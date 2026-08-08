@@ -21,7 +21,7 @@ Exophase API ──6h──> n8n Cloud ──> FlareSolverr (Oracle VM)  [Cloudf
                          ▲
    IGDB API ──6h──> n8n Cloud   (genre, release year, story length, cover)
                          │
-       ┌────────────────┴─────────────────┐
+       ┌─────────────────┴─────────────────┐
        ▼                                    ▼
  React PWA on Vercel ── /api/chat ──> Serverless fn ──> Claude (Haiku + web search)
  (reads via publishable key)          (secret key stays server-side)
