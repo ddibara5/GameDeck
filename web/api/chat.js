@@ -34,79 +34,134 @@ How to recommend:
 async function loadCatalog() {
   const base = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_ANON_KEY;
-  if (!base || !key) throw new!\œ›ÜŠ	ÔÝ\X˜\ÙH[ˆ˜\œÈ\™H›ÝÛÛ™šYÝ\™Y‰ÊNÂ‚ˆÛÛœÝÛÛÈH	Ý]K[š\›Û›Y[\˜Ù[^][YWÛZ[]\ËX\›™YØ]Ø\™ËÝ[Ø]Ø\™Ë\ÝÜ^YYÝ]\ÉÎÂˆÛÛœÝ\›H	Ø˜\Ù_KÜ™\ÝÝŒKÙØ[Y\ÏÜÙ[XÝIØÛÛßI›Ü™\[\ÝÜ^YY™\ØË›[Û\Ý	›[Z]MLÂˆÛÛœÝ™\ÈH]ØZ]™]Ú
-\›ÈXY\œÎˆÈ\ZÙ^NˆÙ^K]]Üš^˜][ÛŽˆ™X\™\ˆ	ÚÙ^_XHJNÂˆYˆ
-\™\Ë›ÚÊH›ÝÈ™]È\œ›ÜŠÝ\X˜\ÙH™XY˜Z[Yˆ	Ü™\ËœÝ]\ßX
-NÂˆÛÛœÝ›ÝÜÈH]ØZ]™\ËšœÛÛŠ
-NÂ‚ˆÛÛœÝ]HÈ›Þˆ	Ö›Þ	ËÛŽˆ	ÔÉËÝX[Nˆ	ÔÝX[IÈNÂˆ]˜XÚÛÙÐÛÝ[HÂˆÛÛœÝ[™\ÈH›ÝÜË›X\
+  if (!base || !key) throw new Error('Supabase env vars are not configured.');
 
-ÊHOˆÂˆÛÛœÝHX]œ›Ý[™
+  const cols = 'title,environment,percent,playtime_minutes,earned_awards,total_awards,last_played,status';
+  const url = `${base}/rest/v1/games?select=${cols}&order=last_played.desc.nullslast&limit=5000`;
+  const res = await fetch(url, { headers: { apikey: key, Authorization: `Bearer ${key}` } });
+  if (!res.ok) throw new Error(`Supabase read failed: ${res.status}`);
+  const rows = await res.json();
 
-Ëœ^][YWÛZ[]\È
-HÈŠHÈLÈËÈÝ\œËHˆÛÛœÝ\ˆHË›\ÝÜ^YYÈÝš[™ÊË›\ÝÜ^YY
-KœÛXÙJÊHˆ	Û™]™\‰ÎÂˆÛÛœÝÝHX]œ›Ý[™
-Ëœ\˜Ù[
-NÂˆÛÛœÝ[œ^YYHYË›\ÝÜ^YY	‰ˆ
-Ëœ^][YWÛZ[]\È
-HOOHÂˆYˆ
-[œ^YY
-H˜XÚÛÙÐÛÝ[
-ÊÎÂˆÛÛœÝYÈH[œ^YYÈ	ÈS”VQQ	Èˆ	ÉÎÂˆ™]\›ˆ	ÙË]_H	Ü]ÙË™[š\›Û›Y[HË™[š\›Û›Y[H	ÜÝIH	ÚZXÚ	ÙË™X\›™YØ]Ø\™ÈKÉÙËÝ[Ø]Ø\™ÈH\Ý	Þ\ŸIÝYßXÂˆJNÂ‚ˆÛÛœÝXY\ˆH]™IÜÈXœ˜\žNˆ	Ü›ÝÜË›[™ÝHØ[Y\ËÙˆÚXÚ	Ø˜XÚÛÙÐÛÝ[H\™HÝÛ™Y]‘U‘Tˆ^YY
-\È˜XÚÛÙËYÙÙYS”VQQ
-Kˆ›Ü›X]ˆ]H]›Ü›HÛÛ\][Û‰HÝ\œÈXÚY]™[Y[È\Ý^YY
-VVVKSSJHS”VQQ
-Û›HYˆ™]™\ˆ^YY
-XÂˆ™]\›ˆ	ÚXY\ŸW‰Û[™\Ëš›Ú[Š	×‰Ê_XÂŸB‚™^ÜY˜][\Þ[˜È[˜Ý[Ûˆ[™\Š™\K™\ÊHÂˆYˆ
-™\K›Y]ÙOOH	ÔÔÕ	ÊHÂˆ™\ËœÝ]\ÊJKšœÛÛŠÈ\œ›ÜŽˆ	ÓY]Ù›Ý[ÝÙY	ÈJNÂˆ™]\›ŽÂˆB‚ˆËÈÜ[Û˜[Ú\™Y\ÙXÜ™]ÝX\™›Üˆ\È
-ZY
-H[™Ú[ˆYˆÐSQQPÒ×ÐTÔÑPÔ‘U\ÂˆËÈÙ][ˆH™\˜Ù[›Ú™XÝ]™\žH™\]Y\Ý]\ÝÙ[™HX]Ú[™ÈYØ[YYXÚËZÙ^HXY\‹‚ˆËÈYˆ[œÙ]H[™Ú[Ý^\ÈÜ[‹ÛÈ\ÞZ[™È\È™]™\ˆœ™XZÜÈH\[[[ÝHÜ[‹‚ˆÛÛœÝTÔÑPÔ‘UH›ØÙ\ÜË™[‹‘ÐSQQPÒ×ÐTÔÑPÔ‘UÂˆYˆ
-TÔÑPÔ‘U	‰ˆ™\KšXY\œÖÉÞYØ[YYXÚËZÙ^I×HOOHTÔÑPÔ‘U
-HÂˆ™\ËœÝ]\ÊJKšœÛÛŠÈ\œ›ÜŽˆ	Õ[˜]]Üš^™Y	ÈJNÂˆ™]\›ŽÂˆBˆYˆ
-\›ØÙ\ÜË™[‹S•“ÔP×ÐTWÒÑVJHÂˆ™\ËœÝ]\ÊL
-KšœÛÛŠÈ\œ›ÜŽˆ	ÔÙ\™\ˆZ\ÜÚ[™ÈS•“ÔP×ÐTWÒÑVIÈJNÂˆ™]\›ŽÂˆB‚ˆžHÂˆÛÛœÝ›ÙHH\[Ùˆ™\K˜›ÙHOOH	ÜÝš[™ÉÈÈ”ÓÓ‹œ\œÙJ™\K˜›ÙH	ÞßIÊHˆ
-™\K˜›ÙHßJNÂˆÛÛœÝY\ÜØYÙ\ÈH\œ˜^Kš\Ð\œ˜^J›ÙK›Y\ÜØYÙ\ÊHÈ›ÙK›Y\ÜØYÙ\Èˆ×NÂˆÛÛœÝÛX[ˆHY\ÜØYÙ\Âˆ™š[\Š
-JHOˆH	‰ˆ
-Kœ›ÛHOOH	Ý\Ù\‰ÈKœ›ÛHOOH	Ø\ÜÚ\Ý[	ÊH	‰ˆ\[ÙˆK˜ÛÛ[OOH	ÜÝš[™ÉÊBˆœÛXÙJLMŠHËÈÙY\H\ÝMˆ\›œÂˆ›X\
+  const plat = { xbox: 'Xbox', psn: 'PS', steam: 'Steam' };
+  let backlogCount = 0;
+  const lines = rows.map((g) => {
+    const h = Math.round((g.playtime_minutes || 0) / 6) / 10; // hours, 1 dp
+    const yr = g.last_played ? String(g.last_played).slice(0, 7) : 'never';
+    const pct = Math.round(g.percent || 0);
+    const unplayed = !g.last_played && (g.playtime_minutes || 0) === 0;
+    if (unplayed) backlogCount++;
+    const tag = unplayed ? ' | UNPLAYED' : '';
+    return `${g.title} | ${plat[g.environment] || g.environment} | ${pct}% | ${h}h | ach ${g.earned_awards || 0}/${g.total_awards || 0} | last ${yr}${tag}`;
+  });
 
-JHOˆ
-È›ÛNˆKœ›ÛKÛÛ[ˆK˜ÛÛ[JJNÂ‚ˆYˆ
-ÛX[‹›[™ÝOOHÛX[–ØÛX[‹›[™ÝHWKœ›ÛHOOH	Ý\Ù\‰ÊHÂˆ™\ËœÝ]\Ê
-KšœÛÛŠÈ\œ›ÜŽˆ	ÛY\ÜØYÙ\È]\Ý[™Ú]H\Ù\ˆ\›‰ÈJNÂˆ™]\›ŽÂˆB‚ˆÛÛœÝØ][ÙÈH]ØZ]ØYØ][ÙÊ
-NÂ‚ˆÛÛœÝ™\]Y\Ý›ÙHHÂˆ[Ù[ˆSÑSˆX^ÝÚÙ[œÎˆLˆÞ\Ý[NˆÂˆÈ\Nˆ	Ý^	Ë^ˆÖTÕSWÔ“ÓTKˆËÈØXÚHH
-\™ÙKÝX›JHØ][ÙÈÛÈ™\X]\›œÈ[ˆHÙ\ÜÚ[Ûˆ\™HŒLÚX\\‹‚ˆÈ\Nˆ	Ý^	Ë^ˆØ][ÙËØXÚWØÛÛ›ÛˆÈ\Nˆ	Ù\[Y\˜[	ÈHKˆKˆËÈ]™HÙXˆÙX\˜ÚÛÈ™XÛÛ[Y[™][ÛœÈØ[ˆ[˜ÛYH™]ÈÈ›Ý^Y][ÝÛ™YØ[Y\ËˆËÈØ[YH\ÜÈÝ]\ËšXÙ\Ë[™™]šY]ÜËˆX^Ý\Ù\ÈØ\ÈÛÜÝ\ˆ™\]Y\Ý‚ˆÛÛÎˆÞÈ\Nˆ	ÝÙX—ÜÙX\˜ÚÌŒLÌIË˜[YNˆ	ÝÙX—ÜÙX\˜Ú	ËX^Ý\Ù\ÎˆWKˆY\ÜØYÙ\ÎˆÛX[‹ˆNÂ‚ˆËÈHTH[œÈHÙX\˜ÚÙ\™\‹\ÚYK]HÛ™ÈÙX\˜Ú\›ˆØ[ˆÛÛYH˜XÚÂˆËÈÚ]ÝÜÜ™X\ÛÛˆœ]\ÙWÝ\›ˆŽÈ™K\Ù[™H\ÜÚ\Ý[ÛÛ[[˜Ú[™ÙYÈÛÛ[YK‚ˆ]ÛÛ›ÈHÛX[ŽÂˆÛÛœÝ^\ÈH×NÂˆÛÛœÝÚ]][ÛœÈH×NÂˆ›Üˆ
-]HHÈHÈJÊÊHÂˆ™\]Y\Ý›ÙK›Y\ÜØYÙ\ÈHÛÛ›ÎÂˆÛÛœÝT™\ÈH]ØZ]™]Ú
-	ÚÎ‹ËØ\K˜[›ÜXË˜ÛÛKÝŒKÛY\ÜØYÙ\ÉËÂˆY]Ùˆ	ÔÔÕ	ËˆXY\œÎˆÂˆ	ÞX\KZÙ^IÎˆ›ØÙ\ÜË™[‹S•“ÔP×ÐTWÒÑVKˆ	Ø[›ÜXË]™\œÚ[Û‰Îˆ	ÌŒŒËL‹LIËˆ	ØÛÛ[]\IÎˆ	Ø\XØ][Û‹ÚœÛÛ‰ËˆKˆ›ÙNˆ”ÓÓ‹œÝš[™ÚYžJ™\]Y\Ý›ÙJKˆJNÂ‚ˆYˆ
-XT™\Ë›ÚÊHÂˆÛÛœÝ]Z[H]ØZ]T™\Ë^
+  const header = `Dave's library: ${rows.length} games, of which ${backlogCount} are owned but NEVER played (his backlog, tagged UNPLAYED). Format: Title | Platform | Completion% | Hours | Achievements | LastPlayed(YYYY-MM) | UNPLAYED(only if never played)`;
+  return `${header}\n${lines.join('\n')}`;
+}
 
-NÂˆ™\ËœÝ]\ÊLŠKšœÛÛŠÈ\œ›ÜŽˆ	ÐRH™\]Y\Ý˜Z[Y	Ë]Z[ˆ]Z[œÛXÙJL
-HJNÂˆ™]\›ŽÂˆB‚ˆÛÛœÝ]HH]ØZ]T™\ËšœÛÛŠ
-NÂˆ›Üˆ
-ÛÛœÝˆÙˆ]K˜ÛÛ[×JHÂˆYˆ
-‹\HOOH	Ý^	È	‰ˆ‹^
-HÂˆ^\Ëœ\Ú
-‹^
-NÂˆ›Üˆ
-ÛÛœÝÈÙˆ‹˜Ú]][ÛœÈ×JHÂˆYˆ
-È	‰ˆË\›
-HÚ]][ÛœËœ\Ú
-È\›ˆË\›]NˆË]HË\›JNÂˆBˆBˆB‚ˆYˆ
-]KœÝÜÜ™X\ÛÛˆOOH	Ü]\ÙWÝ\›‰ÊHÂˆÛÛ›ÈHË‹‹˜ÛÛ›ËÈ›ÛNˆ	Ø\ÜÚ\Ý[	ËÛÛ[ˆ]K˜ÛÛ[WNÂˆÛÛ[YNÂˆBˆœ™XZÎÂˆB‚ˆ]™\HH^\Ëš›Ú[Š	ÉÊKš[J
-NÂ‚ˆËÈYˆH[Ù[ÙX\˜ÚY\[™\È[š\]YHÛÝ\˜Ù\È
-Ú]][ÛœÈ\™H™\]Z\™YˆËÈÚ[ˆÚÝÚ[™ÈÙXˆ™\Ý[ÈÈ\Ù\œË[™]XZÙ\ÈHœ™\ÙX\˜Úˆš\ÚX›JK‚ˆÛÛœÝÙY[ˆH™]ÈÙ]
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
 
-NÂˆÛÛœÝÛÝ\˜Ù\ÈH×NÂˆ›Üˆ
-ÛÛœÝÈÙˆÚ]][ÛœÊHÂˆYˆ
-ÙY[‹š\ÊË\›
-JHÛÛ[YNÂˆÙY[‹˜Y
-Ë\›
-NÂˆÛÝ\˜Ù\Ëœ\Ú
-HÉØË]_WJ	ØË\›JX
-NÂˆYˆ
-ÛÝ\˜Ù\Ë›[™ÝH
-Hœ™XZÎÂˆBˆYˆ
-ÛÝ\˜Ù\Ë›[™Ý
-H™\H
-ÏH—”ÛÝ\˜Ù\Î—‰ÜÛÝ\˜Ù\Ëš›Ú[Š	×‰Ê_XÂ‚ˆ™\ËœÝ]\ÊŒ
-KšœÛÛŠÈ™\Nˆ™\H	Ó›È™\K‰ÈJNÂˆHØ]Ú
-\œŠHÂˆ™\ËœÝ]\ÊL
-KšœÛÛŠÈ\œ›ÜŽˆ	ÔÙ\™\ˆ\œ›Ü‰Ë]Z[ˆÝš[™Ê\œˆ	‰ŠW'"æÖW76vRÇÂW'"’Ò“°¢Ð§Ð
+  // Optional shared-secret guard for this (paid) endpoint. If GAMEDECK_APP_SECRET is
+  // set in the Vercel project, every request must send a matching x-gamedeck-key header.
+  // If unset, the endpoint stays open, so deploying this never breaks the app until you opt in.
+  const APP_SECRET = process.env.GAMEDECK_APP_SECRET;
+  if (APP_SECRET && req.headers['x-gamedeck-key'] !== APP_SECRET) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+  if (!process.env.ANTHROPIC_API_KEY) {
+    res.status(500).json({ error: 'Server missing ANTHROPIC_API_KEY' });
+    return;
+  }
+
+  try {
+    const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+    const messages = Array.isArray(body.messages) ? body.messages : [];
+    const clean = messages
+      .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+      .slice(-16) // keep the last 16 turns
+      .map((m) => ({ role: m.role, content: m.content }));
+
+    if (clean.length === 0 || clean[clean.length - 1].role !== 'user') {
+      res.status(400).json({ error: 'messages must end with a user turn' });
+      return;
+    }
+
+    const catalog = await loadCatalog();
+
+    const requestBody = {
+      model: MODEL,
+      max_tokens: 1024,
+      system: [
+        { type: 'text', text: SYSTEM_PROMPT },
+        // Cache the (large, stable) catalog so repeat turns in a session are ~10x cheaper.
+        { type: 'text', text: catalog, cache_control: { type: 'ephemeral' } },
+      ],
+      // Live web search so recommendations can include new / not-yet-owned games,
+      // Game Pass status, prices, and reviews. max_uses caps cost per request.
+      tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 4 }],
+      messages: clean,
+    };
+
+    // The API runs the search server-side, but a long search turn can come back
+    // with stop_reason "pause_turn"; re-send the assistant content unchanged to continue.
+    let convo = clean;
+    const textParts = [];
+    const citations = [];
+    for (let i = 0; i < 4; i++) {
+      requestBody.messages = convo;
+      const aRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!aRes.ok) {
+        const detail = await aRes.text();
+        res.status(502).json({ error: 'AI request failed', detail: detail.slice(0, 500) });
+        return;
+      }
+
+      const data = await aRes.json();
+      for (const b of data.content || []) {
+        if (b.type === 'text' && b.text) {
+          textParts.push(b.text);
+          for (const c of b.citations || []) {
+            if (c && c.url) citations.push({ url: c.url, title: c.title || c.url });
+          }
+        }
+      }
+
+      if (data.stop_reason === 'pause_turn') {
+        convo = [...convo, { role: 'assistant', content: data.content }];
+        continue;
+      }
+      break;
+    }
+
+    let reply = textParts.join('').trim();
+
+    // If the model searched, append up to 4 unique sources (citations are required
+    // when showing web results to users, and it makes the "research" visible).
+    const seen = new Set();
+    const sources = [];
+    for (const c of citations) {
+      if (seen.has(c.url)) continue;
+      seen.add(c.url);
+      sources.push(`- [${c.title}](${c.url})`);
+      if (sources.length >= 4) break;
+    }
+    if (sources.length) reply += `\n\nSources:\n${sources.join('\n')}`;
+
+    res.status(200).json({ reply: reply || 'No reply.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error', detail: String(err && err.message || err) });
+  }
+}
