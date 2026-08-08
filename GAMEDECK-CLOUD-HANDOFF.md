@@ -29,8 +29,9 @@ Web UI: sign in at n8n Cloud; both data workflows are editable/runnable from a p
 
 | Workflow | ID | Active | Triggers |
 |---|---|---|---|
-| GameDeck \| Exophase - Daily Library & Play-History Sync | `FWUf7KNrSi0M8gKy` | Yes | Every 6h schedule |
+| GameDeck \| Exophase - Daily Library & Play-History Sync | `FWUf7KNrSi0M8gKy` | Yes | Every 6h schedule + Called by Refresh |
 | GameDeck \| IGDB Enrichment | `Cpu3vfesYWfqGSZb` | Yes | Manual + Every 6h schedule |
+| GameDeck \| Refresh Trigger (webhook + guard) | `kyFDlXgDFo2Bj2XP` | Yes | Webhook POST /webhook/gamedeck-refresh (see section 11) |
 | GameDeck \| GitHub - Commit to main (Claude bridge) | `KD1L37RyiZHFv8aP` | No | Manual, via the n8n MCP (see section 8) |
 
 **Credentials (in n8n Cloud credential store):**
@@ -59,7 +60,7 @@ Web UI: sign in at n8n Cloud; both data workflows are editable/runnable from a p
 ### Frontend (app)
 - **GitHub repo:** `github.com/ddibara5/GameDeck` (Vercel root dir = `web/`)
 - **Live URL:** `https://gamedeck-kappa.vercel.app/` - the deployed PWA (installable on mobile via Add to Home Screen). This is the production site Vercel serves from `main`.
-- **Vercel:** builds the Vite React PWA + serverless `/api/chat` (Claude recommender with web search). Auto-deploys on push to `main`.
+- **Vercel:** builds the Vite React PWA + serverless `/api/chat` (Claude recommender with web search) and `/api/sync` (on-demand refresh, see section 11). Auto-deploys on push to `main`.
 - Reads Supabase with the publishable key.
 - **Optional API guard:** env var `GAMEDECK_APP_SECRET` gates `/api/chat` (see section 9). Fail-open: unset = endpoint open, so it is off until you opt in.
 
@@ -68,6 +69,8 @@ Web UI: sign in at n8n Cloud; both data workflows are editable/runnable from a p
 ## 3. How the Exophase sync works (and why it's configured this way)
 
 Flow: `Every 6h` -> `Build Page Requests` (18 page URLs: xbox 12, psn 3, steam 3 for player `5270041`) -> `Fetch via FlareSolverr` (POST to `http://129.159.189.180:8191/v1`, token via credential) -> `Parse Games` -> `Get Existing State` -> `Compute Deltas` -> `Upsert Games` -> `Insert Play Events` -> `Log Sync Run`.
+
+The same flow also runs on demand: an `Execute Workflow Trigger` node named `Called by Refresh` is wired into `Build Page Requests` (see section 11).
 
 **Critical config note - do not "optimize" naively:** the VM is 1 vCPU / 1 GB, so headless Chrome can only do **one page at a time**. The Fetch node is deliberately serialized (`options.batching` = batchSize 1, **batchInterval 20000 ms**) with 3 retries. This makes a run take ~6 minutes, which is fine (it's an unattended background job; the app never waits on it).
 
@@ -91,7 +94,7 @@ If you ever move to a bigger box (e.g. free Ampere A1 4 vCPU/24 GB, or a small p
 
 ## 5. Common tasks & recovery
 
-**Manually trigger a sync:** n8n UI -> open the workflow -> Execute Workflow. (IGDB also has a Manual Trigger node.)
+**Manually trigger a sync:** in-app Refresh button (section 11), or n8n UI -> open the workflow -> Execute Workflow. (IGDB also has a Manual Trigger node.)
 
 **Exophase sync failing?** Check, in order:
 1. VM reachable: `ssh -i ~/.ssh/gamedeck_oracle ubuntu@129.159.189.180 'sudo docker ps'` (both containers `Up`).
@@ -111,7 +114,7 @@ If you ever move to a bigger box (e.g. free Ampere A1 4 vCPU/24 GB, or a small p
 
 Secrets live in exactly four places and nowhere else (never in code or committed files):
 - Supabase dashboard (DB keys)
-- Vercel project env (frontend/API keys; optional `GAMEDECK_APP_SECRET` guard)
+- Vercel project env (frontend/API keys; `N8N_REFRESH_*` refresh webhook URL + token; optional `GAMEDECK_APP_SECRET` guard)
 - n8n Cloud credential store (Supabase service key, FlareSolverr token, Twitch secret, GitHub PAT)
 - VM `/opt/flare/token` (FlareSolverr proxy token)
 
@@ -171,3 +174,24 @@ Each file entry takes **either** inline base64 `content` **or** a `url` the brid
 - Local Docker stack (`deploy-n8n-1`, `deploy-flaresolverr-1`) - stopped & removed.
 - Docker Desktop app, CLI, images, and the ~4.5 GB VM disk - uninstalled. (A couple of empty, macOS-protected container *stub* folders remain by design; harmless.)
 - **Kept:** the `~/gamedeck` project files, `~/gamedeck/deploy/.env` (local reference; gitignored), and `~/.ssh/gamedeck_oracle` (needed for the VM).
+
+---
+
+## 11. On-demand refresh (app "Refresh" button)
+
+The Activity tab has a **Refresh** button that triggers the Exophase sync on demand instead of waiting for the 6-hour schedule.
+
+**Flow:** app -> Vercel `/api/sync` -> n8n webhook (token-gated) -> in-progress guard -> run the sync.
+
+- **App:** `web/src/components/ActivityTab.jsx` (Refresh button, live status via polling, ~6 min lockout) and `web/api/sync.js` (Vercel function that POSTs the webhook). The webhook URL + token live ONLY in Vercel env, never in the browser bundle.
+- **n8n workflow:** `GameDeck | Refresh Trigger (webhook + guard)`, ID `kyFDlXgDFo2Bj2XP` (active). Path: Webhook `POST /webhook/gamedeck-refresh` -> `Authorized?` (checks the `x-refresh-token` header) -> `Check Running` (sync_runs with status=running in the last 8 min) -> `Already Running?` -> respond 409, else respond 202 -> `Mark Running` (insert sync_runs status=running) -> `Run Exophase Sync` (Execute Workflow -> the sync) -> `Mark Done` (flip that row to ok). Uses the `GameDeck Supabase (service)` credential.
+- **Sync workflow change:** the Exophase sync (`FWUf7KNrSi0M8gKy`) gained ONE additive node, `Called by Refresh` (Execute Workflow Trigger), wired into `Build Page Requests`. Its 6-hour schedule and fetch/parse/upsert core are otherwise unchanged.
+- **Completion signal:** the app polls `sync_runs` for a new row with `games_seen` not null (only the sync's final `Log Sync Run` writes that; the refresh workflow's marker rows leave it null), then reloads Activity + Library.
+
+**Vercel env vars (required for the button to work):**
+- `N8N_REFRESH_WEBHOOK_URL` = `https://ddibara.app.n8n.cloud/webhook/gamedeck-refresh`
+- `N8N_REFRESH_TOKEN` = the shared secret checked by the webhook's `Authorized?` node (stored in that node and in Vercel; to rotate, change both).
+
+If either is unset, `/api/sync` returns 503 and the button shows "Refresh is not set up yet" (fail-soft, nothing breaks).
+
+**Guard scope / known limit:** reliably prevents two manual refreshes overlapping. A manual refresh could still rarely coincide with the scheduled 6-hour run (that path does not write the running marker); the 6-minute button lockout makes this unlikely and the sync's retries recover. To fully close it, add the running marker to the scheduled path too.
