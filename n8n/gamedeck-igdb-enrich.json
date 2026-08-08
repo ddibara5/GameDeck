@@ -1,0 +1,157 @@
+{
+  "id": "gamedeckigdbenrich",
+  "name": "GameDeck | IGDB Enrichment",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "enrich-manual",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "enrich-sched",
+      "name": "Every 6h Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -460,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/games?select=master_id,title,playtime_minutes&cover_igdb=is.null&limit=40",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {}
+      },
+      "id": "enrich-get",
+      "name": "Get Games To Enrich",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -220,
+        50
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "WxrYtW6jsqvIjSQj",
+          "name": "GameDeck Supabase (service role)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const CID=$env.TWITCH_CLIENT_ID, SECRET=$env.TWITCH_CLIENT_SECRET;\nconst http=this.helpers.httpRequest.bind(this.helpers);\nconst req=async(url,opt)=>{const r=await http(Object.assign({url},opt));return typeof r==='string'?JSON.parse(r):r;};\nconst norm=s=>{s=(s||'').toLowerCase().replace(/[\u2122\u00ae:\\-\u2013]/g,' ').replace(/\\b(definitive|complete|game of the year|goty|deluxe|standard|gold|ultimate|remastered)\\b/g,'').replace(/\\bedition\\b/g,'');return s.replace(/\\s+/g,' ').trim();};\nconst GOOD=new Set([0,4,8,9,10,11]),BAD=new Set([1,2,3,5,6,7,13,14]);\nconst best=(title,cands)=>{const nt=norm(title);let bc=null,bs=-1e9;for(const c of (cands||[])){const nc=norm(c.name||'');let s=c.total_rating_count||0;if(nc===nt)s+=1e5;else if(nc.startsWith(nt)||nt.startsWith(nc))s+=2e4;else if(nc.includes(nt)||nt.includes(nc))s+=5e3;const cat=(c.category==null)?0:c.category;if(GOOD.has(cat))s+=2e3;else if(BAD.has(cat))s-=8e4;if(s>bs){bs=s;bc=c;}}return bc;};\nconst sleep=ms=>new Promise(r=>setTimeout(r,ms));\nconst tok=await http({method:'POST',url:'https://id.twitch.tv/oauth2/token',qs:{client_id:CID,client_secret:SECRET,grant_type:'client_credentials'},json:true});\nconst H={'Client-ID':CID,'Authorization':'Bearer '+tok.access_token,'Content-Type':'text/plain'};\nlet games=[];for(const it of $input.all()){if(Array.isArray(it.json))games.push(...it.json);else games.push(it.json);}\nconst out=[];\nfor(const g of games){\n  const title=String(g.title||'').replace(/\"/g,'');\n  const e={master_id:g.master_id,enriched_at:new Date().toISOString(),genre:null,release_year:null,length_minutes:null,igdb_id:null,cover_igdb:''};\n  try{\n    const cands=await req('https://api.igdb.com/v4/games',{method:'POST',headers:H,body:'search \"'+title+'\"; fields id,name,genres.name,first_release_date,total_rating_count,category,cover.image_id; limit 10;'});\n    await sleep(150);\n    const m=best(title,cands);\n    if(m){\n      e.igdb_id=m.id;\n      e.cover_igdb=(m.cover&&m.cover.image_id)?m.cover.image_id:'';\n      e.genre=(m.genres&&m.genres[0]&&m.genres[0].name)||null;\n      e.release_year=m.first_release_date?new Date(m.first_release_date*1000).getUTCFullYear():null;\n      try{const ttb=await req('https://api.igdb.com/v4/game_time_to_beats',{method:'POST',headers:H,body:'fields normally; where game_id = '+m.id+';'});if(ttb&&ttb[0]&&ttb[0].normally)e.length_minutes=Math.round(ttb[0].normally/60);}catch(_){}\n    }\n  }catch(err){e._error=String((err&&err.message)||err).slice(0,140);}\n  out.push({json:e});\n  await sleep(180);\n}\nreturn out;"
+      },
+      "id": "enrich-code",
+      "name": "IGDB Enrich",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        20,
+        50
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/games?master_id=eq.{{ $json.master_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"genre\": $json.genre, \"release_year\": $json.release_year, \"length_minutes\": $json.length_minutes, \"igdb_id\": $json.igdb_id, \"enriched_at\": $json.enriched_at, \"cover_igdb\": $json.cover_igdb } }}",
+        "options": {}
+      },
+      "id": "enrich-write",
+      "name": "Write Enrichment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        260,
+        50
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "WxrYtW6jsqvIjSQj",
+          "name": "GameDeck Supabase (service role)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Games To Enrich",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every 6h Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Games To Enrich",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Games To Enrich": {
+      "main": [
+        [
+          {
+            "node": "IGDB Enrich",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IGDB Enrich": {
+      "main": [
+        [
+          {
+            "node": "Write Enrichment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

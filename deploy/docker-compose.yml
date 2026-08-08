@@ -1,0 +1,51 @@
+# GameDeck data pipeline - n8n + FlareSolverr on one small VPS (or home server).
+# FlareSolverr solves Exophase's Cloudflare challenge, which otherwise 403s any
+# datacenter IP. n8n reaches it privately at http://flaresolverr:8191 (same network).
+#
+#   1. cp .env.example .env  and fill in the values
+#   2. docker compose up -d
+#   3. open http://YOUR_VPS_IP:5678  -> finish n8n setup, import the workflow JSON
+#
+# Any VPS with ~2 GB RAM is enough (FlareSolverr runs a headless Chromium).
+
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=${N8N_HOST:-localhost}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
+      - WEBHOOK_URL=${WEBHOOK_URL:-http://localhost:5678/}
+      - GENERIC_TIMEZONE=America/Los_Angeles
+      - TZ=America/Los_Angeles
+      # Consumed by the workflow's HTTP nodes via {{ $env.SUPABASE_URL }} etc.
+      - SUPABASE_URL=${SUPABASE_URL}
+      - FLARESOLVERR_URL=http://flaresolverr:8191
+      - TWITCH_CLIENT_ID=${TWITCH_CLIENT_ID}
+      - TWITCH_CLIENT_SECRET=${TWITCH_CLIENT_SECRET}
+      - N8N_RUNNERS_ENABLED=true
+      # Allow $env access in expressions/Code nodes. The workflow's HTTP nodes
+      # reference $env.SUPABASE_URL and $env.FLARESOLVERR_URL; recent n8n blocks
+      # this by default ("access to env vars denied"), which breaks the sync.
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      - flaresolverr
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    restart: unless-stopped
+    environment:
+      - LOG_LEVEL=info
+      - TZ=America/Los_Angeles
+    # Not exposed to the internet on purpose - only n8n talks to it on the
+    # internal Docker network. Uncomment to debug locally:
+    # ports:
+    #   - "8191:8191"
+
+volumes:
+  n8n_data:

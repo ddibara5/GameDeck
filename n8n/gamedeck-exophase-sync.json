@@ -1,0 +1,349 @@
+{
+  "id": "gamedeckexophasesync",
+  "name": "GameDeck | Exophase - Daily Library & Play-History Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "b3078736-89e5-456b-bd02-dbde84204197",
+      "name": "Every 6h Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -160,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Build one item per (environment, page). Over-provisioned page counts give\n// headroom for library growth; empty pages simply return no games.\nconst PLAYER = '5270041';           // Exophase account-wide player id (Davizzle93)\nconst plan = [['xbox', 20], ['psn', 3], ['steam', 3]];\nconst out = [];\nfor (const [env, pages] of plan) {\n  for (let p = 1; p <= pages; p++) {\n    const url = `https://api.exophase.com/public/player/${PLAYER}/games`\n      + `?page=${p}&environment=${env}&sort=1&showHidden=0`;\n    out.push({ json: { environment: env, page: p, targetUrl: url } });\n  }\n}\nreturn out;"
+      },
+      "id": "b08ac4d1-8204-4dd3-ab37-41927a89d644",
+      "name": "Build Page Requests",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        60,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ ($env.FLARESOLVERR_URL || 'http://flaresolverr:8191') }}/v1",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"cmd\": \"request.get\", \"url\": $json.targetUrl, \"maxTimeout\": 60000 } }}",
+        "options": {
+          "timeout": 75000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "4e1bd87a-c991-489c-92c3-54adf74e95f6",
+      "name": "Fetch via FlareSolverr",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        280,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Parse every FlareSolverr response. FlareSolverr returns the target's body\n// rendered by a headless browser, so a raw JSON endpoint arrives wrapped in\n// HTML (<pre>...</pre>). We extract the JSON object and normalise each game\n// into a row that matches the Supabase `games` table.\nconst items = $input.all();\nconst byId = {};\nconst toMin = (u) => (u && typeof u === 'object') ? ((u.hours || 0) * 60 + (u.minutes || 0)) : 0;\nconst tsToIso = (s) => (s && Number(s) > 0) ? new Date(Number(s) * 1000).toISOString() : null;\n\nfor (const it of items) {\n  const env = it.json.environment;\n  const sol = it.json.solution;\n  const raw = sol && sol.response;\n  if (!raw) continue;\n\n  let jsonText = raw;\n  if (raw.indexOf('<') !== -1) {\n    const start = raw.indexOf('{');\n    const end = raw.lastIndexOf('}');\n    if (start === -1 || end === -1) continue;\n    jsonText = raw.slice(start, end + 1)\n      .replace(/&quot;/g, '\"').replace(/&#34;/g, '\"').replace(/&amp;/g, '&');\n  }\n\n  let data;\n  try { data = JSON.parse(jsonText); } catch (e) { continue; }\n  if (!data || !data.success || !Array.isArray(data.games)) continue;\n\n  for (const g of data.games) {\n    if (g.master_id == null) continue;\n    const meta = g.meta || {};\n    const platforms = Array.isArray(meta.platforms)\n      ? meta.platforms.map(p => (p && (p.name || p.title || p.slug)) || p).filter(Boolean)\n      : [];\n    byId[g.master_id] = {\n      master_id: g.master_id,\n      environment: meta.environment_slug || env,\n      title: meta.title || g.title || 'Unknown',\n      platforms,\n      earned_awards: g.earned_awards || 0,\n      total_awards: g.total_awards || meta.total_awards || 0,\n      percent: (typeof g.percent === 'number') ? g.percent : 0,\n      earned_points: g.earned_points || 0,\n      earned_exp: g.earned_exp || 0,\n      playtime_minutes: toMin(g.playtimeUnits),\n      playtime_label: g.playtime || null,\n      status: g.status || null,\n      beaten: (g.beaten === null || g.beaten === undefined) ? null : !!g.beaten,\n      last_played: tsToIso(g.lastplayed_utc || g.lastplayed),\n      first_played: tsToIso(g.firstplayed),\n      completion_date: tsToIso(g.completion_date_utc || g.completion_date),\n      cover_small: g.resource_small || null,\n      cover_standard: g.resource_standard || null,\n      cover_tile: g.resource_tile || null,\n      achievements_url: meta.endpoint_awards || null,\n      last_synced: new Date().toISOString(),\n      updated_at: new Date().toISOString()\n    };\n  }\n}\n\nconst rows = Object.values(byId);\nif (rows.length === 0) {\n  // Fail loudly rather than silently upserting nothing (e.g. Cloudflare blocked us).\n  throw new Error('Exophase sync parsed 0 games - check FlareSolverr / Cloudflare.');\n}\nreturn rows.map(r => ({ json: r }));"
+      },
+      "id": "997d02db-ecee-447e-b49a-afc1767f906a",
+      "name": "Parse Games",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/games?select=master_id,playtime_minutes,earned_awards,percent&limit=5000",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {}
+      },
+      "id": "8eae24ff-37ad-4236-8fdb-17a8502ce215",
+      "name": "Get Existing State",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        720,
+        300
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "REPLACE_WITH_SUPABASE_CREDENTIAL",
+          "name": "GameDeck Supabase (service role)"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Compare the freshly fetched library to the last known state to build a\n// play-history event whenever playtime or achievements increased. A game seen\n// for the very first time is recorded with a 0-minute \"discovered\" event so we\n// never invent a giant session on day one.\nconst fresh = $('Parse Games').all().map(i => i.json);\nconst existing = $('Get Existing State').all().map(i => i.json);\nconst prev = {};\nfor (const e of existing) { if (e && e.master_id != null) prev[e.master_id] = e; }\n\nconst today = new Date().toISOString().slice(0, 10);\nconst out = [];\nfor (const g of fresh) {\n  const p = prev[g.master_id];\n  let event = null;\n  if (!p) {\n    event = {\n      master_id: g.master_id, title: g.title, environment: g.environment,\n      event_date: today, minutes_delta: 0, achievements_delta: 0,\n      percent_after: g.percent, playtime_minutes_after: g.playtime_minutes,\n      earned_awards_after: g.earned_awards, last_played: g.last_played, is_new: true\n    };\n  } else {\n    const dMin = (g.playtime_minutes || 0) - (p.playtime_minutes || 0);\n    const dAch = (g.earned_awards || 0) - (p.earned_awards || 0);\n    if (dMin > 0 || dAch > 0) {\n      event = {\n        master_id: g.master_id, title: g.title, environment: g.environment,\n        event_date: today, minutes_delta: dMin > 0 ? dMin : 0,\n        achievements_delta: dAch > 0 ? dAch : 0,\n        percent_after: g.percent, playtime_minutes_after: g.playtime_minutes,\n        earned_awards_after: g.earned_awards, last_played: g.last_played, is_new: false\n      };\n    }\n  }\n  out.push({ json: { game: g, event } });\n}\nreturn out;"
+      },
+      "id": "83e604d8-5f4f-47fb-a6de-067e779bd485",
+      "name": "Compute Deltas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        940,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/games?on_conflict=master_id",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('Compute Deltas').all().map(i => i.json.game) }}",
+        "options": {}
+      },
+      "id": "7c9ced52-b03b-4674-a2ff-12327fabbca2",
+      "name": "Upsert Games",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1160,
+        220
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "REPLACE_WITH_SUPABASE_CREDENTIAL",
+          "name": "GameDeck Supabase (service role)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/play_events?on_conflict=master_id,event_date",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('Compute Deltas').all().filter(i => i.json.event).map(i => i.json.event) }}",
+        "options": {}
+      },
+      "id": "8b16d6a9-d128-4031-a08f-746907fd250b",
+      "name": "Insert Play Events",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1380,
+        220
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "REPLACE_WITH_SUPABASE_CREDENTIAL",
+          "name": "GameDeck Supabase (service role)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/sync_runs",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"games_seen\": $('Compute Deltas').all().length, \"games_changed\": $('Compute Deltas').all().filter(i => i.json.event && (i.json.event.minutes_delta > 0 || i.json.event.achievements_delta > 0)).length, \"status\": \"ok\" } }}",
+        "options": {}
+      },
+      "id": "f96df63d-0ff4-4045-95d2-8745b6d63edd",
+      "name": "Log Sync Run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1600,
+        220
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "REPLACE_WITH_SUPABASE_CREDENTIAL",
+          "name": "GameDeck Supabase (service role)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## GameDeck - Exophase Daily Sync\n\n**Before activating:**\n1. Set two env vars on the n8n container:\n   - `SUPABASE_URL` = https://YOUR-PROJECT.supabase.co\n   - `FLARESOLVERR_URL` = http://flaresolverr:8191 (default if omitted)\n2. Create a **Supabase API** credential named *GameDeck Supabase (service role)* using your project URL + the **service_role** key, and select it on the 4 HTTP nodes.\n3. FlareSolverr must be reachable (docker-compose sidecar) - it clears Cloudflare.\n\nExophase's Cloudflare blocks datacenter IPs, so every fetch is routed through FlareSolverr.",
+        "height": 320,
+        "width": 420,
+        "color": 4
+      },
+      "id": "f2fda9db-a101-44cb-8f24-d5893123a718",
+      "name": "Setup Notes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        -60
+      ]
+    }
+  ],
+  "connections": {
+    "Build Page Requests": {
+      "main": [
+        [
+          {
+            "node": "Fetch via FlareSolverr",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch via FlareSolverr": {
+      "main": [
+        [
+          {
+            "node": "Parse Games",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Games": {
+      "main": [
+        [
+          {
+            "node": "Get Existing State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Existing State": {
+      "main": [
+        [
+          {
+            "node": "Compute Deltas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compute Deltas": {
+      "main": [
+        [
+          {
+            "node": "Upsert Games",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Games": {
+      "main": [
+        [
+          {
+            "node": "Insert Play Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Play Events": {
+      "main": [
+        [
+          {
+            "node": "Log Sync Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every 6h Trigger": {
+      "main": [
+        [
+          {
+            "node": "Build Page Requests",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Los_Angeles",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true
+  },
+  "meta": {
+    "templateId": "gamedeck-exophase-sync"
+  },
+  "tags": []
+}
