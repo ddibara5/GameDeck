@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Brand from './components/Brand.jsx'
 import TabBar from './components/TabBar.jsx'
 import LibraryTab from './components/LibraryTab.jsx'
 import ActivityTab from './components/ActivityTab.jsx'
@@ -12,6 +13,9 @@ export default function App() {
 
   return (
     <div className="app">
+      <header className="app-header">
+        <Brand />
+      </header>
       <main className="app-main">
         {activeTab === 'library' && <LibraryTab />}
         {activeTab === 'activity' && <ActivityTab />}
