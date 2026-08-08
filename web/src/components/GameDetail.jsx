@@ -70,10 +70,6 @@ export default function GameDetail({ game, onClose }) {
           transition: drag.current.active ? 'none' : 'transform 0.25s ease',
         }}
       >
-        <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
-          ×
-        </button>
-
         <div
           className="sheet-drag-zone"
           onTouchStart={onDragStart}
