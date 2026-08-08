@@ -1,3 +1,11 @@
+> **SUPERSEDED - historical reference only.**
+> GameDeck is now fully cloud (n8n Cloud + Oracle VM + Supabase + Vercel), with no Mac
+> dependency. This file documents the original local-Mac bring-up, which was retired (see
+> section 8 of GAMEDECK-CLOUD-HANDOFF.md). For how the system runs today, read
+> GAMEDECK-CLOUD-HANDOFF.md. Do not follow the steps below to set up a new environment.
+
+---
+
 # Runbook: set up GameDeck on this Mac (for the AI assistant)
 
 You are running in a LOCAL Cowork session with shell access to Dave's Mac. Your job is to

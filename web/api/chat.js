@@ -8,6 +8,7 @@
 //   SUPABASE_ANON_KEY   - the public anon key (read-only; RLS allows SELECT)
 // Optional:
 //   CLAUDE_MODEL        - defaults to claude-haiku-4-5
+//   GAMEDECK_APP_SECRET - if set, callers must send header `x-gamedeck-key` matching it
 
 const MODEL = process.env.CLAUDE_MODEL || 'claude-haiku-4-5';
 
@@ -59,6 +60,15 @@ async function loadCatalog() {
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
+
+  // Optional shared-secret guard for this (paid) endpoint. If GAMEDECK_APP_SECRET is
+  // set in the Vercel project, every request must send a matching x-gamedeck-key header.
+  // If unset, the endpoint stays open, so deploying this never breaks the app until you opt in.
+  const APP_SECRET = process.env.GAMEDECK_APP_SECRET;
+  if (APP_SECRET && req.headers['x-gamedeck-key'] !== APP_SECRET) {
+    res.status(401).json({ error: 'Unauthorized' });
     return;
   }
   if (!process.env.ANTHROPIC_API_KEY) {

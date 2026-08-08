@@ -28,6 +28,12 @@ create table if not exists public.games (
   cover_small      text,
   cover_standard   text,
   cover_tile       text,
+  genre            text,                              -- IGDB primary genre
+  release_year     int,                               -- IGDB first release year
+  length_minutes   int,                               -- IGDB time-to-beat (normally), minutes
+  igdb_id          bigint,                            -- matched IGDB game id
+  cover_igdb       text,                              -- IGDB cover image_id ('' when no match)
+  enriched_at      timestamptz,                       -- when IGDB enrichment last ran
   achievements_url text,
   first_seen       timestamptz default now(),         -- when the sync first saw this game
   last_synced      timestamptz default now(),
@@ -37,6 +43,16 @@ create table if not exists public.games (
 create index if not exists games_environment_idx on public.games (environment);
 create index if not exists games_last_played_idx  on public.games (last_played desc nulls last);
 create index if not exists games_percent_idx      on public.games (percent desc);
+
+-- IGDB enrichment columns (added post-launch; written by the "GameDeck | IGDB
+-- Enrichment" workflow, read by the app). Idempotent so running this whole file
+-- against the live DB is a safe no-op.
+alter table public.games add column if not exists genre          text;
+alter table public.games add column if not exists release_year   int;
+alter table public.games add column if not exists length_minutes int;
+alter table public.games add column if not exists igdb_id        bigint;
+alter table public.games add column if not exists cover_igdb     text;
+alter table public.games add column if not exists enriched_at    timestamptz;
 
 -- ----------------------------------------------------------------------------
 -- 2. play_events : append-only play history.
