@@ -3,10 +3,10 @@ import ChatMessage from './ChatMessage.jsx'
 import { getAppKey, promptForKey } from '../lib/appAuth.js'
 
 const SUGGESTIONS = [
-  'What should I play next?',
-  'A new game to start from my backlog',
-  'Something short to finish',
-  'A hidden gem I own',
+  'New releases for my taste',
+  'Hidden gems not in my library',
+  'New on Game Pass for me',
+  'Upcoming games to watch',
 ]
 
 const STORAGE_KEY = 'gamedeck_chats_v1'
@@ -250,7 +250,7 @@ export default function DiscoverTab() {
           {!hasStarted && (
             <>
               <div className="chat-intro">
-                <p className="page-subtitle">Ask what to play next, from the games you own or new releases.</p>
+                <p className="page-subtitle">Find your next game: new releases and hidden gems, picked from your taste.</p>
               </div>
               <div className="chat-suggestions">
                 {SUGGESTIONS.map((s) => (
@@ -288,7 +288,7 @@ export default function DiscoverTab() {
             <textarea
               className="chat-input"
               rows={1}
-              placeholder="Ask about your library…"
+              placeholder="Ask for your next game…"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
