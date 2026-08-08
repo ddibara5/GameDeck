@@ -21,7 +21,7 @@ Exophase API ──6h──> n8n Cloud ──> FlareSolverr (Oracle VM)  [Cloudf
                          ▲
    IGDB API ──6h──> n8n Cloud   (genre, release year, story length, cover)
                          │
-       ┌─────────────────┴─────────────────┐
+       ┌────────────────┴─────────────────┐
        ▼                                    ▼
  React PWA on Vercel ── /api/chat ──> Serverless fn ──> Claude (Haiku + web search)
  (reads via publishable key)          (secret key stays server-side)
@@ -44,4 +44,4 @@ Everything runs in the cloud with no local dependency.
 - `n8n/` - exported workflow definitions (Exophase sync, IGDB enrichment)
 - `supabase/` - database schema
 - `deploy/` - legacy local Docker stack (superseded by n8n Cloud + the Oracle VM)
-- `GAMEDECK-CLOUD-HANDOFF.md` - full architecture, resource IDs, and operations reference
+- `GAMEDECK-CLOUD-HANDOFF.md` - full architecture, resource IDs, operations, and how to edit this repo from an agent (GitHub write bridge)
