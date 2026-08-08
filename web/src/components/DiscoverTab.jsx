@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import ChatMessage from './ChatMessage.jsx'
+import { getAppKey, promptForKey } from '../lib/appAuth.js'
 
 const SUGGESTIONS = [
   'What should I play next?',
@@ -95,11 +96,24 @@ export default function DiscoverTab() {
     setCurrentId(id)
 
     try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: nextMessages }),
-      })
+      const postChat = () => {
+        const key = getAppKey()
+        return fetch('/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(key ? { 'x-gamedeck-key': key } : {}),
+          },
+          body: JSON.stringify({ messages: nextMessages }),
+        })
+      }
+
+      let res = await postChat()
+      // If the server has a shared secret set, ask for it once and retry.
+      if (res.status === 401) {
+        const entered = promptForKey()
+        if (entered) res = await postChat()
+      }
 
       if (!res.ok) {
         throw new Error(`Request failed (${res.status})`)
