@@ -116,3 +116,5 @@ gamedeck/
     ├── api/chat.js                   <- serverless Claude function
     └── src/...                        <- app source
 ```
+
+<!-- deploy: connected to Vercel Git integration; pushes to main auto-deploy. -->
