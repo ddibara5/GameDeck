@@ -137,16 +137,17 @@ Anthropic's first-party Claude GitHub connector is **read-only for writes**: it 
 {
   "message": "your commit message",
   "files": [
-    { "path": "web/api/chat.js", "content": "<base64 of the file>" }
+    { "path": "web/api/chat.js", "content": "<base64 of the file>" },
+    { "path": "docs/large-file.md", "url": "https://paste.rs/xxxxx" }
   ]
 }
 ```
-Then read the execution: the `Create commit` node returns the commit URL and `Update main ref` returns the new `main` sha.
+Each file entry takes **either** inline base64 `content` **or** a `url` the bridge fetches and base64-encodes itself; the two can be mixed in one commit. Then read the execution: the `Create commit` node returns the commit URL and `Update main ref` returns the new `main` sha.
 
 **Design notes / limits:**
 - `content` must be **base64**. The commit is atomic (all files in one commit) and **fast-forward only** (its parent is main's current head, so it never force-overwrites; if `main` moved mid-run it fails safe instead of clobbering).
 - It can **add or update** files, not delete them (deleting needs a tree entry with `sha: null`; add that mode if ever needed).
-- For very large or many-file changes, hand the payload in as a fetched URL instead of inline base64 (same result).
+- **Inline or URL per file (implemented):** each file takes either base64 `content` or a `url`. When `url` is set (and `content` omitted), the `Parse input` Code node fetches the raw bytes and base64-encodes them itself (via `this.helpers.httpRequest`; note this instance's task runner exposes `this.helpers`, not `$helpers`), so large files skip fragile inline base64. Verify any commit by comparing each file's `Create blob` sha to `git hash-object` of the source.
 - **History:** commits land directly on `main` with no review gate. Fine for a solo repo; a bad change is one `git revert` away.
 
 **Why this shape (what was tried and rejected):** the first version committed each file separately via the Contents API and opened a PR. Firing the per-file commits concurrently raced on the branch head and returned 409 (once the first commit moved the ref, the rest conflicted). The Git Data API path (one tree, one commit) is atomic and has no such race, so it replaced it.
