@@ -58,6 +58,7 @@ Web UI: sign in at n8n Cloud; both data workflows are editable/runnable from a p
 
 ### Frontend (app)
 - **GitHub repo:** `github.com/ddibara5/GameDeck` (Vercel root dir = `web/`)
+- **Live URL:** `https://gamedeck-kappa.vercel.app/` - the deployed PWA (installable on mobile via Add to Home Screen). This is the production site Vercel serves from `main`.
 - **Vercel:** builds the Vite React PWA + serverless `/api/chat` (Claude recommender with web search). Auto-deploys on push to `main`.
 - Reads Supabase with the publishable key.
 - **Optional API guard:** env var `GAMEDECK_APP_SECRET` gates `/api/chat` (see section 9). Fail-open: unset = endpoint open, so it is off until you opt in.
