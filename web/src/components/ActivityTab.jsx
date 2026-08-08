@@ -72,14 +72,16 @@ export default function ActivityTab() {
 
   // The real completion signal is a new sync_runs row with games_seen filled in
   // (only the sync's final "Log Sync Run" step writes that; lock rows leave it null).
-  async function latestCompletedId() {
+  // games_changed tells us whether the run actually found new play activity.
+  async function latestCompleted() {
     const { data } = await supabase
       .from('sync_runs')
-      .select('id')
+      .select('id, games_changed')
       .not('games_seen', 'is', null)
       .order('id', { ascending: false })
       .limit(1)
-    return data && data[0] ? Number(data[0].id) : 0
+    if (!data || !data[0]) return { id: 0, gamesChanged: 0 }
+    return { id: Number(data[0].id), gamesChanged: Number(data[0].games_changed) || 0 }
   }
 
   function startPolling(baselineId) {
@@ -87,14 +89,19 @@ export default function ActivityTab() {
     const startedAt = Date.now()
     pollRef.current = setInterval(async () => {
       if (!mountedRef.current) return
-      const latest = await latestCompletedId()
-      if (latest > baselineId) {
+      const latest = await latestCompleted()
+      if (latest.id > baselineId) {
         clearInterval(pollRef.current)
         pollRef.current = null
         await loadEvents()
         if (mountedRef.current) {
           setSyncing(false)
-          setSyncNote('Updated just now.')
+          const n = latest.gamesChanged
+          setSyncNote(
+            n > 0
+              ? `Updated. ${n} game${n === 1 ? '' : 's'} with new activity.`
+              : "You're all caught up. No new activity since the last sync.",
+          )
         }
         return
       }
@@ -114,7 +121,7 @@ export default function ActivityTab() {
     setSyncing(true)
     setSyncNote('Refreshing your library, this takes a few minutes.')
 
-    const baselineId = await latestCompletedId()
+    const baselineId = (await latestCompleted()).id
 
     let res
     try {
