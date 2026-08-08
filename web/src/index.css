@@ -383,7 +383,7 @@ textarea {
   display: block;
 }
 
-.Ëover-sm {
+.cover-sm {
   width: 52px;
   height: 52px;
   font-size: 20px;
@@ -538,6 +538,23 @@ textarea {
 .sheet-drag-zone {
   touch-action: none;
   cursor: grab;
+}
+
+.modal-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
 }
 
 .detail-title {
