@@ -10,6 +10,7 @@ const SUGGESTIONS = [
 ]
 
 const STORAGE_KEY = 'gamedeck_chats_v1'
+const ACTIVE_KEY = 'gamedeck_active_chat_v1'
 const MAX_CHATS = 40
 
 // --- local chat history (no API cost: titles are derived client-side) -------
@@ -29,6 +30,25 @@ function persistChats(chats) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(chats.slice(0, MAX_CHATS)))
   } catch {
     /* storage unavailable (private mode) - history just won't persist */
+  }
+}
+
+// Which chat is "open". Session-scoped so it survives tab navigation and reloads
+// but clears when the app/tab is closed; starting a new chat clears it too.
+function loadActiveId() {
+  try {
+    return sessionStorage.getItem(ACTIVE_KEY) || null
+  } catch {
+    return null
+  }
+}
+
+function persistActiveId(id) {
+  try {
+    if (id) sessionStorage.setItem(ACTIVE_KEY, id)
+    else sessionStorage.removeItem(ACTIVE_KEY)
+  } catch {
+    /* storage unavailable (private mode) - active chat just won't persist */
   }
 }
 
@@ -58,7 +78,17 @@ export default function DiscoverTab() {
   const scrollRef = useRef(null)
 
   useEffect(() => {
-    setChats(loadChats())
+    const saved = loadChats()
+    setChats(saved)
+    // Reopen the chat that was active before navigating away / reloading.
+    const activeId = loadActiveId()
+    if (activeId) {
+      const active = saved.find((c) => c.id === activeId)
+      if (active) {
+        setMessages(active.messages || [])
+        setCurrentId(activeId)
+      }
+    }
   }, [])
 
   useEffect(() => {
@@ -79,6 +109,7 @@ export default function DiscoverTab() {
       persistChats(next)
       return next
     })
+    persistActiveId(chatId)
     return chatId
   }
 
@@ -157,6 +188,7 @@ export default function DiscoverTab() {
     setSending(false)
     setCurrentId(null)
     setShowHistory(false)
+    persistActiveId(null)
   }
 
   function openChat(id) {
@@ -166,6 +198,7 @@ export default function DiscoverTab() {
     setCurrentId(id)
     setSending(false)
     setShowHistory(false)
+    persistActiveId(id)
   }
 
   function deleteChat(id, e) {
