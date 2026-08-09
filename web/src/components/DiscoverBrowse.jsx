@@ -40,9 +40,16 @@ const PLATFORMS = [
 
 const SORTS = [
   { key: 'popularity', label: 'Most popular' },
+  { key: 'anticipated', label: 'Most anticipated' },
   { key: 'rating', label: 'Highest rated' },
   { key: 'release', label: 'Newest' },
   { key: 'name', label: 'Name A-Z' },
+]
+
+const AVAILABILITY = [
+  { key: 'all', label: 'All' },
+  { key: 'released', label: 'Out now' },
+  { key: 'upcoming', label: 'Coming soon' },
 ]
 
 const RAILS = [
@@ -54,7 +61,7 @@ const RAILS = [
 
 const YEARS = ['all', 2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2016, 2014, 2011]
 const PAGE_SIZE = 30
-const DEFAULT_FILTERS = { genre: 'all', platform: 'all', year: 'all', sort: 'popularity' }
+const DEFAULT_FILTERS = { genre: 'all', platform: 'all', year: 'all', status: 'all', sort: 'popularity' }
 
 export default function DiscoverBrowse({ onAsk }) {
   const [query, setQuery] = useState('')
@@ -79,7 +86,11 @@ export default function DiscoverBrowse({ onAsk }) {
   const reqRef = useRef(0)
 
   const filtersActive =
-    filters.genre !== 'all' || filters.platform !== 'all' || filters.year !== 'all' || filters.sort !== 'popularity'
+    filters.genre !== 'all' ||
+    filters.platform !== 'all' ||
+    filters.year !== 'all' ||
+    filters.status !== 'all' ||
+    filters.sort !== 'popularity'
   const browseMode = Boolean(query.trim() || preset || filtersActive)
 
   // Load the user's library titles once (for the "In library" badge).
@@ -139,6 +150,7 @@ export default function DiscoverBrowse({ onAsk }) {
         genre: filters.genre,
         platform: filters.platform,
         year: filters.year,
+        status: filters.status,
         sort: filters.sort,
         page: nextPage,
         limit: PAGE_SIZE,
@@ -179,6 +191,18 @@ export default function DiscoverBrowse({ onAsk }) {
     setQuery('')
     setPreset(null)
     setFilters(DEFAULT_FILTERS)
+  }
+
+  // Availability drives the `status` param. Unreleased games have no rating
+  // counts, so default "Coming soon" to anticipation (hypes) sorting; restore
+  // popularity when leaving it, unless the user has since picked another sort.
+  function setAvailability(status) {
+    setFilters((f) => {
+      let sort = f.sort
+      if (status === 'upcoming' && sort === 'popularity') sort = 'anticipated'
+      else if (status !== 'upcoming' && sort === 'anticipated') sort = 'popularity'
+      return { ...f, status, sort }
+    })
   }
 
   function handleMoreLikeThis(game) {
@@ -364,6 +388,22 @@ export default function DiscoverBrowse({ onAsk }) {
                     type="button"
                     className={`filter-opt${filters.platform === o.key ? ' active' : ''}`}
                     onClick={() => setFilters((f) => ({ ...f, platform: o.key }))}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="filter-group">
+              <span className="filter-label">Availability</span>
+              <div className="filter-options">
+                {AVAILABILITY.map((o) => (
+                  <button
+                    key={o.key}
+                    type="button"
+                    className={`filter-opt${filters.status === o.key ? ' active' : ''}`}
+                    onClick={() => setAvailability(o.key)}
                   >
                     {o.label}
                   </button>

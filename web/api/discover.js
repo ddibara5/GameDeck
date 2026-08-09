@@ -11,6 +11,7 @@
 //   /api/discover?q=elden           (search)
 //   /api/discover?preset=soulslike|fromsoft|rockstar|jrpg|metroidvania|arpg
 //   /api/discover?genre=role-playing-rpg&platform=xbox&year=2024&sort=rating&page=0
+//   add &status=released|upcoming to constrain by availability (release date vs now)
 //   add &debug=1 to see the generated IGDB query in the response
 
 const IGDB = 'https://api.igdb.com/v4';
@@ -74,6 +75,7 @@ const PLATFORMS = {
 
 const SORTS = {
   popularity: 'sort total_rating_count desc',
+  anticipated: 'sort hypes desc',
   rating: 'sort total_rating desc',
   release: 'sort first_release_date desc',
   name: 'sort name asc',
@@ -152,6 +154,13 @@ export default async function handler(req, res) {
           const end = Math.floor(Date.UTC(y + 1, 0, 1) / 1000);
           where.push(`first_release_date >= ${start}`, `first_release_date < ${end}`);
         }
+      }
+      // Availability: released games have a past date; upcoming ones a future date.
+      // (Null-dated games are excluded by either comparison, which is what we want.)
+      if (q.status === 'released') {
+        where.push(`first_release_date <= ${nowTs}`);
+      } else if (q.status === 'upcoming') {
+        where.push(`first_release_date > ${nowTs}`);
       }
     }
 
