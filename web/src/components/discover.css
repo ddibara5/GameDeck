@@ -199,7 +199,7 @@
 .in-library-dot {
   position: absolute;
   top: 6px;
-  right: 6px;
+  left: 6px;
   width: 12px;
   height: 12px;
   border-radius: 50%;
@@ -328,4 +328,68 @@
   display: flex;
   gap: 10px;
   margin-top: 18px;
+}
+
+/* ---------- Wishlist ---------- */
+
+/* Faint tint so the "Your wishlist" rail reads as pinned/special. */
+.wishlist-rail {
+  background: rgba(200, 169, 126, 0.05);
+}
+
+/* Overlay heart, always a sibling of the card button (never nested). */
+.shelf-card-wrap,
+.discover-card-wrap {
+  position: relative;
+}
+
+.wish-heart {
+  position: absolute;
+  border: none;
+  border-radius: 50%;
+  background: rgba(20, 18, 16, 0.6);
+  color: #efe7db;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  z-index: 2;
+}
+
+.wish-heart.on {
+  color: var(--accent);
+}
+
+/* Poster (wishlist rail): top-right corner of the cover. */
+.shelf-card-wrap .wish-heart {
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+}
+
+/* Browse list card: trailing, vertically centered, clear of the title. */
+.discover-card-wrap .wish-heart {
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+}
+
+/* Compact wishlist toggle in the detail sheet action row. */
+.discover-action.wish-action {
+  flex: 0 0 auto;
+  width: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.discover-action.wish-action.on {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(200, 169, 126, 0.14);
 }

@@ -3,7 +3,9 @@ import DiscoverCard from './DiscoverCard.jsx'
 import DiscoverDetail from './DiscoverDetail.jsx'
 import Cover from './Cover.jsx'
 import Skeleton from './Skeleton.jsx'
+import WishHeart from './WishHeart.jsx'
 import { fetchDiscover, loadLibraryTitles, normTitle } from '../lib/discover.js'
+import { useWishlist } from '../lib/wishlist.js'
 
 // Quick-access chips tuned to Dave's genre play history (no developer filters).
 // Each chip resolves to either an IGDB keyword/genre preset (server `preset=`)
@@ -106,6 +108,12 @@ export default function DiscoverBrowse({ onAsk }) {
     if (!libTitles) return () => false
     return (name) => libTitles.has(normTitle(name))
   }, [libTitles])
+
+  const { items: wishItems, ids: wishIds } = useWishlist()
+  const wishGames = useMemo(
+    () => wishItems.map((r) => ({ id: r.igdb_id, name: r.title, cover: r.cover, year: r.year })),
+    [wishItems]
+  )
 
   // Discovery rails (only needed when not actively browsing).
   useEffect(() => {
@@ -309,7 +317,7 @@ export default function DiscoverBrowse({ onAsk }) {
             <>
               <div className="game-list">
                 {visibleResults.map((g) => (
-                  <DiscoverCard key={g.id} game={g} inLibrary={isOwned(g.name)} onSelect={setSelected} />
+                  <DiscoverCard key={g.id} game={g} inLibrary={isOwned(g.name)} wishActive={wishIds.has(g.id)} onSelect={setSelected} />
                 ))}
               </div>
               {hasMore ? (
@@ -330,7 +338,29 @@ export default function DiscoverBrowse({ onAsk }) {
       ) : railsLoading ? (
         <Skeleton count={4} />
       ) : (
-        RAILS.map((r) => {
+        <>
+          {wishGames.length ? (
+            <section className="shelf wishlist-rail">
+              <div className="shelf-head">
+                <span className="shelf-title">Your wishlist</span>
+              </div>
+              <div className="shelf-row">
+                {wishGames.map((g) => (
+                  <div className="shelf-card-wrap" key={g.id}>
+                    <button type="button" className="shelf-card" onClick={() => setSelected(g)}>
+                      <div className="shelf-poster">
+                        <Cover src={g.cover} title={g.name} size="lg" />
+                      </div>
+                      <div className="shelf-card-title">{g.name}</div>
+                      <div className="shelf-card-meta">{g.year || ''}</div>
+                    </button>
+                    <WishHeart game={g} active />
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+          {RAILS.map((r) => {
           const items = hideFromLibrary(rails[r.key])
           return items.length ? (
             <section className="shelf" key={r.key}>
@@ -339,22 +369,26 @@ export default function DiscoverBrowse({ onAsk }) {
               </div>
               <div className="shelf-row">
                 {items.map((g) => (
-                  <button type="button" className="shelf-card" key={g.id} onClick={() => setSelected(g)}>
-                    <div className="shelf-poster">
-                      <Cover src={g.cover} title={g.name} size="lg" />
-                      {isOwned(g.name) ? <span className="in-library-dot" title="In library" /> : null}
-                    </div>
-                    <div className="shelf-card-title">{g.name}</div>
-                    <div className="shelf-card-meta">
-                      {g.year || ''}
-                      {g.rating ? `${g.year ? ' · ' : ''}★ ${g.rating}` : ''}
-                    </div>
-                  </button>
+                  <div className="shelf-card-wrap" key={g.id}>
+                    <button type="button" className="shelf-card" onClick={() => setSelected(g)}>
+                      <div className="shelf-poster">
+                        <Cover src={g.cover} title={g.name} size="lg" />
+                        {isOwned(g.name) ? <span className="in-library-dot" title="In library" /> : null}
+                      </div>
+                      <div className="shelf-card-title">{g.name}</div>
+                      <div className="shelf-card-meta">
+                        {g.year || ''}
+                        {g.rating ? `${g.year ? ' · ' : ''}★ ${g.rating}` : ''}
+                      </div>
+                    </button>
+                    <WishHeart game={g} active={wishIds.has(g.id)} />
+                  </div>
                 ))}
               </div>
             </section>
           ) : null
-        })
+          })}
+        </>
       )}
 
       {showFilters ? (
