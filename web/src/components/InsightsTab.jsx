@@ -124,11 +124,12 @@ export default function InsightsTab() {
     )
   }
 
+  // Four headline collection stats (consolidated here from the Library tab).
   const kpis = [
+    { label: 'Total games', value: games.length.toLocaleString() },
+    { label: 'Finished', value: games.filter((g) => effectiveStatus(g, statusMap) === 'finished').length.toLocaleString() },
     { label: 'Total hours', value: h(stats.totalMin).toLocaleString() },
-    { label: 'Games played', value: stats.played.length },
-    { label: 'Finished', value: games.filter((g) => effectiveStatus(g, statusMap) === 'finished').length },
-    { label: 'Backlog', value: stats.backlog.length },
+    { label: 'Achievements', value: stats.achievements.toLocaleString() },
   ]
 
   const platformRows = [

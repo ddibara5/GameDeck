@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import GameCard from './GameCard.jsx'
 import GameDetail from './GameDetail.jsx'
-import StatsStrip from './StatsStrip.jsx'
 import Skeleton from './Skeleton.jsx'
 import HomeShelf from './HomeShelf.jsx'
 import { useStatusMap, effectiveStatus } from '../lib/userStatus.js'
@@ -30,7 +29,6 @@ const GAME_COLUMNS =
 
 export default function LibraryTab() {
   const [games, setGames] = useState([])
-  const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [search, setSearch] = useState('')
@@ -40,10 +38,6 @@ export default function LibraryTab() {
   const [selectedGame, setSelectedGame] = useState(null)
   const [visibleCount, setVisibleCount] = useState(12)
   const statusMap = useStatusMap()
-  const finishedCount = useMemo(
-    () => games.filter((g) => effectiveStatus(g, statusMap) === 'finished').length,
-    [games, statusMap]
-  )
 
   useEffect(() => {
     let cancelled = false
@@ -52,24 +46,17 @@ export default function LibraryTab() {
       setLoading(true)
       setError(null)
 
-      const [gamesRes, statsRes] = await Promise.all([
-        supabase
-          .from('games')
-          .select(GAME_COLUMNS)
-          .order('last_played', { ascending: false, nullsFirst: false }),
-        supabase.from('v_library_stats').select('*').single(),
-      ])
+      const { data, error: gamesErr } = await supabase
+        .from('games')
+        .select(GAME_COLUMNS)
+        .order('last_played', { ascending: false, nullsFirst: false })
 
       if (cancelled) return
 
-      if (gamesRes.error) {
-        setError(gamesRes.error.message)
+      if (gamesErr) {
+        setError(gamesErr.message)
       } else {
-        setGames(gamesRes.data || [])
-      }
-
-      if (!statsRes.error) {
-        setStats(statsRes.data)
+        setGames(data || [])
       }
 
       setLoading(false)
@@ -178,8 +165,6 @@ export default function LibraryTab() {
           </select>
         </div>
       </div>
-
-      <StatsStrip stats={stats} loading={loading} finishedCount={finishedCount} />
 
       {!loading && !error && search.trim() === '' && platformFilter === 'all' && statusFilter === 'all' ? (
         <HomeShelf games={games} onSelect={setSelectedGame} />
