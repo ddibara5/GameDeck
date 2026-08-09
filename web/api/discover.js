@@ -181,4 +181,14 @@ export default async function handler(req, res) {
     const body = parts.join(' ');
 
     if (q.debug) {
-      res.status(200).json({ query:+öG’Ò“°¢&WGW&ã°¢Ð ¢6öç7B&÷w2Òv—B–vF"‚vvÖW2rÂ&öG’“°¢&W2ç6WD†VFW"‚t66†RÔ6öçG&öÂrÂw2ÖÖ†vSÓ3Â7FÆR×v†–ÆR×&WfÆ–FFSÓƒr“°¢&W2ç7FGW2ƒ#’æ§6öâ‡²vÖW3¢&÷w2æÖ†æ÷&ÖÆ—¦R’Ò“°¢Ò6F6‚†W'"’°¢&W2ç7FGW2ƒS’æ§6öâ‡²W'&÷#¢tF—66÷fW"f–ÆVBrÂFWF–Ã¢7G&–ær‚†W'"bbW'"æÖW76vR’ÇÂW'"’Ò“°¢Ð§Ð 
+      res.status(200).json({ query: body });
+      return;
+    }
+
+    const rows = await igdb('games', body);
+    res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=1800');
+    res.status(200).json({ games: rows.map(normalize) });
+  } catch (err) {
+    res.status(500).json({ error: 'Discover failed', detail: String((err && err.message) || err) });
+  }
+}
