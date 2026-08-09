@@ -311,8 +311,8 @@ textarea {
   width: min(calc(100% - 24px), 616px);
   display: flex;
   gap: 2px;
-  padding: 8px;
-  border-radius: 28px;
+  padding: 4px;
+  border-radius: 999px;
   background: rgba(78, 56, 40, 0.55);
   border: 1px solid rgba(200, 169, 126, 0.22);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(230, 205, 170, 0.18);
@@ -331,7 +331,7 @@ textarea {
   gap: 3px;
   min-height: 56px;
   padding: 9px 4px;
-  border-radius: 22px;
+  border-radius: 999px;
   background: none;
   border: none;
   color: var(--muted);
@@ -356,12 +356,12 @@ textarea {
   color: var(--accent);
 }
 
-/* Larger pill highlight behind the active tab (inset rounded chip), pops in on select. */
+/* Full-height active capsule, nested concentric with the bar's rounded end. */
 .tabbar-btn.active::before {
   content: "";
   position: absolute;
-  inset: 2px 2px;
-  border-radius: 20px;
+  inset: 0;
+  border-radius: 999px;
   background: rgba(230, 205, 170, 0.2);
   z-index: 0;
   animation: tab-pill-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
