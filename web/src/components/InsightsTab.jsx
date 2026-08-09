@@ -360,10 +360,18 @@ export default function InsightsTab() {
         note={`You try almost everything (${pct(s.played)} played) but commit to few (${pct(s.past50)} past halfway).`}
       >
         <div className="ins-funnel">
-          <div className="ins-fbar" style={{ width: '100%' }}>Owned<span className="n">{n(s.total)}</span><span className="p">100%</span></div>
-          <div className="ins-fbar" style={{ width: `${Math.max(24, (s.played / Math.max(1, s.total)) * 100)}%` }}>Played<span className="n">{n(s.played)}</span><span className="p">{pct(s.played)}</span></div>
-          <div className="ins-fbar" style={{ width: `${Math.max(24, (s.progressed / Math.max(1, s.total)) * 100)}%` }}>Progressed<span className="n">{n(s.progressed)}</span><span className="p">{pct(s.progressed)}</span></div>
-          <div className="ins-fbar hot" style={{ width: `${Math.max(20, (s.past50 / Math.max(1, s.total)) * 100)}%` }}>Past 50%<span className="n">{n(s.past50)}</span><span className="p">{pct(s.past50)}</span></div>
+          {[
+            { label: 'Owned', value: s.total, w: 100, hot: false },
+            { label: 'Played', value: s.played, w: (s.played / Math.max(1, s.total)) * 100, hot: false },
+            { label: 'Progressed', value: s.progressed, w: (s.progressed / Math.max(1, s.total)) * 100, hot: false },
+            { label: 'Past 50%', value: s.past50, w: (s.past50 / Math.max(1, s.total)) * 100, hot: true },
+          ].map((f) => (
+            <div className="ins-frow" key={f.label}>
+              <span className="ins-flabel">{f.label} <b>{n(f.value)}</b></span>
+              <span className="ins-ftrack"><span className={`ins-ffill${f.hot ? ' hot' : ''}`} style={{ width: `${f.w}%` }} /></span>
+              <span className="ins-fpct">{Math.round(f.w)}%</span>
+            </div>
+          ))}
         </div>
       </ChartCard>
 
