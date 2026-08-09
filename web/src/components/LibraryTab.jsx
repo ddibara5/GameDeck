@@ -1,17 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import GameCard from './GameCard.jsx'
 import GameDetail from './GameDetail.jsx'
 import Skeleton from './Skeleton.jsx'
 import HomeShelf from './HomeShelf.jsx'
 import { useStatusMap, effectiveStatus } from '../lib/userStatus.js'
-import { triggerSync, isSyncLocked } from '../lib/sync.js'
-import './library.css'
-
-// Pull-to-refresh tuning.
-const PTR_THRESHOLD = 64 // px pulled before a release triggers a sync
-const PTR_MAX = 90 // px the indicator can travel
-const PTR_RESIST = 0.5 // finger-to-indicator movement ratio
 
 const PLATFORM_FILTERS = [
   { key: 'all', label: 'All' },
@@ -46,111 +39,34 @@ export default function LibraryTab() {
   const [visibleCount, setVisibleCount] = useState(12)
   const statusMap = useStatusMap()
 
-  // Pull-to-refresh state.
-  const [pull, setPull] = useState(0)
-  const [dragging, setDragging] = useState(false)
-  const [refreshing, setRefreshing] = useState(false)
-  const [ptrNote, setPtrNote] = useState('')
-  const refreshingRef = useRef(false)
+  useEffect(() => {
+    let cancelled = false
 
-  const loadGames = useCallback(async () => {
-    const { data, error: gamesErr } = await supabase
-      .from('games')
-      .select(GAME_COLUMNS)
-      .order('last_played', { ascending: false, nullsFirst: false })
-    if (gamesErr) setError(gamesErr.message)
-    else {
-      setGames(data || [])
+    async function load() {
+      setLoading(true)
       setError(null)
+
+      const { data, error: gamesErr } = await supabase
+        .from('games')
+        .select(GAME_COLUMNS)
+        .order('last_played', { ascending: false, nullsFirst: false })
+
+      if (cancelled) return
+
+      if (gamesErr) {
+        setError(gamesErr.message)
+      } else {
+        setGames(data || [])
+      }
+
+      setLoading(false)
+    }
+
+    load()
+    return () => {
+      cancelled = true
     }
   }, [])
-
-  useEffect(() => {
-    let alive = true
-    ;(async () => {
-      setLoading(true)
-      await loadGames()
-      if (alive) setLoading(false)
-    })()
-    return () => {
-      alive = false
-    }
-  }, [loadGames])
-
-  const runRefresh = useCallback(async () => {
-    if (refreshingRef.current) return
-    refreshingRef.current = true
-    setRefreshing(true)
-    if (isSyncLocked()) {
-      setPtrNote('A sync is already running.')
-    } else {
-      setPtrNote('Starting a sync')
-      const r = await triggerSync()
-      setPtrNote(r.message)
-    }
-    await loadGames() // reflect anything a prior sync already landed
-    setTimeout(() => {
-      refreshingRef.current = false
-      setRefreshing(false)
-      setPtrNote('')
-      setPull(0)
-    }, 1800)
-  }, [loadGames])
-
-  // Pull-to-refresh gesture: pull down from the top of the page to fire a sync.
-  useEffect(() => {
-    let startY = 0
-    let tracking = false
-
-    const atTop = () =>
-      (window.scrollY || document.documentElement.scrollTop || 0) <= 0
-
-    const onStart = (e) => {
-      if (refreshingRef.current || !atTop()) {
-        tracking = false
-        return
-      }
-      const t = e.touches && e.touches[0]
-      if (!t) return
-      startY = t.clientY
-      tracking = true
-    }
-    const onMove = (e) => {
-      if (!tracking || refreshingRef.current) return
-      const t = e.touches && e.touches[0]
-      if (!t) return
-      const dy = t.clientY - startY
-      if (dy > 0 && atTop()) {
-        if (e.cancelable) e.preventDefault() // suppress native overscroll/reload
-        setDragging(true)
-        setPull(Math.min(dy * PTR_RESIST, PTR_MAX))
-      } else {
-        tracking = false
-        setDragging(false)
-        setPull(0)
-      }
-    }
-    const onEnd = () => {
-      if (!tracking) return
-      tracking = false
-      setDragging(false)
-      setPull((p) => {
-        if (p >= PTR_THRESHOLD) runRefresh()
-        return p >= PTR_THRESHOLD ? p : 0
-      })
-    }
-
-    window.addEventListener('touchstart', onStart, { passive: true })
-    window.addEventListener('touchmove', onMove, { passive: false })
-    window.addEventListener('touchend', onEnd, { passive: true })
-    window.addEventListener('touchcancel', onEnd, { passive: true })
-    return () => {
-      window.removeEventListener('touchstart', onStart)
-      window.removeEventListener('touchmove', onMove)
-      window.removeEventListener('touchend', onEnd)
-      window.removeEventListener('touchcancel', onEnd)
-    }
-  }, [runRefresh])
 
   const visibleGames = useMemo(() => {
     let list = games
@@ -200,39 +116,8 @@ export default function LibraryTab() {
     setVisibleCount(12)
   }, [platformFilter, statusFilter, search, sortKey])
 
-  const ptrVisible = refreshing || pull > 4
-  const ptrArmed = pull >= PTR_THRESHOLD
-  const ptrY = refreshing ? 52 : Math.min(pull, PTR_MAX)
-
   return (
     <div>
-      <div
-        className="ptr"
-        style={{
-          transform: `translateX(-50%) translateY(${ptrVisible ? ptrY : 0}px)`,
-          opacity: ptrVisible ? 1 : 0,
-          transition: dragging ? 'none' : 'opacity 0.18s ease, transform 0.2s ease',
-        }}
-        aria-hidden={!ptrVisible}
-      >
-        <svg
-          className={`ptr-icon${refreshing ? ' spin' : ''}`}
-          style={refreshing ? undefined : { transform: `rotate(${Math.min(pull / PTR_THRESHOLD, 1) * 360}deg)` }}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M21 12a9 9 0 1 1-2.6-6.4" />
-          <path d="M21 3v6h-6" />
-        </svg>
-        <span className="ptr-text">
-          {refreshing ? ptrNote || 'Syncing…' : ptrArmed ? 'Release to sync' : 'Pull to sync'}
-        </span>
-      </div>
-
       <div className="library-sticky">
         <input
           type="search"
