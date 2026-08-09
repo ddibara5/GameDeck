@@ -28,9 +28,11 @@
   position: sticky;
   top: 0;
   z-index: 40;
+  box-sizing: border-box;
+  height: calc(var(--app-header-h) + var(--safe-top));
   display: flex;
   align-items: center;
-  padding: calc(8px + var(--safe-top)) 16px 8px;
+  padding: var(--safe-top) 16px 0;
   background: var(--bg);
   border-bottom: 1px solid var(--line);
 }
