@@ -27,41 +27,57 @@
 .ins-funnel {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 9px;
 }
 
-.ins-fbar {
-  position: relative;
-  height: 34px;
-  /* Wide enough that the narrowest segment still fits "Label  count  pct". */
-  min-width: 156px;
-  border-radius: 8px;
-  background: linear-gradient(90deg, var(--walnut), var(--walnut-light));
-  display: flex;
+/* Label / proportional track / percent. Text sits over the card (theme-safe
+   --text/--muted tokens) so only the fill is a colored, to-scale bar. */
+.ins-frow {
+  display: grid;
+  grid-template-columns: 118px 1fr 40px;
   align-items: center;
-  padding: 0 12px;
-  color: #fdf9f2;
-  font-size: 12.5px;
-  font-weight: 600;
+  gap: 10px;
+}
+
+.ins-flabel {
+  font-size: 13px;
+  color: var(--text);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ins-flabel b {
+  font-weight: 700;
+  margin-left: 5px;
+}
+
+.ins-ftrack {
+  display: block;
+  height: 24px;
+  border-radius: 7px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.ins-ffill {
+  display: block;
+  height: 100%;
+  min-width: 3px;
+  border-radius: 7px;
+  background: linear-gradient(90deg, var(--walnut), var(--walnut-light));
   transition: width 0.5s ease;
 }
 
-.ins-fbar .n {
-  margin-left: 6px;
-  font-weight: 700;
-}
-
-.ins-fbar .p {
-  margin-left: auto;
-  padding-left: 10px;
-  opacity: 0.82;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-}
-
-.ins-fbar.hot {
+.ins-ffill.hot {
   background: linear-gradient(90deg, var(--amber), var(--walnut));
+}
+
+.ins-fpct {
+  font-size: 12.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 /* Records / hall of fame */
