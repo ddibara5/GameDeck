@@ -1,7 +1,11 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
+import { initTheme } from './lib/theme.js'
 import './index.css'
+
+// Apply the saved theme (and keep 'system' synced to the OS) before first paint.
+initTheme()
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

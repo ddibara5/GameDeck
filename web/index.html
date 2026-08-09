@@ -6,31 +6,33 @@
     <title>GameDeck</title>
     <meta name="description" content="Your personal video-game library, activity, and AI game picks." />
 
+    <!-- Apply the saved theme before first paint to avoid a flash of the wrong mode. -->
+    <script>
+      (function () {
+        try {
+          var v = localStorage.getItem('gamedeck_theme_v1')
+          var t =
+            v === 'light' || v === 'dark'
+              ? v
+              : v === 'system'
+                ? window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches
+                  ? 'light'
+                  : 'dark'
+                : 'dark'
+          document.documentElement.setAttribute('data-theme', t)
+        } catch (e) {}
+      })()
+    </script>
+
     <meta name="theme-color" content="#1a1917" />
-    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#1a1917" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#efe8dd" media="(prefers-color-scheme: light)" />
+    <meta name="color-scheme" content="dark light" />
 
     <!-- iOS PWA support -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="GameDeck" />
-
-    <!-- Home-screen icons: dark (default) + light-mode variants -->
-    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png" />
-    <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-167.png" />
-    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png" />
-    <link rel="apple-touch-icon" sizes="120x120" href="/icons/icon-120.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180-light.png" media="(prefers-color-scheme: light)" />
-    <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-167-light.png" media="(prefers-color-scheme: light)" />
-    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152-light.png" media="(prefers-color-scheme: light)" />
-    <link rel="apple-touch-icon" sizes="120x120" href="/icons/icon-120-light.png" media="(prefers-color-scheme: light)" />
-
-    <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png" />
-    <link rel="manifest" href="/manifest.webmanifest" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
-</html>
+    <meta name="apple-mobile-web-app-status-bar-style"(ÛÛ[H˜›XÚË]˜[œÛXÙ[ˆÏ‚ˆY]H˜[YOH˜\K[[Øš[K]ÙX‹X\]]HˆÛÛ[H‘Ø[YQXÚÈˆÏ‚‚ˆKKHÛYK\ØÜ™Y[ˆXÛÛœÎˆ\šÈ
+Y˜][
+H
+ÈYÚ[[ÙH˜\šX[ÈKO‚ˆ[šÈ™[H˜\K]ÝXÚZXÛÛˆˆÚ^™\ÏHŒNNˆ™YH‹ÚXÛÛœËÚXÛÛ‹LNœ™ÈˆÏ‚ˆ[šÈ™[H˜\K]ÝXÚZXÛÛˆˆÚ^™\ÏHŒMÞMÈˆ™YH‹ÚXÛÛœËÚXÛÛ‹LMËœ™ÈˆÏ‚ˆ[šÈ™[H˜\K]ÝXÚZXÛÛˆˆÚ^™\ÏHŒMLžMLˆˆ™YH‹ÚXÛÛœËÚXÛÛ‹LML‹œ™ÈˆÏ‚ˆ[šÈ™[H˜\K]ÝXÚZXÛÛˆˆÚ^™\ÏHŒLŒLŒˆ™YH‹ÚXÛÛœËÚXÛÛ‹LLŒœ™ÈˆÏ‚ˆ[šÈ™[H˜\K]ÝXÚZXÛÛˆˆÚ^™\ÏHŒNNˆ™YH‹ÚXÛÛœËÚXÛÛ‹LN[YÚœ™ÈˆYYXOHŠ™Y™\œËXÛÛÜ‹\ØÚ[YNˆYÚ
+HˆÏ‚ˆ[šÈ™[H˜\K]ÝXÚZXÛÛˆ‹6—¦W3Ò#cwƒcr"‡&VcÒ"ö–6öç2ö–6öâÓcrÖÆ–v‡Bçær"ÖVF–Ò"‡&VfW'2Ö6öÆ÷"×66†VÖS¢Æ–v‡B’"óà¢ÆÆ–æ²&VÃÒ&ÆR×F÷V6‚Ö–6öâ"6—¦W3Ò#S'ƒS""‡&VcÒ"ö–6öç2ö–6öâÓS"ÖÆ–v‡Bçær"ÖVF–Ò"‡&VfW'2Ö6öÆ÷"×66†VÖS¢Æ–v‡B’"óà¢ÆÆ–æ²&VÃÒ&ÆR×F÷V6‚Ö–6öâ"6—¦W3Ò##ƒ#"‡&VcÒ"ö–6öç2ö–6öâÓ#ÖÆ–v‡Bçær"ÖVF–Ò"‡&VfW'2Ö6öÆ÷"×66†VÖS¢Æ–v‡B’"óà ¢ÆÆ–æ²&VÃÒ&–6öâ"G—SÒ&–ÖvR÷7fr·†ÖÂ"‡&VcÒ"ö–6öç2ö–6öâç7fr"óà¢ÆÆ–æ²&VÃÒ&–6öâ"G—SÒ&–ÖvR÷ær"6—¦W3Ò#3'ƒ3""‡&VcÒ"ö–6öç2öff–6öâÓ3"çær"óà¢ÆÆ–æ²&VÃÒ&–6öâ"G—SÒ&–ÖvR÷ær"6—¦W3Ò#gƒb"‡&VcÒ"ö–6öç2öff–6öâÓbçær"óà¢ÆÆ–æ²&VÃÒ&Öæ–fW7B"‡&VcÒ"öÖæ–fW7BçvV&Öæ–fW7B"óà¢Âö†VCà¢Æ&öG“à¢ÆF—b–CÒ'&ö÷B#ãÂöF—cà¢Ç67&—BG—SÒ&ÖöGVÆR"7&3Ò"÷7&2öÖ–âæ§7‚#ãÂ÷67&—Cà¢Âö&öG“à£Âö‡FÖÃà 
