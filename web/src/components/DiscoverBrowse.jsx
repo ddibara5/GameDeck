@@ -5,14 +5,16 @@ import Cover from './Cover.jsx'
 import Skeleton from './Skeleton.jsx'
 import { fetchDiscover, loadLibraryTitles, normTitle } from '../lib/discover.js'
 
-// Genre favourites first, matching Dave's taste, then the useful IGDB genres.
-const PRESETS = [
-  { key: 'soulslike', label: 'Soulslike' },
-  { key: 'fromsoft', label: 'FromSoftware' },
-  { key: 'rockstar', label: 'Rockstar' },
-  { key: 'jrpg', label: 'JRPG' },
-  { key: 'metroidvania', label: 'Metroidvania' },
-  { key: 'arpg', label: 'Action RPG' },
+// Quick-access chips tuned to Dave's genre play history (no developer filters).
+// Each chip resolves to either an IGDB keyword/genre preset (server `preset=`)
+// or a plain genre slug (server `genre=`); the API supports both natively.
+const CHIPS = [
+  { key: 'soulslike', label: 'Soulslike', preset: 'soulslike' },
+  { key: 'jrpg', label: 'JRPG', preset: 'jrpg' },
+  { key: 'metroidvania', label: 'Metroidvania', preset: 'metroidvania' },
+  { key: 'arpg', label: 'Action RPG', preset: 'arpg' },
+  { key: 'shooter', label: 'Shooter', genre: 'shooter' },
+  { key: 'adventure', label: 'Adventure', genre: 'adventure' },
 ]
 
 const GENRES = [
@@ -156,9 +158,23 @@ export default function DiscoverBrowse({ onAsk }) {
     }
   }
 
-  function togglePreset(key) {
-    setPreset((cur) => (cur === key ? null : key))
+  // A chip is either a preset (keyword/company/genre-id bundle) or a plain
+  // genre slug. Selecting one clears the other so only a single chip is active.
+  const isChipActive = (chip) =>
+    chip.genre ? !preset && filters.genre === chip.genre : preset === chip.key
+
+  function toggleChip(chip) {
     setQuery('')
+    if (chip.genre) {
+      setPreset(null)
+      setFilters((f) => ({
+        ...DEFAULT_FILTERS,
+        genre: !preset && f.genre === chip.genre ? 'all' : chip.genre,
+      }))
+    } else {
+      setFilters(DEFAULT_FILTERS)
+      setPreset((cur) => (cur === chip.key ? null : chip.key))
+    }
   }
 
   function resetAll() {
@@ -228,14 +244,14 @@ export default function DiscoverBrowse({ onAsk }) {
       </div>
 
       <div className="preset-row">
-        {PRESETS.map((p) => (
+        {CHIPS.map((chip) => (
           <button
-            key={p.key}
+            key={chip.key}
             type="button"
-            className={`preset-chip${preset === p.key ? ' active' : ''}`}
-            onClick={() => togglePreset(p.key)}
+            className={`preset-chip${isChipActive(chip) ? ' active' : ''}`}
+            onClick={() => toggleChip(chip)}
           >
-            {p.label}
+            {chip.label}
           </button>
         ))}
       </div>
