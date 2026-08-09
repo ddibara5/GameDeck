@@ -4,8 +4,7 @@ import { getAppKey, setAppKey, promptForKey } from '../lib/appAuth.js'
 
 const REPO = 'ddibara5/GameDeck'
 const SOURCE_URL = 'https://github.com/ddibara5/GameDeck'
-// Set this to your public Exophase profile URL.
-const EXOPHASE_PROFILE_URL = 'https://www.exophase.com/'
+const EXOPHASE_PROFILE_URL = 'https://www.exophase.com/user/Davizzle93/'
 
 const CHATS_KEY = 'gamedeck_chats_v1'
 const ACTIVE_CHAT_KEY = 'gamedeck_active_chat_v1'
@@ -76,7 +75,6 @@ function MenuItem({ glyph, label, sub, value, valueAccent, href, onClick, disabl
 }
 
 export default function Menu({ open, onClose }) {
-  const [summary, setSummary] = useState(null)
   const [lastSync, setLastSync] = useState(null)
   const [exoActivity, setExoActivity] = useState(null)
   const [version, setVersion] = useState(null)
@@ -110,20 +108,11 @@ export default function Menu({ open, onClose }) {
     setKeySet(Boolean(getAppKey()))
 
     ;(async () => {
-      const [statsRes, syncRes, actRes] = await Promise.all([
-        supabase.from('v_library_stats').select('*').single(),
+      const [syncRes, actRes] = await Promise.all([
         supabase.from('sync_runs').select('ran_at').not('games_seen', 'is', null).order('id', { ascending: false }).limit(1),
         supabase.from('games').select('last_played').not('last_played', 'is', null).order('last_played', { ascending: false }).limit(1),
       ])
       if (cancelled) return
-      if (statsRes.data) {
-        const s = statsRes.data
-        setSummary({
-          games: s.total_games ?? 0,
-          hours: Math.round((s.total_minutes ?? 0) / 60),
-          ach: s.total_achievements ?? 0,
-        })
-      }
       if (syncRes.data && syncRes.data[0]) setLastSync(syncRes.data[0].ran_at)
       if (actRes.data && actRes.data[0]) setExoActivity(actRes.data[0].last_played)
 
@@ -219,15 +208,6 @@ export default function Menu({ open, onClose }) {
               <polygon points="256,113 374,172 256,231 138,172" fill="#f5a623" />
             </svg>
             <span className="brand-word">Game<b>Deck</b></span>
-          </div>
-          <div className="drawer-summary">
-            {summary ? (
-              <>
-                <b>{summary.games.toLocaleString()}</b> games, <b>{summary.hours.toLocaleString()}</b> hours, <b>{summary.ach.toLocaleString()}</b> achievements
-              </>
-            ) : (
-              'Loading your library'
-            )}
           </div>
         </div>
 

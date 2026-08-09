@@ -6,39 +6,10 @@ import { formatRelativeDay, minutesToHhm, platformMeta } from '../lib/format.js'
 
 const RECENT_LIMIT = 60
 
-// After a manual refresh, disable the button for a few minutes so the 1-vCPU
-// FlareSolverr box is never asked to run two syncs at once. Session-scoped so it
-// survives tab navigation but resets when the app is closed.
-const LOCK_KEY = 'gamedeck_sync_lock_v1'
-const LOCK_MS = 6 * 60 * 1000
-const POLL_MS = 15000
-const POLL_TIMEOUT_MS = 8 * 60 * 1000
-
-function loadLockUntil() {
-  try {
-    return Number(sessionStorage.getItem(LOCK_KEY)) || 0
-  } catch {
-    return 0
-  }
-}
-
-function persistLockUntil(ts) {
-  try {
-    if (ts) sessionStorage.setItem(LOCK_KEY, String(ts))
-    else sessionStorage.removeItem(LOCK_KEY)
-  } catch {
-    /* storage unavailable - lockout just won't persist across navigation */
-  }
-}
-
 export default function ActivityTab() {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [syncing, setSyncing] = useState(false)
-  const [syncNote, setSyncNote] = useState('')
-  const [lockUntil, setLockUntil] = useState(loadLockUntil())
-  const pollRef = useRef(null)
   const mountedRef = useRef(true)
 
   async function loadEvents() {
@@ -65,87 +36,9 @@ export default function ActivityTab() {
     })()
     return () => {
       mountedRef.current = false
-      if (pollRef.current) clearInterval(pollRef.current)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  // The real completion signal is a new sync_runs row with games_seen filled in
-  // (only the sync's final "Log Sync Run" step writes that; lock rows leave it null).
-  // games_changed tells us whether the run actually found new play activity.
-  async function latestCompleted() {
-    const { data } = await supabase
-      .from('sync_runs')
-      .select('id, games_changed')
-      .not('games_seen', 'is', null)
-      .order('id', { ascending: false })
-      .limit(1)
-    if (!data || !data[0]) return { id: 0, gamesChanged: 0 }
-    return { id: Number(data[0].id), gamesChanged: Number(data[0].games_changed) || 0 }
-  }
-
-  function startPolling(baselineId) {
-    if (pollRef.current) clearInterval(pollRef.current)
-    const startedAt = Date.now()
-    pollRef.current = setInterval(async () => {
-      if (!mountedRef.current) return
-      const latest = await latestCompleted()
-      if (latest.id > baselineId) {
-        clearInterval(pollRef.current)
-        pollRef.current = null
-        await loadEvents()
-        if (mountedRef.current) {
-          setSyncing(false)
-          const n = latest.gamesChanged
-          setSyncNote(
-            n > 0
-              ? `Updated. ${n} game${n === 1 ? '' : 's'} with new activity.`
-              : "You're all caught up. No new activity since the last sync.",
-          )
-        }
-        return
-      }
-      if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
-        clearInterval(pollRef.current)
-        pollRef.current = null
-        if (mountedRef.current) {
-          setSyncing(false)
-          setSyncNote('Still running in the background, pull down to refresh in a bit.')
-        }
-      }
-    }, POLL_MS)
-  }
-
-  async function triggerRefresh() {
-    if (syncing || Date.now() < lockUntil) return
-    setSyncing(true)
-    setSyncNote('Refreshing your library, this takes a few minutes.')
-
-    const baselineId = (await latestCompleted()).id
-
-    let res
-    try {
-      res = await fetch('/api/sync', { method: 'POST' })
-    } catch {
-      setSyncing(false)
-      setSyncNote('Could not reach the sync service. Please try again.')
-      return
-    }
-
-    if (res.status === 202 || res.status === 409) {
-      // Started, or one was already running: either way, watch for completion.
-      const until = Date.now() + LOCK_MS
-      setLockUntil(until)
-      persistLockUntil(until)
-      if (res.status === 409) setSyncNote('A sync is already running, watching for it to finish.')
-      startPolling(baselineId)
-      return
-    }
-
-    setSyncing(false)
-    if (res.status === 503) setSyncNote('Refresh is not set up yet.')
-    else setSyncNote('Could not start a sync. Please try again.')
-  }
 
   const grouped = useMemo(() => {
     const groups = []
@@ -164,39 +57,11 @@ export default function ActivityTab() {
     return groups
   }, [events])
 
-  const locked = Date.now() < lockUntil
-  const buttonDisabled = syncing || locked
-
   return (
     <div>
       <div className="page-header">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <h1 className="page-title">Activity</h1>
-          <button
-            type="button"
-            className="chat-newchat-btn"
-            onClick={triggerRefresh}
-            disabled={buttonDisabled}
-            aria-label="Refresh library from Exophase"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              width="15"
-              height="15"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M21 12a9 9 0 1 1-2.64-6.36" />
-              <path d="M21 3v6h-6" />
-            </svg>
-            {syncing ? 'Syncing' : 'Refresh'}
-          </button>
-        </div>
+        <h1 className="page-title">Activity</h1>
         <p className="page-subtitle">Recent play sessions and achievement unlocks.</p>
-        {syncNote ? <p className="page-subtitle" style={{ marginTop: 4 }}>{syncNote}</p> : null}
       </div>
 
       {loading ? (
