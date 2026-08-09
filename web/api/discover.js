@@ -133,8 +133,9 @@ export default async function handler(req, res) {
     const offset = page * limit;
     const nowTs = Math.floor(Date.now() / 1000);
 
-    // Base: real, playable main games with art. category 0 = main game.
-    const where = ['category = 0', 'version_parent = null'];
+    // Base: games with art. (IGDB deprecated the old `category` enum, so we no
+    // longer filter on it; `cover != null` keeps results to real, art-having games.)
+    const where = ['cover != null'];
     let sort = SORTS[q.sort] || SORTS.popularity;
     let search = '';
 
