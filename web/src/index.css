@@ -372,10 +372,8 @@ textarea {
 
 /* ---------- Sticky search / filter header (Library) ---------- */
 
+/* Library search + filters scroll away with the list; only the app header stays fixed. */
 .library-sticky {
-  position: sticky;
-  top: calc(var(--app-header-h) + var(--safe-top));
-  z-index: 10;
   background: var(--bg);
   padding: 12px 16px 10px;
   border-bottom: 1px solid var(--line);
