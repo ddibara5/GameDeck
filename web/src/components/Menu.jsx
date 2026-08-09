@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { getAppKey, setAppKey, promptForKey } from '../lib/appAuth.js'
 import { getTheme, setTheme } from '../lib/theme.js'
+import { useWishlist } from '../lib/wishlist.js'
 
 const REPO = 'ddibara5/GameDeck'
 const SOURCE_URL = 'https://github.com/ddibara5/GameDeck'
@@ -53,6 +54,7 @@ const ICONS = {
   key: icon(<><circle cx="8" cy="15" r="4" /><path d="M11 12l8-8 2 2M18 6l2 2" /></>),
   info: icon(<><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></>),
   code: icon(<><path d="M8 9l-4 3 4 3M16 9l4 3-4 3" /></>),
+  heart: icon(<path d="M12 21s-7-4.5-9.5-8.5A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6.5C19 16.5 12 21 12 21z" />),
 }
 
 function MenuItem({ glyph, label, sub, value, valueAccent, href, onClick, disabled, chevron = true }) {
@@ -81,7 +83,8 @@ function MenuItem({ glyph, label, sub, value, valueAccent, href, onClick, disabl
   )
 }
 
-export default function Menu({ open, onClose }) {
+export default function Menu({ open, onClose, onOpenWishlist }) {
+  const { items: wishItems } = useWishlist()
   const [lastSync, setLastSync] = useState(null)
   const [exoActivity, setExoActivity] = useState(null)
   const [version, setVersion] = useState(null)
@@ -223,6 +226,22 @@ export default function Menu({ open, onClose }) {
             <span className="brand-word">Game<b>Deck</b></span>
           </div>
         </div>
+
+        <div className="menu-sec">
+          <div className="menu-sec-label">Library</div>
+          <MenuItem
+            glyph={ICONS.heart}
+            label="Wishlist"
+            value={String(wishItems.length)}
+            valueAccent
+            onClick={() => {
+              if (onOpenWishlist) onOpenWishlist()
+              onClose()
+            }}
+          />
+        </div>
+
+        <div className="menu-divider" />
 
         <div className="menu-sec">
           <div className="menu-sec-label">Data &amp; sync</div>

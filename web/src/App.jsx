@@ -6,6 +6,7 @@ import LibraryTab from './components/LibraryTab.jsx'
 import ActivityTab from './components/ActivityTab.jsx'
 import InsightsTab from './components/InsightsTab.jsx'
 import DiscoverTab from './components/DiscoverTab.jsx'
+import WishlistTab from './components/WishlistTab.jsx'
 
 const TABS = ['library', 'activity', 'insights', 'discover']
 
@@ -17,6 +18,8 @@ const CLOSE_DX = 60
 export default function App() {
   const [activeTab, setActiveTab] = useState('library')
   const [menuOpen, setMenuOpen] = useState(false)
+  // A drawer-opened overlay view (e.g. Wishlist) shown over the active tab.
+  const [view, setView] = useState(null)
 
   useEffect(() => {
     let startX = 0
@@ -68,13 +71,26 @@ export default function App() {
         <Brand onOpen={() => setMenuOpen(true)} />
       </header>
       <main className="app-main">
-        {activeTab === 'library' && <LibraryTab />}
-        {activeTab === 'activity' && <ActivityTab />}
-        {activeTab === 'insights' && <InsightsTab />}
-        {activeTab === 'discover' && <DiscoverTab />}
+        {view === 'wishlist' ? (
+          <WishlistTab onClose={() => setView(null)} />
+        ) : (
+          <>
+            {activeTab === 'library' && <LibraryTab />}
+            {activeTab === 'activity' && <ActivityTab />}
+            {activeTab === 'insights' && <InsightsTab />}
+            {activeTab === 'discover' && <DiscoverTab />}
+          </>
+        )}
       </main>
-      <TabBar active={activeTab} onChange={setActiveTab} tabs={TABS} />
-      <Menu open={menuOpen} onClose={() => setMenuOpen(false)} />
+      <TabBar
+        active={view ? null : activeTab}
+        onChange={(t) => {
+          setView(null)
+          setActiveTab(t)
+        }}
+        tabs={TABS}
+      />
+      <Menu open={menuOpen} onClose={() => setMenuOpen(false)} onOpenWishlist={() => setView('wishlist')} />
     </div>
   )
 }

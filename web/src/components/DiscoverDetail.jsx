@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import Cover from './Cover.jsx'
+import { useWishlist, toggleWishlist } from '../lib/wishlist.js'
 
 // Detail sheet for a Discover (IGDB) game. Reuses the Library modal-sheet shell
 // so the swipe-to-close behaviour and styling match. Adds two actions:
@@ -8,6 +9,7 @@ import Cover from './Cover.jsx'
 export default function DiscoverDetail({ game, inLibrary, onAsk, onMoreLikeThis, onClose }) {
   const drag = useRef({ startY: 0, active: false })
   const [dragY, setDragY] = useState(0)
+  const { ids: wishIds } = useWishlist()
 
   function onDragStart(e) {
     drag.current = { startY: e.touches[0].clientY, active: true }
@@ -43,6 +45,8 @@ export default function DiscoverDetail({ game, inLibrary, onAsk, onMoreLikeThis,
     if (e.target === e.currentTarget) onClose()
   }
 
+  const wishActive = wishIds.has(Number(game.id))
+
   const meta = []
   if (game.year) meta.push(String(game.year))
   if (game.rating) meta.push(`★ ${game.rating}`)
@@ -75,6 +79,17 @@ export default function DiscoverDetail({ game, inLibrary, onAsk, onMoreLikeThis,
         {inLibrary ? <span className="in-library-badge sheet">In your library</span> : null}
 
         <div className="discover-actions">
+          <button
+            type="button"
+            className={`discover-action wish-action${wishActive ? ' on' : ''}`}
+            aria-pressed={wishActive}
+            aria-label={wishActive ? 'Remove from wishlist' : 'Add to wishlist'}
+            onClick={() => toggleWishlist(game)}
+          >
+            <svg viewBox="0 0 24 24" width="17" height="17" fill={wishActive ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 21s-7-4.5-9.5-8.5A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6.5C19 16.5 12 21 12 21z" />
+            </svg>
+          </button>
           <button type="button" className="discover-action primary" onClick={() => onAsk(game)}>
             Ask AI about this
           </button>
