@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Brand from './components/Brand.jsx'
+import Menu from './components/Menu.jsx'
 import TabBar from './components/TabBar.jsx'
 import LibraryTab from './components/LibraryTab.jsx'
 import ActivityTab from './components/ActivityTab.jsx'
@@ -10,11 +11,12 @@ const TABS = ['library', 'activity', 'insights', 'discover']
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('library')
+  const [menuOpen, setMenuOpen] = useState(false)
 
   return (
     <div className="app">
       <header className="app-header">
-        <Brand />
+        <Brand onOpen={() => setMenuOpen(true)} />
       </header>
       <main className="app-main">
         {activeTab === 'library' && <LibraryTab />}
@@ -23,6 +25,7 @@ export default function App() {
         {activeTab === 'discover' && <DiscoverTab />}
       </main>
       <TabBar active={activeTab} onChange={setActiveTab} tabs={TABS} />
+      <Menu open={menuOpen} onClose={() => setMenuOpen(false)} />
     </div>
   )
 }
