@@ -50,30 +50,16 @@ async function igdb(endpoint, body) {
   return r.json();
 }
 
-// --- slug/name -> id resolution, cached per warm instance ---------------------
-const _ids = {};
-async function resolveKeyword(slug) {
-  const k = `kw:${slug}`;
-  if (k in _ids) return _ids[k];
-  const rows = await igdb('keywords', `fields id; where slug = "${slug}"; limit 1;`);
-  return (_ids[k] = rows[0] ? rows[0].id : null);
-}
-async function resolveCompany(name) {
-  const k = `co:${name}`;
-  if (k in _ids) return _ids[k];
-  const rows = await igdb('companies', `search "${name}"; fields id,name; limit 5;`);
-  const exact = rows.find((c) => c.name && c.name.toLowerCase() === name.toLowerCase());
-  return (_ids[k] = (exact || rows[0]) ? (exact || rows[0]).id : null);
-}
-
-// preset -> async () => extra where-clause fragment (or '')
+// preset -> extra where-clause fragment. IGDB keyword/company/genre ids confirmed
+// live: soulslike kw 17326, metroidvania kw 477, jrpg kw 521, RPG genre 12,
+// FromSoftware company 1012, Rockstar Games company 29.
 const PRESETS = {
-  soulslike: async () => { const id = await resolveKeyword('souls-like'); return id ? `keywords = (${id})` : ''; },
-  metroidvania: async () => { const id = await resolveKeyword('metroidvania'); return id ? `keywords = (${id})` : ''; },
-  jrpg: async () => { const id = await resolveKeyword('jrpg'); return id ? `keywords = (${id})` : ''; },
-  arpg: async () => { const id = await resolveKeyword('action-rpg'); return id ? `keywords = (${id})` : ''; },
-  fromsoft: async () => { const id = await resolveCompany('FromSoftware'); return id ? `involved_companies.company = (${id})` : ''; },
-  rockstar: async () => { const id = await resolveCompany('Rockstar Games'); return id ? `involved_companies.company = (${id})` : ''; },
+  soulslike: 'keywords = (17326)',
+  metroidvania: 'keywords = (477)',
+  jrpg: 'keywords = (521)',
+  arpg: 'genres = (12)',
+  fromsoft: 'involved_companies.company = (1012)',
+  rockstar: 'involved_companies.company = (29)',
 };
 
 // platform slug -> IGDB platform ids
@@ -128,18 +114,6 @@ export default async function handler(req, res) {
   }
   try {
     const q = req.query || {};
-
-    // Temporary diagnostic: discover real IGDB keyword/company ids for the presets.
-    if (q.probe) {
-      const terms = ['souls', 'metroidvania', 'jrpg', 'action rpg', 'roguelike'];
-      const keywords = {};
-      for (const t of terms) keywords[t] = await igdb('keywords', `fields id,name,slug; where name ~ *"${t}"*; limit 10;`);
-      const companies = {};
-      for (const c of ['FromSoftware', 'Rockstar']) companies[c] = await igdb('companies', `fields id,name; where name ~ *"${c}"*; limit 8;`);
-      res.status(200).json({ keywords, companies });
-      return;
-    }
-
     const page = Math.max(0, parseInt(q.page, 10) || 0);
     const limit = Math.min(40, parseInt(q.limit, 10) || 30);
     const offset = page * limit;
@@ -168,10 +142,7 @@ export default async function handler(req, res) {
       // browse / search / filter
       where.push('cover != null');
       if (q.q) search = `search "${String(q.q).replace(/"/g, '')}";`;
-      if (q.preset && PRESETS[q.preset]) {
-        const frag = await PRESETS[q.preset]();
-        if (frag) where.push(frag);
-      }
+      if (q.preset && PRESETS[q.preset]) where.push(PRESETS[q.preset]);
       if (q.genre) where.push(`genres.slug = "${String(q.genre).replace(/"/g, '')}"`);
       if (q.platform && PLATFORMS[q.platform]) where.push(`platforms = (${PLATFORMS[q.platform].join(',')})`);
       if (q.year) {
