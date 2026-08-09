@@ -73,6 +73,7 @@ export default function DiscoverBrowse({ onAsk }) {
 
   const [selected, setSelected] = useState(null)
   const [libTitles, setLibTitles] = useState(null)
+  const [hideOwned, setHideOwned] = useState(false)
 
   const debounceRef = useRef(null)
   const reqRef = useRef(0)
@@ -175,6 +176,9 @@ export default function DiscoverBrowse({ onAsk }) {
     setFilters({ ...DEFAULT_FILTERS, genre: slug || 'all', sort: 'rating' })
   }
 
+  const hideFromLibrary = (list) => (hideOwned && list ? list.filter((g) => !isOwned(g.name)) : list || [])
+  const visibleResults = hideFromLibrary(results)
+
   return (
     <div className="discover-browse">
       <div className="discover-searchbar">
@@ -214,11 +218,35 @@ export default function DiscoverBrowse({ onAsk }) {
         ))}
       </div>
 
+      <div className="browse-toggle-row">
+        <button
+          type="button"
+          className={`owned-toggle${hideOwned ? ' active' : ''}`}
+          onClick={() => setHideOwned((v) => !v)}
+          aria-pressed={hideOwned}
+        >
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            {hideOwned ? (
+              <>
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20C5 20 1 12 1 12a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M1 1l22 22" />
+                <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+              </>
+            ) : (
+              <>
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
+              </>
+            )}
+          </svg>
+          {hideOwned ? 'In-library hidden' : 'Hide in-library'}
+        </button>
+      </div>
+
       {browseMode ? (
         <>
           <div className="results-head">
             <span className="results-count">
-              {loading && results.length === 0 ? 'Searching…' : `${results.length}${hasMore ? '+' : ''} games`}
+              {loading && results.length === 0 ? 'Searching…' : `${visibleResults.length}${hasMore ? '+' : ''} games`}
             </span>
             <button type="button" className="results-clear" onClick={resetAll}>
               Clear
@@ -232,15 +260,19 @@ export default function DiscoverBrowse({ onAsk }) {
             </div>
           ) : loading && results.length === 0 ? (
             <Skeleton count={6} />
-          ) : results.length === 0 ? (
+          ) : visibleResults.length === 0 ? (
             <div className="empty-state">
               <div className="empty-state-title">No games found</div>
-              <div>Try a different search, preset, or filter.</div>
+              <div>
+                {hideOwned && results.length > 0
+                  ? 'Every match is already in your library. Turn off "In-library hidden" to see them.'
+                  : 'Try a different search, preset, or filter.'}
+              </div>
             </div>
           ) : (
             <>
               <div className="game-list">
-                {results.map((g) => (
+                {visibleResults.map((g) => (
                   <DiscoverCard key={g.id} game={g} inLibrary={isOwned(g.name)} onSelect={setSelected} />
                 ))}
               </div>
@@ -262,14 +294,15 @@ export default function DiscoverBrowse({ onAsk }) {
       ) : railsLoading ? (
         <Skeleton count={4} />
       ) : (
-        RAILS.map((r) =>
-          rails[r.key] && rails[r.key].length ? (
+        RAILS.map((r) => {
+          const items = hideFromLibrary(rails[r.key])
+          return items.length ? (
             <section className="shelf" key={r.key}>
               <div className="shelf-head">
                 <span className="shelf-title">{r.label}</span>
               </div>
               <div className="shelf-row">
-                {rails[r.key].map((g) => (
+                {items.map((g) => (
                   <button type="button" className="shelf-card" key={g.id} onClick={() => setSelected(g)}>
                     <div className="shelf-poster">
                       <Cover src={g.cover} title={g.name} size="lg" />
@@ -285,7 +318,7 @@ export default function DiscoverBrowse({ onAsk }) {
               </div>
             </section>
           ) : null
-        )
+        })
       )}
 
       {showFilters ? (
