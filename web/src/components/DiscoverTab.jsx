@@ -23,11 +23,35 @@ export default function DiscoverTab() {
     <div className="discover-page">
       <div className="discover-topbar">
         <h1 className="chat-topbar-title">Discover</h1>
-        <div className="seg discover-seg" role="tablist" aria-label="J\ØÛÝ™\ˆ[ÙH‚ˆ]Û‚ˆ\OH˜]Ûˆ‚ˆ›ÛOHXˆ‚ˆ\šXK\Ù[XÝY^ÜÝX•XˆOOH	Øœ›ÝÜÙIßBˆÛ\ÜÓ˜[YO^ØÙYËX‰ÜÝX•XˆOOH	Øœ›ÝÜÙIÈÈ	ÈXÝ]™IÈˆ	ÉßXBˆÛÛXÚÏ^Ê
-HOˆÙ]ÝX•XŠ	Øœ›ÝÜÙIÊ_Bˆ‚ˆœ›ÝÜÙBˆØ]Û‚ˆ]Û‚ˆ\OH˜]Ûˆ‚ˆ›ÛOHXˆ‚ˆ\šXK\Ù[XÝY^ÜÝX•XˆOOH	Ø\ÚÉßBˆÛ\ÜÓ˜[YO^ØÙYËX‰ÜÝX•XˆOOH	Ø\ÚÉÈÈ	ÈXÝ]™IÈˆ	ÉßXBˆÛÛXÚÏ^Ê
-HOˆÙ]ÝX•XŠ	Ø\ÚÉÊ_Bˆ‚ˆ\ÚÈRBˆØ]Û‚ˆÙ]‚ˆÙ]‚‚ˆËÊˆ›ÝÝ^H[Ý[YÛÈÚ]\ÝÜžHÈØÜ›ÛÝ\š]™HXˆ›\ÎÈÛ›HÛ™HÚÝÜËˆ
-‹ßBˆ]ˆÝ[O^ÞÈ\Ü^NˆÝX•XˆOOH	Øœ›ÝÜÙIÈÈ	Ø›ØÚÉÈˆ	Û›Û™IÈ_O‚ˆ\ØÛÝ™\œ›ÝÜÙHÛ\ÚÏ^Ø\ÚÐX›Ý]HÏ‚ˆÙ]‚ˆ]ˆÝ[O^ÞÈ\Ü^NˆÝX•XˆOOH	Ø\ÚÉÈÈ	Ø›ØÚÉÈˆ	Û›Û™IÈ_O‚ˆ\ØÛÝ™\\ÚÈÙYY›Û\^ÜÙYY›Û\HÛ”ÙYYÛÛœÝ[YY^Ê
-HOˆÙ]ÙYY›Û\
-[
-_HÏ‚ˆÙ]‚ˆÙ]‚ˆ
-BŸB
+        <div className="seg discover-seg" role="tablist" aria-label="Discover mode">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={subTab === 'browse'}
+            className={`seg-btn${subTab === 'browse' ? ' active' : ''}`}
+            onClick={() => setSubTab('browse')}
+          >
+            Browse
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={subTab === 'ask'}
+            className={`seg-btn${subTab === 'ask' ? ' active' : ''}`}
+            onClick={() => setSubTab('ask')}
+          >
+            Ask AI
+          </button>
+        </div>
+      </div>
+
+      {/* Both stay mounted so chat history / scroll survive tab flips; only one shows. */}
+      <div style={{ display: subTab === 'browse' ? 'block' : 'none' }}>
+        <DiscoverBrowse onAsk={askAbout} />
+      </div>
+      <div style={{ display: subTab === 'ask' ? 'block' : 'none' }}>
+        <DiscoverAsk seedPrompt={seedPrompt} onSeedConsumed={() => setSeedPrompt(null)} />
+      </div>
+    </div>
+  )
+}
