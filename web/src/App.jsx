@@ -20,6 +20,15 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   // A drawer-opened overlay view (e.g. Wishlist) shown over the active tab.
   const [view, setView] = useState(null)
+  // Header goes frosted + shows a separator once the page is scrolled off the top.
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 4)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   useEffect(() => {
     let startX = 0
@@ -67,7 +76,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className="app-header">
+      <header className={`app-header${scrolled ? ' scrolled' : ''}`}>
         <Brand onOpen={() => setMenuOpen(true)} />
       </header>
       <main className="app-main">
