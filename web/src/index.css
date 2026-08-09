@@ -16,7 +16,7 @@
 
   --radius: 14px;
   --shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
-  --tabbar-height: 64px;
+  --tabbar-height: 90px;
   --app-header-h: 56px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
@@ -301,44 +301,114 @@ textarea {
 
 /* ---------- Tab bar ---------- */
 
+/* Floating "liquid glass" bar: frosted, detached, safe-area aware. The blur
+   reads from whatever content scrolls beneath it. */
 .tabbar {
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
-  bottom: 0;
-  width: 100%;
-  max-width: 640px;
+  bottom: calc(var(--safe-bottom) + 12px);
+  width: min(calc(100% - 24px), 616px);
   display: flex;
-  background: var(--surface);
-  border-top: 1px solid var(--line);
-  padding-bottom: var(--safe-bottom);
+  gap: 2px;
+  padding: 8px;
+  border-radius: 28px;
+  background: rgba(78, 56, 40, 0.55);
+  border: 1px solid rgba(200, 169, 126, 0.22);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(230, 205, 170, 0.18);
+  -webkit-backdrop-filter: blur(20px) saturate(165%);
+  backdrop-filter: blur(20px) saturate(165%);
   z-index: 50;
 }
 
 .tabbar-btn {
+  position: relative;
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  min-height: var(--tabbar-height);
+  gap: 3px;
+  min-height: 56px;
+  padding: 9px 4px;
+  border-radius: 22px;
   background: none;
   border: none;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 0.02em;
   cursor: pointer;
-  transition: color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.15s ease, transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Press-in movement on tap; springs back on release via the easing above. */
+.tabbar-btn:active {
+  transform: scale(0.9);
+}
+
+.tabbar-btn > * {
+  position: relative;
+  z-index: 1;
 }
 
 .tabbar-btn.active {
   color: var(--accent);
 }
 
+/* Larger pill highlight behind the active tab (inset rounded chip), pops in on select. */
+.tabbar-btn.active::before {
+  content: "";
+  position: absolute;
+  inset: 2px 2px;
+  border-radius: 20px;
+  background: rgba(230, 205, 170, 0.2);
+  z-index: 0;
+  animation: tab-pill-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Icon gives a small bounce the moment its tab becomes active. */
+.tabbar-btn.active .tabbar-icon {
+  animation: tab-icon-pop 0.34s ease;
+}
+
 .tabbar-icon {
   width: 22px;
   height: 22px;
+}
+
+@keyframes tab-pill-in {
+  from {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes tab-icon-pop {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tabbar-btn,
+  .tabbar-btn:active,
+  .tabbar-btn.active::before,
+  .tabbar-btn.active .tabbar-icon {
+    transition: color 0.15s ease;
+    transform: none;
+    animation: none;
+  }
 }
 
 /* ---------- Generic layout helpers ---------- */
@@ -1421,6 +1491,20 @@ textarea {
 [data-theme="light"] .menu-item .menu-chev { color: #b3a898; }
 [data-theme="light"] .menu-foot { color: #9a8f7e; }
 [data-theme="light"] .chat-bubble.error { border-color: #d8a3a3; color: #b04a4a; }
+
+/* Tab bar, light mode (option A): warm walnut glass, raised white active chip
+   with dark-walnut ink, and inactive labels a shade darker for legibility. */
+[data-theme="light"] .tabbar {
+  background: rgba(201, 170, 128, 0.42);
+  border-color: rgba(111, 78, 55, 0.24);
+  box-shadow: 0 10px 30px rgba(60, 40, 20, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+[data-theme="light"] .tabbar-btn { color: #5a5045; }
+[data-theme="light"] .tabbar-btn.active { color: #4a3320; }
+[data-theme="light"] .tabbar-btn.active::before {
+  background: rgba(255, 252, 247, 0.8);
+  box-shadow: 0 1px 3px rgba(60, 40, 20, 0.18);
+}
 [data-theme="light"] .status-badge.status-finished {
   color: #0f7a58;
   border-color: #1d9e75;
