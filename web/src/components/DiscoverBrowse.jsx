@@ -10,11 +10,9 @@ import { fetchDiscover, loadLibraryTitles, normTitle } from '../lib/discover.js'
 // or a plain genre slug (server `genre=`); the API supports both natively.
 const CHIPS = [
   { key: 'soulslike', label: 'Soulslike', preset: 'soulslike' },
-  { key: 'jrpg', label: 'JRPG', preset: 'jrpg' },
-  { key: 'metroidvania', label: 'Metroidvania', preset: 'metroidvania' },
   { key: 'arpg', label: 'Action RPG', preset: 'arpg' },
-  { key: 'shooter', label: 'Shooter', genre: 'shooter' },
   { key: 'adventure', label: 'Adventure', genre: 'adventure' },
+  { key: 'simulator', label: 'Simulator', genre: 'simulator' },
 ]
 
 const GENRES = [
