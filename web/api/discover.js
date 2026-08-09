@@ -128,6 +128,18 @@ export default async function handler(req, res) {
   }
   try {
     const q = req.query || {};
+
+    // Temporary diagnostic: discover real IGDB keyword/company ids for the presets.
+    if (q.probe) {
+      const terms = ['souls', 'metroidvania', 'jrpg', 'action rpg', 'roguelike'];
+      const keywords = {};
+      for (const t of terms) keywords[t] = await igdb('keywords', `fields id,name,slug; where name ~ *"${t}"*; limit 10;`);
+      const companies = {};
+      for (const c of ['FromSoftware', 'Rockstar']) companies[c] = await igdb('companies', `fields id,name; where name ~ *"${c}"*; limit 8;`);
+      res.status(200).json({ keywords, companies });
+      return;
+    }
+
     const page = Math.max(0, parseInt(q.page, 10) || 0);
     const limit = Math.min(40, parseInt(q.limit, 10) || 30);
     const offset = page * limit;
