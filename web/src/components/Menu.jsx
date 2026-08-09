@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { getAppKey, setAppKey, promptForKey } from '../lib/appAuth.js'
+import { getTheme, setTheme } from '../lib/theme.js'
 
 const REPO = 'ddibara5/GameDeck'
 const SOURCE_URL = 'https://github.com/ddibara5/GameDeck'
@@ -10,6 +11,12 @@ const CHATS_KEY = 'gamedeck_chats_v1'
 const ACTIVE_CHAT_KEY = 'gamedeck_active_chat_v1'
 const SYNC_LOCK_KEY = 'gamedeck_sync_lock_v1'
 const LOCK_MS = 6 * 60 * 1000
+
+const THEME_OPTIONS = [
+  { key: 'dark', label: 'Dark' },
+  { key: 'light', label: 'Light' },
+  { key: 'system', label: 'System' },
+]
 
 function relTime(ts) {
   if (!ts) return null
@@ -79,6 +86,7 @@ export default function Menu({ open, onClose }) {
   const [exoActivity, setExoActivity] = useState(null)
   const [version, setVersion] = useState(null)
   const [keySet, setKeySet] = useState(() => Boolean(getAppKey()))
+  const [theme, setThemeState] = useState(() => getTheme())
   const [chatsCleared, setChatsCleared] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [syncNote, setSyncNote] = useState('')
@@ -106,6 +114,7 @@ export default function Menu({ open, onClose }) {
     let cancelled = false
     setChatsCleared(false)
     setKeySet(Boolean(getAppKey()))
+    setThemeState(getTheme())
 
     ;(async () => {
       const [syncRes, actRes] = await Promise.all([
@@ -174,6 +183,10 @@ export default function Menu({ open, onClose }) {
     setChatsCleared(true)
   }
 
+  function changeTheme(pref) {
+    setThemeState(setTheme(pref))
+  }
+
   function toggleKey() {
     if (getAppKey()) {
       if (!window.confirm('Forget the Discover access key on this device? You will be asked for it next time you open Discover.')) return
@@ -239,7 +252,25 @@ export default function Menu({ open, onClose }) {
 
         <div className="menu-sec">
           <div className="menu-sec-label">Settings</div>
-          <MenuItem glyph={ICONS.appear} label="Appearance" value="Dark" disabled chevron={false} />
+          <div className="menu-appearance">
+            <div className="menu-appearance-head">
+              {ICONS.appear}
+              <span className="menu-label">Appearance</span>
+            </div>
+            <div className="seg" role="group" aria-label="Appearance">
+              {THEME_OPTIONS.map((opt) => (
+                <button
+                  key={opt.key}
+                  type="button"
+                  className={`seg-btn${theme === opt.key ? ' active' : ''}`}
+                  onClick={() => changeTheme(opt.key)}
+                  aria-pressed={theme === opt.key}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <MenuItem
             glyph={ICONS.spark}
             label="Recommender history"
