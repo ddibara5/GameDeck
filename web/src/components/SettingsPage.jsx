@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { getAppKey, setAppKey, promptForKey } from '../lib/appAuth.js'
 import { getTheme, setTheme, getAccent, setAccent } from '../lib/theme.js'
+import { useMountTransition } from '../lib/useMountTransition.js'
 import { MenuItem, ICONS, relTime } from './menuUI.jsx'
 
 const REPO = 'ddibara5/GameDeck'
@@ -29,7 +30,8 @@ const ACCENT_OPTIONS = [
   { key: 'graphite', label: 'Graphite', ring: '#202124', dot: '#98a2ae' },
 ]
 
-export default function SettingsPage({ onClose }) {
+export default function SettingsPage({ open, onClose }) {
+  const { mounted, closing } = useMountTransition(open)
   const [lastSync, setLastSync] = useState(null)
   const [exoActivity, setExoActivity] = useState(null)
   const [version, setVersion] = useState(null)
@@ -49,16 +51,18 @@ export default function SettingsPage({ onClose }) {
 
   // Close on Escape.
   useEffect(() => {
+    if (!mounted) return undefined
     const onKey = (e) => {
       if (e.key === 'Escape') onClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [mounted, onClose])
 
   // Swipe to go back: iOS-style edge-back. Start near the left edge and drag
   // right to dismiss the page.
   useEffect(() => {
+    if (!mounted) return undefined
     const EDGE_PX = 24
     const BACK_DX = 60
     let startX = 0
@@ -99,10 +103,11 @@ export default function SettingsPage({ onClose }) {
       window.removeEventListener('touchmove', onMove)
       window.removeEventListener('touchend', onEnd)
     }
-  }, [onClose])
+  }, [mounted, onClose])
 
   // Load freshness data + version once when the page opens.
   useEffect(() => {
+    if (!mounted) return undefined
     let cancelled = false
 
     ;(async () => {
@@ -130,7 +135,7 @@ export default function SettingsPage({ onClose }) {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [mounted])
 
   async function triggerRefresh() {
     if (syncing || Date.now() < lockUntil) return
@@ -191,11 +196,13 @@ export default function SettingsPage({ onClose }) {
     }
   }
 
+  if (!mounted) return null
+
   const locked = Date.now() < lockUntil
   const versionValue = version ? `${version.sha} · ${relTime(version.date) || ''}`.trim().replace(/·\s*$/, '').trim() : '-'
 
   return (
-    <div className="settings-page" role="dialog" aria-label="Settings">
+    <div className={`settings-page${closing ? ' closing' : ''}`} role="dialog" aria-label="Settings">
       <div className="settings-hd">
         <button type="button" className="settings-back" onClick={onClose} aria-label="Back">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

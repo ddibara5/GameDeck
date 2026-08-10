@@ -1,11 +1,13 @@
 import { useEffect } from 'react'
 import { useWishlist } from '../lib/wishlist.js'
+import { useMountTransition } from '../lib/useMountTransition.js'
 import { MenuItem, ICONS } from './menuUI.jsx'
 
 // Left drawer: a lists / content hub. App-wide settings live in the gear-opened
 // Settings page (see SettingsPage.jsx); this panel stays focused on collections.
 export default function Menu({ open, onClose, onOpenWishlist }) {
   const { items: wishItems } = useWishlist()
+  const { mounted, closing } = useMountTransition(open)
 
   // Close on Escape.
   useEffect(() => {
@@ -17,12 +19,12 @@ export default function Menu({ open, onClose, onOpenWishlist }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
 
-  if (!open) return null
+  if (!mounted) return null
 
   return (
     <>
-      <div className="drawer-scrim" onClick={onClose} />
-      <aside className="drawer" role="dialog" aria-label="Menu">
+      <div className={`drawer-scrim${closing ? ' closing' : ''}`} onClick={onClose} />
+      <aside className={`drawer${closing ? ' closing' : ''}`} role="dialog" aria-label="Menu">
         <div className="drawer-head">
           <div className="drawer-brand">
             <svg className="gd-logo" style={{ width: 34, height: 36, flex: 'none' }} viewBox="130 105 252 300" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">

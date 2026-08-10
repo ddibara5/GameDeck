@@ -112,7 +112,7 @@ export default function App() {
         tabs={TABS}
       />
       <Menu open={menuOpen} onClose={() => setMenuOpen(false)} onOpenWishlist={() => setView('wishlist')} />
-      {settingsOpen && <SettingsPage onClose={() => setSettingsOpen(false)} />}
+      <SettingsPage open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   )
 }

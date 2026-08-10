@@ -30,6 +30,13 @@
   --app-header-h: 66px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
+
+  /* Overlay motion: shared timing so pages/drawers/sheets enter and exit with
+     one consistent, fluid feel. */
+  --overlay-in: 0.32s;
+  --overlay-out: 0.26s;
+  --enter-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --exit-ease: cubic-bezier(0.4, 0, 0.9, 0.3);
 }
 
 /* ---------- App header (brand) ---------- */
@@ -177,7 +184,12 @@
   inset: 0;
   background: rgba(8, 7, 6, 0.55);
   z-index: 200;
-  animation: fade-in 0.18s ease;
+  animation: fade-in var(--overlay-in) ease;
+}
+
+.drawer-scrim.closing {
+  animation: fade-out var(--overlay-out) ease forwards;
+  pointer-events: none;
 }
 
 .drawer {
@@ -195,15 +207,33 @@
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
-  animation: drawer-in 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: drawer-in var(--overlay-in) var(--enter-ease);
+  will-change: transform;
+}
+
+.drawer.closing {
+  animation: drawer-out var(--overlay-out) var(--exit-ease) forwards;
 }
 
 @keyframes drawer-in {
   from {
     transform: translateX(-100%);
+    opacity: 0.7;
   }
   to {
     transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes drawer-out {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: 0.7;
   }
 }
 
@@ -332,15 +362,33 @@
   background: var(--bg);
   display: flex;
   flex-direction: column;
-  animation: settings-in 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: settings-in var(--overlay-in) var(--enter-ease);
+  will-change: transform;
+}
+
+.settings-page.closing {
+  animation: settings-out var(--overlay-out) var(--exit-ease) forwards;
 }
 
 @keyframes settings-in {
   from {
     transform: translateX(100%);
+    opacity: 0.5;
   }
   to {
     transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes settings-out {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0.5;
   }
 }
 
@@ -416,7 +464,14 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .settings-page {
+  .settings-page,
+  .settings-page.closing,
+  .drawer,
+  .drawer.closing,
+  .drawer-scrim,
+  .drawer-scrim.closing,
+  .modal-backdrop,
+  .modal-sheet {
     animation: none;
   }
 }
@@ -959,7 +1014,7 @@ textarea {
   align-items: flex-end;
   justify-content: center;
   z-index: 100;
-  animation: fade-in 0.15s ease;
+  animation: fade-in var(--overlay-in) ease;
 }
 
 @keyframes fade-in {
@@ -968,6 +1023,15 @@ textarea {
   }
   to {
     opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
   }
 }
 
@@ -982,7 +1046,7 @@ textarea {
   border-radius: 20px 20px 0 0;
   border-top: 1px solid var(--line);
   padding: 16px 20px calc(24px + var(--safe-bottom));
-  animation: slide-up 0.2s ease;
+  animation: slide-up var(--overlay-in) var(--enter-ease);
 }
 
 @keyframes slide-up {
