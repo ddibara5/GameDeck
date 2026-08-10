@@ -7,7 +7,7 @@ import './discover.css'
 //   Browse - a filterable IGDB catalog (rails, presets, search, detail sheets)
 //   Ask    - the existing AI game-picker chat (unchanged behaviour)
 // "Ask AI about this" from a Browse detail sheet flips to Ask with a seed prompt.
-export default function DiscoverTab() {
+export default function DiscoverTab({ onCustomize }) {
   const [subTab, setSubTab] = useState('browse')
   const [seedPrompt, setSeedPrompt] = useState(null)
 
@@ -47,7 +47,7 @@ export default function DiscoverTab() {
 
       {/* Both stay mounted so chat history / scroll survive tab flips; only one shows. */}
       <div style={{ display: subTab === 'browse' ? 'block' : 'none' }}>
-        <DiscoverBrowse onAsk={askAbout} />
+        <DiscoverBrowse onAsk={askAbout} onCustomize={onCustomize} />
       </div>
       <div style={{ display: subTab === 'ask' ? 'block' : 'none' }}>
         <DiscoverAsk seedPrompt={seedPrompt} onSeedConsumed={() => setSeedPrompt(null)} />
