@@ -1530,6 +1530,62 @@ textarea {
 }
 
 /* ============================================================
+   COLOR THEMES  (accent + tuned neutrals, applied via data-accent
+   on <html>, persisted by src/lib/theme.js). Walnut is the default,
+   defined by the base :root / [data-theme="light"] blocks above.
+   Each theme sets an identical token set for dark and light so the
+   more-specific light block always wins in light mode.
+   ============================================================ */
+
+/* ---- Slate: cool steel blue ---- */
+:root[data-accent="slate"] {
+  --bg: #15171b; --surface: #1d2026; --surface-2: #252932; --line: #333a45;
+  --text: #e5e8ee; --muted: #98a1b1; --walnut: #41506a; --walnut-light: #5f7799;
+  --accent: #86a0c2; --amber: #7fb0e0;
+}
+:root[data-accent="slate"][data-theme="light"] {
+  --bg: #e7eaef; --surface: #f0f3f7; --surface-2: #fbfcff; --line: #d4dbe6;
+  --text: #232830; --muted: #697384; --walnut: #41506a; --walnut-light: #5f7799;
+  --accent: #4d6d95; --amber: #3f74ab;
+}
+
+/* ---- Sage: warm olive green ---- */
+:root[data-accent="sage"] {
+  --bg: #161814; --surface: #1e211a; --surface-2: #262a22; --line: #353b2f;
+  --text: #e8eae1; --muted: #a0a690; --walnut: #48543a; --walnut-light: #6b7a55;
+  --accent: #9aab83; --amber: #bcc77e;
+}
+:root[data-accent="sage"][data-theme="light"] {
+  --bg: #e9ebe0; --surface: #f2f4ea; --surface-2: #fcfdf5; --line: #d7dcc8;
+  --text: #262a20; --muted: #6c7360; --walnut: #48543a; --walnut-light: #6b7a55;
+  --accent: #5e7046; --amber: #69793b;
+}
+
+/* ---- Plum: dusty mauve ---- */
+:root[data-accent="plum"] {
+  --bg: #18151a; --surface: #201d23; --surface-2: #29242e; --line: #383140;
+  --text: #ebe5ec; --muted: #a89aac; --walnut: #4d3b4f; --walnut-light: #6f5670;
+  --accent: #b191b0; --amber: #caa2d2;
+}
+:root[data-accent="plum"][data-theme="light"] {
+  --bg: #ece6ed; --surface: #f4eff5; --surface-2: #fdf9fe; --line: #ddd2de;
+  --text: #2a252c; --muted: #776c78; --walnut: #4d3b4f; --walnut-light: #6f5670;
+  --accent: #7c567b; --amber: #8a5c90;
+}
+
+/* ---- Graphite: near-mono steel ---- */
+:root[data-accent="graphite"] {
+  --bg: #17181a; --surface: #202124; --surface-2: #292a2e; --line: #3a3c41;
+  --text: #e8e9ec; --muted: #9b9ea6; --walnut: #464a52; --walnut-light: #646973;
+  --accent: #98a2ae; --amber: #b2b8c2;
+}
+:root[data-accent="graphite"][data-theme="light"] {
+  --bg: #e8e9ec; --surface: #f1f2f5; --surface-2: #fbfcfe; --line: #d7d9de;
+  --text: #24262b; --muted: #6b6e76; --walnut: #464a52; --walnut-light: #646973;
+  --accent: #59626f; --amber: #69707c;
+}
+
+/* ============================================================
    Appearance (theme) control in the drawer
    ============================================================ */
 .menu-appearance {
@@ -1581,4 +1637,63 @@ textarea {
 .seg-btn.active {
   background: var(--accent);
   color: var(--bg);
+}
+
+/* Color theme (accent) swatch picker in the drawer */
+.menu-accent {
+  padding: 14px 12px 2px;
+}
+
+.menu-accent-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 0 0 10px;
+}
+
+.accent-row {
+  display: flex;
+  gap: 14px;
+}
+
+.accent-opt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.accent-dot {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  position: relative;
+  transition: box-shadow 0.15s ease;
+}
+
+.accent-dot i {
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+}
+
+.accent-opt.on .accent-dot {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.accent-name {
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.accent-opt.on .accent-name {
+  color: var(--text);
+  font-weight: 600;
 }
