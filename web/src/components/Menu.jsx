@@ -3,6 +3,7 @@ import { useWishlist } from '../lib/wishlist.js'
 import { useMountTransition } from '../lib/useMountTransition.js'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
 import { useStatusMap, effectiveStatus, includeInLists } from '../lib/userStatus.js'
+import { useLibraryPrefs, passesYear } from '../lib/libraryPrefs.js'
 import { BEST_MIN_RATING } from './ListView.jsx'
 import { MenuItem, ICONS } from './menuUI.jsx'
 
@@ -12,20 +13,23 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList }) {
   const { items: wishItems } = useWishlist()
   const { games } = useLibraryGames()
   const statusMap = useStatusMap()
+  const prefs = useLibraryPrefs()
   const { mounted, closing } = useMountTransition(open)
 
   // Live counts for each list, derived from the (session-cached) library + the
-  // status map so the badges stay in sync as statuses change.
+  // status map + view prefs so the badges match what the lists actually show.
   const counts = useMemo(() => {
     const c = { backlog: 0, playing: 0, finished: 0, abandoned: 0, best: 0 }
     for (const g of games) {
       if (!includeInLists(g, statusMap)) continue
+      if (prefs.hidden.has(String(g.master_id))) continue
+      if (!passesYear(g, prefs.hideBeforeYear)) continue
       const s = effectiveStatus(g, statusMap)
       if (c[s] != null) c[s] += 1
       if (s === 'backlog' && Number(g.igdb_rating) >= BEST_MIN_RATING) c.best += 1
     }
     return c
-  }, [games, statusMap])
+  }, [games, statusMap, prefs])
 
   const openList = (key) => {
     onOpenList(key)
