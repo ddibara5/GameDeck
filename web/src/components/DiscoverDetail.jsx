@@ -1,150 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
-import Cover from './Cover.jsx'
-import { useDelayedClose } from '../lib/useDelayedClose.js'
-import { useWishlist, toggleWishlist } from '../lib/wishlist.js'
+import GameSheet from './GameSheet.jsx'
 
-// Detail sheet for a Discover (IGDB) game. Reuses the Library modal-sheet shell
-// so the swipe-to-close behaviour and styling match. Adds two actions:
-//   - "Ask AI about this"  -> hands a seed prompt back up to Discover's Ask tab
-//   - "More like this"     -> re-queries Browse by this game's primary genre
+// Discover detail: an IGDB game (not owned). Thin wrapper over the shared
+// GameSheet; the game object already carries its summary/screenshots/etc.
 export default function DiscoverDetail({ game, inLibrary, onAsk, onMoreLikeThis, onClose }) {
-  const { closing, requestClose } = useDelayedClose(onClose)
-  const drag = useRef({ startY: 0, active: false })
-  const [dragY, setDragY] = useState(0)
-  const { ids: wishIds } = useWishlist()
-
-  function onDragStart(e) {
-    drag.current = { startY: e.touches[0].clientY, active: true }
-  }
-  function onDragMove(e) {
-    if (!drag.current.active) return
-    const dy = e.touches[0].clientY - drag.current.startY
-    if (dy > 0) {
-      setDragY(dy)
-      if (e.cancelable) e.preventDefault()
-    } else {
-      setDragY(0)
-    }
-  }
-  function onDragEnd() {
-    const shouldClose = dragY > 110
-    drag.current.active = false
-    if (shouldClose) requestClose()
-    else setDragY(0)
-  }
-
-  useEffect(() => {
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
-  }, [])
-
-  if (!game) return null
-
-  const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget) requestClose()
-  }
-
-  const wishActive = wishIds.has(Number(game.id))
-
-  const meta = []
-  if (game.year) meta.push(String(game.year))
-  if (game.rating) meta.push(`★ ${game.rating}`)
-  if (game.ratingCount) meta.push(`${game.ratingCount} ratings`)
-
   return (
-    <div className={`modal-backdrop${closing ? ' closing' : ''}`} onClick={handleBackdropClick}>
-      <div
-        className="modal-sheet"
-        role="dialog"
-        aria-modal="true"
-        aria-label={game.name}
-        style={{
-          transform: closing ? 'translateY(110%)' : dragY ? `translateY(${dragY}px)` : undefined,
-          transition: drag.current.active ? 'none' : 'transform 0.2s ease',
-        }}
-      >
-        <div
-          className="sheet-drag-zone"
-          onTouchStart={onDragStart}
-          onTouchMove={onDragMove}
-          onTouchEnd={onDragEnd}
-        >
-          <div className="modal-handle" />
-          <Cover src={game.cover} title={game.name} size="lg" />
-        </div>
-
-        <div className="detail-title">{game.name}</div>
-        {meta.length ? <div className="discover-detail-meta">{meta.join('  ·  ')}</div> : null}
-        {inLibrary ? <span className="in-library-badge sheet">In your library</span> : null}
-
-        <div className="discover-actions">
-          <button
-            type="button"
-            className={`discover-action wish-action${wishActive ? ' on' : ''}`}
-            aria-pressed={wishActive}
-            aria-label={wishActive ? 'Remove from wishlist' : 'Add to wishlist'}
-            onClick={() => toggleWishlist(game)}
-          >
-            <svg viewBox="0 0 24 24" width="17" height="17" fill={wishActive ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 21s-7-4.5-9.5-8.5A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6.5C19 16.5 12 21 12 21z" />
-            </svg>
-          </button>
-          <button type="button" className="discover-action primary" onClick={() => onAsk(game)}>
-            Ask AI about this
-          </button>
-          <button type="button" className="discover-action" onClick={() => onMoreLikeThis(game)}>
-            More like this
-          </button>
-        </div>
-
-        {game.genres && game.genres.length ? (
-          <div className="chip-wrap">
-            {game.genres.map((g) => (
-              <span className="meta-chip" key={g}>
-                {g}
-              </span>
-            ))}
-          </div>
-        ) : null}
-
-        {game.summary ? <p className="discover-summary">{game.summary}</p> : null}
-
-        {game.screenshots && game.screenshots.length ? (
-          <div className="shot-strip">
-            {game.screenshots.map((s, i) => (
-              <img className="shot" src={s} alt={`${game.name} screenshot ${i + 1}`} key={i} loading="lazy" />
-            ))}
-          </div>
-        ) : null}
-
-        {game.platforms && game.platforms.length ? (
-          <div className="detail-row">
-            <span className="detail-label">Platforms</span>
-            <span className="detail-value">{game.platforms.join(', ')}</span>
-          </div>
-        ) : null}
-        {game.companies && game.companies.length ? (
-          <div className="detail-row">
-            <span className="detail-label">Studio</span>
-            <span className="detail-value">
-              {game.companies
-                .filter((c) => c.developer)
-                .map((c) => c.name)
-                .slice(0, 2)
-                .join(', ') || game.companies[0].name}
-            </span>
-          </div>
-        ) : null}
-
-        {game.url ? (
-          <a className="detail-link" href={game.url} target="_blank" rel="noreferrer noopener">
-            View on IGDB
-          </a>
-        ) : null}
-      </div>
-    </div>
+    <GameSheet
+      variant="discover"
+      game={game}
+      inLibrary={inLibrary}
+      onAsk={onAsk}
+      onMoreLikeThis={onMoreLikeThis}
+      onClose={onClose}
+    />
   )
 }

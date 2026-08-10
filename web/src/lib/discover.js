@@ -29,6 +29,15 @@ export async function fetchDiscover(params) {
   return games
 }
 
+// Fetch a single IGDB game by its id (normalized shape), for the game sheet to
+// enrich owned / wishlisted games with a summary + screenshots. Cached per id.
+export async function fetchGameById(igdbId) {
+  const id = Number(igdbId)
+  if (!id) return null
+  const games = await fetchDiscover({ ids: id })
+  return games[0] || null
+}
+
 // --- "In library" matching --------------------------------------------------
 // Normalise a title down to comparable letters/digits so "Elden Ring" matches
 // "ELDEN RING" and "Marvel's Spider-Man" matches "Marvels Spider Man".

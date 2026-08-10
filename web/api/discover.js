@@ -121,6 +121,20 @@ export default async function handler(req, res) {
     const offset = page * limit;
     const nowTs = Math.floor(Date.now() / 1000);
 
+    // Direct by-id lookup (used by the game sheet to enrich owned/wishlisted games
+    // with the same summary + screenshots Discover shows). Bypasses rails/filters.
+    const idList = String(q.ids || '')
+      .split(',')
+      .map((s) => parseInt(s, 10))
+      .filter(Boolean);
+    if (idList.length) {
+      const body = `${GAME_FIELDS}; where id = (${idList.slice(0, 20).join(',')}); limit ${idList.length};`;
+      const rows = await igdb('games', body);
+      res.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate=604800');
+      res.status(200).json({ games: rows.map(normalize) });
+      return;
+    }
+
     // Base: games with art. (IGDB deprecated the old `category` enum, so we no
     // longer filter on it; `cover != null` keeps results to real, art-having games.)
     const where = ['cover != null'];

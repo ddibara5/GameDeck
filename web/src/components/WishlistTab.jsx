@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import Cover from './Cover.jsx'
+import GameSheet from './GameSheet.jsx'
 import { useWishlist, removeFromWishlist, reconcileWishlist } from '../lib/wishlist.js'
 import { loadLibraryTitles } from '../lib/discover.js'
 import './wishlist.css'
@@ -10,6 +11,7 @@ export default function WishlistTab({ onClose }) {
   const { items, loading } = useWishlist()
   const [reconciled, setReconciled] = useState([])
   const [noteDismissed, setNoteDismissed] = useState(false)
+  const [selected, setSelected] = useState(null)
 
   // Once on open: drop anything that has since landed in the synced library.
   useEffect(() => {
@@ -45,7 +47,19 @@ export default function WishlistTab({ onClose }) {
   function Row({ r }) {
     const upcoming = r.year && r.year >= CURRENT_YEAR
     return (
-      <div className="wl-row">
+      <div
+        className="wl-row"
+        role="button"
+        tabIndex={0}
+        style={{ cursor: 'pointer' }}
+        onClick={() => setSelected(r)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            setSelected(r)
+          }
+        }}
+      >
         <Cover src={r.cover} title={r.title} size="sm" className="wish-cover" />
         <div className="wl-rb">
           <div className="wl-rt">{r.title}</div>
@@ -54,7 +68,15 @@ export default function WishlistTab({ onClose }) {
             {upcoming ? <span className="wl-soon">Coming soon</span> : null}
           </div>
         </div>
-        <button type="button" className="wl-remove" aria-label={`Remove ${r.title}`} onClick={() => removeFromWishlist(r.igdb_id)}>
+        <button
+          type="button"
+          className="wl-remove"
+          aria-label={`Remove ${r.title}`}
+          onClick={(e) => {
+            e.stopPropagation()
+            removeFromWishlist(r.igdb_id)
+          }}
+        >
           &times;
         </button>
       </div>
@@ -106,6 +128,10 @@ export default function WishlistTab({ onClose }) {
           {soon.length ? <div className="wl-group">All saved</div> : null}
           {rest.map((r) => <Row key={r.igdb_id} r={r} />)}
         </>
+      ) : null}
+
+      {selected ? (
+        <GameSheet variant="wishlist" game={selected} onClose={() => setSelected(null)} />
       ) : null}
     </div>
   )

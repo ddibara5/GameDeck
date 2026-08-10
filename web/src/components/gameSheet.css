@@ -1,0 +1,18 @@
+/* Shared game sheet: the unified meta row under the title (year, genre, platform,
+   with an optional rating). Bundled globally so Library, Discover, and Wishlist
+   all render the same sheet regardless of which tab loaded first. */
+.gs-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 13.5px;
+  margin: 2px 0 4px;
+}
+
+.gs-star {
+  color: var(--amber);
+  font-weight: 600;
+  white-space: nowrap;
+}
