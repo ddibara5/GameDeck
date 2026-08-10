@@ -5,6 +5,36 @@
 const KEY = 'gamedeck_theme_v1'
 const VALID = new Set(['dark', 'light', 'system'])
 
+// Color theme (accent + tuned neutrals), independent of light/dark. Applied by
+// setting data-accent on <html>; palettes live in index.css. Walnut is default.
+const ACCENT_KEY = 'gamedeck_accent_v1'
+const ACCENTS = new Set(['walnut', 'slate', 'sage', 'plum', 'graphite'])
+
+export function getAccent() {
+  try {
+    const v = localStorage.getItem(ACCENT_KEY)
+    return ACCENTS.has(v) ? v : 'walnut'
+  } catch {
+    return 'walnut'
+  }
+}
+
+export function applyAccent(name) {
+  const a = ACCENTS.has(name) ? name : 'walnut'
+  document.documentElement.setAttribute('data-accent', a)
+}
+
+export function setAccent(name) {
+  const a = ACCENTS.has(name) ? name : 'walnut'
+  try {
+    localStorage.setItem(ACCENT_KEY, a)
+  } catch {
+    /* storage unavailable - preference just won't persist */
+  }
+  applyAccent(a)
+  return a
+}
+
 export function getTheme() {
   try {
     const v = localStorage.getItem(KEY)
@@ -41,6 +71,7 @@ export function setTheme(pref) {
 // Apply on startup and keep 'system' in sync with OS appearance changes.
 export function initTheme() {
   applyTheme(getTheme())
+  applyAccent(getAccent())
   try {
     const mq = window.matchMedia('(prefers-color-scheme: light)')
     const onChange = () => {
