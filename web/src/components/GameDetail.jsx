@@ -69,7 +69,7 @@ export default function GameDetail({ game, onClose }) {
         aria-label={game.title}
         style={{
           transform: closing ? 'translateY(110%)' : dragY ? `translateY(${dragY}px)` : undefined,
-          transition: drag.current.active ? 'none' : 'transform 0.25s ease',
+          transition: drag.current.active ? 'none' : 'transform 0.2s ease',
         }}
       >
         <div

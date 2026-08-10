@@ -63,7 +63,7 @@ export default function DiscoverDetail({ game, inLibrary, onAsk, onMoreLikeThis,
         aria-label={game.name}
         style={{
           transform: closing ? 'translateY(110%)' : dragY ? `translateY(${dragY}px)` : undefined,
-          transition: drag.current.active ? 'none' : 'transform 0.25s ease',
+          transition: drag.current.active ? 'none' : 'transform 0.2s ease',
         }}
       >
         <div
