@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { useWishlist } from '../lib/wishlist.js'
 import { useMountTransition } from '../lib/useMountTransition.js'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
-import { useStatusMap, effectiveStatus } from '../lib/userStatus.js'
+import { useStatusMap, effectiveStatus, includeInLists } from '../lib/userStatus.js'
 import { BEST_MIN_RATING } from './ListView.jsx'
 import { MenuItem, ICONS } from './menuUI.jsx'
 
@@ -19,6 +19,7 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList }) {
   const counts = useMemo(() => {
     const c = { backlog: 0, playing: 0, finished: 0, abandoned: 0, best: 0 }
     for (const g of games) {
+      if (!includeInLists(g, statusMap)) continue
       const s = effectiveStatus(g, statusMap)
       if (c[s] != null) c[s] += 1
       if (s === 'backlog' && Number(g.igdb_rating) >= BEST_MIN_RATING) c.best += 1

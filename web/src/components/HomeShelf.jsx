@@ -1,12 +1,13 @@
 import Cover from './Cover.jsx'
 import { minutesToHhm, igdbCover } from '../lib/format.js'
+import { isRealGame } from '../lib/userStatus.js'
 
 // Two discovery shelves shown at the top of the Library (default view only):
 // "Continue playing" (most recently played) and "Fresh from your backlog" (never played).
 export default function HomeShelf({ games, onSelect }) {
   const continuePlaying = games.filter((g) => g.last_played).slice(0, 12)
   const backlog = games
-    .filter((g) => !g.last_played && (g.playtime_minutes || 0) === 0 && (g.total_awards || 0) > 0)
+    .filter((g) => !g.last_played && (g.playtime_minutes || 0) === 0 && isRealGame(g))
     .sort((a, b) => (b.total_awards || 0) - (a.total_awards || 0))
     .slice(0, 12)
 

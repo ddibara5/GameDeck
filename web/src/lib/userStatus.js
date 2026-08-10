@@ -64,6 +64,25 @@ export function effectiveStatus(game, map) {
   return m[String(game.master_id)] || derivedStatus(game)
 }
 
+// A synced row is a real game (not an app / media tile) when it has at least one
+// achievement OR it matched a game on IGDB (so it got cover art). This is the same
+// guard the Library "Fresh from your backlog" shelf uses, lifted so every status
+// list applies it too.
+export function isRealGame(game) {
+  if (!game) return false
+  return (Number(game.total_awards) || 0) > 0 || Boolean(game.cover_igdb)
+}
+
+// Whether a row should appear in the drawer status / smart lists at all. Real
+// games always qualify; anything you manually tagged is honoured too, so an
+// explicit status never gets filtered out as "junk".
+export function includeInLists(game, map) {
+  if (!game) return false
+  if (isRealGame(game)) return true
+  const m = map || loadMap()
+  return Boolean(m[String(game.master_id)])
+}
+
 // React hook: returns the live status map, re-rendering on any change.
 export function useStatusMap() {
   const [map, setMap] = useState(loadMap)

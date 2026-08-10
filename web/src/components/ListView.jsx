@@ -3,7 +3,7 @@ import GameCard from './GameCard.jsx'
 import GameDetail from './GameDetail.jsx'
 import Skeleton from './Skeleton.jsx'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
-import { useStatusMap, effectiveStatus } from '../lib/userStatus.js'
+import { useStatusMap, effectiveStatus, includeInLists } from '../lib/userStatus.js'
 import './wishlist.css'
 
 export const BEST_MIN_RATING = 85
@@ -48,7 +48,7 @@ export default function ListView({ viewKey, onClose }) {
 
   const list = useMemo(() => {
     if (!def) return []
-    const filtered = games.filter((g) => def.filter(g, statusMap))
+    const filtered = games.filter((g) => includeInLists(g, statusMap) && def.filter(g, statusMap))
     return def.sort ? [...filtered].sort(def.sort) : filtered
   }, [def, games, statusMap])
 
