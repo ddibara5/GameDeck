@@ -56,18 +56,22 @@ export default function SettingsPage({ onClose }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  // Swipe to go back: a clear left swipe (drag right-to-left) closes the page,
-  // mirroring how a left swipe closes the drawer.
+  // Swipe to go back: iOS-style edge-back. Start near the left edge and drag
+  // right to dismiss the page.
   useEffect(() => {
+    const EDGE_PX = 24
+    const BACK_DX = 60
     let startX = 0
     let startY = 0
     let tracking = false
+    let fromEdge = false
 
     const onStart = (e) => {
       const t = e.touches && e.touches[0]
       if (!t) return
       startX = t.clientX
       startY = t.clientY
+      fromEdge = startX <= EDGE_PX
       tracking = true
     }
     const onMove = (e) => {
@@ -78,7 +82,7 @@ export default function SettingsPage({ onClose }) {
       const dy = t.clientY - startY
       // Only act on a clearly horizontal gesture, so vertical scrolling is untouched.
       if (Math.abs(dx) <= Math.abs(dy)) return
-      if (dx < -60) {
+      if (fromEdge && dx > BACK_DX) {
         onClose()
         tracking = false
       }
