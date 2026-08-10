@@ -25,12 +25,17 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
     if (owned && game) setStatusState(effectiveStatus(game))
   }, [owned, game])
 
-  // IGDB media. Discover already carries it; owned/wishlist fetch it by id so the
-  // summary + screenshots match what Discover shows.
+  // IGDB media. Discover rail items already carry their summary + screenshots, so
+  // we use them directly. Owned/wishlist items (and sparse Discover entries like a
+  // wishlist card opened from the Discover home, which only has cover/title/year)
+  // fetch it by id so every sheet is equally rich.
   const igdbId = variant === 'discover' ? game && game.id : game && game.igdb_id
-  const [media, setMedia] = useState(variant === 'discover' ? game : null)
+  const discoverHasMedia = Boolean(
+    variant === 'discover' && game && (game.summary || (game.screenshots && game.screenshots.length))
+  )
+  const [media, setMedia] = useState(discoverHasMedia ? game : null)
   useEffect(() => {
-    if (variant === 'discover') {
+    if (discoverHasMedia) {
       setMedia(game)
       return undefined
     }
@@ -46,7 +51,7 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
     return () => {
       alive = false
     }
-  }, [variant, igdbId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [variant, igdbId, discoverHasMedia]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Swipe-down-to-close, from the cover/handle zone so details below still scroll.
   const drag = useRef({ startY: 0, active: false })
