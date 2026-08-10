@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { getAppKey, setAppKey, promptForKey } from '../lib/appAuth.js'
 import { getTheme, setTheme, getAccent, setAccent } from '../lib/theme.js'
+import { getHideBeforeYear, setHideBeforeYear } from '../lib/libraryPrefs.js'
 import { useMountTransition } from '../lib/useMountTransition.js'
 import { MenuItem, ICONS, relTime } from './menuUI.jsx'
 
@@ -18,6 +19,14 @@ const THEME_OPTIONS = [
   { key: 'dark', label: 'Dark' },
   { key: 'light', label: 'Light' },
   { key: 'system', label: 'System' },
+]
+
+// "Hide games before <year>" for the drawer status lists. 0 = show everything.
+const HIDE_YEAR_OPTIONS = [
+  { key: 0, label: 'Off' },
+  { key: 2010, label: '2010+' },
+  { key: 2015, label: '2015+' },
+  { key: 2020, label: '2020+' },
 ]
 
 // Color themes. `ring` is the swatch's outer disc (a theme surface), `dot` the
@@ -38,6 +47,7 @@ export default function SettingsPage({ open, onClose }) {
   const [keySet, setKeySet] = useState(() => Boolean(getAppKey()))
   const [theme, setThemeState] = useState(() => getTheme())
   const [accent, setAccentState] = useState(() => getAccent())
+  const [hideYear, setHideYear] = useState(() => getHideBeforeYear())
   const [chatsCleared, setChatsCleared] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [syncNote, setSyncNote] = useState('')
@@ -196,6 +206,10 @@ export default function SettingsPage({ open, onClose }) {
     setAccentState(setAccent(key))
   }
 
+  function changeHideYear(year) {
+    setHideYear(setHideBeforeYear(year || null))
+  }
+
   function toggleKey() {
     if (getAppKey()) {
       if (!window.confirm('Forget the Discover access key on this device? You will be asked for it next time you open Discover.')) return
@@ -287,6 +301,29 @@ export default function SettingsPage({ open, onClose }) {
               chevron={false}
             />
             <MenuItem glyph={ICONS.link} label="Exophase profile" href={EXOPHASE_PROFILE_URL} />
+          </div>
+        </div>
+
+        <div className="settings-section">
+          <div className="menu-sec-label">Library</div>
+          <div className="menu-appearance">
+            <div className="menu-appearance-head">
+              {ICONS.layers}
+              <span className="menu-label">Hide games before</span>
+            </div>
+            <div className="seg" role="group" aria-label="Hide games before a year">
+              {HIDE_YEAR_OPTIONS.map((opt) => (
+                <button
+                  key={opt.key}
+                  type="button"
+                  className={`seg-btn${(hideYear || 0) === opt.key ? ' active' : ''}`}
+                  onClick={() => changeHideYear(opt.key)}
+                  aria-pressed={(hideYear || 0) === opt.key}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

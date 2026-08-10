@@ -4,6 +4,7 @@ import GameDetail from './GameDetail.jsx'
 import Skeleton from './Skeleton.jsx'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
 import { useStatusMap, effectiveStatus, includeInLists } from '../lib/userStatus.js'
+import { useLibraryPrefs, passesYear } from '../lib/libraryPrefs.js'
 import './wishlist.css'
 
 export const BEST_MIN_RATING = 85
@@ -44,13 +45,20 @@ export default function ListView({ viewKey, onClose }) {
   const def = LIST_DEFS[viewKey]
   const { games, loading, error } = useLibraryGames()
   const statusMap = useStatusMap()
+  const prefs = useLibraryPrefs()
   const [selectedGame, setSelectedGame] = useState(null)
 
   const list = useMemo(() => {
     if (!def) return []
-    const filtered = games.filter((g) => includeInLists(g, statusMap) && def.filter(g, statusMap))
+    const filtered = games.filter(
+      (g) =>
+        includeInLists(g, statusMap) &&
+        !prefs.hidden.has(String(g.master_id)) &&
+        passesYear(g, prefs.hideBeforeYear) &&
+        def.filter(g, statusMap)
+    )
     return def.sort ? [...filtered].sort(def.sort) : filtered
-  }, [def, games, statusMap])
+  }, [def, games, statusMap, prefs])
 
   if (!def) return null
 
