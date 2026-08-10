@@ -10,6 +10,16 @@
   --accent: #c8a97e;
   --amber: #e0871a;
 
+  /* Brand logo isometric-stack ramp, darkest (l1) to brightest (l7).
+     Recolored per theme by the :root[data-accent] blocks below. */
+  --logo-1: #5c2206;
+  --logo-2: #792d08;
+  --logo-3: #9a3b0c;
+  --logo-4: #b4590f;
+  --logo-5: #c85c15;
+  --logo-6: #d97716;
+  --logo-7: #f5a623;
+
   --xbox: #107c10;
   --psn: #0f3fa8;
   --steam: #66c0f4;
@@ -84,6 +94,15 @@
   color: var(--amber);
   font-weight: 700;
 }
+
+/* Logo facets read their fill from the theme ramp (inline fill = fallback). */
+.gd-logo .l1 { fill: var(--logo-1); }
+.gd-logo .l2 { fill: var(--logo-2); }
+.gd-logo .l3 { fill: var(--logo-3); }
+.gd-logo .l4 { fill: var(--logo-4); }
+.gd-logo .l5 { fill: var(--logo-5); }
+.gd-logo .l6 { fill: var(--logo-6); }
+.gd-logo .l7 { fill: var(--logo-7); }
 
 .brand-caret {
   width: 15px;
@@ -1542,6 +1561,8 @@ textarea {
   --bg: #15171b; --surface: #1d2026; --surface-2: #252932; --line: #333a45;
   --text: #e5e8ee; --muted: #98a1b1; --walnut: #41506a; --walnut-light: #5f7799;
   --accent: #86a0c2; --amber: #7fb0e0;
+  --logo-1: #26385a; --logo-2: #314a74; --logo-3: #3d5e90; --logo-4: #4a72aa;
+  --logo-5: #5a86c0; --logo-6: #6f9ed6; --logo-7: #86b4e8;
 }
 :root[data-accent="slate"][data-theme="light"] {
   --bg: #e7eaef; --surface: #f0f3f7; --surface-2: #fbfcff; --line: #d4dbe6;
@@ -1554,6 +1575,8 @@ textarea {
   --bg: #161814; --surface: #1e211a; --surface-2: #262a22; --line: #353b2f;
   --text: #e8eae1; --muted: #a0a690; --walnut: #48543a; --walnut-light: #6b7a55;
   --accent: #9aab83; --amber: #bcc77e;
+  --logo-1: #3c4724; --logo-2: #4f5c2f; --logo-3: #64723a; --logo-4: #7a8848;
+  --logo-5: #909d58; --logo-6: #a9b56c; --logo-7: #c2cd84;
 }
 :root[data-accent="sage"][data-theme="light"] {
   --bg: #e9ebe0; --surface: #f2f4ea; --surface-2: #fcfdf5; --line: #d7dcc8;
@@ -1566,6 +1589,8 @@ textarea {
   --bg: #18151a; --surface: #201d23; --surface-2: #29242e; --line: #383140;
   --text: #ebe5ec; --muted: #a89aac; --walnut: #4d3b4f; --walnut-light: #6f5670;
   --accent: #b191b0; --amber: #caa2d2;
+  --logo-1: #422c47; --logo-2: #573a5d; --logo-3: #6f4b76; --logo-4: #895e90;
+  --logo-5: #a173a8; --logo-6: #b98cc0; --logo-7: #cfa6d6;
 }
 :root[data-accent="plum"][data-theme="light"] {
   --bg: #ece6ed; --surface: #f4eff5; --surface-2: #fdf9fe; --line: #ddd2de;
@@ -1578,6 +1603,8 @@ textarea {
   --bg: #17181a; --surface: #202124; --surface-2: #292a2e; --line: #3a3c41;
   --text: #e8e9ec; --muted: #9b9ea6; --walnut: #464a52; --walnut-light: #646973;
   --accent: #98a2ae; --amber: #b2b8c2;
+  --logo-1: #363a42; --logo-2: #484d56; --logo-3: #5e646f; --logo-4: #767c88;
+  --logo-5: #9096a2; --logo-6: #a9afba; --logo-7: #c2c8d2;
 }
 :root[data-accent="graphite"][data-theme="light"] {
   --bg: #e8e9ec; --surface: #f1f2f5; --surface-2: #fbfcfe; --line: #d7d9de;
