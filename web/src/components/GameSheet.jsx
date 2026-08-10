@@ -5,6 +5,7 @@ import { igdbCover, platformMeta, minutesToHhm, formatDate } from '../lib/format
 import { STATUSES, STATUS_LABELS, effectiveStatus, setStatus } from '../lib/userStatus.js'
 import { useWishlist, toggleWishlist } from '../lib/wishlist.js'
 import { fetchGameById } from '../lib/discover.js'
+import Lightbox from './Lightbox.jsx'
 import './gameSheet.css'
 
 // One sheet for a game across Library (owned), Discover, and Wishlist. Same shell
@@ -56,6 +57,9 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   // Swipe-down-to-close, from the cover/handle zone so details below still scroll.
   const drag = useRef({ startY: 0, active: false })
   const [dragY, setDragY] = useState(0)
+
+  // Screenshot lightbox (null = closed, else the index being viewed).
+  const [shotIndex, setShotIndex] = useState(null)
   function onDragStart(e) {
     drag.current = { startY: e.touches[0].clientY, active: true }
   }
@@ -213,7 +217,15 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
         {screenshots.length ? (
           <div className="shot-strip">
             {screenshots.map((s, i) => (
-              <img className="shot" src={s} alt={`${title} screenshot ${i + 1}`} key={i} loading="lazy" />
+              <button
+                type="button"
+                className="shot-btn"
+                key={i}
+                onClick={() => setShotIndex(i)}
+                aria-label={`View ${title} screenshot ${i + 1} larger`}
+              >
+                <img className="shot" src={s} alt={`${title} screenshot ${i + 1}`} loading="lazy" />
+              </button>
             ))}
           </div>
         ) : null}
@@ -299,6 +311,15 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
           </a>
         ) : null}
       </div>
+
+      {shotIndex != null ? (
+        <Lightbox
+          shots={screenshots}
+          index={shotIndex}
+          title={title}
+          onClose={() => setShotIndex(null)}
+        />
+      ) : null}
     </div>
   )
 }
