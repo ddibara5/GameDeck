@@ -1505,7 +1505,8 @@ textarea {
 [data-theme="light"] .chat-bubble.error { border-color: #d8a3a3; color: #b04a4a; }
 
 /* Tab bar + header glass, light mode: neutral near-white frosted (matches the
-   neutral dark treatment), a crisp raised white active chip with near-black ink. */
+   neutral dark treatment), a translucent raised active chip that lets content
+   show through (see-through like dark), with near-black ink. */
 [data-theme="light"] .app-header.scrolled {
   background: rgba(245, 245, 248, 0.42);
   border-bottom-color: rgba(40, 38, 36, 0.12);
@@ -1519,8 +1520,8 @@ textarea {
 [data-theme="light"] .tabbar-btn { color: #6a655d; }
 [data-theme="light"] .tabbar-btn.active { color: #232020; }
 [data-theme="light"] .tabbar-btn.active::before {
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 1px 4px rgba(40, 40, 45, 0.22);
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 1px 4px rgba(40, 40, 45, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 [data-theme="light"] .status-badge.status-finished {
   color: #0f7a58;
