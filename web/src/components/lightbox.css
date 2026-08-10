@@ -30,6 +30,8 @@
   align-items: center;
   justify-content: center;
   padding: calc(16px + var(--safe-top, 0px)) 12px calc(16px + var(--safe-bottom, 0px));
+  background: rgba(8, 6, 5, 1);
+  overflow: hidden;
   animation: lb-fade 0.18s ease both;
   -webkit-tap-highlight-color: transparent;
 }
@@ -50,6 +52,8 @@
   align-items: center;
   justify-content: center;
   touch-action: none;
+  transform-origin: center center;
+  will-change: transform;
 }
 
 .lb-img {
