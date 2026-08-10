@@ -154,6 +154,18 @@ export default async function handler(req, res) {
     } else if (rail === 'highly_rated') {
       where.push('total_rating >= 85', 'total_rating_count >= 40', 'cover != null');
       sort = 'sort total_rating desc';
+    } else if (rail === 'coming_soon') {
+      // Upcoming, ordered by soonest release (complements 'upcoming', which sorts by hype).
+      where.push(`first_release_date > ${nowTs}`, 'cover != null');
+      sort = 'sort first_release_date asc';
+    } else if (rail === 'just_added') {
+      // Newest entries in the IGDB database.
+      where.push('cover != null', 'total_rating_count >= 1');
+      sort = 'sort created_at desc';
+    } else if (rail === 'hidden_gems') {
+      // Well-reviewed but low-profile: high rating, modest rating count.
+      where.push('total_rating >= 80', 'total_rating_count >= 8', 'total_rating_count <= 40', 'cover != null');
+      sort = 'sort total_rating desc';
     } else {
       // browse / search / filter
       where.push('cover != null');
