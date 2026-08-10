@@ -6,6 +6,9 @@ import Skeleton from './Skeleton.jsx'
 import WishHeart from './WishHeart.jsx'
 import { fetchDiscover, loadLibraryTitles, normTitle } from '../lib/discover.js'
 import { useWishlist } from '../lib/wishlist.js'
+import { useRowsConfig, ROW_BY_KEY, RAIL_KEYS } from '../lib/discoverRows.js'
+
+const CURRENT_YEAR = new Date().getFullYear()
 
 // Quick-access chips tuned to Dave's genre play history (no developer filters).
 // Each chip resolves to either an IGDB keyword/genre preset (server `preset=`)
@@ -65,7 +68,7 @@ const YEARS = ['all', 2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2016
 const PAGE_SIZE = 30
 const DEFAULT_FILTERS = { genre: 'all', platform: 'all', year: 'all', status: 'all', sort: 'popularity' }
 
-export default function DiscoverBrowse({ onAsk }) {
+export default function DiscoverBrowse({ onAsk, onCustomize }) {
   const [query, setQuery] = useState('')
   const [preset, setPreset] = useState(null)
   const [filters, setFilters] = useState(DEFAULT_FILTERS)
@@ -110,6 +113,7 @@ export default function DiscoverBrowse({ onAsk }) {
   }, [libTitles])
 
   const { items: wishItems, ids: wishIds } = useWishlist()
+  const rowsConfig = useRowsConfig()
   const wishGames = useMemo(
     () => wishItems.map((r) => ({ id: r.igdb_id, name: r.title, cover: r.cover, year: r.year })),
     [wishItems]
@@ -120,7 +124,7 @@ export default function DiscoverBrowse({ onAsk }) {
     let alive = true
     setRailsLoading(true)
     Promise.all(
-      RAILS.map((r) => fetchDiscover({ rail: r.key, limit: 20 }).then((games) => [r.key, games]).catch(() => [r.key, []]))
+      RAIL_KEYS.map((k) => fetchDiscover({ rail: k, limit: 20 }).then((games) => [k, games]).catch(() => [k, []]))
     ).then((pairs) => {
       if (!alive) return
       const map = {}
@@ -339,55 +343,50 @@ export default function DiscoverBrowse({ onAsk }) {
         <Skeleton count={4} />
       ) : (
         <>
-          {wishGames.length ? (
-            <section className="shelf wishlist-rail">
-              <div className="shelf-head">
-                <span className="shelf-title">Your wishlist</span>
-              </div>
-              <div className="shelf-row">
-                {wishGames.map((g) => (
-                  <div className="shelf-card-wrap" key={g.id}>
-                    <button type="button" className="shelf-card" onClick={() => setSelected(g)}>
-                      <div className="shelf-poster">
-                        <Cover src={g.cover} title={g.name} size="lg" />
-                      </div>
-                      <div className="shelf-card-title">{g.name}</div>
-                      <div className="shelf-card-meta">{g.year || ''}</div>
-                    </button>
-                    <WishHeart game={g} active />
-                  </div>
-                ))}
-              </div>
-            </section>
-          ) : null}
-          {RAILS.map((r) => {
-          const items = hideFromLibrary(rails[r.key])
-          return items.length ? (
-            <section className="shelf" key={r.key}>
-              <div className="shelf-head">
-                <span className="shelf-title">{r.label}</span>
-              </div>
-              <div className="shelf-row">
-                {items.map((g) => (
-                  <div className="shelf-card-wrap" key={g.id}>
-                    <button type="button" className="shelf-card" onClick={() => setSelected(g)}>
-                      <div className="shelf-poster">
-                        <Cover src={g.cover} title={g.name} size="lg" />
-                        {isOwned(g.name) ? <span className="in-library-dot" title="In library" /> : null}
-                      </div>
-                      <div className="shelf-card-title">{g.name}</div>
-                      <div className="shelf-card-meta">
-                        {g.year || ''}
-                        {g.rating ? `${g.year ? ' · ' : ''}★ ${g.rating}` : ''}
-                      </div>
-                    </button>
-                    <WishHeart game={g} active={wishIds.has(g.id)} />
-                  </div>
-                ))}
-              </div>
-            </section>
-          ) : null
+          {rowsConfig.order.map((key) => {
+            if (!rowsConfig.enabled[key]) return null
+            const row = ROW_BY_KEY[key]
+            if (!row) return null
+            let items
+            if (row.kind === 'wishlist') items = wishGames
+            else if (row.kind === 'wishlistSoon') items = wishGames.filter((g) => g.year && g.year >= CURRENT_YEAR)
+            else items = hideFromLibrary(rails[key])
+            if (!items || !items.length) return null
+            return (
+              <section className={`shelf${row.kind === 'wishlist' ? ' wishlist-rail' : ''}`} key={key}>
+                <div className="shelf-head">
+                  <span className="shelf-title">{row.label}</span>
+                </div>
+                <div className="shelf-row">
+                  {items.map((g) => (
+                    <div className="shelf-card-wrap" key={g.id}>
+                      <button type="button" className="shelf-card" onClick={() => setSelected(g)}>
+                        <div className="shelf-poster">
+                          <Cover src={g.cover} title={g.name} size="lg" />
+                          {isOwned(g.name) ? <span className="in-library-dot" title="In library" /> : null}
+                        </div>
+                        <div className="shelf-card-title">{g.name}</div>
+                        <div className="shelf-card-meta">
+                          {g.year || ''}
+                          {g.rating ? `${g.year ? ' · ' : ''}★ ${g.rating}` : ''}
+                        </div>
+                      </button>
+                      <WishHeart game={g} active={wishIds.has(g.id)} />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )
           })}
+          <button type="button" className="customize-btn" onClick={() => onCustomize && onCustomize()}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="4" y1="7" x2="20" y2="7" />
+              <circle cx="9" cy="7" r="2.3" fill="var(--surface)" />
+              <line x1="4" y1="17" x2="20" y2="17" />
+              <circle cx="15" cy="17" r="2.3" fill="var(--surface)" />
+            </svg>
+            Customize rows
+          </button>
         </>
       )}
 

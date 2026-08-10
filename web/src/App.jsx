@@ -9,6 +9,7 @@ import InsightsTab from './components/InsightsTab.jsx'
 import DiscoverTab from './components/DiscoverTab.jsx'
 import WishlistTab from './components/WishlistTab.jsx'
 import ListView from './components/ListView.jsx'
+import CustomizeRows from './components/CustomizeRows.jsx'
 
 const TABS = ['library', 'activity', 'insights', 'discover']
 
@@ -21,6 +22,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('library')
   const [menuOpen, setMenuOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [customizeOpen, setCustomizeOpen] = useState(false)
   // A drawer-opened overlay view (e.g. Wishlist) shown over the active tab.
   const [view, setView] = useState(null)
   // Header goes frosted + shows a separator once the page is scrolled off the top.
@@ -49,14 +51,23 @@ export default function App() {
     }
     const onMove = (e) => {
       if (!tracking) return
-      // Settings is a full-screen page over everything; its own swipe handles back.
-      if (settingsOpen) return
+      // Settings / Customize are full-screen pages with their own edge-back swipe.
+      if (settingsOpen || customizeOpen) return
       const t = e.touches && e.touches[0]
       if (!t) return
       const dx = t.clientX - startX
       const dy = t.clientY - startY
       // Only act on a clearly horizontal gesture, so vertical scrolling is untouched.
       if (Math.abs(dx) <= Math.abs(dy)) return
+      // A drawer-opened overlay (Wishlist, status/smart lists) is open: an edge
+      // swipe-in goes back to close it instead of opening the app drawer.
+      if (view) {
+        if (fromEdge && dx > OPEN_DX) {
+          setView(null)
+          tracking = false
+        }
+        return
+      }
       if (!menuOpen && fromEdge && dx > OPEN_DX) {
         setMenuOpen(true)
         tracking = false
@@ -77,7 +88,7 @@ export default function App() {
       window.removeEventListener('touchmove', onMove)
       window.removeEventListener('touchend', onEnd)
     }
-  }, [menuOpen, settingsOpen])
+  }, [menuOpen, settingsOpen, customizeOpen, view])
 
   return (
     <div className="app">
@@ -102,7 +113,7 @@ export default function App() {
             {activeTab === 'library' && <LibraryTab />}
             {activeTab === 'activity' && <ActivityTab />}
             {activeTab === 'insights' && <InsightsTab />}
-            {activeTab === 'discover' && <DiscoverTab />}
+            {activeTab === 'discover' && <DiscoverTab onCustomize={() => setCustomizeOpen(true)} />}
           </>
         )}
       </main>
@@ -121,6 +132,7 @@ export default function App() {
         onOpenList={(key) => setView(key)}
       />
       <SettingsPage open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <CustomizeRows open={customizeOpen} onClose={() => setCustomizeOpen(false)} />
     </div>
   )
 }
