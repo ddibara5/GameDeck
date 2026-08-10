@@ -19,10 +19,13 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList }) {
   // Live counts for each list, derived from the (session-cached) library + the
   // status map + view prefs so the badges match what the lists actually show.
   const counts = useMemo(() => {
-    const c = { backlog: 0, playing: 0, finished: 0, abandoned: 0, best: 0 }
+    const c = { backlog: 0, playing: 0, finished: 0, abandoned: 0, best: 0, hidden: 0 }
     for (const g of games) {
+      if (prefs.hidden.has(String(g.master_id))) {
+        c.hidden += 1
+        continue
+      }
       if (!includeInLists(g, statusMap)) continue
-      if (prefs.hidden.has(String(g.master_id))) continue
       if (!passesYear(g, prefs.hideBeforeYear)) continue
       const s = effectiveStatus(g, statusMap)
       if (c[s] != null) c[s] += 1
@@ -108,6 +111,18 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList }) {
             onClick={() => openList('smart:best-backlog')}
           />
         </div>
+
+        {counts.hidden > 0 ? (
+          <div className="menu-sec">
+            <MenuItem
+              glyph={ICONS.eyeOff}
+              label="Hidden"
+              sub="Not a game, review or restore"
+              value={String(counts.hidden)}
+              onClick={() => openList('special:hidden')}
+            />
+          </div>
+        ) : null}
 
         <div className="menu-foot">GameDeck</div>
       </aside>

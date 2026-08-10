@@ -1,15 +1,10 @@
 import Cover from './Cover.jsx'
 import { minutesToHhm, igdbCover } from '../lib/format.js'
-import { isRealGame } from '../lib/userStatus.js'
 
-// Two discovery shelves shown at the top of the Library (default view only):
-// "Continue playing" (most recently played) and "Fresh from your backlog" (never played).
+// Discovery shelf shown at the top of the Library (default view only): "Continue
+// playing" (most recently played). The backlog now lives only in the side panel.
 export default function HomeShelf({ games, onSelect }) {
   const continuePlaying = games.filter((g) => g.last_played).slice(0, 12)
-  const backlog = games
-    .filter((g) => !g.last_played && (g.playtime_minutes || 0) === 0 && isRealGame(g))
-    .sort((a, b) => (b.total_awards || 0) - (a.total_awards || 0))
-    .slice(0, 12)
 
   const shelves = [
     {
@@ -17,12 +12,6 @@ export default function HomeShelf({ games, onSelect }) {
       label: 'Continue playing',
       items: continuePlaying,
       meta: (g) => minutesToHhm(g.playtime_minutes) + ' played',
-    },
-    {
-      key: 'backlog',
-      label: 'Fresh from your backlog',
-      items: backlog,
-      meta: () => 'Never played',
     },
   ]
 

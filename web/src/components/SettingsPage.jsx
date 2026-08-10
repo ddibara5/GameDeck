@@ -5,6 +5,7 @@ import { getTheme, setTheme, getAccent, setAccent } from '../lib/theme.js'
 import { getHideBeforeYear, setHideBeforeYear } from '../lib/libraryPrefs.js'
 import { useMountTransition } from '../lib/useMountTransition.js'
 import { MenuItem, ICONS, relTime } from './menuUI.jsx'
+import './settings.css'
 
 const REPO = 'ddibara5/GameDeck'
 const SOURCE_URL = 'https://github.com/ddibara5/GameDeck'
@@ -21,13 +22,10 @@ const THEME_OPTIONS = [
   { key: 'system', label: 'System' },
 ]
 
-// "Hide games before <year>" for the drawer status lists. 0 = show everything.
-const HIDE_YEAR_OPTIONS = [
-  { key: 0, label: 'Off' },
-  { key: 2010, label: '2010+' },
-  { key: 2015, label: '2015+' },
-  { key: 2020, label: '2020+' },
-]
+// "Hide games before <year>" for the drawer status lists. The slider's far-left
+// (MIN_HIDE_YEAR) means "off / show all"; any higher value is the cutoff year.
+const CURRENT_YEAR = new Date().getFullYear()
+const MIN_HIDE_YEAR = 1995
 
 // Color themes. `ring` is the swatch's outer disc (a theme surface), `dot` the
 // inner accent. Palettes live in index.css under :root[data-accent="..."].
@@ -207,7 +205,8 @@ export default function SettingsPage({ open, onClose }) {
   }
 
   function changeHideYear(year) {
-    setHideYear(setHideBeforeYear(year || null))
+    const y = Number(year)
+    setHideYear(setHideBeforeYear(y > MIN_HIDE_YEAR ? y : null))
   }
 
   function toggleKey() {
@@ -310,19 +309,24 @@ export default function SettingsPage({ open, onClose }) {
             <div className="menu-appearance-head">
               {ICONS.layers}
               <span className="menu-label">Hide games before</span>
+              <span className="year-readout">{hideYear || 'Off'}</span>
             </div>
-            <div className="seg" role="group" aria-label="Hide games before a year">
-              {HIDE_YEAR_OPTIONS.map((opt) => (
-                <button
-                  key={opt.key}
-                  type="button"
-                  className={`seg-btn${(hideYear || 0) === opt.key ? ' active' : ''}`}
-                  onClick={() => changeHideYear(opt.key)}
-                  aria-pressed={(hideYear || 0) === opt.key}
-                >
-                  {opt.label}
-                </button>
-              ))}
+            <input
+              type="range"
+              className="year-slider"
+              min={MIN_HIDE_YEAR}
+              max={CURRENT_YEAR}
+              step="1"
+              value={hideYear || MIN_HIDE_YEAR}
+              onChange={(e) => changeHideYear(e.target.value)}
+              aria-label="Hide games released before this year"
+            />
+            <div className="year-scale">
+              <span>All years</span>
+              <button type="button" className="year-off" onClick={() => changeHideYear(MIN_HIDE_YEAR)}>
+                Off
+              </button>
+              <span>{CURRENT_YEAR}</span>
             </div>
           </div>
         </div>

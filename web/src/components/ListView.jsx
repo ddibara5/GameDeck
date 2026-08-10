@@ -39,6 +39,14 @@ export const LIST_DEFS = {
     sort: (a, b) => (Number(b.igdb_rating) || 0) - (Number(a.igdb_rating) || 0),
     empty: 'Highly rated games in your backlog appear here as ratings sync in.',
   },
+  // Everything the user marked "not a game". Bypasses the normal filters so the
+  // hidden items are reviewable; open one and hit "Show again" to restore it.
+  'special:hidden': {
+    title: 'Hidden',
+    subtitle: 'Marked “not a game”. Open one to show it again.',
+    hiddenList: true,
+    empty: 'Nothing hidden. Use “Not a game? Hide” on a game to tuck it away here.',
+  },
 }
 
 export default function ListView({ viewKey, onClose }) {
@@ -50,6 +58,10 @@ export default function ListView({ viewKey, onClose }) {
 
   const list = useMemo(() => {
     if (!def) return []
+    // The Hidden list shows exactly the hidden games, ignoring every other filter.
+    if (def.hiddenList) {
+      return games.filter((g) => prefs.hidden.has(String(g.master_id)))
+    }
     const filtered = games.filter(
       (g) =>
         includeInLists(g, statusMap) &&
