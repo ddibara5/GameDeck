@@ -8,6 +8,7 @@ import ActivityTab from './components/ActivityTab.jsx'
 import InsightsTab from './components/InsightsTab.jsx'
 import DiscoverTab from './components/DiscoverTab.jsx'
 import WishlistTab from './components/WishlistTab.jsx'
+import ListView from './components/ListView.jsx'
 
 const TABS = ['library', 'activity', 'insights', 'discover']
 
@@ -94,6 +95,8 @@ export default function App() {
       <main className="app-main">
         {view === 'wishlist' ? (
           <WishlistTab onClose={() => setView(null)} />
+        ) : view ? (
+          <ListView viewKey={view} onClose={() => setView(null)} />
         ) : (
           <>
             {activeTab === 'library' && <LibraryTab />}
@@ -111,7 +114,12 @@ export default function App() {
         }}
         tabs={TABS}
       />
-      <Menu open={menuOpen} onClose={() => setMenuOpen(false)} onOpenWishlist={() => setView('wishlist')} />
+      <Menu
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        onOpenWishlist={() => setView('wishlist')}
+        onOpenList={(key) => setView(key)}
+      />
       <SettingsPage open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   )

@@ -1,13 +1,35 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useWishlist } from '../lib/wishlist.js'
 import { useMountTransition } from '../lib/useMountTransition.js'
+import { useLibraryGames } from '../lib/useLibraryGames.js'
+import { useStatusMap, effectiveStatus } from '../lib/userStatus.js'
+import { BEST_MIN_RATING } from './ListView.jsx'
 import { MenuItem, ICONS } from './menuUI.jsx'
 
 // Left drawer: a lists / content hub. App-wide settings live in the gear-opened
 // Settings page (see SettingsPage.jsx); this panel stays focused on collections.
-export default function Menu({ open, onClose, onOpenWishlist }) {
+export default function Menu({ open, onClose, onOpenWishlist, onOpenList }) {
   const { items: wishItems } = useWishlist()
+  const { games } = useLibraryGames()
+  const statusMap = useStatusMap()
   const { mounted, closing } = useMountTransition(open)
+
+  // Live counts for each list, derived from the (session-cached) library + the
+  // status map so the badges stay in sync as statuses change.
+  const counts = useMemo(() => {
+    const c = { backlog: 0, playing: 0, finished: 0, abandoned: 0, best: 0 }
+    for (const g of games) {
+      const s = effectiveStatus(g, statusMap)
+      if (c[s] != null) c[s] += 1
+      if (s === 'backlog' && Number(g.igdb_rating) >= BEST_MIN_RATING) c.best += 1
+    }
+    return c
+  }, [games, statusMap])
+
+  const openList = (key) => {
+    onOpenList(key)
+    onClose()
+  }
 
   // Close on Escape.
   useEffect(() => {
@@ -64,6 +86,21 @@ export default function Menu({ open, onClose, onOpenWishlist }) {
               if (onOpenWishlist) onOpenWishlist()
               onClose()
             }}
+          />
+          <MenuItem glyph={ICONS.layers} label="Backlog" value={String(counts.backlog)} onClick={() => openList('status:backlog')} />
+          <MenuItem glyph={ICONS.play} label="Playing" value={String(counts.playing)} onClick={() => openList('status:playing')} />
+          <MenuItem glyph={ICONS.check} label="Finished" value={String(counts.finished)} onClick={() => openList('status:finished')} />
+          <MenuItem glyph={ICONS.xcircle} label="Abandoned" value={String(counts.abandoned)} onClick={() => openList('status:abandoned')} />
+        </div>
+
+        <div className="menu-sec">
+          <div className="menu-sec-label">Smart lists</div>
+          <MenuItem
+            glyph={ICONS.star}
+            label="Best of your backlog"
+            sub="Rated 85+, still unplayed"
+            value={String(counts.best)}
+            onClick={() => openList('smart:best-backlog')}
           />
         </div>
 
