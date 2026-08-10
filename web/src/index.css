@@ -42,6 +42,7 @@
   height: calc(var(--app-header-h) + var(--safe-top));
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: var(--safe-top) 16px 0;
   background: var(--bg);
   border-bottom: 1px solid transparent;
@@ -103,6 +104,63 @@
 .gd-logo .l5 { fill: var(--logo-5); }
 .gd-logo .l6 { fill: var(--logo-6); }
 .gd-logo .l7 { fill: var(--logo-7); }
+
+/* Settings gear: frosted-glass chip in the header, echoing the tab bar.
+   24px glyph in a 38px chip inside a 44px tap target. */
+.gear-btn {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-right: -8px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.gear-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  color: var(--text);
+  background: rgba(38, 38, 42, 0.34);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 6px 16px rgba(0, 0, 0, 0.3);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease;
+}
+
+.gear-btn:active .gear-chip {
+  transform: scale(0.9);
+}
+
+.gear-glyph {
+  width: 24px;
+  height: 24px;
+}
+
+[data-theme="light"] .gear-chip {
+  background: rgba(245, 245, 248, 0.42);
+  border-color: rgba(40, 38, 36, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), 0 4px 12px rgba(40, 40, 45, 0.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gear-chip {
+    transition: background 0.2s ease;
+  }
+  .gear-btn:active .gear-chip {
+    transform: none;
+  }
+}
 
 .brand-caret {
   width: 15px;
@@ -263,6 +321,104 @@
   border-top: 1px solid var(--line);
   color: #6f665a;
   font-size: 12px;
+}
+
+/* ---------- Settings page (gear-opened, full-screen) ---------- */
+
+.settings-page {
+  position: fixed;
+  inset: 0;
+  z-index: 210;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  animation: settings-in 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes settings-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.settings-hd {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: calc(var(--safe-top) + 12px) 16px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+}
+
+.settings-back {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  margin-left: -8px;
+  border: none;
+  background: none;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.settings-back:active {
+  background: var(--surface-2);
+}
+
+.settings-back svg {
+  width: 24px;
+  height: 24px;
+}
+
+.settings-hd-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.settings-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding: 6px 0 calc(var(--safe-bottom) + 28px);
+}
+
+.settings-section {
+  padding: 8px 0 6px;
+}
+
+.settings-group {
+  margin: 0 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.settings-group .menu-item {
+  border-radius: 0;
+}
+
+.settings-group .menu-item + .menu-item {
+  border-top: 1px solid var(--line);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-page {
+    animation: none;
+  }
 }
 
 * {
