@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Brand from './components/Brand.jsx'
 import Menu from './components/Menu.jsx'
+import SettingsPage from './components/SettingsPage.jsx'
 import TabBar from './components/TabBar.jsx'
 import LibraryTab from './components/LibraryTab.jsx'
 import ActivityTab from './components/ActivityTab.jsx'
@@ -18,6 +19,7 @@ const CLOSE_DX = 60
 export default function App() {
   const [activeTab, setActiveTab] = useState('library')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   // A drawer-opened overlay view (e.g. Wishlist) shown over the active tab.
   const [view, setView] = useState(null)
   // Header goes frosted + shows a separator once the page is scrolled off the top.
@@ -78,6 +80,14 @@ export default function App() {
     <div className="app">
       <header className={`app-header${scrolled ? ' scrolled' : ''}`}>
         <Brand onOpen={() => setMenuOpen(true)} />
+        <button type="button" className="gear-btn" onClick={() => setSettingsOpen(true)} aria-label="Settings" aria-haspopup="dialog">
+          <span className="gear-chip">
+            <svg className="gear-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </span>
+        </button>
       </header>
       <main className="app-main">
         {view === 'wishlist' ? (
@@ -100,6 +110,7 @@ export default function App() {
         tabs={TABS}
       />
       <Menu open={menuOpen} onClose={() => setMenuOpen(false)} onOpenWishlist={() => setView('wishlist')} />
+      {settingsOpen && <SettingsPage onClose={() => setSettingsOpen(false)} />}
     </div>
   )
 }
