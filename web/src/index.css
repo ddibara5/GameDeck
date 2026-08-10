@@ -1015,7 +1015,7 @@ textarea {
   align-items: flex-end;
   justify-content: center;
   z-index: 100;
-  animation: fade-in var(--overlay-in) ease;
+  animation: fade-in var(--overlay-out) ease;
 }
 
 .modal-backdrop.closing {
@@ -1051,7 +1051,7 @@ textarea {
   border-radius: 20px 20px 0 0;
   border-top: 1px solid var(--line);
   padding: 16px 20px calc(24px + var(--safe-bottom));
-  animation: slide-up var(--overlay-in) var(--enter-ease);
+  animation: slide-up var(--overlay-out) var(--enter-ease);
 }
 
 @keyframes slide-up {
