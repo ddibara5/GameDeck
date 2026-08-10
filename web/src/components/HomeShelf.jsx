@@ -1,10 +1,17 @@
 import Cover from './Cover.jsx'
 import { minutesToHhm, igdbCover } from '../lib/format.js'
+import { useStatusMap, effectiveStatus, includeInLists } from '../lib/userStatus.js'
 
 // Discovery shelf shown at the top of the Library (default view only): "Continue
-// playing" (most recently played). The backlog now lives only in the side panel.
+// playing". Uses the same signal as the Playing list (real games whose effective
+// status is "playing", i.e. played within the recency window and not finished),
+// most-recent first, so the shelf and the side-panel list stay in sync.
 export default function HomeShelf({ games, onSelect }) {
-  const continuePlaying = games.filter((g) => g.last_played).slice(0, 12)
+  const statusMap = useStatusMap()
+  const continuePlaying = games
+    .filter((g) => includeInLists(g, statusMap) && effectiveStatus(g, statusMap) === 'playing')
+    .sort((a, b) => new Date(b.last_played || 0) - new Date(a.last_played || 0))
+    .slice(0, 12)
 
   const shelves = [
     {
