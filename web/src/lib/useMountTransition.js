@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 // (whether to render at all) and `closing` (apply the exit-animation class).
 // When `open` flips false, `closing` turns on for `exitMs` so the exit
 // animation can play, then the component unmounts.
-export function useMountTransition(open, exitMs = 300) {
+export function useMountTransition(open, exitMs = 220) {
   const [mounted, setMounted] = useState(open)
   const [closing, setClosing] = useState(false)
   const timer = useRef(null)

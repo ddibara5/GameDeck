@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import Cover from './Cover.jsx'
+import { useDelayedClose } from '../lib/useDelayedClose.js'
 import { useWishlist, toggleWishlist } from '../lib/wishlist.js'
 
 // Detail sheet for a Discover (IGDB) game. Reuses the Library modal-sheet shell
@@ -7,6 +8,7 @@ import { useWishlist, toggleWishlist } from '../lib/wishlist.js'
 //   - "Ask AI about this"  -> hands a seed prompt back up to Discover's Ask tab
 //   - "More like this"     -> re-queries Browse by this game's primary genre
 export default function DiscoverDetail({ game, inLibrary, onAsk, onMoreLikeThis, onClose }) {
+  const { closing, requestClose } = useDelayedClose(onClose)
   const drag = useRef({ startY: 0, active: false })
   const [dragY, setDragY] = useState(0)
   const { ids: wishIds } = useWishlist()
@@ -27,7 +29,7 @@ export default function DiscoverDetail({ game, inLibrary, onAsk, onMoreLikeThis,
   function onDragEnd() {
     const shouldClose = dragY > 110
     drag.current.active = false
-    if (shouldClose) onClose()
+    if (shouldClose) requestClose()
     else setDragY(0)
   }
 
@@ -42,7 +44,7 @@ export default function DiscoverDetail({ game, inLibrary, onAsk, onMoreLikeThis,
   if (!game) return null
 
   const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget) onClose()
+    if (e.target === e.currentTarget) requestClose()
   }
 
   const wishActive = wishIds.has(Number(game.id))
@@ -53,14 +55,14 @@ export default function DiscoverDetail({ game, inLibrary, onAsk, onMoreLikeThis,
   if (game.ratingCount) meta.push(`${game.ratingCount} ratings`)
 
   return (
-    <div className="modal-backdrop" onClick={handleBackdropClick}>
+    <div className={`modal-backdrop${closing ? ' closing' : ''}`} onClick={handleBackdropClick}>
       <div
         className="modal-sheet"
         role="dialog"
         aria-modal="true"
         aria-label={game.name}
         style={{
-          transform: dragY ? `translateY(${dragY}px)` : undefined,
+          transform: closing ? 'translateY(110%)' : dragY ? `translateY(${dragY}px)` : undefined,
           transition: drag.current.active ? 'none' : 'transform 0.25s ease',
         }}
       >

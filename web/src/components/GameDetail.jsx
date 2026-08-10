@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import Cover from './Cover.jsx'
+import { useDelayedClose } from '../lib/useDelayedClose.js'
 import { platformMeta, formatDate, minutesToHhm, igdbCover } from '../lib/format.js'
 import { STATUSES, STATUS_LABELS, effectiveStatus, setStatus } from '../lib/userStatus.js'
 
 export default function GameDetail({ game, onClose }) {
+  const { closing, requestClose } = useDelayedClose(onClose)
   const [status, setStatusState] = useState('backlog')
 
   // Swipe-down-to-close, only from the cover/handle zone so the details below still scroll.
@@ -25,7 +27,7 @@ export default function GameDetail({ game, onClose }) {
   function onDragEnd() {
     const shouldClose = dragY > 110
     drag.current.active = false
-    if (shouldClose) onClose()
+    if (shouldClose) requestClose()
     else setDragY(0)
   }
 
@@ -55,18 +57,18 @@ export default function GameDetail({ game, onClose }) {
     len > 0 ? Math.max(0, Math.min(100, Math.round(((game.playtime_minutes || 0) / len) * 100))) : null
 
   const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget) onClose()
+    if (e.target === e.currentTarget) requestClose()
   }
 
   return (
-    <div className="modal-backdrop" onClick={handleBackdropClick}>
+    <div className={`modal-backdrop${closing ? ' closing' : ''}`} onClick={handleBackdropClick}>
       <div
         className="modal-sheet"
         role="dialog"
         aria-modal="true"
         aria-label={game.title}
         style={{
-          transform: dragY ? `translateY(${dragY}px)` : undefined,
+          transform: closing ? 'translateY(110%)' : dragY ? `translateY(${dragY}px)` : undefined,
           transition: drag.current.active ? 'none' : 'transform 0.25s ease',
         }}
       >

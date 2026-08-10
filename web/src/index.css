@@ -34,7 +34,7 @@
   /* Overlay motion: shared timing so pages/drawers/sheets enter and exit with
      one consistent, fluid feel. */
   --overlay-in: 0.32s;
-  --overlay-out: 0.26s;
+  --overlay-out: 0.2s;
   --enter-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --exit-ease: cubic-bezier(0.4, 0, 0.9, 0.3);
 }
@@ -471,6 +471,7 @@
   .drawer-scrim,
   .drawer-scrim.closing,
   .modal-backdrop,
+  .modal-backdrop.closing,
   .modal-sheet {
     animation: none;
   }
@@ -1015,6 +1016,10 @@ textarea {
   justify-content: center;
   z-index: 100;
   animation: fade-in var(--overlay-in) ease;
+}
+
+.modal-backdrop.closing {
+  animation: fade-out var(--overlay-out) ease forwards;
 }
 
 @keyframes fade-in {
