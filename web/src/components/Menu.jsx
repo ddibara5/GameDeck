@@ -19,6 +19,17 @@ export default function Menu({ open, onClose, onOpenWishlist }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
 
+  // Lock background scroll while the drawer is open, so the page behind the
+  // scrim can't scroll.
+  useEffect(() => {
+    if (!mounted) return undefined
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [mounted])
+
   if (!mounted) return null
 
   return (

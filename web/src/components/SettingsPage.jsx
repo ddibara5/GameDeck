@@ -59,6 +59,17 @@ export default function SettingsPage({ open, onClose }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [mounted, onClose])
 
+  // Lock background scroll while the page is open, so the page behind it can't
+  // scroll and its scrollbar doesn't show through.
+  useEffect(() => {
+    if (!mounted) return undefined
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [mounted])
+
   // Swipe to go back: iOS-style edge-back. Start near the left edge and drag
   // right to dismiss the page.
   useEffect(() => {
