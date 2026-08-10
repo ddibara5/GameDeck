@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { getAppKey, setAppKey, promptForKey } from '../lib/appAuth.js'
-import { getTheme, setTheme } from '../lib/theme.js'
+import { getTheme, setTheme, getAccent, setAccent } from '../lib/theme.js'
 import { useWishlist } from '../lib/wishlist.js'
 
 const REPO = 'ddibara5/GameDeck'
@@ -17,6 +17,16 @@ const THEME_OPTIONS = [
   { key: 'dark', label: 'Dark' },
   { key: 'light', label: 'Light' },
   { key: 'system', label: 'System' },
+]
+
+// Color themes. `ring` is the swatch's outer disc (a theme surface), `dot` the
+// inner accent. Palettes live in index.css under :root[data-accent="..."].
+const ACCENT_OPTIONS = [
+  { key: 'walnut', label: 'Walnut', ring: '#232120', dot: '#c8a97e' },
+  { key: 'slate', label: 'Slate', ring: '#1d2026', dot: '#86a0c2' },
+  { key: 'sage', label: 'Sage', ring: '#1e211a', dot: '#9aab83' },
+  { key: 'plum', label: 'Plum', ring: '#201d23', dot: '#b191b0' },
+  { key: 'graphite', label: 'Graphite', ring: '#202124', dot: '#98a2ae' },
 ]
 
 function relTime(ts) {
@@ -90,6 +100,7 @@ export default function Menu({ open, onClose, onOpenWishlist }) {
   const [version, setVersion] = useState(null)
   const [keySet, setKeySet] = useState(() => Boolean(getAppKey()))
   const [theme, setThemeState] = useState(() => getTheme())
+  const [accent, setAccentState] = useState(() => getAccent())
   const [chatsCleared, setChatsCleared] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [syncNote, setSyncNote] = useState('')
@@ -118,6 +129,7 @@ export default function Menu({ open, onClose, onOpenWishlist }) {
     setChatsCleared(false)
     setKeySet(Boolean(getAppKey()))
     setThemeState(getTheme())
+    setAccentState(getAccent())
 
     ;(async () => {
       const [syncRes, actRes] = await Promise.all([
@@ -188,6 +200,10 @@ export default function Menu({ open, onClose, onOpenWishlist }) {
 
   function changeTheme(pref) {
     setThemeState(setTheme(pref))
+  }
+
+  function changeAccent(key) {
+    setAccentState(setAccent(key))
   }
 
   function toggleKey() {
@@ -288,6 +304,26 @@ export default function Menu({ open, onClose, onOpenWishlist }) {
                   {opt.label}
                 </button>
               ))}
+            </div>
+            <div className="menu-accent">
+              <div className="menu-accent-label">Theme</div>
+              <div className="accent-row" role="group" aria-label="Color theme">
+                {ACCENT_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    className={`accent-opt${accent === opt.key ? ' on' : ''}`}
+                    onClick={() => changeAccent(opt.key)}
+                    aria-pressed={accent === opt.key}
+                    title={opt.label}
+                  >
+                    <span className="accent-dot" style={{ background: opt.ring }}>
+                      <i style={{ background: opt.dot }} />
+                    </span>
+                    <span className="accent-name">{opt.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
           <MenuItem
