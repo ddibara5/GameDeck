@@ -46,17 +46,24 @@ export function setStatus(masterId, status) {
   window.dispatchEvent(new Event('gd-status-change'))
 }
 
+// A game counts as "playing" when its most recent play falls within this many
+// days. Bump it if you play long games in bursts; drop it to keep the list tighter.
+export const PLAYING_WINDOW_DAYS = 21
+
 // Status when the user hasn't set one:
-//   never played           -> backlog
-//   played >= story length -> finished  (keys off the IGDB story-completion %)
-//   otherwise              -> playing
+//   never played                          -> backlog (no list; dormant)
+//   played past its IGDB story length     -> finished
+//   played within the last N days         -> playing
+//   played, but a while ago and unfinished -> backlog (dormant; tag it yourself)
 export function derivedStatus(game) {
   if (!game) return 'backlog'
-  const played = game.last_played || (game.playtime_minutes || 0) > 0
-  if (!played) return 'backlog'
+  const playedAt = game.last_played ? Date.parse(game.last_played) : NaN
+  const hasPlayed = !Number.isNaN(playedAt) || (game.playtime_minutes || 0) > 0
+  if (!hasPlayed) return 'backlog'
   const len = Number(game.length_minutes) || 0
   if (len > 0 && (game.playtime_minutes || 0) / len >= 1) return 'finished'
-  return 'playing'
+  if (!Number.isNaN(playedAt) && Date.now() - playedAt <= PLAYING_WINDOW_DAYS * 86400000) return 'playing'
+  return 'backlog'
 }
 
 export function effectiveStatus(game, map) {
