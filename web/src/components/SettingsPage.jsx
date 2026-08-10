@@ -2,10 +2,8 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { getAppKey, setAppKey, promptForKey } from '../lib/appAuth.js'
 import { getTheme, setTheme, getAccent, setAccent } from '../lib/theme.js'
-import { getHideBeforeYear, setHideBeforeYear } from '../lib/libraryPrefs.js'
 import { useMountTransition } from '../lib/useMountTransition.js'
 import { MenuItem, ICONS, relTime } from './menuUI.jsx'
-import './settings.css'
 
 const REPO = 'ddibara5/GameDeck'
 const SOURCE_URL = 'https://github.com/ddibara5/GameDeck'
@@ -21,11 +19,6 @@ const THEME_OPTIONS = [
   { key: 'light', label: 'Light' },
   { key: 'system', label: 'System' },
 ]
-
-// "Hide games before <year>" for the drawer status lists. The slider's far-left
-// (MIN_HIDE_YEAR) means "off / show all"; any higher value is the cutoff year.
-const CURRENT_YEAR = new Date().getFullYear()
-const MIN_HIDE_YEAR = 1995
 
 // Color themes. `ring` is the swatch's outer disc (a theme surface), `dot` the
 // inner accent. Palettes live in index.css under :root[data-accent="..."].
@@ -45,7 +38,6 @@ export default function SettingsPage({ open, onClose }) {
   const [keySet, setKeySet] = useState(() => Boolean(getAppKey()))
   const [theme, setThemeState] = useState(() => getTheme())
   const [accent, setAccentState] = useState(() => getAccent())
-  const [hideYear, setHideYear] = useState(() => getHideBeforeYear())
   const [chatsCleared, setChatsCleared] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [syncNote, setSyncNote] = useState('')
@@ -204,11 +196,6 @@ export default function SettingsPage({ open, onClose }) {
     setAccentState(setAccent(key))
   }
 
-  function changeHideYear(year) {
-    const y = Number(year)
-    setHideYear(setHideBeforeYear(y > MIN_HIDE_YEAR ? y : null))
-  }
-
   function toggleKey() {
     if (getAppKey()) {
       if (!window.confirm('Forget the Discover access key on this device? You will be asked for it next time you open Discover.')) return
@@ -300,34 +287,6 @@ export default function SettingsPage({ open, onClose }) {
               chevron={false}
             />
             <MenuItem glyph={ICONS.link} label="Exophase profile" href={EXOPHASE_PROFILE_URL} />
-          </div>
-        </div>
-
-        <div className="settings-section">
-          <div className="menu-sec-label">Library</div>
-          <div className="menu-appearance">
-            <div className="menu-appearance-head">
-              {ICONS.layers}
-              <span className="menu-label">Hide games before</span>
-              <span className="year-readout">{hideYear || 'Off'}</span>
-            </div>
-            <input
-              type="range"
-              className="year-slider"
-              min={MIN_HIDE_YEAR}
-              max={CURRENT_YEAR}
-              step="1"
-              value={hideYear || MIN_HIDE_YEAR}
-              onChange={(e) => changeHideYear(e.target.value)}
-              aria-label="Hide games released before this year"
-            />
-            <div className="year-scale">
-              <span>All years</span>
-              <button type="button" className="year-off" onClick={() => changeHideYear(MIN_HIDE_YEAR)}>
-                Off
-              </button>
-              <span>{CURRENT_YEAR}</span>
-            </div>
           </div>
         </div>
 

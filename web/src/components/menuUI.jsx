@@ -42,12 +42,6 @@ export const ICONS = {
   check: icon(<><circle cx="12" cy="12" r="9" /><path d="m8.5 12 2.5 2.5 4.5-5" /></>),
   xcircle: icon(<><circle cx="12" cy="12" r="9" /><path d="m15 9-6 6M9 9l6 6" /></>),
   star: icon(<path d="m12 3 2.6 5.5 6 .8-4.4 4.2 1.1 6L12 16.9 6.7 19.5l1.1-6L3.4 9.3l6-.8z" />),
-  eyeOff: icon(
-    <>
-      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20C5 20 1 12 1 12a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M1 1l22 22" />
-      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
-    </>
-  ),
 }
 
 export function MenuItem({ glyph, label, sub, value, valueAccent, href, onClick, disabled, chevron = true }) {

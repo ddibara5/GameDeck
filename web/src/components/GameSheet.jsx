@@ -4,7 +4,6 @@ import { useDelayedClose } from '../lib/useDelayedClose.js'
 import { igdbCover, platformMeta, minutesToHhm, formatDate } from '../lib/format.js'
 import { STATUSES, STATUS_LABELS, effectiveStatus, setStatus } from '../lib/userStatus.js'
 import { useWishlist, toggleWishlist } from '../lib/wishlist.js'
-import { isHidden, toggleHidden } from '../lib/libraryPrefs.js'
 import { fetchGameById } from '../lib/discover.js'
 import Lightbox from './Lightbox.jsx'
 import './gameSheet.css'
@@ -61,12 +60,6 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
 
   // Screenshot lightbox (null = closed, else the index being viewed).
   const [shotIndex, setShotIndex] = useState(null)
-
-  // "Not a game" hide (owned only): pull it out of the drawer status lists.
-  const [hidden, setHidden] = useState(false)
-  useEffect(() => {
-    if (owned && game) setHidden(isHidden(game.master_id))
-  }, [owned, game])
   function onDragStart(e) {
     drag.current = { startY: e.touches[0].clientY, active: true }
   }
@@ -204,16 +197,6 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
             ) : null}
           </div>
         )}
-
-        {owned ? (
-          <button
-            type="button"
-            className={`gs-hide${hidden ? ' on' : ''}`}
-            onClick={() => setHidden(toggleHidden(game.master_id))}
-          >
-            {hidden ? 'Hidden from your lists · Show again' : 'Not a game? Hide from your lists'}
-          </button>
-        ) : null}
 
         {owned ? (
           <div className="detail-percent">

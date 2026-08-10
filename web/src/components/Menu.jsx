@@ -3,8 +3,6 @@ import { useWishlist } from '../lib/wishlist.js'
 import { useMountTransition } from '../lib/useMountTransition.js'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
 import { useStatusMap, effectiveStatus, includeInLists } from '../lib/userStatus.js'
-import { useLibraryPrefs, passesYear } from '../lib/libraryPrefs.js'
-import { BEST_MIN_RATING } from './ListView.jsx'
 import { MenuItem, ICONS } from './menuUI.jsx'
 
 // Left drawer: a lists / content hub. App-wide settings live in the gear-opened
@@ -13,26 +11,19 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList }) {
   const { items: wishItems } = useWishlist()
   const { games } = useLibraryGames()
   const statusMap = useStatusMap()
-  const prefs = useLibraryPrefs()
   const { mounted, closing } = useMountTransition(open)
 
-  // Live counts for each list, derived from the (session-cached) library + the
-  // status map + view prefs so the badges match what the lists actually show.
+  // Live counts for each status list, from the (session-cached) library + the
+  // status map, so the badges match what the lists actually show.
   const counts = useMemo(() => {
-    const c = { backlog: 0, playing: 0, finished: 0, abandoned: 0, best: 0, hidden: 0 }
+    const c = { playing: 0, finished: 0, abandoned: 0 }
     for (const g of games) {
-      if (prefs.hidden.has(String(g.master_id))) {
-        c.hidden += 1
-        continue
-      }
       if (!includeInLists(g, statusMap)) continue
-      if (!passesYear(g, prefs.hideBeforeYear)) continue
       const s = effectiveStatus(g, statusMap)
       if (c[s] != null) c[s] += 1
-      if (s === 'backlog' && Number(g.igdb_rating) >= BEST_MIN_RATING) c.best += 1
     }
     return c
-  }, [games, statusMap, prefs])
+  }, [games, statusMap])
 
   const openList = (key) => {
     onOpenList(key)
@@ -95,34 +86,10 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList }) {
               onClose()
             }}
           />
-          <MenuItem glyph={ICONS.layers} label="Backlog" value={String(counts.backlog)} onClick={() => openList('status:backlog')} />
           <MenuItem glyph={ICONS.play} label="Playing" value={String(counts.playing)} onClick={() => openList('status:playing')} />
           <MenuItem glyph={ICONS.check} label="Finished" value={String(counts.finished)} onClick={() => openList('status:finished')} />
           <MenuItem glyph={ICONS.xcircle} label="Abandoned" value={String(counts.abandoned)} onClick={() => openList('status:abandoned')} />
         </div>
-
-        <div className="menu-sec">
-          <div className="menu-sec-label">Smart lists</div>
-          <MenuItem
-            glyph={ICONS.star}
-            label="Best of your backlog"
-            sub="Rated 85+, still unplayed"
-            value={String(counts.best)}
-            onClick={() => openList('smart:best-backlog')}
-          />
-        </div>
-
-        {counts.hidden > 0 ? (
-          <div className="menu-sec">
-            <MenuItem
-              glyph={ICONS.eyeOff}
-              label="Hidden"
-              sub="Not a game, review or restore"
-              value={String(counts.hidden)}
-              onClick={() => openList('special:hidden')}
-            />
-          </div>
-        ) : null}
 
         <div className="menu-foot">GameDeck</div>
       </aside>

@@ -4,19 +4,10 @@ import GameDetail from './GameDetail.jsx'
 import Skeleton from './Skeleton.jsx'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
 import { useStatusMap, effectiveStatus, includeInLists } from '../lib/userStatus.js'
-import { useLibraryPrefs, passesYear } from '../lib/libraryPrefs.js'
 import './wishlist.css'
 
-export const BEST_MIN_RATING = 85
-
-// Every drawer-opened list. `filter` runs against a game with the live status map;
-// `sort` is optional (defaults to the fetch order, i.e. last played first).
+// Drawer-opened status lists. `filter` runs against a game with the live status map.
 export const LIST_DEFS = {
-  'status:backlog': {
-    title: 'Backlog',
-    filter: (g, m) => effectiveStatus(g, m) === 'backlog',
-    empty: 'Games you haven’t started yet will show up here.',
-  },
   'status:playing': {
     title: 'Playing',
     filter: (g, m) => effectiveStatus(g, m) === 'playing',
@@ -32,45 +23,18 @@ export const LIST_DEFS = {
     filter: (g, m) => effectiveStatus(g, m) === 'abandoned',
     empty: 'Games you’ve set aside will show up here.',
   },
-  'smart:best-backlog': {
-    title: 'Best of your backlog',
-    subtitle: `Backlog rated ${BEST_MIN_RATING}+ on IGDB`,
-    filter: (g, m) => effectiveStatus(g, m) === 'backlog' && Number(g.igdb_rating) >= BEST_MIN_RATING,
-    sort: (a, b) => (Number(b.igdb_rating) || 0) - (Number(a.igdb_rating) || 0),
-    empty: 'Highly rated games in your backlog appear here as ratings sync in.',
-  },
-  // Everything the user marked "not a game". Bypasses the normal filters so the
-  // hidden items are reviewable; open one and hit "Show again" to restore it.
-  'special:hidden': {
-    title: 'Hidden',
-    subtitle: 'Marked “not a game”. Open one to show it again.',
-    hiddenList: true,
-    empty: 'Nothing hidden. Use “Not a game? Hide” on a game to tuck it away here.',
-  },
 }
 
 export default function ListView({ viewKey, onClose }) {
   const def = LIST_DEFS[viewKey]
   const { games, loading, error } = useLibraryGames()
   const statusMap = useStatusMap()
-  const prefs = useLibraryPrefs()
   const [selectedGame, setSelectedGame] = useState(null)
 
   const list = useMemo(() => {
     if (!def) return []
-    // The Hidden list shows exactly the hidden games, ignoring every other filter.
-    if (def.hiddenList) {
-      return games.filter((g) => prefs.hidden.has(String(g.master_id)))
-    }
-    const filtered = games.filter(
-      (g) =>
-        includeInLists(g, statusMap) &&
-        !prefs.hidden.has(String(g.master_id)) &&
-        passesYear(g, prefs.hideBeforeYear) &&
-        def.filter(g, statusMap)
-    )
-    return def.sort ? [...filtered].sort(def.sort) : filtered
-  }, [def, games, statusMap, prefs])
+    return games.filter((g) => includeInLists(g, statusMap) && def.filter(g, statusMap))
+  }, [def, games, statusMap])
 
   if (!def) return null
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Brand from './components/Brand.jsx'
 import Menu from './components/Menu.jsx'
 import SettingsPage from './components/SettingsPage.jsx'
@@ -17,16 +17,50 @@ const TABS = ['library', 'activity', 'insights', 'discover']
 const EDGE_PX = 24
 const OPEN_DX = 60
 const CLOSE_DX = 60
+// Keep a drawer-opened view mounted through its slide-out (matches --overlay-out).
+const VIEW_EXIT_MS = 220
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('library')
   const [menuOpen, setMenuOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [customizeOpen, setCustomizeOpen] = useState(false)
-  // A drawer-opened overlay view (e.g. Wishlist) shown over the active tab.
+  // A drawer-opened overlay view (Wishlist / status lists) shown over the active tab.
   const [view, setView] = useState(null)
+  const [viewClosing, setViewClosing] = useState(false)
+  const viewTimer = useRef(null)
   // Header goes frosted + shows a separator once the page is scrolled off the top.
   const [scrolled, setScrolled] = useState(false)
+
+  const openView = (v) => {
+    if (viewTimer.current) {
+      clearTimeout(viewTimer.current)
+      viewTimer.current = null
+    }
+    setViewClosing(false)
+    setView(v)
+  }
+  // Animate the view out (slide + fade, like the drawer), then unmount it.
+  const closeView = () => {
+    if (!view || viewClosing) return
+    setViewClosing(true)
+    viewTimer.current = setTimeout(() => {
+      setView(null)
+      setViewClosing(false)
+      viewTimer.current = null
+    }, VIEW_EXIT_MS)
+  }
+  useEffect(() => () => viewTimer.current && clearTimeout(viewTimer.current), [])
+
+  // Lock background scroll while a view overlay is open.
+  useEffect(() => {
+    if (!view) return undefined
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [view])
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 4)
@@ -62,8 +96,8 @@ export default function App() {
       // A drawer-opened overlay (Wishlist, status/smart lists) is open: an edge
       // swipe-in goes back to close it instead of opening the app drawer.
       if (view) {
-        if (fromEdge && dx > OPEN_DX) {
-          setView(null)
+        if (!viewClosing && fromEdge && dx > OPEN_DX) {
+          closeView()
           tracking = false
         }
         return
@@ -88,7 +122,7 @@ export default function App() {
       window.removeEventListener('touchmove', onMove)
       window.removeEventListener('touchend', onEnd)
     }
-  }, [menuOpen, settingsOpen, customizeOpen, view])
+  }, [menuOpen, settingsOpen, customizeOpen, view, viewClosing])
 
   return (
     <div className="app">
@@ -104,23 +138,24 @@ export default function App() {
         </button>
       </header>
       <main className="app-main">
-        {view === 'wishlist' ? (
-          <WishlistTab onClose={() => setView(null)} />
-        ) : view ? (
-          <ListView viewKey={view} onClose={() => setView(null)} />
-        ) : (
-          <>
-            {activeTab === 'library' && <LibraryTab />}
-            {activeTab === 'activity' && <ActivityTab />}
-            {activeTab === 'insights' && <InsightsTab />}
-            {activeTab === 'discover' && <DiscoverTab onCustomize={() => setCustomizeOpen(true)} />}
-          </>
-        )}
+        {activeTab === 'library' && <LibraryTab />}
+        {activeTab === 'activity' && <ActivityTab />}
+        {activeTab === 'insights' && <InsightsTab />}
+        {activeTab === 'discover' && <DiscoverTab onCustomize={() => setCustomizeOpen(true)} />}
       </main>
+      {view ? (
+        <div className={`view-page${viewClosing ? ' closing' : ''}`}>
+          {view === 'wishlist' ? (
+            <WishlistTab onClose={closeView} />
+          ) : (
+            <ListView viewKey={view} onClose={closeView} />
+          )}
+        </div>
+      ) : null}
       <TabBar
         active={view ? null : activeTab}
         onChange={(t) => {
-          setView(null)
+          closeView()
           setActiveTab(t)
         }}
         tabs={TABS}
@@ -128,8 +163,8 @@ export default function App() {
       <Menu
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
-        onOpenWishlist={() => setView('wishlist')}
-        onOpenList={(key) => setView(key)}
+        onOpenWishlist={() => openView('wishlist')}
+        onOpenList={(key) => openView(key)}
       />
       <SettingsPage open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <CustomizeRows open={customizeOpen} onClose={() => setCustomizeOpen(false)} />

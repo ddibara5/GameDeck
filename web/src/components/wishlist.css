@@ -1,6 +1,33 @@
 /* ---------- Wishlist view (drawer-opened overlay) ---------- */
 /* Tokens come from index.css, so light theme is automatic. */
 
+/* Full-screen slide-over that hosts the Wishlist and the status lists. Uses the
+   same slide (settings-in/out) + easing tokens as the Settings page and drawer,
+   so exiting it (back button or left-edge swipe) matches the side menu's motion. */
+.view-page {
+  position: fixed;
+  inset: 0;
+  z-index: 205;
+  background: var(--bg);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding-bottom: calc(var(--safe-bottom) + 16px);
+  animation: settings-in var(--overlay-in) var(--enter-ease);
+  will-change: transform;
+}
+
+.view-page.closing {
+  animation: settings-out var(--overlay-out) var(--exit-ease) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .view-page,
+  .view-page.closing {
+    animation: none;
+  }
+}
+
 .wl-page {
   padding-bottom: 16px;
 }
@@ -9,7 +36,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 14px 16px 6px;
+  padding: calc(var(--safe-top) + 14px) 16px 6px;
 }
 
 .wl-back {

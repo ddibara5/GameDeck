@@ -16,29 +16,3 @@
   font-weight: 600;
   white-space: nowrap;
 }
-
-/* "Not a game" hide toggle (owned sheet). Quiet by default; turns amber-ish
-   accent once the game is hidden so the state reads clearly. */
-.gs-hide {
-  display: block;
-  width: 100%;
-  margin: 4px 0 2px;
-  padding: 9px 12px;
-  border: 1px solid var(--line);
-  border-radius: 11px;
-  background: none;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.gs-hide:active {
-  background: var(--surface-2);
-}
-
-.gs-hide.on {
-  color: var(--accent);
-  border-color: var(--accent);
-}
