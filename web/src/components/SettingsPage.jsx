@@ -56,6 +56,47 @@ export default function SettingsPage({ onClose }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  // Swipe to go back: a clear left swipe (drag right-to-left) closes the page,
+  // mirroring how a left swipe closes the drawer.
+  useEffect(() => {
+    let startX = 0
+    let startY = 0
+    let tracking = false
+
+    const onStart = (e) => {
+      const t = e.touches && e.touches[0]
+      if (!t) return
+      startX = t.clientX
+      startY = t.clientY
+      tracking = true
+    }
+    const onMove = (e) => {
+      if (!tracking) return
+      const t = e.touches && e.touches[0]
+      if (!t) return
+      const dx = t.clientX - startX
+      const dy = t.clientY - startY
+      // Only act on a clearly horizontal gesture, so vertical scrolling is untouched.
+      if (Math.abs(dx) <= Math.abs(dy)) return
+      if (dx < -60) {
+        onClose()
+        tracking = false
+      }
+    }
+    const onEnd = () => {
+      tracking = false
+    }
+
+    window.addEventListener('touchstart', onStart, { passive: true })
+    window.addEventListener('touchmove', onMove, { passive: true })
+    window.addEventListener('touchend', onEnd, { passive: true })
+    return () => {
+      window.removeEventListener('touchstart', onStart)
+      window.removeEventListener('touchmove', onMove)
+      window.removeEventListener('touchend', onEnd)
+    }
+  }, [onClose])
+
   // Load freshness data + version once when the page opens.
   useEffect(() => {
     let cancelled = false

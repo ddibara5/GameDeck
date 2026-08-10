@@ -48,6 +48,8 @@ export default function App() {
     }
     const onMove = (e) => {
       if (!tracking) return
+      // Settings is a full-screen page over everything; its own swipe handles back.
+      if (settingsOpen) return
       const t = e.touches && e.touches[0]
       if (!t) return
       const dx = t.clientX - startX
@@ -74,7 +76,7 @@ export default function App() {
       window.removeEventListener('touchmove', onMove)
       window.removeEventListener('touchend', onEnd)
     }
-  }, [menuOpen])
+  }, [menuOpen, settingsOpen])
 
   return (
     <div className="app">
