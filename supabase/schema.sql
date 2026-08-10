@@ -33,6 +33,7 @@ create table if not exists public.games (
   length_minutes   int,                               -- IGDB time-to-beat (normally), minutes
   igdb_id          bigint,                            -- matched IGDB game id
   cover_igdb       text,                              -- IGDB cover image_id ('' when no match)
+  igdb_rating      int,                               -- IGDB total_rating 0..100 (-1 = checked, none; null = not yet checked)
   enriched_at      timestamptz,                       -- when IGDB enrichment last ran
   achievements_url text,
   first_seen       timestamptz default now(),         -- when the sync first saw this game
@@ -52,6 +53,7 @@ alter table public.games add column if not exists release_year   int;
 alter table public.games add column if not exists length_minutes int;
 alter table public.games add column if not exists igdb_id        bigint;
 alter table public.games add column if not exists cover_igdb     text;
+alter table public.games add column if not exists igdb_rating    int;
 alter table public.games add column if not exists enriched_at    timestamptz;
 
 -- ----------------------------------------------------------------------------
