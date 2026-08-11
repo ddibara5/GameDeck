@@ -1,0 +1,35 @@
+/* Ambient app background: a warm, accent-tinted "aurora" glow anchored behind the
+   top of the screen, plus a faint film grain, both fixed behind all app content.
+   Built from --accent / --amber and the theme tokens, so it retints with the accent
+   theme and adapts to light/dark automatically. The layers sit behind the (now
+   transparent) app column; cards, sheets and the frosted header/tab bar keep their
+   own surfaces on top and pick the glow up through their blur. */
+
+/* Let the ambient layers (painted on <body>) show through the app column. */
+.app {
+  background: transparent;
+}
+
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1; /* behind app content, above the solid body background */
+  pointer-events: none;
+}
+
+/* Aurora - accent + amber radial glow, strongest at the top. */
+body::before {
+  background:
+    radial-gradient(74% 48% at 50% -8%, color-mix(in srgb, var(--accent) 42%, transparent), transparent 70%),
+    radial-gradient(54% 36% at 82% 3%, color-mix(in srgb, var(--amber) 26%, transparent), transparent 74%);
+}
+
+/* Grain - fine film texture over the background (cards paint on top, ungrained). */
+body::after {
+  opacity: 0.075;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 150px 150px;
+}
