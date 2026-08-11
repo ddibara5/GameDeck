@@ -95,6 +95,33 @@ export function igdbCover(imageId, size = 't_cover_big') {
   return `https://images.igdb.com/igdb/image/upload/${size}/${imageId}.jpg`
 }
 
+// Native pixel width of each IGDB size bucket, so we never ask the CDN to upscale
+// past the source (upscaling is the only thing that would make an image blurry).
+const IGDB_BUCKET_W = {
+  t_cover_small: 90,
+  t_cover_big: 264,
+  t_screenshot_med: 569,
+  t_screenshot_big: 889,
+  t_720p: 1280,
+  t_1080p: 1920,
+}
+
+/**
+ * Route an IGDB image through the wsrv.nl image CDN: downscaled to the display
+ * width and re-encoded to WebP (much smaller than IGDB's JPEG), so first loads
+ * are faster. `targetW` is the intended pixel width (pass 2x the CSS size for
+ * retina). We cap it at the source bucket's own width, so the CDN can only ever
+ * downscale, never enlarge, which keeps images sharp. Non-IGDB URLs (Exophase
+ * covers, external news art) pass through untouched.
+ */
+export function optImg(url, targetW = 240) {
+  if (!url || url.indexOf('images.igdb.com') === -1) return url
+  const bucket = url.match(/\/(t_[a-z0-9_]+)\//)
+  const srcW = (bucket && IGDB_BUCKET_W[bucket[1]]) || 0
+  const w = srcW ? Math.min(targetW, srcW) : targetW
+  return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${w}&output=webp&q=82`
+}
+
 const PLATFORM_META = {
   xbox: { label: 'Xbox', color: 'var(--xbox)' },
   psn: { label: 'PlayStation', color: 'var(--psn)' },

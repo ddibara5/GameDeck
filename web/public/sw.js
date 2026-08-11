@@ -53,10 +53,11 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
 
-  // IGDB game art: cache-first with a capped cache. Opaque responses (these are
-  // no-CORS <img> loads, so response.type === 'opaque') are still storable and
-  // replayable from the Cache API, so this works without any CORS changes.
-  if (url.hostname === 'images.igdb.com') {
+  // Game art: cache-first with a capped cache. Covers/screenshots are served via
+  // the wsrv.nl image CDN (resized WebP); raw images.igdb.com is the fallback path.
+  // Opaque responses (no-CORS <img> loads) are still storable and replayable from
+  // the Cache API, so this works without any CORS changes.
+  if (url.hostname === 'images.igdb.com' || url.hostname === 'wsrv.nl') {
     event.respondWith(
       caches.open(IMG_CACHE).then((cache) =>
         cache.match(request).then((cached) => {
