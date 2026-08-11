@@ -1,12 +1,8 @@
 /* Card sizing (Settings > Appearance).
-   --shelf-pw   = poster width on every horizontal rail (Continue Playing,
-                  Discover shelves, wishlist, Game Pass).
+   --shelf-pw   = poster width on the Discover rails only (see discover.css).
    --list-thumb / --list-title = Library / Discover list-row thumbnail + title.
    Defaults live here; data-shelf / data-list on <html> (set by lib/theme.js)
-   switch the scale. Imported after index.css so these override the base
-   .shelf-card / .shelf-poster widths; the `:root` prefix keeps them winning
-   regardless of stylesheet order. Discover rails re-assert --shelf-pw at higher
-   specificity in discover.css. */
+   switch the scale. Imported after index.css so these override the base sizes. */
 :root {
   --shelf-pw: 146px;
   --list-thumb: 66px;
@@ -21,9 +17,12 @@
 :root[data-list='comfortable'] { --list-thumb: 66px; --list-title: 16px; }
 :root[data-list='large'] { --list-thumb: 84px; --list-title: 17.5px; }
 
-:root .shelf-card,
-:root .shelf-poster {
-  width: var(--shelf-pw);
+/* Continue Playing (the Library home shelf) is pinned to the Small poster width;
+   only the Discover rails follow the Shelf size setting, via the higher-specificity
+   .discover-browse rule in discover.css that reads --shelf-pw. */
+.shelf-card,
+.shelf-poster {
+  width: 116px;
 }
 
 /* Scoped to .game-card so other small covers (menus, etc.) stay fixed. */
