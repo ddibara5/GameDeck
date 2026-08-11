@@ -24,3 +24,108 @@
 .modal-backdrop.modal-backdrop {
   z-index: 300;
 }
+
+/* Shared game-sheet body styles. These live here (not in discover.css) so the
+   sheet renders correctly from every tab. discover.css is code-split with the
+   Discover tab, so a sheet opened from Wishlist/Library would otherwise miss
+   these rules and render unstyled (notably screenshots at full natural size). */
+
+/* "In your library" pill (sheet + discover result card). */
+.in-library-badge {
+  align-self: flex-start;
+  margin-top: 2px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 1px 7px;
+  border-radius: 999px;
+  color: var(--xbox);
+  border: 1px solid #1d9e75;
+  background: rgba(29, 158, 117, 0.12);
+}
+.in-library-badge.sheet {
+  display: inline-block;
+  margin: 4px 0 0;
+}
+
+/* Primary action row (wishlist / Ask AI / More like this) + shared button atom
+   (also used by the Discover filter sheet's Reset / Show results). */
+.discover-actions {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0 4px;
+}
+.discover-action {
+  flex: 1;
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.discover-action:active {
+  opacity: 0.85;
+}
+.discover-action.primary {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+.discover-action.wish-action {
+  flex: 0 0 auto;
+  width: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.discover-action.wish-action.on {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(200, 169, 126, 0.14);
+}
+
+/* Genre chips. */
+.chip-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 2px;
+}
+.meta-chip {
+  font-size: 11.5px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  border-radius: 999px;
+  padding: 3px 9px;
+}
+
+/* Summary blurb. */
+.discover-summary {
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.55;
+  margin: 12px 0 4px;
+}
+
+/* Screenshot strip. The .shot width/aspect-ratio is what keeps these images
+   sized correctly; without it they render at full natural resolution. */
+.shot-strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 8px 0 4px;
+  -webkit-overflow-scrolling: touch;
+}
+.shot {
+  flex: 0 0 auto;
+  width: 240px;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+}

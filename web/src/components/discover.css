@@ -150,25 +150,6 @@
   font-weight: 600;
 }
 
-.in-library-badge {
-  align-self: flex-start;
-  margin-top: 2px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  padding: 1px 7px;
-  border-radius: 999px;
-  color: var(--xbox);
-  border: 1px solid #1d9e75;
-  background: rgba(29, 158, 117, 0.12);
-}
-
-.in-library-badge.sheet {
-  display: inline-block;
-  margin: 4px 0 0;
-}
-
 /* ---------- Browse: discovery rails ---------- */
 
 .discover-browse .shelf-card,
@@ -223,82 +204,6 @@
   border-radius: 50%;
   background: var(--xbox);
   border: 2px solid var(--surface);
-}
-
-/* ---------- Detail sheet extras ---------- */
-
-.discover-detail-meta {
-  color: var(--muted);
-  font-size: 13px;
-  margin: 2px 0 4px;
-}
-
-.discover-actions {
-  display: flex;
-  gap: 8px;
-  margin: 12px 0 4px;
-}
-
-.discover-action {
-  flex: 1;
-  min-height: 44px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  background: var(--surface-2);
-  color: var(--text);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.discover-action:active {
-  opacity: 0.85;
-}
-
-.discover-action.primary {
-  background: var(--accent);
-  color: var(--bg);
-  border-color: var(--accent);
-}
-
-.chip-wrap {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 10px 0 2px;
-}
-
-.meta-chip {
-  font-size: 11.5px;
-  color: var(--muted);
-  border: 1px solid var(--line);
-  background: var(--surface-2);
-  border-radius: 999px;
-  padding: 3px 9px;
-}
-
-.discover-summary {
-  color: var(--muted);
-  font-size: 13.5px;
-  line-height: 1.55;
-  margin: 12px 0 4px;
-}
-
-.shot-strip {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding: 8px 0 4px;
-  -webkit-overflow-scrolling: touch;
-}
-
-.shot {
-  flex: 0 0 auto;
-  width: 240px;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
-  border-radius: 12px;
-  border: 1px solid var(--line);
 }
 
 /* ---------- Filter sheet ---------- */
@@ -395,21 +300,6 @@
   transform: translateY(-50%);
   width: 30px;
   height: 30px;
-}
-
-/* Compact wishlist toggle in the detail sheet action row. */
-.discover-action.wish-action {
-  flex: 0 0 auto;
-  width: 46px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.discover-action.wish-action.on {
-  color: var(--accent);
-  border-color: var(--accent);
-  background: rgba(200, 169, 126, 0.14);
 }
 
 /* ---------- Browse: tappable rail heading (opens the full list page) ---------- */
