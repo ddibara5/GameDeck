@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import DiscoverCard from './DiscoverCard.jsx'
 import DiscoverDetail from './DiscoverDetail.jsx'
+import DiscoverRailList from './DiscoverRailList.jsx'
 import Cover from './Cover.jsx'
 import Skeleton from './Skeleton.jsx'
 import WishHeart from './WishHeart.jsx'
@@ -85,6 +86,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
   const [hasMore, setHasMore] = useState(false)
 
   const [selected, setSelected] = useState(null)
+  const [openRail, setOpenRail] = useState(null)
   const [libTitles, setLibTitles] = useState(null)
   const [gamePass, setGamePass] = useState([])
   const [hideOwned, setHideOwned] = useState(false)
@@ -367,9 +369,16 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
             if (!items || !items.length) return null
             return (
               <section className={`shelf${row.kind === 'wishlist' ? ' wishlist-rail' : ''}`} key={key}>
-                <div className="shelf-head">
-                  <span className="shelf-title">{row.label}</span>
-                </div>
+                <button type="button" className="shelf-head" onClick={() => setOpenRail(row)}>
+                  <span className="shelf-title-wrap">
+                    <span className="shelf-title">{row.label}</span>
+                    <span className="shelf-caret" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9 6l6 6-6 6" />
+                      </svg>
+                    </span>
+                  </span>
+                </button>
                 <div className="shelf-row">
                   {items.map((g) => {
                     const timing = releaseTiming(g.released)
@@ -515,6 +524,32 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
           }}
           onMoreLikeThis={handleMoreLikeThis}
           onClose={() => setSelected(null)}
+        />
+      ) : null}
+
+      {openRail ? (
+        <DiscoverRailList
+          row={openRail}
+          seedItems={
+            openRail.kind === 'wishlist'
+              ? wishGames
+              : openRail.kind === 'wishlistSoon'
+                ? wishGames.filter((g) => g.year && g.year >= CURRENT_YEAR)
+                : openRail.kind === 'gamepass'
+                  ? hideFromLibrary(gamePass)
+                  : undefined
+          }
+          isOwned={isOwned}
+          wishIds={wishIds}
+          onClose={() => setOpenRail(null)}
+          onAsk={(g) => {
+            setOpenRail(null)
+            onAsk(g)
+          }}
+          onMoreLikeThis={(g) => {
+            setOpenRail(null)
+            handleMoreLikeThis(g)
+          }}
         />
       ) : null}
     </div>
