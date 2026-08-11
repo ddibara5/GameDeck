@@ -173,7 +173,7 @@
 
 .discover-browse .shelf-card,
 .discover-browse .shelf-poster {
-  width: 116px;
+  width: var(--shelf-pw);
 }
 
 .discover-browse .shelf-poster {
@@ -181,7 +181,7 @@
 }
 
 .discover-browse .shelf-poster .cover-lg {
-  max-width: 116px;
+  max-width: var(--shelf-pw);
   margin: 0;
 }
 

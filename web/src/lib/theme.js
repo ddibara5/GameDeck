@@ -35,6 +35,63 @@ export function setAccent(name) {
   return a
 }
 
+// Card sizing. Shelf = poster width on every horizontal rail (Continue Playing,
+// Discover shelves, wishlist, Game Pass). List = Library / Discover list-row
+// thumbnail + title. Applied via data-shelf / data-list on <html>; the actual
+// scales live in index.css. Defaults: shelf 'm' (medium), list 'comfortable'.
+const SHELF_KEY = 'gamedeck_shelf_size_v1'
+const LIST_KEY = 'gamedeck_list_size_v1'
+const SHELF_SIZES = new Set(['s', 'm', 'l'])
+const LIST_SIZES = new Set(['compact', 'comfortable', 'large'])
+
+export function getShelfSize() {
+  try {
+    const v = localStorage.getItem(SHELF_KEY)
+    return SHELF_SIZES.has(v) ? v : 'm'
+  } catch {
+    return 'm'
+  }
+}
+
+export function applyShelfSize(v) {
+  document.documentElement.setAttribute('data-shelf', SHELF_SIZES.has(v) ? v : 'm')
+}
+
+export function setShelfSize(v) {
+  const s = SHELF_SIZES.has(v) ? v : 'm'
+  try {
+    localStorage.setItem(SHELF_KEY, s)
+  } catch {
+    /* storage unavailable - preference just won't persist */
+  }
+  applyShelfSize(s)
+  return s
+}
+
+export function getListSize() {
+  try {
+    const v = localStorage.getItem(LIST_KEY)
+    return LIST_SIZES.has(v) ? v : 'comfortable'
+  } catch {
+    return 'comfortable'
+  }
+}
+
+export function applyListSize(v) {
+  document.documentElement.setAttribute('data-list', LIST_SIZES.has(v) ? v : 'comfortable')
+}
+
+export function setListSize(v) {
+  const s = LIST_SIZES.has(v) ? v : 'comfortable'
+  try {
+    localStorage.setItem(LIST_KEY, s)
+  } catch {
+    /* storage unavailable - preference just won't persist */
+  }
+  applyListSize(s)
+  return s
+}
+
 export function getTheme() {
   try {
     const v = localStorage.getItem(KEY)
@@ -72,6 +129,8 @@ export function setTheme(pref) {
 export function initTheme() {
   applyTheme(getTheme())
   applyAccent(getAccent())
+  applyShelfSize(getShelfSize())
+  applyListSize(getListSize())
   try {
     const mq = window.matchMedia('(prefers-color-scheme: light)')
     const onChange = () => {

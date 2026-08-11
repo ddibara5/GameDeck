@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { getAppKey, setAppKey, promptForKey } from '../lib/appAuth.js'
-import { getTheme, setTheme, getAccent, setAccent } from '../lib/theme.js'
+import { getTheme, setTheme, getAccent, setAccent, getShelfSize, setShelfSize, getListSize, setListSize } from '../lib/theme.js'
 import { useMountTransition } from '../lib/useMountTransition.js'
 import { lockScroll } from '../lib/scrollLock.js'
 import { MenuItem, ICONS, relTime } from './menuUI.jsx'
@@ -31,6 +31,20 @@ const ACCENT_OPTIONS = [
   { key: 'graphite', label: 'Graphite', ring: '#202124', dot: '#98a2ae' },
 ]
 
+// Poster width on horizontal rails (Continue Playing, Discover, wishlist, Game Pass).
+const SHELF_SIZE_OPTIONS = [
+  { key: 's', label: 'Small' },
+  { key: 'm', label: 'Medium' },
+  { key: 'l', label: 'Large' },
+]
+
+// Library / Discover list-row thumbnail + title size.
+const LIST_SIZE_OPTIONS = [
+  { key: 'compact', label: 'Compact' },
+  { key: 'comfortable', label: 'Comfortable' },
+  { key: 'large', label: 'Large' },
+]
+
 export default function SettingsPage({ open, onClose }) {
   const { mounted, closing } = useMountTransition(open)
   const [lastSync, setLastSync] = useState(null)
@@ -39,6 +53,8 @@ export default function SettingsPage({ open, onClose }) {
   const [keySet, setKeySet] = useState(() => Boolean(getAppKey()))
   const [theme, setThemeState] = useState(() => getTheme())
   const [accent, setAccentState] = useState(() => getAccent())
+  const [shelfSize, setShelfSizeState] = useState(() => getShelfSize())
+  const [listSize, setListSizeState] = useState(() => getListSize())
   const [chatsCleared, setChatsCleared] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [syncNote, setSyncNote] = useState('')
@@ -193,6 +209,14 @@ export default function SettingsPage({ open, onClose }) {
     setAccentState(setAccent(key))
   }
 
+  function changeShelfSize(key) {
+    setShelfSizeState(setShelfSize(key))
+  }
+
+  function changeListSize(key) {
+    setListSizeState(setListSize(key))
+  }
+
   function toggleKey() {
     if (getAppKey()) {
       if (!window.confirm('Forget the Discover access key on this device? You will be asked for it next time you open Discover.')) return
@@ -255,6 +279,40 @@ export default function SettingsPage({ open, onClose }) {
                     <i style={{ background: opt.dot }} />
                   </span>
                   <span className="accent-name">{opt.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="menu-accent">
+            <div className="menu-accent-label">Shelf size</div>
+            <div className="seg" role="group" aria-label="Shelf size">
+              {SHELF_SIZE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.key}
+                  type="button"
+                  className={`seg-btn${shelfSize === opt.key ? ' active' : ''}`}
+                  onClick={() => changeShelfSize(opt.key)}
+                  aria-pressed={shelfSize === opt.key}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="menu-accent">
+            <div className="menu-accent-label">List size</div>
+            <div className="seg" role="group" aria-label="List size">
+              {LIST_SIZE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.key}
+                  type="button"
+                  className={`seg-btn${listSize === opt.key ? ' active' : ''}`}
+                  onClick={() => changeListSize(opt.key)}
+                  aria-pressed={listSize === opt.key}
+                >
+                  {opt.label}
                 </button>
               ))}
             </div>
