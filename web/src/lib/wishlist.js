@@ -6,7 +6,13 @@ import { supabase } from './supabase.js'
 import { normTitle } from './discover.js'
 
 const EVENT = 'gd-wishlist-change'
-const COLUMNS = 'igdb_id, title, cover, year, note, created_at'
+const BASE_COLUMNS = 'igdb_id, title, cover, year, note, created_at'
+// Release date + precision are added by a later migration. Select them when present
+// and fall back to the base columns if the migration hasn't run yet, so the wishlist
+// never breaks. Rows keep working with just `year` until the refresh job fills these.
+const DATE_COLUMNS = 'released, date_precision, release_label, last_synced'
+const FULL_COLUMNS = `${BASE_COLUMNS}, ${DATE_COLUMNS}`
+const MISSING_DATE_COL = /released|date_precision|release_label|last_synced/i
 
 let cache = null // array of rows once loaded, else null
 let inflight = null
@@ -22,16 +28,20 @@ function gameId(game) {
 export async function loadWishlist(force = false) {
   if (cache && !force) return cache
   if (inflight && !force) return inflight
-  inflight = supabase
-    .from('wishlist')
-    .select(COLUMNS)
-    .order('created_at', { ascending: false })
-    .then(({ data, error }) => {
-      inflight = null
-      if (error) return cache || []
-      cache = data || []
-      return cache
-    })
+  const run = (cols) =>
+    supabase.from('wishlist').select(cols).order('created_at', { ascending: false })
+  inflight = run(FULL_COLUMNS).then(async (res) => {
+    let { data, error } = res
+    if (error && MISSING_DATE_COL.test(error.message || '')) {
+      const r2 = await run(BASE_COLUMNS)
+      data = r2.data
+      error = r2.error
+    }
+    inflight = null
+    if (error) return cache || []
+    cache = data || []
+    return cache
+  })
   return inflight
 }
 
@@ -43,16 +53,28 @@ export function isWishlisted(id) {
 export async function addToWishlist(game) {
   const id = gameId(game)
   if (!id) return
-  const row = {
+  const rel = game.release || null
+  const base = {
     igdb_id: id,
     title: game.name || game.title || 'Untitled',
     cover: game.cover || null,
     year: game.year || null,
   }
+  // Store the release date + precision when the source game carries it (games from
+  // Discover / the game sheet do); the weekly refresh backfills anything missing.
+  const dated = {
+    ...base,
+    released: rel && rel.ts != null ? rel.ts : null,
+    date_precision: rel && rel.precision ? rel.precision : null,
+    release_label: rel && rel.label ? rel.label : null,
+  }
   // Optimistic: update the cache and notify immediately, reconcile on error.
-  cache = [{ ...row, note: null, created_at: new Date().toISOString() }, ...(cache || []).filter((r) => r.igdb_id !== id)]
+  cache = [{ ...dated, note: null, created_at: new Date().toISOString() }, ...(cache || []).filter((r) => r.igdb_id !== id)]
   emit()
-  const { error } = await supabase.from('wishlist').upsert(row, { onConflict: 'igdb_id' })
+  let { error } = await supabase.from('wishlist').upsert(dated, { onConflict: 'igdb_id' })
+  if (error && MISSING_DATE_COL.test(error.message || '')) {
+    ;({ error } = await supabase.from('wishlist').upsert(base, { onConflict: 'igdb_id' }))
+  }
   if (error) {
     await loadWishlist(true)
     emit()
@@ -88,12 +110,19 @@ export async function restoreToWishlist(row) {
     year: row.year ?? null,
     note: row.note ?? null,
     created_at: row.created_at || new Date().toISOString(),
+    released: row.released ?? null,
+    date_precision: row.date_precision ?? null,
+    release_label: row.release_label ?? null,
   }
   cache = [full, ...(cache || []).filter((r) => r.igdb_id !== key)].sort(
     (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0),
   )
   emit()
-  const { error } = await supabase.from('wishlist').upsert(full, { onConflict: 'igdb_id' })
+  let { error } = await supabase.from('wishlist').upsert(full, { onConflict: 'igdb_id' })
+  if (error && MISSING_DATE_COL.test(error.message || '')) {
+    const { released, date_precision, release_label, ...base } = full
+    ;({ error } = await supabase.from('wishlist').upsert(base, { onConflict: 'igdb_id' }))
+  }
   if (error) {
     await loadWishlist(true)
     emit()
