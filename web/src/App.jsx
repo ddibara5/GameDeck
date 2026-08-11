@@ -9,6 +9,7 @@ import ActivityTab from './components/ActivityTab.jsx'
 import InsightsTab from './components/InsightsTab.jsx'
 import DiscoverTab from './components/DiscoverTab.jsx'
 import NewsTab from './components/NewsTab.jsx'
+import { useNewsUnread } from './lib/news.js'
 import WishlistTab from './components/WishlistTab.jsx'
 import ListView from './components/ListView.jsx'
 import CustomizeRows from './components/CustomizeRows.jsx'
@@ -33,6 +34,8 @@ export default function App() {
   const viewTimer = useRef(null)
   // Header goes frosted + shows a separator once the page is scrolled off the top.
   const [scrolled, setScrolled] = useState(false)
+  // Unread dot on the News tab when a newer weekly drop is available.
+  const newsUnread = useNewsUnread()
 
   const openView = (v) => {
     if (viewTimer.current) {
@@ -158,6 +161,7 @@ export default function App() {
           setActiveTab(t)
         }}
         tabs={TABS}
+        badges={{ news: newsUnread }}
       />
       <Menu
         open={menuOpen}

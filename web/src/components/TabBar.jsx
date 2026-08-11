@@ -54,12 +54,13 @@ const TAB_CONFIG = {
   },
 }
 
-export default function TabBar({ tabs, active, onChange }) {
+export default function TabBar({ tabs, active, onChange, badges }) {
   return (
     <nav className="tabbar" aria-label="Main navigation">
       {tabs.map((tab) => {
         const config = TAB_CONFIG[tab]
         const isActive = tab === active
+        const hasBadge = badges && badges[tab] && !isActive
         return (
           <button
             key={tab}
@@ -68,6 +69,7 @@ export default function TabBar({ tabs, active, onChange }) {
             onClick={() => onChange(tab)}
             aria-current={isActive ? 'page' : undefined}
           >
+            {hasBadge ? <span className="tab-unread" aria-label="New" /> : null}
             <span className="tabbar-icon">{config.icon}</span>
             <span>{config.label}</span>
           </button>
