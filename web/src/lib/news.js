@@ -11,21 +11,29 @@ const WEEKS_KEPT = 4
 const SEEN_KEY = 'gamedeck_news_seen_week_v1'
 const SEEN_EVENT = 'gd-news-seen'
 
-const SELECT =
-  'id, week_of, rank, title, summary, image_url, primary_url, sources, published_at, ' +
-  'game_name, game_igdb_id, game_cover'
+const BASE_SELECT =
+  'id, week_of, rank, title, summary, image_url, primary_url, sources, published_at'
+// game_* columns are added by a later migration. Select them when present; fall
+// back to the base columns if the migration hasn't run yet, so the tab never breaks.
+const FULL_SELECT = `${BASE_SELECT}, game_name, game_igdb_id, game_cover`
 
 export async function fetchNews() {
   const cutoff = new Date()
   cutoff.setDate(cutoff.getDate() - WEEKS_KEPT * 7)
   const cutoffIso = cutoff.toISOString().slice(0, 10) // YYYY-MM-DD
 
-  const { data, error } = await supabase
-    .from('news')
-    .select(SELECT)
-    .gte('week_of', cutoffIso)
-    .order('week_of', { ascending: false })
-    .order('rank', { ascending: true })
+  const run = (sel) =>
+    supabase
+      .from('news')
+      .select(sel)
+      .gte('week_of', cutoffIso)
+      .order('week_of', { ascending: false })
+      .order('rank', { ascending: true })
+
+  let { data, error } = await run(FULL_SELECT)
+  if (error && /game_(name|igdb_id|cover)/i.test(error.message || '')) {
+    ;({ data, error } = await run(BASE_SELECT))
+  }
 
   if (error) return []
   return (data || []).map((r) => ({
