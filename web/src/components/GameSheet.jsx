@@ -54,7 +54,7 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
     return () => {
       alive = false
     }
-  }, [variant, igdbId, discoverHasMedia]) // eslint-césable-line react-hooks/exhaustive-deps
+  }, [variant, igdbId, discoverHasMedia]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Swipe-down-to-close, from the cover/handle zone so details below still scroll.
   const drag = useRef({ startY: 0, active: false })
@@ -191,7 +191,7 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
               </button>
             ) : null}
             {onMoreLikeThis ? (
-              <button type="button" className="céscover-action" onClick={() => onMoreLikeThis(seed)}>
+              <button type="button" className="discover-action" onClick={() => onMoreLikeThis(seed)}>
                 More like this
               </button>
             ) : null}
@@ -231,7 +231,7 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
         ) : null}
 
         {genres.length ? (
-          <cév className="chip-wrap">
+          <div className="chip-wrap">
             {genres.map((g) => (
               <span className="meta-chip" key={g}>
                 {g}
@@ -281,20 +281,46 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
           <>
             {platforms.length ? (
               <div className="detail-row">
-                <span(Û\ÜÓ˜[YOH™]Z[[X™[”]›Ü›\ÏÜÜ[‚ˆÜ[ˆÛ\ÜÓ˜[YOH™]Z[]˜[YHžÜ]›Ü›\Ëš›Ú[Š	Ë	Ê_OÜÜ[‚ˆÙ]‚ˆ
-Hˆ[BˆÜÝY[ÈÈ
-ˆ]ˆÛ\ÜÓ˜[YOH™]Z[\›ÝÈ‚ˆÜ[ˆÛ\ÜÓ˜[YOH™]Z[[X™[”ÝY[ÏÜÜ[‚ˆÜ[ˆÛ\ÜÓ˜[YOH™]Z[]˜[YHžÜÝXú[ßOÜÜ[‚ˆÙ]‚ˆ
-Hˆ[BˆÞYX\ˆÈ
-ˆ]ˆÛ\ÜÓ˜[YOH™]Z[\›ÝÈ‚ˆÜ[ˆÛ\ÜÓ˜[YOH™]Z[[X™[”™[X\ÙYÜÜ[‚ˆÜ[ˆÛ\ÜÓ˜[YOH™]Z[]˜[YHžÞYX\ŸOÜÜ[‚ˆÙ]‚ˆ
-Hˆ[BˆÏ‚ˆ
-_B‚ˆÛÝÛ™Y	‰ˆØ[YK˜XÚY]™[Y[×Ý\›È
-ˆHÛ\ÜÓ˜[YOH™]Z[[[šÈˆ™Y^ÙØ[YK˜XÚY]™[Y[×Ý\›H\™Ù]H—Ø›[šÈˆ™[H››Ü™Y™\œ™\ˆ›ÛÜ[™\ˆ‚ˆšY]ÈXÚY]™[Y[ÂˆØO‚ˆ
-Hˆ[BˆÈ[ÝÛ™Y	‰ˆ\›È
-ˆHÛ\ÜÓ˜[YOH™]Z[[[šÈˆ™Y^Ý\›H\™Ù]H—Ø›[šÈˆ™[H››Ü™Y™\œ™\ˆ›ÛÜ[™\ˆ‚ˆšY]ÈÛˆQÑ‚ˆØO‚ˆ
-Hˆ[BˆÙ]‚‚ˆÜÚÝ[™^OH[È
-ˆYÚ›ÞˆÚÝÏ^ÜØÜ™Y[œÚÝßBˆ[™^^ÜÚÝ[™^Bˆ]O^Ý]_BˆÛÛÜÙO^Ê
-HOˆÙ]ÚÝ[™^
-[
-_BˆÏ‚ˆ
-Hˆ[BˆÙ]‹ˆØÝ[Y[˜›ÙKˆ
-BŸB
+                <span className="detail-label">Platforms</span>
+                <span className="detail-value">{platforms.join(', ')}</span>
+              </div>
+            ) : null}
+            {studio ? (
+              <div className="detail-row">
+                <span className="detail-label">Studio</span>
+                <span className="detail-value">{studio}</span>
+              </div>
+            ) : null}
+            {year ? (
+              <div className="detail-row">
+                <span className="detail-label">Released</span>
+                <span className="detail-value">{year}</span>
+              </div>
+            ) : null}
+          </>
+        )}
+
+        {owned && game.achievements_url ? (
+          <a className="detail-link" href={game.achievements_url} target="_blank" rel="noreferrer noopener">
+            View achievements
+          </a>
+        ) : null}
+        {!owned && url ? (
+          <a className="detail-link" href={url} target="_blank" rel="noreferrer noopener">
+            View on IGDB
+          </a>
+        ) : null}
+      </div>
+
+      {shotIndex != null ? (
+        <Lightbox
+          shots={screenshots}
+          index={shotIndex}
+          title={title}
+          onClose={() => setShotIndex(null)}
+        />
+      ) : null}
+    </div>,
+    document.body,
+  )
+}
