@@ -4,7 +4,7 @@ import DiscoverDetail from './DiscoverDetail.jsx'
 import Cover from './Cover.jsx'
 import Skeleton from './Skeleton.jsx'
 import WishHeart from './WishHeart.jsx'
-import { fetchDiscover, loadLibraryTitles, normTitle } from '../lib/discover.js'
+import { fetchDiscover, loadLibraryTitles, loadGamePass, normTitle } from '../lib/discover.js'
 import { releaseTiming } from '../lib/format.js'
 import { useWishlist } from '../lib/wishlist.js'
 import { useRowsConfig, ROW_BY_KEY, RAIL_KEYS } from '../lib/discoverRows.js'
@@ -86,6 +86,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
 
   const [selected, setSelected] = useState(null)
   const [libTitles, setLibTitles] = useState(null)
+  const [gamePass, setGamePass] = useState([])
   const [hideOwned, setHideOwned] = useState(false)
 
   const debounceRef = useRef(null)
@@ -112,6 +113,16 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
     if (!libTitles) return () => false
     return (name) => libTitles.has(normTitle(name))
   }, [libTitles])
+
+  // Load the Game Pass catalog once (only used when the row is enabled, but the
+  // fetch is cheap + cached, so we load it unconditionally).
+  useEffect(() => {
+    let alive = true
+    loadGamePass().then((list) => alive && setGamePass(list))
+    return () => {
+      alive = false
+    }
+  }, [])
 
   const { items: wishItems, ids: wishIds } = useWishlist()
   const rowsConfig = useRowsConfig()
@@ -351,6 +362,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
             let items
             if (row.kind === 'wishlist') items = wishGames
             else if (row.kind === 'wishlistSoon') items = wishGames.filter((g) => g.year && g.year >= CURRENT_YEAR)
+            else if (row.kind === 'gamepass') items = hideFromLibrary(gamePass)
             else items = hideFromLibrary(rails[key])
             if (!items || !items.length) return null
             return (

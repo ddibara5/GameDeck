@@ -48,6 +48,33 @@ export function normTitle(t) {
     .replace(/[^a-z0-9]/g, '')
 }
 
+// Xbox Game Pass catalog, rebuilt nightly by the n8n "Game Pass Catalog Sync"
+// workflow into the Supabase `gamepass` table (IGDB-matched, so it renders with
+// the same covers/rating/timing as every other rail). Session-cached.
+let _gpPromise = null
+
+export function loadGamePass() {
+  if (!_gpPromise) {
+    _gpPromise = supabase
+      .from('gamepass')
+      .select('igdb_id, name, cover, year, rating, released')
+      .order('rating', { ascending: false, nullsFirst: false })
+      .then(({ data, error }) => {
+        if (error) return []
+        return (data || []).map((r) => ({
+          id: r.igdb_id,
+          name: r.name,
+          cover: r.cover,
+          year: r.year,
+          rating: r.rating,
+          released: r.released,
+        }))
+      })
+      .catch(() => [])
+  }
+  return _gpPromise
+}
+
 let _libPromise = null
 
 export function loadLibraryTitles() {

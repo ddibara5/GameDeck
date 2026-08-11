@@ -20,6 +20,7 @@ export const ROW_CATALOG = [
   { key: 'coming_soon', label: 'Coming soon', sub: 'Out next, by release date', kind: 'rail' },
   { key: 'just_added', label: 'Just added', sub: 'New to the database', kind: 'rail' },
   { key: 'hidden_gems', label: 'Hidden gems', sub: 'Great, under the radar', kind: 'rail' },
+  { key: 'gamepass', label: 'On Game Pass', sub: 'Your Xbox subscription catalog', kind: 'gamepass' },
   { key: 'wishlist_soon', label: 'Wishlist - coming soon', sub: 'Saved games releasing soon', kind: 'wishlistSoon' },
 ]
 
