@@ -17,8 +17,9 @@
   justify-content: space-between;
   gap: 12px;
   padding: 0 16px;
-  border-bottom: 1px solid var(--line);
-  background: var(--bg);
+  /* Transparent so the ambient background gradient flows through unbroken,
+     matching the Activity/Insights headers. No solid fill, no divider seam. */
+  background: transparent;
 }
 
 .discover-seg {
