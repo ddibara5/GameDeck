@@ -4,7 +4,6 @@ import App from './App.jsx'
 import { initTheme } from './lib/theme.js'
 import './index.css'
 import './cardSize.css'
-import './appBackground.css'
 
 // Apply the saved theme (and keep 'system' synced to the OS) before first paint.
 initTheme()

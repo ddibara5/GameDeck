@@ -1,35 +1,3 @@
-/* Ambient app background: a gentle vertical gradient - a touch lighter at the top,
-   easing to a touch darker at the bottom. Derived from --bg with color-mix, so it
-   retints with the accent theme and adapts to light/dark automatically. Fixed
-   behind the (transparent) app column; cards, sheets and the frosted header/tab bar
-   keep their own surfaces on top. Deliberately subtle: noticeable, never loud. */
-
-/* Let the gradient (painted on <body>) show through the app column. */
-.app {
-  background: transparent;
-}
-
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: -1; /* behind app content, above the solid body background */
-  pointer-events: none;
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--bg), white 6%) 0%,
-    var(--bg) 52%,
-    color-mix(in srgb, var(--bg), black 10%) 100%
-  );
-}
-
-/* Light mode: invert the gradient so it reads a touch deeper at the top
-   (grounding the transparent header) and eases lighter toward the bottom. */
-[data-theme='light'] body::before {
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--bg), black 9%) 0%,
-    var(--bg) 52%,
-    color-mix(in srgb, var(--bg), white 6%) 100%
-  );
-}
+/* Ambient app background reverted: the app now uses the original solid --bg
+   surface (set in index.css), with no gradient/aurora/grain layer. This file is
+   intentionally left empty and is no longer imported by main.jsx. */
