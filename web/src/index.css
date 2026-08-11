@@ -679,9 +679,11 @@ textarea {
 
 /* ---------- Sticky search / filter header (Library) ---------- */
 
-/* Library search + filters scroll away with the list; only the app header stays fixed. */
+/* Library search + filters scroll away with the list; only the app header stays fixed.
+   Transparent so the ambient background gradient flows through unbroken (matching the
+   Activity/Insights headers); a hairline divider still separates controls from the list. */
 .library-sticky {
-  background: var(--bg);
+  background: transparent;
   padding: 12px 16px 10px;
   border-bottom: 1px solid var(--line);
 }
