@@ -1,3 +1,0 @@
-/* Ambient app background reverted: the app now uses the original solid --bg
-   surface (set in index.css), with no gradient/aurora/grain layer. This file is
-   intentionally left empty and is no longer imported by main.jsx. */
