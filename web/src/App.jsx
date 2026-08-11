@@ -8,11 +8,12 @@ import LibraryTab from './components/LibraryTab.jsx'
 import ActivityTab from './components/ActivityTab.jsx'
 import InsightsTab from './components/InsightsTab.jsx'
 import DiscoverTab from './components/DiscoverTab.jsx'
+import NewsTab from './components/NewsTab.jsx'
 import WishlistTab from './components/WishlistTab.jsx'
 import ListView from './components/ListView.jsx'
 import CustomizeRows from './components/CustomizeRows.jsx'
 
-const TABS = ['library', 'activity', 'insights', 'discover']
+const TABS = ['library', 'activity', 'insights', 'discover', 'news']
 
 // Drawer edge-swipe: open with a swipe in from the left edge, close with a left swipe.
 const EDGE_PX = 24
@@ -139,6 +140,7 @@ export default function App() {
         {activeTab === 'activity' && <ActivityTab />}
         {activeTab === 'insights' && <InsightsTab />}
         {activeTab === 'discover' && <DiscoverTab onCustomize={() => setCustomizeOpen(true)} />}
+        {activeTab === 'news' && <NewsTab />}
       </main>
       {view ? (
         <div className={`view-page${viewClosing ? ' closing' : ''}`}>

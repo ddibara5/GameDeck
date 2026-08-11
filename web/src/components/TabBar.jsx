@@ -38,6 +38,20 @@ const TAB_CONFIG = {
       </svg>
     ),
   },
+  news: {
+    label: 'News',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <path
+          d="M4 5.5h11a1 1 0 0 1 1 1V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path d="M16 9h3a1 1 0 0 1 1 1v8a2 2 0 0 1-2 2" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M6.5 9h6M6.5 12h6M6.5 15h4" strokeLinecap="round" />
+      </svg>
+    ),
+  },
 }
 
 export default function TabBar({ tabs, active, onChange }) {
