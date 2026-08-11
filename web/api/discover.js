@@ -97,6 +97,7 @@ function normalize(g) {
     cover: IMG(g.cover && g.cover.image_id, 'cover_big'),
     coverId: (g.cover && g.cover.image_id) || null,
     year: g.first_release_date ? new Date(g.first_release_date * 1000).getUTCFullYear() : null,
+    released: g.first_release_date || null,
     rating: g.total_rating != null ? Math.round(g.total_rating) : null,
     ratingCount: g.total_rating_count || 0,
     genres: (g.genres || []).map((x) => x.name),

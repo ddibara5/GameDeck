@@ -48,6 +48,44 @@ export function formatRelativeDay(value) {
 }
 
 /**
+ * Compact release timing for Discover cards, from an IGDB first_release_date
+ * (unix SECONDS). Returns { label, tone } only when a game is near its release,
+ * so older catalog rows show nothing (and fall back to just the rating).
+ *   tone 'amber'  -> upcoming (counting down)
+ *   tone 'fresh'  -> released within the last ~10 days
+ *   tone 'muted'  -> released 11-30 days ago
+ * Windows: up to 120 days before release, up to 30 days after.
+ */
+export function releaseTiming(released) {
+  const ts = Number(released)
+  if (!ts) return null
+  const DAY = 86400
+  const diff = ts - Date.now() / 1000 // >0 upcoming, <0 already out
+  const days = Math.abs(diff) / DAY
+
+  if (diff >= 0) {
+    if (days > 120) return null
+    let label
+    if (diff < 2 * DAY) {
+      const h = Math.max(1, Math.round(diff / 3600))
+      label = h >= 24 ? 'Tomorrow' : `in ${h}h`
+    } else if (days < 14) {
+      label = `in ${Math.round(days)}d`
+    } else {
+      label = `in ${Math.round(days / 7)}w`
+    }
+    return { label, tone: 'amber' }
+  }
+
+  if (days > 30) return null
+  let label
+  if (days < 1) label = 'Today'
+  else if (days < 14) label = `${Math.round(days)}d ago`
+  else label = `${Math.round(days / 7)}w ago`
+  return { label, tone: days <= 10 ? 'fresh' : 'muted' }
+}
+
+/**
  * Build an IGDB cover URL from a stored image_id, at a given size preset.
  * Sizes: 't_cover_small' (90x128), 't_cover_big' (264x374), 't_720p', 't_1080p'.
  * Returns null when no image_id (so callers can fall back to the Exophase cover).

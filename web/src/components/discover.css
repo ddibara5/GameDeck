@@ -196,6 +196,24 @@
   min-height: 2.5em;
 }
 
+/* Release-timing token on the meta line. The rating text stays --muted; only the
+   timing carries color: amber counting down, green just-released, muted recent. */
+.shelf-card-meta .sc-time {
+  font-weight: 600;
+}
+.shelf-card-meta .sc-time.amber {
+  color: var(--amber);
+}
+.shelf-card-meta .sc-time.fresh {
+  color: #4bbf8a;
+}
+.shelf-card-meta .sc-time.muted {
+  color: var(--muted);
+}
+[data-theme='light'] .shelf-card-meta .sc-time.fresh {
+  color: #2f9e6e;
+}
+
 .in-library-dot {
   position: absolute;
   top: 6px;

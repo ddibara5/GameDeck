@@ -5,6 +5,7 @@ import Cover from './Cover.jsx'
 import Skeleton from './Skeleton.jsx'
 import WishHeart from './WishHeart.jsx'
 import { fetchDiscover, loadLibraryTitles, normTitle } from '../lib/discover.js'
+import { releaseTiming } from '../lib/format.js'
 import { useWishlist } from '../lib/wishlist.js'
 import { useRowsConfig, ROW_BY_KEY, RAIL_KEYS } from '../lib/discoverRows.js'
 
@@ -358,22 +359,26 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
                   <span className="shelf-title">{row.label}</span>
                 </div>
                 <div className="shelf-row">
-                  {items.map((g) => (
-                    <div className="shelf-card-wrap" key={g.id}>
-                      <button type="button" className="shelf-card" onClick={() => setSelected(g)}>
-                        <div className="shelf-poster">
-                          <Cover src={g.cover} title={g.name} size="lg" />
-                          {isOwned(g.name) ? <span className="in-library-dot" title="In library" /> : null}
-                        </div>
-                        <div className="shelf-card-title">{g.name}</div>
-                        <div className="shelf-card-meta">
-                          {g.year || ''}
-                          {g.rating ? `${g.year ? ' · ' : ''}★ ${g.rating}` : ''}
-                        </div>
-                      </button>
-                      <WishHeart game={g} active={wishIds.has(g.id)} />
-                    </div>
-                  ))}
+                  {items.map((g) => {
+                    const timing = releaseTiming(g.released)
+                    return (
+                      <div className="shelf-card-wrap" key={g.id}>
+                        <button type="button" className="shelf-card" onClick={() => setSelected(g)}>
+                          <div className="shelf-poster">
+                            <Cover src={g.cover} title={g.name} size="lg" />
+                            {isOwned(g.name) ? <span className="in-library-dot" title="In library" /> : null}
+                          </div>
+                          <div className="shelf-card-title">{g.name}</div>
+                          <div className="shelf-card-meta">
+                            {timing ? <span className={`sc-time ${timing.tone}`}>{timing.label}</span> : null}
+                            {timing && g.rating ? <span className="sc-sep"> · </span> : null}
+                            {g.rating ? <span>★ {g.rating}</span> : null}
+                          </div>
+                        </button>
+                        <WishHeart game={g} active={wishIds.has(g.id)} />
+                      </div>
+                    )
+                  })}
                 </div>
               </section>
             )
