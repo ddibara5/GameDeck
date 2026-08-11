@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMountTransition } from '../lib/useMountTransition.js'
+import { lockScroll } from '../lib/scrollLock.js'
 import { ROW_BY_KEY, getRowsConfig, setRowsConfig, resetRowsConfig } from '../lib/discoverRows.js'
 import './customizeRows.css'
 
@@ -64,11 +65,7 @@ export default function CustomizeRows({ open, onClose }) {
   // Lock background scroll while open.
   useEffect(() => {
     if (!mounted) return undefined
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
+    return lockScroll()
   }, [mounted])
 
   // iOS edge-back: swipe in from the left edge to go back (disabled mid-drag).

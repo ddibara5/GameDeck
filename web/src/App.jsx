@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { lockScroll } from './lib/scrollLock.js'
 import Brand from './components/Brand.jsx'
 import Menu from './components/Menu.jsx'
 import SettingsPage from './components/SettingsPage.jsx'
@@ -52,14 +53,10 @@ export default function App() {
   }
   useEffect(() => () => viewTimer.current && clearTimeout(viewTimer.current), [])
 
-  // Lock background scroll while a view overlay is open.
+  // Lock background scroll while a view overlay is open (shared ref-counted lock).
   useEffect(() => {
     if (!view) return undefined
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
+    return lockScroll()
   }, [view])
 
   useEffect(() => {

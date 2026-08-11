@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase.js'
 import { getAppKey, setAppKey, promptForKey } from '../lib/appAuth.js'
 import { getTheme, setTheme, getAccent, setAccent } from '../lib/theme.js'
 import { useMountTransition } from '../lib/useMountTransition.js'
+import { lockScroll } from '../lib/scrollLock.js'
 import { MenuItem, ICONS, relTime } from './menuUI.jsx'
 
 const REPO = 'ddibara5/GameDeck'
@@ -63,11 +64,7 @@ export default function SettingsPage({ open, onClose }) {
   // scroll and its scrollbar doesn't show through.
   useEffect(() => {
     if (!mounted) return undefined
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
+    return lockScroll()
   }, [mounted])
 
   // Swipe to go back: iOS-style edge-back. Start near the left edge and drag

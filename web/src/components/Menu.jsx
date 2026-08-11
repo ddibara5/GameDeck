@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { useWishlist } from '../lib/wishlist.js'
 import { useMountTransition } from '../lib/useMountTransition.js'
+import { lockScroll } from '../lib/scrollLock.js'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
 import { useStatusMap, effectiveStatus, includeInLists } from '../lib/userStatus.js'
 import { MenuItem, ICONS } from './menuUI.jsx'
@@ -44,11 +45,7 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList }) {
   // scrim can't scroll.
   useEffect(() => {
     if (!mounted) return undefined
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
+    return lockScroll()
   }, [mounted])
 
   if (!mounted) return null

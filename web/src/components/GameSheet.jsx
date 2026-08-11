@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Cover from './Cover.jsx'
 import { useDelayedClose } from '../lib/useDelayedClose.js'
+import { lockScroll } from '../lib/scrollLock.js'
 import { igdbCover, platformMeta, minutesToHhm, formatDate } from '../lib/format.js'
 import { STATUSES, STATUS_LABELS, effectiveStatus, setStatus } from '../lib/userStatus.js'
 import { useWishlist, toggleWishlist } from '../lib/wishlist.js'
@@ -80,14 +81,8 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
     else setDragY(0)
   }
 
-  // Lock background scroll while the sheet is open.
-  useEffect(() => {
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
-  }, [])
+  // Lock background scroll while the sheet is open (shared ref-counted lock).
+  useEffect(() => lockScroll(), [])
 
   if (!game) return null
 
