@@ -32,18 +32,28 @@ function relOf(r) {
   return { k: 'tba', ts: null, label: 'TBA' }
 }
 
-// Effective instant used for sorting + countdown (coarsened to the known precision).
-function effTs(rel) {
+// End of the known release window: the last day the game could land given its
+// precision. Coarser dates (quarter, year) resolve to the END of their period so
+// they sort AFTER the concrete dates they overlap, never before them.
+function windowEnd(rel) {
   if (rel.ts == null) return Infinity
   const d = new Date(rel.ts)
-  if (rel.k === 'quarter') return Date.UTC(d.getUTCFullYear(), Math.floor(d.getUTCMonth() / 3) * 3, 1)
-  if (rel.k === 'month') return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)
-  if (rel.k === 'year') return Date.UTC(d.getUTCFullYear(), 5, 1)
+  const y = d.getUTCFullYear()
+  const m = d.getUTCMonth()
+  if (rel.k === 'year') return Date.UTC(y, 11, 31)
+  if (rel.k === 'quarter') return Date.UTC(y, Math.floor(m / 3) * 3 + 3, 0)
+  if (rel.k === 'month') return Date.UTC(y, m + 1, 0)
   return rel.ts
 }
 
+// Instant used for sorting + countdown: the end of the window, so a vaguer date
+// never jumps ahead of the specific ones inside the same period.
+function effTs(rel) {
+  return windowEnd(rel)
+}
+
 function isOut(rel) {
-  return rel.ts != null && rel.k !== 'tba' && rel.ts < Date.now()
+  return rel.k !== 'tba' && rel.ts != null && windowEnd(rel) < Date.now()
 }
 
 function fmtDay(ts) {
@@ -93,7 +103,7 @@ function shortOf(rel) {
 function sectionOf(rel) {
   if (rel.k === 'tba') return { order: 8e15, id: 'tba', label: 'To be announced', amber: false }
   if (isOut(rel)) return { order: 9e15, id: 'out', label: 'Out now', amber: false }
-  const d = new Date(effTs(rel))
+  const d = new Date(rel.ts)
   const y = d.getUTCFullYear()
   const m = d.getUTCMonth()
   const now = new Date()
@@ -101,7 +111,7 @@ function sectionOf(rel) {
     const thisMonth = y === now.getUTCFullYear() && m === now.getUTCMonth()
     return { order: Date.UTC(y, m, 1), id: `m${y}-${m}`, label: thisMonth ? 'This month' : `${MON[m]} ${y}`, amber: thisMonth }
   }
-  if (rel.k === 'quarter') { const q = Math.floor(m / 3) + 1; return { order: Date.UTC(y, (q - 1) * 3, 1), id: `q${y}-${q}`, label: `Q${q} ${y}`, amber: false } }
+  if (rel.k === 'quarter') { const q = Math.floor(m / 3) + 1; return { order: Date.UTC(y, q * 3, 0), id: `q${y}-${q}`, label: `Q${q} ${y}`, amber: false } }
   return { order: Date.UTC(y, 11, 31), id: `y${y}`, label: `${y}`, amber: false }
 }
 
@@ -141,7 +151,7 @@ function NextUp({ items, onOpen }) {
   const soon = useMemo(() => {
     return items
       .map((r) => ({ r, rel: relOf(r) }))
-      .filter(({ rel }) => rel.k !== 'tba' && rel.ts != null && !isOut(rel))
+      .filter(({ rel }) => (rel.k === 'day' || rel.k === 'month') && rel.ts != null && !isOut(rel))
       .sort((a, b) => effTs(a.rel) - effTs(b.rel))
       .slice(0, 6)
   }, [items])
