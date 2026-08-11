@@ -84,7 +84,49 @@ const SORTS = {
 const GAME_FIELDS =
   'fields name,summary,cover.image_id,first_release_date,total_rating,total_rating_count,' +
   'genres.name,keywords.name,themes.name,platforms.name,platforms.abbreviation,' +
-  'screenshots.image_id,involved_companies.company.name,involved_companies.developer,url';
+  'screenshots.image_id,involved_companies.company.name,involved_companies.developer,url,' +
+  'release_dates.date,release_dates.category,release_dates.human';
+
+// IGDB release_dates.category is a date-FORMAT enum (how precise the date is):
+//   0 YYYYMMMMDD (day), 1 YYYYMMMM (month), 2 YYYY (year),
+//   3-6 YYYYQ1..Q4 (quarter), 7 TBD. Map it to a coarse precision the UI can trust
+//   so we never render a fake exact day for a year- or quarter-only game.
+function precisionFromCategory(cat) {
+  if (cat === 0) return 'day';
+  if (cat === 1) return 'month';
+  if (cat === 2) return 'year';
+  if (cat === 3 || cat === 4 || cat === 5 || cat === 6) return 'quarter';
+  if (cat === 7) return 'tba';
+  return null;
+}
+
+// Fallback when category is absent: parse IGDB's human string ("2027", "Q1 2027",
+// "Mar 2027", "Mar 15, 2027", "TBD").
+function precisionFromHuman(h) {
+  if (!h) return null;
+  const s = String(h).trim();
+  if (/tbd/i.test(s)) return 'tba';
+  if (/^Q[1-4]\s+\d{4}$/i.test(s)) return 'quarter';
+  if (/^\d{4}$/.test(s)) return 'year';
+  if (/\d{1,2},\s*\d{4}$/.test(s)) return 'day';
+  if (/^[A-Za-z]{3,9}\s+\d{4}$/.test(s)) return 'month';
+  return null;
+}
+
+// Normalized release: the earliest concrete release across platforms/regions, plus
+// how precise IGDB actually is about it. { ts, precision, label }.
+function computeRelease(g) {
+  const rds = (g.release_dates || []).filter(Boolean);
+  const dated = rds.filter((r) => typeof r.date === 'number');
+  if (!dated.length) {
+    const withHuman = rds.find((r) => r.human);
+    return { ts: g.first_release_date || null, precision: 'tba', label: (withHuman && withHuman.human) || 'TBA' };
+  }
+  dated.sort((a, b) => a.date - b.date);
+  const first = dated[0];
+  const precision = precisionFromCategory(first.category) || precisionFromHuman(first.human) || 'day';
+  return { ts: first.date, precision, label: first.human || null };
+}
 
 function normalize(g) {
   const companies = (g.involved_companies || [])
@@ -98,6 +140,7 @@ function normalize(g) {
     coverId: (g.cover && g.cover.image_id) || null,
     year: g.first_release_date ? new Date(g.first_release_date * 1000).getUTCFullYear() : null,
     released: g.first_release_date || null,
+    release: computeRelease(g),
     rating: g.total_rating != null ? Math.round(g.total_rating) : null,
     ratingCount: g.total_rating_count || 0,
     genres: (g.genres || []).map((x) => x.name),
