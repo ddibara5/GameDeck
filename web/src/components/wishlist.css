@@ -289,3 +289,283 @@
     animation: none;
   }
 }
+
+/* ---------- Controls row: sort + density ---------- */
+.wl-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 16px 4px;
+}
+
+.wl-controls .wl-sort {
+  padding: 0;
+}
+
+.wl-dens {
+  flex: none;
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.wl-dbtn {
+  width: 34px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.wl-dbtn.on {
+  background: var(--surface-2);
+  color: var(--accent);
+}
+
+.wl-dbtn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ---------- Proximity chip ---------- */
+.wl-chip {
+  flex: none;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 5px 9px;
+  border-radius: 8px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.wl-chip.soon {
+  background: color-mix(in srgb, var(--amber), transparent 82%);
+  color: var(--amber);
+}
+
+.wl-chip.near {
+  background: color-mix(in srgb, var(--accent), transparent 84%);
+  color: var(--accent);
+}
+
+.wl-chip.far {
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+.wl-chip.tba {
+  background: transparent;
+  color: var(--muted);
+  border: 1px dashed var(--line);
+}
+
+.wl-chip.out {
+  background: color-mix(in srgb, var(--xbox), transparent 82%);
+  color: #57b45a;
+}
+
+/* ---------- Sticky date section header ---------- */
+.wl-sech {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 14px 16px 8px;
+  background: color-mix(in srgb, var(--bg), transparent 4%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.wl-sech-l {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.wl-sech.amber .wl-sech-l {
+  color: var(--amber);
+}
+
+.wl-sech-c {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Next up strip ---------- */
+.wl-next-lbl {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 14px 16px 8px;
+}
+
+.wl-next {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 0 16px 6px;
+  scrollbar-width: none;
+}
+
+.wl-next::-webkit-scrollbar {
+  display: none;
+}
+
+.wl-ncard {
+  flex: none;
+  width: 128px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.wl-nart {
+  position: relative;
+  height: 150px;
+  background: var(--surface-2);
+}
+
+.wl-nart > .cover {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.wl-nover {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 16px 10px 8px;
+  background: linear-gradient(to top, rgba(10, 9, 8, 0.92), rgba(10, 9, 8, 0));
+}
+
+.wl-nbig {
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+
+.wl-nlab {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.72);
+  margin-top: 2px;
+}
+
+.wl-nt {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 10px 10px;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Grid density ---------- */
+.wl-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  padding: 6px 16px 4px;
+}
+
+.wl-gc {
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.wl-gcov {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.wl-gcov > .cover {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  box-shadow: none;
+  font-size: 22px;
+}
+
+.wl-gbadge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 3px 6px;
+  border-radius: 7px;
+  font-variant-numeric: tabular-nums;
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+.wl-gbadge.soon {
+  background: color-mix(in srgb, var(--amber), transparent 10%);
+  color: #1a1206;
+}
+
+.wl-gbadge.near {
+  background: color-mix(in srgb, var(--accent), transparent 10%);
+  color: #1a1206;
+}
+
+.wl-gbadge.far {
+  background: rgba(20, 18, 16, 0.78);
+  color: var(--text);
+}
+
+.wl-gbadge.tba {
+  background: rgba(20, 18, 16, 0.78);
+  color: var(--muted);
+}
+
+.wl-gbadge.out {
+  background: color-mix(in srgb, var(--xbox), transparent 8%);
+  color: #eafff0;
+}
+
+.wl-gt {
+  font-size: 11.5px;
+  font-weight: 600;
+  margin-top: 6px;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
