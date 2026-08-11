@@ -22,3 +22,14 @@ body::before {
     color-mix(in srgb, var(--bg), black 10%) 100%
   );
 }
+
+/* Light mode: invert the gradient so it reads a touch deeper at the top
+   (grounding the transparent header) and eases lighter toward the bottom. */
+[data-theme='light'] body::before {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--bg), black 9%) 0%,
+    var(--bg) 52%,
+    color-mix(in srgb, var(--bg), white 6%) 100%
+  );
+}
