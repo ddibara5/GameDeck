@@ -75,6 +75,31 @@ export function toggleWishlist(game) {
   return isWishlisted(gameId(game)) ? removeFromWishlist(gameId(game)) : addToWishlist(game)
 }
 
+// Put a previously-removed row back exactly as it was (id, title, cover, year,
+// note, created_at). Used by the wishlist's swipe-to-delete undo so an accidental
+// swipe restores the item in its original spot rather than jumping to the top.
+export async function restoreToWishlist(row) {
+  const key = Number(row && row.igdb_id)
+  if (!key) return
+  const full = {
+    igdb_id: key,
+    title: row.title || 'Untitled',
+    cover: row.cover ?? null,
+    year: row.year ?? null,
+    note: row.note ?? null,
+    created_at: row.created_at || new Date().toISOString(),
+  }
+  cache = [full, ...(cache || []).filter((r) => r.igdb_id !== key)].sort(
+    (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0),
+  )
+  emit()
+  const { error } = await supabase.from('wishlist').upsert(full, { onConflict: 'igdb_id' })
+  if (error) {
+    await loadWishlist(true)
+    emit()
+  }
+}
+
 // Drop any wishlist rows whose title now matches a game in the synced library.
 // Returns the removed rows so the caller can surface a small note.
 export async function reconcileWishlist(ownedTitleSet) {

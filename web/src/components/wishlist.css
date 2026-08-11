@@ -118,23 +118,89 @@
   color: var(--amber);
 }
 
-.wl-row {
+/* ---------- Sort control ---------- */
+.wl-sort {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 9px 16px;
+  gap: 6px;
+  padding: 10px 16px 4px;
 }
 
-.wl-row + .wl-row {
-  border-top: 1px solid var(--line);
+.wl-sort-b {
+  flex: none;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  padding: 6px 13px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.wl-sort-b.on {
+  color: var(--text);
+  background: var(--surface-2);
+  border-color: var(--text-dim, var(--line));
+}
+
+.wl-sort-b:active {
+  background: var(--surface-2);
+}
+
+/* ---------- Swipe-to-delete row ---------- */
+.wl-swipe {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Red trash action sits behind the face and is uncovered as it slides left. */
+.wl-trash {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 76px;
+  border: none;
+  background: #b3261e;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 0;
+}
+
+.wl-trash:active {
+  background: #8f1c16;
+}
+
+.wl-face {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 10px 16px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  will-change: transform;
+}
+
+.wl-face:active {
+  background: var(--surface);
 }
 
 .cover.wish-cover {
-  width: 46px;
-  height: 61px;
-  border-radius: 9px;
-  font-size: 18px;
+  width: 60px;
+  height: 80px;
+  border-radius: 10px;
+  font-size: 22px;
   flex: 0 0 auto;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
 }
 
 .wl-rb {
@@ -143,7 +209,7 @@
 }
 
 .wl-rt {
-  font-size: 14px;
+  font-size: 14.5px;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -156,7 +222,7 @@
   gap: 8px;
   font-size: 12px;
   color: var(--muted);
-  margin-top: 3px;
+  margin-top: 4px;
 }
 
 .wl-soon {
@@ -169,22 +235,57 @@
   padding: 1px 7px;
 }
 
-.wl-remove {
-  flex: none;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 1px solid var(--line);
-  background: var(--surface-2);
-  color: var(--muted);
-  font-size: 17px;
-  line-height: 1;
-  cursor: pointer;
+/* ---------- Undo toast ---------- */
+.wl-toast {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--safe-bottom) + 18px);
+  z-index: 260;
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 14px;
+  max-width: calc(100vw - 32px);
+  padding: 11px 12px 11px 16px;
+  border-radius: 13px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  font-size: 13.5px;
+  color: var(--text);
+  animation: wl-toast-in 0.2s var(--enter-ease);
 }
 
-.wl-remove:active {
-  background: var(--line);
+.wl-toast-t {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wl-toast-u {
+  flex: none;
+  border: none;
+  background: none;
+  color: var(--amber);
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+@keyframes wl-toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 10px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wl-toast {
+    animation: none;
+  }
 }
