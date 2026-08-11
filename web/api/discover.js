@@ -234,6 +234,12 @@ export default async function handler(req, res) {
       }
     }
 
+    // A rail defines the result SET via its `where` filters; when the caller
+    // passes an explicit sort (the "see all" list page's sort control), honor it
+    // so the whole filtered set re-sorts consistently across pages. Without one,
+    // the rail keeps the recommended order set above.
+    if (rail && q.sort && SORTS[q.sort]) sort = SORTS[q.sort];
+
     // IGDB's `search` can't be combined with `sort`; drop sort when searching.
     const parts = [GAME_FIELDS + ';'];
     if (search) parts.push(search);
