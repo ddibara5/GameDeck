@@ -14,7 +14,7 @@ export default function Cover({ src, title, size = 'sm', className = '' }) {
   return (
     <div className={`cover ${sizeClass} ${className}`.trim()}>
       {showImage ? (
-        <img src={src} alt={title || 'Game cover'} loading="lazy" onError={() => setFailed(true)} />
+        <img src={src} alt={title || 'Game cover'} loading="lazy" decoding="async" onError={() => setFailed(true)} />
       ) : (
         <span aria-hidden="true">{initial}</span>
       )}

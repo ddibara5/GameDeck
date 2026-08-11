@@ -6,6 +6,11 @@
     <title>GameDeck</title>
     <meta name="description" content="Your personal video-game library, activity, and AI game picks." />
 
+    <!-- Warm the connection to IGDB's image host before the first cover renders.
+         No crossorigin: <img> loads here are non-CORS, so the preconnect must match. -->
+    <link rel="preconnect" href="https://images.igdb.com" />
+    <link rel="dns-prefetch" href="https://images.igdb.com" />
+
     <!-- Apply the saved theme before first paint to avoid a flash of the wrong mode. -->
     <script>
       (function () {
