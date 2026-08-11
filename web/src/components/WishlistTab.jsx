@@ -5,62 +5,175 @@ import { useWishlist, removeFromWishlist, restoreToWishlist, reconcileWishlist }
 import { loadLibraryTitles } from '../lib/discover.js'
 import './wishlist.css'
 
-const CURRENT_YEAR = new Date().getFullYear()
 const SORT_KEY = 'gamedeck_wishlist_sort'
+const DENSITY_KEY = 'gamedeck_wishlist_density'
 const SORTS = [
   { k: 'release', label: 'Release' },
   { k: 'added', label: 'Added' },
   { k: 'az', label: 'A-Z' },
 ]
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const DAY = 86400000
 
 function byTitle(a, b) {
   return (a.title || '').localeCompare(b.title || '')
 }
 
-// How far out an upcoming game is, honestly, from year alone (no month/day data).
-function relLabel(year) {
-  const d = year - CURRENT_YEAR
-  if (d <= 0) return 'This year'
-  if (d === 1) return 'Next year'
-  return `in ${d} years`
+// --- release model ---------------------------------------------------------
+// Rows may carry released (unix seconds) + date_precision + release_label from the
+// IGDB sync, or just `year` before the refresh has run. Normalize both to one shape:
+// { k: 'day'|'month'|'quarter'|'year'|'tba', ts, label }.
+function relOf(r) {
+  const prec = r.date_precision
+  const ts = r.released != null ? r.released * 1000 : null
+  if (prec === 'tba') return { k: 'tba', ts: null, label: r.release_label || 'TBA' }
+  if (ts != null) return { k: prec || 'day', ts, label: r.release_label || null }
+  if (r.year) return { k: 'year', ts: Date.UTC(r.year, 5, 1), label: String(r.year) }
+  return { k: 'tba', ts: null, label: 'TBA' }
 }
 
-// Group + order the wishlist for the chosen sort. "release" keeps smart sections
-// (Coming soon / Out now / No date yet); the other sorts are one flat list.
+// Effective instant used for sorting + countdown (coarsened to the known precision).
+function effTs(rel) {
+  if (rel.ts == null) return Infinity
+  const d = new Date(rel.ts)
+  if (rel.k === 'quarter') return Date.UTC(d.getUTCFullYear(), Math.floor(d.getUTCMonth() / 3) * 3, 1)
+  if (rel.k === 'month') return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)
+  if (rel.k === 'year') return Date.UTC(d.getUTCFullYear(), 5, 1)
+  return rel.ts
+}
+
+function isOut(rel) {
+  return rel.ts != null && rel.k !== 'tba' && rel.ts < Date.now()
+}
+
+function fmtDay(ts) {
+  const d = new Date(ts)
+  return `${MON[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`
+}
+function fmtDayShort(ts) {
+  const d = new Date(ts)
+  return `${MON[d.getUTCMonth()]} ${d.getUTCDate()}`
+}
+function fmtMonthShort(ts) {
+  const d = new Date(ts)
+  return `${MON[d.getUTCMonth()]} '${String(d.getUTCFullYear()).slice(2)}`
+}
+function fmtQuarter(ts) {
+  const d = new Date(ts)
+  return `Q${Math.floor(d.getUTCMonth() / 3) + 1} ${d.getUTCFullYear()}`
+}
+
+// Full chip for list rows: proximity-colored countdown / date / status.
+function chipOf(rel) {
+  if (rel.k === 'tba') return { cls: 'tba', txt: rel.label || 'TBA' }
+  if (isOut(rel)) return { cls: 'out', txt: 'Out now' }
+  const days = Math.round((effTs(rel) - Date.now()) / DAY)
+  if (rel.k === 'day') {
+    if (days <= 0) return { cls: 'soon', txt: 'Out today' }
+    if (days <= 30) return { cls: 'soon', txt: `in ${days} day${days === 1 ? '' : 's'}` }
+    return { cls: days <= 120 ? 'near' : 'far', txt: rel.label || fmtDay(rel.ts) }
+  }
+  if (rel.k === 'month') return { cls: days <= 120 ? 'near' : 'far', txt: rel.label || `${MON[new Date(rel.ts).getUTCMonth()]} ${new Date(rel.ts).getUTCFullYear()}` }
+  if (rel.k === 'quarter') return { cls: 'far', txt: rel.label || fmtQuarter(rel.ts) }
+  return { cls: 'far', txt: rel.label || String(new Date(rel.ts).getUTCFullYear()) }
+}
+
+// Compact badge for grid cards.
+function shortOf(rel) {
+  if (rel.k === 'tba') return 'TBA'
+  if (isOut(rel)) return 'Owned'
+  const days = Math.round((effTs(rel) - Date.now()) / DAY)
+  if (rel.k === 'day') return days <= 30 ? `${Math.max(days, 0)}d` : fmtDayShort(rel.ts)
+  if (rel.k === 'month') return fmtMonthShort(rel.ts)
+  if (rel.k === 'quarter') { const d = new Date(rel.ts); return `Q${Math.floor(d.getUTCMonth() / 3) + 1} '${String(d.getUTCFullYear()).slice(2)}` }
+  return String(new Date(rel.ts).getUTCFullYear())
+}
+
+// Which dated section a row belongs to, and its sort order.
+function sectionOf(rel) {
+  if (rel.k === 'tba') return { order: 8e15, id: 'tba', label: 'To be announced', amber: false }
+  if (isOut(rel)) return { order: 9e15, id: 'out', label: 'Out now', amber: false }
+  const d = new Date(effTs(rel))
+  const y = d.getUTCFullYear()
+  const m = d.getUTCMonth()
+  const now = new Date()
+  if (rel.k === 'day' || rel.k === 'month') {
+    const thisMonth = y === now.getUTCFullYear() && m === now.getUTCMonth()
+    return { order: Date.UTC(y, m, 1), id: `m${y}-${m}`, label: thisMonth ? 'This month' : `${MON[]}] ${y}`, amber: thisMonth }
+  }
+  if (rel.k === 'quarter') { const q = Math.floor(m / 3) + 1; return { order: Date.UTC(y, (q - 1) * 3, 1), id: `q${y}-${q}`, label: `Q${q} ${y}`, amber: false } }
+  return { order: Date.UTC(y, 11, 31), id: `y${y}`, label: `${y}`, amber: false }
+}
+
+// Group + order the wishlist. "release" builds smart date sections; the other sorts
+// are one flat list.
 function buildSections(items, sort) {
-  if (sort === 'az') {
-    return [{ key: 'az', rows: [...items].sort(byTitle) }]
-  }
+  if (sort === 'az') return [{ id: 'az', rows: [...items].sort(byTitle) }]
   if (sort === 'added') {
-    return [
-      {
-        key: 'added',
-        rows: [...items].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)),
-      },
-    ]
+    return [{ id: 'added', rows: [...items].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)) }]
   }
-  const up = []
-  const out = []
-  const none = []
+  const groups = new Map()
   for (const r of items) {
-    if (!r.year) none.push(r)
-    else if (r.year >= CURRENT_YEAR) up.push(r)
-    else out.push(r)
+    const rel = relOf(r)
+    const s = sectionOf(rel)
+    if (!groups.has(s.id)) groups.set(s.id, { ...s, rows: [] })
+    groups.get(s.id).rows.push(r)
   }
-  up.sort((a, b) => a.year - b.year || byTitle(a, b))
-  out.sort((a, b) => b.year - a.year || byTitle(a, b))
-  none.sort(byTitle)
-  const sections = []
-  if (up.length) sections.push({ key: 'up', label: 'Coming soon', amber: true, rows: up })
-  if (out.length) sections.push({ key: 'out', label: 'Out now', rows: out })
-  if (none.length) sections.push({ key: 'none', label: 'No date yet', rows: none })
-  return sections
+  const secs = [...groups.values()].sort((a, b) => a.order - b.order)
+  for (const g of secs) {
+    const past = g.id === 'out'
+    g.rows.sort((a, b) => {
+      const ta = effTs(relOf(a))
+      const tb = effTs(relOf(b))
+      return past ? tb - ta || byTitle(a, b) : ta - tb || byTitle(a, b)
+    })
+  }
+  return secs
 }
 
-// One wishlist row with iOS-style swipe-left-to-delete. A short swipe snaps the
-// red trash action open; a long swipe deletes outright. Tapping the face opens
-// the sheet. Touch is handled with a non-passive listener so the row can own the
-// horizontal gesture without fighting vertical page scroll.
+function Chip({ rel }) {
+  const c = chipOf(rel)
+  return <span className={`wl-chip ${c.cls}`}>{c.txt}</span>
+}
+
+// --- Next up strip: nearest concrete upcoming releases ---------------------
+function NextUp({ items, onOpen }) {
+  const soon = useMemo(() => {
+    return items
+      .map((r) => ({ r, rel: relOf(r) }))
+      .filter(({ rel }) => rel.k !== 'tba' && rel.ts != null && !isOut(rel))
+      .sort((a, b) => effTs(a.rel) - effTs(b.rel))
+      .slice(0, 6)
+  }, [items])
+  if (soon.length < 2) return null
+  return (
+    <div className="wl-next-wrap">
+      <div className="wl-next-lbl">Next up</div>
+      <div className="wl-next">
+        {soon.map(({ r, rel }) => {
+          const days = Math.round((effTs(rel) - Date.now()) / DAY)
+          const big = rel.k === 'day' && days <= 45 ? String(Math.max(days, 0)) : shortOf(rel)
+          const lab = rel.k === 'day' && days <= 45 ? (days === 1 ? 'day away' : 'days away') : ''
+          return (
+            <button type="button" key={r.igdb_id} className="wl-ncard" onClick={() => onOpen(r)}>
+              <div className="wl-nart">
+                <Cover src={r.cover} title={r.title} size="sm" className="wl-ncover" />
+                <div className="wl-nover">
+                  <div className="wl-nbig">{big}</div>
+                  <div className="wl-nlab">{lab || '\u00a0'}</div>
+                </div>
+              </div>
+              <div className="wl-nt">{r.title}</div>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// One wishlist row with iOS-style swipe-left-to-delete. Short swipe reveals the trash
+// action; long swipe deletes outright. Tapping opens the sheet.
 function SwipeRow({ r, onOpen, onRemove }) {
   const rootRef = useRef(null)
   const faceRef = useRef(null)
@@ -72,9 +185,10 @@ function SwipeRow({ r, onOpen, onRemove }) {
   const DELETE_AT = 150
   const MAX = 220
 
-  const upcoming = r.year && r.year >= CURRENT_YEAR
+  const rel = relOf(r)
+  const chip = chipOf(rel)
+  const sub = rel.label && rel.label !== chip.txt ? rel.label : ''
 
-  // Keep the imperative handlers pointing at fresh callbacks/state.
   apiRef.current.collapseAndRemove = () => {
     const root = rootRef.current
     const face = faceRef.current
@@ -201,13 +315,26 @@ function SwipeRow({ r, onOpen, onRemove }) {
         <Cover src={r.cover} title={r.title} size="sm" className="wish-cover" />
         <div className="wl-rb">
           <div className="wl-rt">{r.title}</div>
-          <div className="wl-rm">
-            <span>{r.year || 'TBA'}</span>
-            {upcoming ? <span className="wl-soon">{relLabel(r.year)}</span> : null}
-          </div>
+          {sub ? <div className="wl-rm">{sub}</div> : null}
         </div>
+        <Chip rel={rel} />
       </div>
     </div>
+  )
+}
+
+function GridCard({ r, onOpen }) {
+  const rel = relOf(r)
+  const short = shortOf(rel)
+  const cls = chipOf(rel).cls
+  return (
+    <button type="button" className="wl-gc" onClick={() => onOpen(r)}>
+      <div className="wl-gcov">
+        <Cover src={r.cover} title={r.title} size="lg" className="wl-gcover" />
+        <span className={`wl-gbadge ${cls}`}>{short}</span>
+      </div>
+      <div className="wl-gt">{r.title}</div>
+    </button>
   )
 }
 
@@ -225,6 +352,13 @@ export default function WishlistTab({ onClose }) {
       return 'release'
     }
   })
+  const [density, setDensity] = useState(() => {
+    try {
+      return localStorage.getItem(DENSITY_KEY) || 'list'
+    } catch {
+      return 'list'
+    }
+  })
 
   useEffect(() => {
     try {
@@ -233,6 +367,14 @@ export default function WishlistTab({ onClose }) {
       /* ignore */
     }
   }, [sort])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(DENSITY_KEY, density)
+    } catch {
+      /* ignore */
+    }
+  }, [density])
 
   // Once on open: drop anything that has since landed in the synced library.
   useEffect(() => {
@@ -272,13 +414,15 @@ export default function WishlistTab({ onClose }) {
     </button>
   )
 
+  const isGrid = density === 'grid'
+
   return (
     <div className="wl-page">
       <div className="wl-head">
         {back}
         <div>
           <div className="wl-title">Wishlist</div>
-          <div className="wl-sub">{loading ? 'Loading…' : `${items.length} ${items.length === 1 ? 'game' : 'games'} you're tracking`}</div>
+          <div className="wl-sub">{loading ? 'Loading\u2026' : `${items.length} ${items.length === 1 ? 'game' : 'games'} you're tracking`}</div>
         </div>
       </div>
 
@@ -306,28 +450,53 @@ export default function WishlistTab({ onClose }) {
       ) : null}
 
       {items.length > 1 ? (
-        <div className="wl-sort" role="tablist" aria-label="Sort wishlist">
-          {SORTS.map((s) => (
-            <button
-              key={s.k}
-              type="button"
-              role="tab"
-              aria-selected={sort === s.k}
-              className={`wl-sort-b${sort === s.k ? ' on' : ''}`}
-              onClick={() => setSort(s.k)}
-            >
-              {s.label}
+        <div className="wl-controls">
+          <div className="wl-sort" role="tablist" aria-label="Sort wishlist">
+            {SORTS.map((s) => (
+              <button
+                key={s.k}
+                type="button"
+                role="tab"
+                aria-selected={sort === s.k}
+                className={`wl-sort-b${sort === s.k ? ' on' : ''}`}
+                onClick={() => setSort(s.k)}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+          <div className="wl-dens" role="group" aria-label="Density">
+            <button type="button" className={`wl-dbtn${!isGrid ? ' on' : ''}`} aria-label="List view" aria-pressed={!isGrid} onClick={() => setDensity('list')}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" /></svg>
             </button>
-          ))}
+            <button type="button" className={`wl-dbtn${isGrid ? ' on' : ''}`} aria-label="Grid view" aria-pressed={isGrid} onClick={() => setDensity('grid')}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>
+            </button>
+          </div>
         </div>
       ) : null}
 
+      {sort === 'release' && !loading ? <NextUp items={items} onOpen={setSelected} /> : null}
+
       {sections.map((sec) => (
-        <div key={sec.key}>
-          {sec.label ? <div className={`wl-group${sec.amber ? ' amber' : ''}`}>{sec.label}</div> : null}
-          {sec.rows.map((r) => (
-            <SwipeRow key={r.igdb_id} r={r} onOpen={setSelected} onRemove={handleRemove} />
-          ))}
+        <div key={sec.id}>
+          {sec.label ? (
+            <div className={`wl-sech${sec.amber ? ' amber' : ''}`}>
+              <span className="wl-sech-l">{sec.label}</span>
+              <span className="wl-sech-c">{sec.rows.length}</span>
+            </div>
+          ) : null}
+          {isGrid ? (
+            <div className="wl-grid">
+              {sec.rows.map((r) => (
+                <GridCard key={r.igdb_id} r={r} onOpen={setSelected} />
+              ))}
+            </div>
+          ) : (
+            sec.rows.map((r) => (
+              <SwipeRow key={r.igdb_id} r={r} onOpen={setSelected} onRemove={handleRemove} />
+            ))
+          )}
         </div>
       ))}
 
