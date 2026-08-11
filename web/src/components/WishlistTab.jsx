@@ -99,7 +99,7 @@ function sectionOf(rel) {
   const now = new Date()
   if (rel.k === 'day' || rel.k === 'month') {
     const thisMonth = y === now.getUTCFullYear() && m === now.getUTCMonth()
-    return { order: Date.UTC(y, m, 1), id: `m${y}-${m}`, label: thisMonth ? 'This month' : `${MON[]}] ${y}`, amber: thisMonth }
+    return { order: Date.UTC(y, m, 1), id: `m${y}-${m}`, label: thisMonth ? 'This month' : `${MON[m]} ${y}`, amber: thisMonth }
   }
   if (rel.k === 'quarter') { const q = Math.floor(m / 3) + 1; return { order: Date.UTC(y, (q - 1) * 3, 1), id: `q${y}-${q}`, label: `Q${q} ${y}`, amber: false } }
   return { order: Date.UTC(y, 11, 31), id: `y${y}`, label: `${y}`, amber: false }
