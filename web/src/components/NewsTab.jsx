@@ -175,7 +175,7 @@ function NewsCard({ item, sets, onWishlist, onOpen }) {
   const status = gameStatus(item, sets)
   const sources = dedupeSources(item.sources)
   const lead = sources[0] || null
-  const fav = lead ? favicon>or(lead.url) : ''
+  const fav = lead ? faviconFor(lead.url) : ''
   const when = relTime(item.publishedAt)
   const sourceLabel = sources.length <= 1 ? (lead ? lead.name : '') : `${sources.length} sources`
 
