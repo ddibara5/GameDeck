@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Cover from './Cover.jsx'
 import { useDelayedClose } from '../lib/useDelayedClose.js'
 import { lockScroll } from '../lib/scrollLock.js'
@@ -125,7 +126,11 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
     if (e.target === e.currentTarget) requestClose()
   }
 
-  return (
+  // Portal to <body> so the fixed-position backdrop always anchors to the viewport,
+  // not to a transformed ancestor (e.g. the Wishlist / list overlays use
+  // `will-change: transform`, which would otherwise trap this sheet and make it
+  // glitch or open misaligned). Keeps every sheet in the app on one identical path.
+  return createPortal(
     <div className={`modal-backdrop${closing ? ' closing' : ''}`} onClick={handleBackdropClick}>
       <div
         className="modal-sheet"
@@ -315,6 +320,7 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
           onClose={() => setShotIndex(null)}
         />
       ) : null}
-    </div>
+    </div>,
+    document.body,
   )
 }

@@ -16,3 +16,11 @@
   font-weight: 600;
   white-space: nowrap;
 }
+
+/* The sheet is portaled to <body>, so it must clear the full-screen overlays it can
+   be opened from: the Wishlist / status-list view pages (z-index 205) and their undo
+   toast (260). Doubled class keeps this above the base .modal-backdrop rule (100)
+   regardless of stylesheet order. The screenshot lightbox (400) still sits above it. */
+.modal-backdrop.modal-backdrop {
+  z-index: 300;
+}
