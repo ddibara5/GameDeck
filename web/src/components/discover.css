@@ -411,3 +411,136 @@
   border-color: var(--accent);
   background: rgba(200, 169, 126, 0.14);
 }
+
+/* ---------- Browse: tappable rail heading (opens the full list page) ---------- */
+button.shelf-head {
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  align-items: center;
+}
+button.shelf-head:active {
+  background: var(--surface);
+  border-radius: 10px;
+}
+.shelf-title-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.shelf-caret {
+  display: inline-flex;
+  color: var(--accent);
+}
+
+/* ---------- Browse: full "see all" rail list page ---------- */
+.rail-page {
+  position: fixed;
+  inset: 0;
+  z-index: 205;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  animation: rail-in var(--overlay-in) var(--enter-ease);
+}
+.rail-page.closing {
+  animation: rail-out var(--overlay-out) var(--exit-ease) forwards;
+}
+@keyframes rail-in {
+  from { transform: translateX(100%); }
+  to { transform: none; }
+}
+@keyframes rail-out {
+  from { transform: none; }
+  to { transform: translateX(100%); }
+}
+
+.rail-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: calc(var(--safe-top) + 8px) 10px 8px 4px;
+  border-bottom: 1px solid var(--line);
+  flex: 0 0 auto;
+}
+.rail-back {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  color: var(--text);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.rail-titles {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  min-width: 0;
+}
+.rail-title {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rail-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 1px;
+}
+.rail-sort {
+  margin-left: auto;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--accent);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 7px 12px;
+  cursor: pointer;
+}
+
+.rail-scroll {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(var(--safe-bottom) + 12px);
+}
+
+.rail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px 12px;
+  padding: 14px 16px 20px;
+}
+.rail-grid .shelf-card-wrap,
+.rail-grid .shelf-card,
+.rail-grid .shelf-poster {
+  width: 100%;
+}
+.rail-grid .shelf-poster .cover-lg {
+  max-width: none;
+  margin: 0;
+}
+/* Two-line titles in the grid (match the rail cards). */
+.rail-grid .shelf-card-title {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.25;
+  min-height: 2.5em;
+}
