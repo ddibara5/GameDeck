@@ -175,7 +175,7 @@ function NewsCard({ item, sets, onWishlist, onOpen }) {
   const status = gameStatus(item, sets)
   const sources = dedupeSources(item.sources)
   const lead = sources[0] || null
-  const fav = lead ? faviconFor(lead.url) : ''
+  const fav = lead ? favicon>or(lead.url) : ''
   const when = relTime(item.publishedAt)
   const sourceLabel = sources.length <= 1 ? (lead ? lead.name : '') : `${sources.length} sources`
 
@@ -190,6 +190,7 @@ function NewsCard({ item, sets, onWishlist, onOpen }) {
           src={item.image}
           alt=""
           loading="lazy"
+          decoding="async"
           onError={() => setImgFailed(true)}
         />
       ) : null}
@@ -232,7 +233,7 @@ function GameRow({ item, status, onWishlist, onOpen }) {
     <div className="news-game">
       <span className="news-game-thumb">
         {coverUrl && !imgFailed ? (
-          <img src={coverUrl} alt="" loading="lazy" onError={() => setImgFailed(true)} />
+          <img src={coverUrl} alt="" loading="lazy" decoding="async" onError={() => setImgFailed(true)} />
         ) : (
           <span aria-hidden="true">{initial}</span>
         )}

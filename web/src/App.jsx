@@ -1,18 +1,22 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { lockScroll } from './lib/scrollLock.js'
 import Brand from './components/Brand.jsx'
 import Menu from './components/Menu.jsx'
 import SettingsPage from './components/SettingsPage.jsx'
 import TabBar from './components/TabBar.jsx'
-import LibraryTab from './components/LibraryTab.jsx'
-import ActivityTab from './components/ActivityTab.jsx'
-import InsightsTab from './components/InsightsTab.jsx'
-import DiscoverTab from './components/DiscoverTab.jsx'
-import NewsTab from './components/NewsTab.jsx'
 import { useNewsUnread } from './lib/news.js'
-import WishlistTab from './components/WishlistTab.jsx'
-import ListView from './components/ListView.jsx'
 import CustomizeRows from './components/CustomizeRows.jsx'
+
+// Code-split each tab and the overlay views into their own chunk so the initial
+// bundle only carries the shell + the first (Library) tab. The service worker
+// cache-firsts the hashed chunks, so after the first visit each one loads instantly.
+const LibraryTab = lazy(() => import('./components/LibraryTab.jsx'))
+const ActivityTab = lazy(() => import('./components/ActivityTab.jsx'))
+const InsightsTab = lazy(() => import('./components/InsightsTab.jsx'))
+const DiscoverTab = lazy(() => import('./components/DiscoverTab.jsx'))
+const NewsTab = lazy(() => import('./components/NewsTab.jsx'))
+const WishlistTab = lazy(() => import('./components/WishlistTab.jsx'))
+const ListView = lazy(() => import('./components/ListView.jsx'))
 
 const TABS = ['library', 'activity', 'insights', 'discover', 'news']
 
@@ -139,19 +143,23 @@ export default function App() {
         </button>
       </header>
       <main className="app-main">
-        {activeTab === 'library' && <LibraryTab />}
-        {activeTab === 'activity' && <ActivityTab />}
-        {activeTab === 'insights' && <InsightsTab />}
-        {activeTab === 'discover' && <DiscoverTab onCustomize={() => setCustomizeOpen(true)} />}
-        {activeTab === 'news' && <NewsTab />}
+        <Suspense fallback={null}>
+          {activeTab === 'library' && <LibraryTab />}
+          {activeTab === 'activity' && <ActivityTab />}
+          {activeTab === 'insights' && <InsightsTab />}
+          {activeTab === 'discover' && <DiscoverTab onCustomize={() => setCustomizeOpen(true)} />}
+          {activeTab === 'news' && <NewsTab />}
+        </Suspense>
       </main>
       {view ? (
         <div className={`view-page${viewClosing ? ' closing' : ''}`}>
-          {view === 'wishlist' ? (
-            <WishlistTab onClose={closeView} />
-          ) : (
-            <ListView viewKey={view} onClose={closeView} />
-          )}
+          <Suspense fallback={null}>
+            {view === 'wishlist' ? (
+              <WishlistTab onClose={closeView} />
+            ) : (
+              <ListView viewKey={view} onClose={closeView} />
+            )}
+          </Suspense>
         </div>
       ) : null}
       <TabBar
