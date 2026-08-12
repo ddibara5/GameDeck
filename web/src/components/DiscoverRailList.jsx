@@ -5,7 +5,7 @@ import WishHeart from './WishHeart.jsx'
 import Skeleton from './Skeleton.jsx'
 import DiscoverDetail from './DiscoverDetail.jsx'
 import { fetchDiscover } from '../lib/discover.js'
-import { releaseTiming } from '../lib/format.js'
+import { releaseTiming, shelfMetaDate } from '../lib/format.js'
 import { useDelayedClose } from '../lib/useDelayedClose.js'
 import { useEdgeBack } from '../lib/useEdgeBack.js'
 import { lockScroll } from '../lib/scrollLock.js'
@@ -152,6 +152,8 @@ export default function DiscoverRailList({ row, seedItems, isOwned, wishIds, onC
             <div className="rail-grid">
               {items.map((g) => {
                 const timing = releaseTiming(g.released)
+                // Only set when the line would otherwise be blank.
+                const metaDate = shelfMetaDate(g, timing)
                 return (
                   <div className="shelf-card-wrap" key={g.id}>
                     <button type="button" className="shelf-card" onClick={() => setSelected(g)}>
@@ -164,6 +166,7 @@ export default function DiscoverRailList({ row, seedItems, isOwned, wishIds, onC
                         {timing ? <span className={`sc-time ${timing.tone}`}>{timing.label}</span> : null}
                         {timing && g.rating ? <span className="sc-sep">{' · '}</span> : null}
                         {g.rating ? <span>{'★'} {g.rating}</span> : null}
+                        {metaDate ? <span className="sc-date">{metaDate}</span> : null}
                       </div>
                     </button>
                     <WishHeart game={g} active={wishIds.has(g.id)} />

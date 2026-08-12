@@ -6,7 +6,7 @@ import Cover from './Cover.jsx'
 import Skeleton from './Skeleton.jsx'
 import WishHeart from './WishHeart.jsx'
 import { fetchDiscover, fetchDiscoverHome, loadLibraryTitles, loadGamePass, normTitle } from '../lib/discover.js'
-import { releaseTiming } from '../lib/format.js'
+import { releaseTiming, shelfMetaDate } from '../lib/format.js'
 import { useWishlist } from '../lib/wishlist.js'
 import { useRowsConfig, ROW_BY_KEY } from '../lib/discoverRows.js'
 
@@ -466,6 +466,8 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
                 <div className="shelf-row">
                   {items.slice(0, RAIL_PREVIEW).map((g) => {
                     const timing = releaseTiming(g.released)
+                    // Only set when the line would otherwise be blank.
+                    const metaDate = shelfMetaDate(g, timing)
                     return (
                       <div className="shelf-card-wrap" key={g.id}>
                         <button type="button" className="shelf-card" onClick={() => setSelected(g)}>
@@ -478,6 +480,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
                             {timing ? <span className={`sc-time ${timing.tone}`}>{timing.label}</span> : null}
                             {timing && g.rating ? <span className="sc-sep"> · </span> : null}
                             {g.rating ? <span>★ {g.rating}</span> : null}
+                            {metaDate ? <span className="sc-date">{metaDate}</span> : null}
                           </div>
                         </button>
                         <WishHeart game={g} active={wishIds.has(g.id)} />

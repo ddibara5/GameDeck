@@ -140,6 +140,27 @@ export function releaseLabel(release, fallbackYear = null) {
 }
 
 /**
+ * Fallback text for a Discover card's meta line, used only when the card has
+ * nothing else to put there: no release countdown and no rating.
+ *
+ * That combination is common and looks broken. "Most anticipated" is sorted by
+ * hype, so it fills with games six-plus months out - past the countdown window,
+ * and unreleased so they have no rating either. Wishlist cards carry only a
+ * year. Both rendered an empty row under the title.
+ *
+ * A date is more use than a countdown would be at that range ("2027" beats
+ * "in 14mo"), and precision is respected, so a game IGDB only knows the quarter
+ * of shows "Q2 2027" rather than an invented day.
+ *
+ * Returns null when the card already has something to say, so callers can
+ * render it unconditionally.
+ */
+export function shelfMetaDate(game, timing) {
+  if (!game || timing || game.rating) return null
+  return releaseLabel(game.release, game.year)
+}
+
+/**
  * Build an IGDB cover URL from a stored image_id, at a given size preset.
  * Sizes: 't_cover_small' (90x128), 't_cover_big' (264x374), 't_720p', 't_1080p'.
  * Returns null when no image_id (so callers can fall back to the Exophase cover).
