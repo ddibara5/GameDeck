@@ -25,6 +25,15 @@
   z-index: 300;
 }
 
+/* Promote the sliding sheet to its own compositor layer so the slide-up transform
+   doesn't repaint the tall, image-heavy, scrollable contents every frame. Lives
+   here (bundled with the sheet) rather than in the global index.css. Applies to
+   every .modal-sheet once this stylesheet has loaded (which is whenever a sheet
+   can open), including the Discover filter / sort sheets. */
+.modal-sheet {
+  will-change: transform;
+}
+
 /* Shared game-sheet body styles. These live here (not in discover.css) so the
    sheet renders correctly from every tab. discover.css is code-split with the
    Discover tab, so a sheet opened from Wishlist/Library would otherwise miss

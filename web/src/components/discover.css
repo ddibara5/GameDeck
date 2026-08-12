@@ -152,6 +152,15 @@
 
 /* ---------- Browse: discovery rails ---------- */
 
+/* Skip layout + paint for rails scrolled off-screen (the home stacks several,
+   each a horizontal strip of covers). The browser renders a rail only as it
+   nears the viewport; contain-intrinsic-size reserves its height so the scroll
+   position stays stable. Big win on a long, image-heavy home. */
+.discover-browse .shelf {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 280px;
+}
+
 .discover-browse .shelf-card,
 .discover-browse .shelf-poster {
   width: var(--shelf-pw);
@@ -353,6 +362,8 @@ button.shelf-head:active {
   display: flex;
   flex-direction: column;
   animation: rail-in var(--overlay-in) var(--enter-ease);
+  /* Own compositor layer so the slide-in transform stays smooth. */
+  will-change: transform;
 }
 .rail-page.closing {
   animation: rail-out var(--overlay-out) var(--exit-ease) forwards;
