@@ -5,10 +5,10 @@ import DiscoverRailList from './DiscoverRailList.jsx'
 import Cover from './Cover.jsx'
 import Skeleton from './Skeleton.jsx'
 import WishHeart from './WishHeart.jsx'
-import { fetchDiscover, loadLibraryTitles, loadGamePass, normTitle } from '../lib/discover.js'
+import { fetchDiscover, fetchDiscoverHome, loadLibraryTitles, loadGamePass, normTitle } from '../lib/discover.js'
 import { releaseTiming } from '../lib/format.js'
 import { useWishlist } from '../lib/wishlist.js'
-import { useRowsConfig, ROW_BY_KEY, RAIL_KEYS } from '../lib/discoverRows.js'
+import { useRowsConfig, ROW_BY_KEY } from '../lib/discoverRows.js'
 
 const CURRENT_YEAR = new Date().getFullYear()
 
@@ -70,14 +70,38 @@ const YEARS = ['all', 2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2016
 const PAGE_SIZE = 30
 const DEFAULT_FILTERS = { genre: 'all', platform: 'all', year: 'all', status: 'all', sort: 'popularity' }
 
+// In-place placeholder for a rail whose batched data hasn't landed yet. Reserves
+// the shelf's height (heading + a row of poster-shaped shimmers) so the home
+// doesn't jump as rails fill in.
+function ShelfSkeleton({ label }) {
+  return (
+    <section className="shelf">
+      <div className="shelf-head shelf-head-sk">
+        <span className="shelf-title-wrap">
+          <span className="shelf-title">{label}</span>
+        </span>
+      </div>
+      <div className="shelf-row">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div className="shelf-card-wrap" key={i}>
+            <div className="shelf-poster">
+              <div className="skeleton shelf-poster-sk" />
+            </div>
+            <div className="skeleton shelf-title-sk" />
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
 export default function DiscoverBrowse({ onAsk, onCustomize }) {
   const [query, setQuery] = useState('')
   const [preset, setPreset] = useState(null)
   const [filters, setFilters] = useState(DEFAULT_FILTERS)
   const [showFilters, setShowFilters] = useState(false)
 
-  const [rails, setRails] = useState({}) // key -> games[]
-  const [railsLoading, setRailsLoading] = useState(true)
+  const [rails, setRails] = useState({}) // key -> games[]; a key is undefined until its batch resolves
 
   const [results, setResults] = useState([])
   const [page, setPage] = useState(0)
@@ -133,23 +157,41 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
     [wishItems]
   )
 
-  // Discovery rails (only needed when not actively browsing).
+  // Enabled IGDB rails, in the user's configured order. (Local rows - wishlist,
+  // Game Pass - aren't IGDB rails; they load from their own sources.)
+  const enabledRailKeys = useMemo(
+    () => rowsConfig.order.filter((k) => rowsConfig.enabled[k] && ROW_BY_KEY[k] && ROW_BY_KEY[k].kind === 'rail'),
+    [rowsConfig]
+  )
+  const railKeySig = enabledRailKeys.join(',')
+
+  // Fetch every enabled rail in ONE batched request instead of one call per rail.
+  // Re-runs only when the set of enabled rails changes; results merge in, so a
+  // toggled-in rail loads without dropping the rails already on screen.
   useEffect(() => {
+    if (!enabledRailKeys.length) return undefined
     let alive = true
-    setRailsLoading(true)
-    Promise.all(
-      RAIL_KEYS.map((k) => fetchDiscover({ rail: k, limit: 20 }).then((games) => [k, games]).catch(() => [k, []]))
-    ).then((pairs) => {
-      if (!alive) return
-      const map = {}
-      pairs.forEach(([k, v]) => (map[k] = v))
-      setRails(map)
-      setRailsLoading(false)
-    })
+    fetchDiscoverHome(enabledRailKeys, 20)
+      .then((map) => {
+        if (alive) setRails((prev) => ({ ...prev, ...map }))
+      })
+      .catch(() => {
+        // Total failure: mark the requested rails empty so they stop showing a
+        // skeleton (each then renders as "no data" and is hidden).
+        if (!alive) return
+        setRails((prev) => {
+          const next = { ...prev }
+          enabledRailKeys.forEach((k) => {
+            if (next[k] === undefined) next[k] = []
+          })
+          return next
+        })
+      })
     return () => {
       alive = false
     }
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [railKeySig])
 
   // Results fetch whenever the active query/preset/filters change (debounced on text).
   useEffect(() => {
@@ -353,8 +395,6 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
             </>
           )}
         </>
-      ) : railsLoading ? (
-        <Skeleton count={4} />
       ) : (
         <>
           {rowsConfig.order.map((key) => {
@@ -365,7 +405,12 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
             if (row.kind === 'wishlist') items = wishGames
             else if (row.kind === 'wishlistSoon') items = wishGames.filter((g) => g.year && g.year >= CURRENT_YEAR)
             else if (row.kind === 'gamepass') items = hideFromLibrary(gamePass)
-            else items = hideFromLibrary(rails[key])
+            else {
+              // IGDB rail: undefined = the batched fetch hasn't resolved yet, so
+              // show an in-place skeleton instead of hiding the whole home.
+              if (rails[key] === undefined) return <ShelfSkeleton key={key} label={row.label} />
+              items = hideFromLibrary(rails[key])
+            }
             if (!items || !items.length) return null
             return (
               <section className={`shelf${row.kind === 'wishlist' ? ' wishlist-rail' : ''}`} key={key}>
