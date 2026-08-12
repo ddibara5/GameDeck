@@ -121,6 +121,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
 
   const debounceRef = useRef(null)
   const reqRef = useRef(0)
+  const lastFilterSig = useRef(null)
 
   const filtersActive =
     filters.genre !== 'all' ||
@@ -128,7 +129,13 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
     filters.year !== 'all' ||
     filters.status !== 'all' ||
     filters.sort !== 'popularity'
-  const browseMode = Boolean(query.trim() || preset || filtersActive)
+  // Typing a title is a request for ranked matches, so search still collapses the
+  // page into one flat list. Filters and preset chips are a different intent -
+  // "show me the same shelves, but only RPGs" - so they narrow every rail in
+  // place and the browsable structure survives. Rails that filter down to nothing
+  // hide themselves.
+  const searchMode = Boolean(query.trim())
+  const narrowed = Boolean(preset || filtersActive)
 
   // Load the user's library titles once (for the "In library" badge).
   useEffect(() => {
@@ -168,6 +175,12 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
     [rowsConfig]
   )
   const railKeySig = enabledRailKeys.join(',')
+  // The active narrowing, as a stable string, so the rails refetch when it moves.
+  const railFilters = useMemo(
+    () => ({ preset: preset || undefined, ...filters }),
+    [preset, filters]
+  )
+  const railFilterSig = JSON.stringify(railFilters)
 
   // Fetch every enabled rail in ONE batched request instead of one call per rail.
   // Re-runs only when the set of enabled rails changes; results merge in, so a
@@ -176,7 +189,12 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
     if (!enabledRailKeys.length) return undefined
     let alive = true
     const merge = (map) => setRails((prev) => ({ ...prev, ...map }))
+    // A changed filter invalidates every rail on screen; clear them so each shows
+    // its skeleton instead of briefly showing results from the previous selection.
+    setRails((prev) => (lastFilterSig.current === railFilterSig ? prev : {}))
+    lastFilterSig.current = railFilterSig
     fetchDiscoverHome(enabledRailKeys, RAIL_PREVIEW, {
+      filters: railFilters,
       // Cached rails paint immediately; this swaps in the refreshed set when the
       // background request lands (only fires if we rendered from disk).
       onFresh: (map) => {
@@ -202,11 +220,12 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
       alive = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [railKeySig])
+  }, [railKeySig, railFilterSig])
 
-  // Results fetch whenever the active query/preset/filters change (debounced on text).
+  // Flat result list, for text search only. Filters no longer trigger this - they
+  // narrow the rails instead.
   useEffect(() => {
-    if (!browseMode) {
+    if (!searchMode) {
       setResults([])
       setPage(0)
       setError(null)
@@ -216,7 +235,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
     debounceRef.current = setTimeout(() => runSearch(0, false), query ? 280 : 0)
     return () => debounceRef.current && clearTimeout(debounceRef.current)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, preset, filters, browseMode])
+  }, [query, preset, filters, searchMode])
 
   async function runSearch(nextPage, append) {
     const reqId = ++reqRef.current
@@ -357,7 +376,16 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
         ))}
       </div>
 
-      {browseMode ? (
+      {!searchMode && narrowed ? (
+        <div className="results-head">
+          <span className="results-count">Filtering every row</span>
+          <button type="button" className="results-clear" onClick={resetAll}>
+            Clear
+          </button>
+        </div>
+      ) : null}
+
+      {searchMode ? (
         <>
           <div className="results-head">
             <span className="results-count">
@@ -585,6 +613,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
 
       {openRail ? (
         <DiscoverRailList
+          filters={narrowed ? railFilters : undefined}
           row={openRail}
           seedItems={
             openRail.kind === 'wishlist'

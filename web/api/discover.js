@@ -170,13 +170,42 @@ function weightedRating(g) {
 // parallel on one warm function.
 const RERANK_POOL = 120;
 
-function railBody(rail, nowTs, limit, offset = 0) {
+// The top-bar filters, as IGDB where-fragments. Shared so a filter means exactly
+// the same thing whether it is narrowing a flat search or narrowing every rail on
+// the Discover home.
+function filterClauses(q, nowTs) {
+  const where = [];
+  if (q.preset && PRESETS[q.preset]) where.push(PRESETS[q.preset]);
+  if (q.genre) where.push(`genres.slug = "${String(q.genre).replace(/"/g, '')}"`);
+  if (q.platform && PLATFORMS[q.platform]) where.push(`platforms = (${PLATFORMS[q.platform].join(',')})`);
+  if (q.year) {
+    const y = parseInt(q.year, 10);
+    if (y) {
+      const start = Math.floor(Date.UTC(y, 0, 1) / 1000);
+      const end = Math.floor(Date.UTC(y + 1, 0, 1) / 1000);
+      where.push(`first_release_date >= ${start}`, `first_release_date < ${end}`);
+    }
+  }
+  // Availability: released games have a past date, upcoming ones a future date.
+  // (Null-dated games are excluded by either comparison, which is what we want.)
+  if (q.status === 'released') where.push(`first_release_date <= ${nowTs}`);
+  else if (q.status === 'upcoming') where.push(`first_release_date > ${nowTs}`);
+  return where;
+}
+
+// `extra` carries the active top-bar filters; a rail narrowed past the point of
+// having any matches simply returns nothing and the client hides that shelf.
+// `sortOverride` is the user picking an explicit order, which also suppresses
+// weighted re-ranking - they asked for a specific sort, so give them that one.
+function railBody(rail, nowTs, limit, offset = 0, extra = [], sortOverride = null) {
   const rc = railClauses(rail, nowTs);
   if (!rc) return null;
-  const where = ['cover != null', ...rc.where];
-  const take = rc.rerank ? RERANK_POOL : limit;
-  const skip = rc.rerank ? 0 : offset;
-  return `${GAME_FIELDS}; where ${where.join(' & ')}; ${rc.sort}; limit ${take}; offset ${skip};`;
+  const where = ['cover != null', ...rc.where, ...extra];
+  const rerank = rc.rerank && !sortOverride;
+  const take = rerank ? RERANK_POOL : limit;
+  const skip = rerank ? 0 : offset;
+  const sort = sortOverride || rc.sort;
+  return `${GAME_FIELDS}; where ${where.join(' & ')}; ${sort}; limit ${take}; offset ${skip};`;
 }
 
 function rankByWeighted(rows, limit, offset = 0) {
@@ -187,9 +216,9 @@ function rankByWeighted(rows, limit, offset = 0) {
 }
 
 // Apply a rail's re-ranking (if any) and return the requested window.
-function applyRerank(rail, nowTs, rows, limit, offset = 0) {
+function applyRerank(rail, nowTs, rows, limit, offset = 0, sortOverride = null) {
   const rc = railClauses(rail, nowTs);
-  if (!rc || !rc.rerank) return rows;
+  if (!rc || !rc.rerank || sortOverride) return rows;
   return rankByWeighted(rows, limit, offset);
 }
 
@@ -355,13 +384,15 @@ export default async function handler(req, res) {
         .map((s) => s.trim())
         .filter(Boolean)
         .slice(0, 12);
+      const homeExtra = filterClauses(q, nowTs);
+      const homeSort = q.sort && SORTS[q.sort] ? SORTS[q.sort] : null;
       const pairs = await Promise.all(
         keys.map(async (k) => {
-          const body = railBody(k, nowTs, limit);
+          const body = railBody(k, nowTs, limit, 0, homeExtra, homeSort);
           if (!body) return [k, []];
           try {
             const rows = await igdb('games', body);
-            return [k, applyRerank(k, nowTs, rows, limit).map(normalize)];
+            return [k, applyRerank(k, nowTs, rows, limit, 0, homeSort).map(normalize)];
           } catch {
             return [k, []];
           }
@@ -382,30 +413,14 @@ export default async function handler(req, res) {
 
     const rail = String(q.rail || '');
     const rc = rail ? railClauses(rail, nowTs) : null;
+    if (q.q) search = `search "${String(q.q).replace(/"/g, '')}";`;
     if (rc) {
-      where.push(...rc.where);
+      // A rail's "see all" page. Any active top-bar filters narrow it too, so the
+      // full list matches the shelf the user tapped through from.
+      where.push(...rc.where, ...filterClauses(q, nowTs));
       sort = rc.sort;
     } else {
-      // browse / search / filter
-      if (q.q) search = `search "${String(q.q).replace(/"/g, '')}";`;
-      if (q.preset && PRESETS[q.preset]) where.push(PRESETS[q.preset]);
-      if (q.genre) where.push(`genres.slug = "${String(q.genre).replace(/"/g, '')}"`);
-      if (q.platform && PLATFORMS[q.platform]) where.push(`platforms = (${PLATFORMS[q.platform].join(',')})`);
-      if (q.year) {
-        const y = parseInt(q.year, 10);
-        if (y) {
-          const start = Math.floor(Date.UTC(y, 0, 1) / 1000);
-          const end = Math.floor(Date.UTC(y + 1, 0, 1) / 1000);
-          where.push(`first_release_date >= ${start}`, `first_release_date < ${end}`);
-        }
-      }
-      // Availability: released games have a past date; upcoming ones a future date.
-      // (Null-dated games are excluded by either comparison, which is what we want.)
-      if (q.status === 'released') {
-        where.push(`first_release_date <= ${nowTs}`);
-      } else if (q.status === 'upcoming') {
-        where.push(`first_release_date > ${nowTs}`);
-      }
+      where.push(...filterClauses(q, nowTs));
     }
 
     // A rail defines the result SET via its `where` filters; when the caller

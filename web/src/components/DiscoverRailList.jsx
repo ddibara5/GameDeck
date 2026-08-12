@@ -37,7 +37,7 @@ function sortLocal(items, key) {
   return a
 }
 
-export default function DiscoverRailList({ row, seedItems, isOwned, wishIds, onClose, onAsk, onMoreLikeThis }) {
+export default function DiscoverRailList({ row, seedItems, isOwned, wishIds, onClose, onAsk, onMoreLikeThis, filters }) {
   const { closing, requestClose } = useDelayedClose(onClose)
   const isRail = row.kind === 'rail'
 
@@ -62,13 +62,18 @@ export default function DiscoverRailList({ row, seedItems, isOwned, wishIds, onC
   // Suppressed while a nested sheet is up so the swipe closes that first.
   useEdgeBack(requestClose, { disabled: sortOpen || Boolean(selected) })
 
-  // Rail kinds: (re)fetch page 0 whenever the sort changes.
+  // Stable identity for the inherited top-bar filters, so the effect below reruns
+  // if they ever change while this page is open rather than silently serving the
+  // set it was opened with.
+  const filterSig = JSON.stringify(filters || null)
+
+  // Rail kinds: (re)fetch page 0 whenever the sort or the filters change.
   useEffect(() => {
     if (!isRail) return undefined
     let alive = true
     const reqId = ++reqRef.current
     setLoading(true)
-    fetchDiscover({ rail: row.key, sort: sort || undefined, page: 0, limit: PAGE })
+    fetchDiscover({ rail: row.key, sort: sort || undefined, page: 0, limit: PAGE, ...(filters || {}) })
       .then((games) => {
         if (!alive || reqId !== reqRef.current) return
         setRows(games)
@@ -85,14 +90,14 @@ export default function DiscoverRailList({ row, seedItems, isOwned, wishIds, onC
     return () => {
       alive = false
     }
-  }, [isRail, row.key, sort])
+  }, [isRail, row.key, sort, filterSig])
 
   async function showMoreRail() {
     const reqId = ++reqRef.current
     const next = page + 1
     setLoading(true)
     try {
-      const games = await fetchDiscover({ rail: row.key, sort: sort || undefined, page: next, limit: PAGE })
+      const games = await fetchDiscover({ rail: row.key, sort: sort || undefined, page: next, limit: PAGE, ...(filters || {}) })
       if (reqId !== reqRef.current) return
       setRows((prev) => [...prev, ...games])
       setPage(next)

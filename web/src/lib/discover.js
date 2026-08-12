@@ -46,8 +46,22 @@ export async function fetchDiscover(params) {
 // per exact rail set. `keys` is the ordered list of enabled rail keys.
 const _homeCache = new Map()
 
-async function fetchHomeNetwork(list, limit) {
-  const qs = new URLSearchParams({ home: list.join(','), limit: String(limit) })
+// Only the filters the server actually understands, in a fixed order, so the
+// same selection always produces the same cache key.
+const HOME_FILTER_KEYS = ['preset', 'genre', 'platform', 'year', 'status', 'sort']
+
+function homeFilterParams(filters) {
+  const out = {}
+  if (!filters) return out
+  for (const k of HOME_FILTER_KEYS) {
+    const v = filters[k]
+    if (v != null && v !== '' && v !== 'all') out[k] = String(v)
+  }
+  return out
+}
+
+async function fetchHomeNetwork(list, limit, params) {
+  const qs = new URLSearchParams({ home: list.join(','), limit: String(limit), ...params })
   const res = await fetch(`/api/discover?${qs.toString()}`)
   if (!res.ok) throw new Error(`Discover home failed (${res.status})`)
   const data = await res.json()
@@ -58,13 +72,17 @@ async function fetchHomeNetwork(list, limit) {
 // paints the home from disk instead of showing skeletons until IGDB answers.
 // Pass `onFresh` to receive a background refresh (only fires when the resolved
 // value came off disk, so it never double-applies).
-export async function fetchDiscoverHome(keys, limit = 20, { onFresh } = {}) {
+export async function fetchDiscoverHome(keys, limit = 20, { onFresh, filters } = {}) {
   const list = (keys || []).filter(Boolean)
   if (!list.length) return {}
-  const cacheKey = `${list.join(',')}|${limit}`
+  const params = homeFilterParams(filters)
+  // The filter selection is part of the identity of this payload. Leaving it out
+  // would serve yesterday's unfiltered rails from disk the moment a filter is on.
+  const filterSig = new URLSearchParams(params).toString()
+  const cacheKey = `${list.join(',')}|${limit}|${filterSig}`
   if (_homeCache.has(cacheKey)) return _homeCache.get(cacheKey)
 
-  const { value } = await swr(`discover:home:${cacheKey}`, () => fetchHomeNetwork(list, limit), {
+  const { value } = await swr(`discover:home:${cacheKey}`, () => fetchHomeNetwork(list, limit, params), {
     maxAge: HOME_TTL,
     onFresh: (rails) => {
       _homeCache.set(cacheKey, rails)
