@@ -45,7 +45,7 @@ const LIST_SIZE_OPTIONS = [
   { key: 'large', label: 'Large' },
 ]
 
-export default function SettingsPage({ open, onClose }) {
+export default function SettingsPage({ open, onClose, onOpenNav }) {
   const { mounted, closing } = useMountTransition(open)
   const [lastSync, setLastSync] = useState(null)
   const [exoActivity, setExoActivity] = useState(null)
@@ -316,6 +316,13 @@ export default function SettingsPage({ open, onClose }) {
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+
+        <div className="settings-section">
+          <div className="menu-sec-label">Navigation</div>
+          <div className="settings-group">
+            <MenuItem glyph={ICONS.nav} label="Tab bar" sub="Reorder, hide, and label your tabs" onClick={onOpenNav} />
           </div>
         </div>
 
