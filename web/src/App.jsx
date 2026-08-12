@@ -5,7 +5,7 @@ import Menu from './components/Menu.jsx'
 import SettingsPage from './components/SettingsPage.jsx'
 import TabBar from './components/TabBar.jsx'
 import { useNewsUnread } from './lib/news.js'
-import { useNavConfig, visibleKeys, hiddenKeys } from './lib/navConfig.js'
+import { useNavConfig, getNavConfig, visibleKeys, hiddenKeys } from './lib/navConfig.js'
 import CustomizeRows from './components/CustomizeRows.jsx'
 import CustomizeNav from './components/CustomizeNav.jsx'
 
@@ -28,7 +28,9 @@ const CLOSE_DX = 60
 const VIEW_EXIT_MS = 220
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('library')
+  // Open on whatever tab is leftmost in the saved layout (not always Library), so
+  // reordering the tab bar also changes the landing tab.
+  const [activeTab, setActiveTab] = useState(() => visibleKeys(getNavConfig())[0] || 'library')
   const [menuOpen, setMenuOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [customizeOpen, setCustomizeOpen] = useState(false)
