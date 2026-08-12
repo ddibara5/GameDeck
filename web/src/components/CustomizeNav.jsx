@@ -163,23 +163,109 @@ export default function CustomizeNav({ open, onClose }) {
     }
     const onUp = () => {
       setDragKey(null)
-      setNavConfifÈÜ™\ˆ]™K˜İ\œ™[›Ü™\‹[˜X›Yˆ]™K˜İ\œ™[™[˜X›YX™[Îˆ]™K˜İ\œ™[›X™[ÈJBˆBˆÚ[™İË˜Y]™[\İ[™\Š	ÜÚ[\›[İ™IËÛ”Ú[\“[İ™KÈ\ÜÚ]™Nˆ˜[ÙHJBˆÚ[™İË˜Y]™[\İ[™\Š	ÜÚ[\\	ËÛ•\
-BˆÚ[™İË˜Y]™[\İ[™\Š	İİXÚ[İ™IËÛ•İXÚ[İ™KÈ\ÜÚ]™Nˆ˜[ÙHJBˆÚ[™İË˜Y]™[\İ[™\Š	İİXÚ[™	ËÛ•\
-Bˆ™]\›ˆ
+      setNavConfig({ order: live.current.order, enabled: live.current.enabled, labels: live.current.labels })
+    }
+    window.addEventListener('pointermove', onPointerMove, { passive: false })
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('touchmove', onTouchMove, { passive: false })
+    window.addEventListener('touchend', onUp)
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('touchmove', onTouchMove)
+      window.removeEventListener('touchend', onUp)
+    }
+  }, [dragKey])
 
-HOˆÂˆÚ[™İËœ™[[İ™Q]™[\İ[™\Š	ÜÚ[\›[İ™IËÛ”Ú[\“[İ™JBˆÚ[™İËœ™[[İ™Q]™[\İ[™\Š	ÜÚ[\\	ËÛ•\
-BˆÚ[™İËœ™[[İ™Q]™[\İ[™\Š	İİXÚ[İ™IËÛ•İXÚ[İ™JBˆÚ[™İËœ™[[İ™Q]™[\İ[™\Š	İİXÚ[™	ËÛ•\
-BˆBˆKÙ˜YÒÙ^WJB‚ˆYˆ
-[[İ[Y
-H™]\›ˆ[‚ˆ™]\›ˆ
-ˆ]ˆÛ\ÜÓ˜[YO^ØÙ][™ÜË\YÙIØÛÜÚ[™ÈÈ	ÈÛÜÚ[™ÉÈˆ	ÉßXH›ÛOH™X[ÙÈˆ\šXK[X™[H“˜]šYØ][Ûˆ‚ˆ]ˆÛ\ÜÓ˜[YOHœÙ][™ÜËZ‚ˆ]Ûˆ\OH˜]ÛˆˆÛ\ÜÓ˜[YOHœÙ][™ÜËX˜XÚÈˆÛÛXÚÏ^ÛÛÛÜÙ_H\šXK[X™[H˜XÚÈ‚ˆİ™ÈšY]Ğ›ŞHŒˆš[H››Û™Hˆİ›ÚÙOH˜İ\œ™[ÛÛÜˆˆİ›ÚÙUÚYHŒ‹Œˆˆİ›ÚÙS[™XØ\Hœ›İ[™ˆİ›ÚÙS[™Z›Ú[Hœ›İ[™‚ˆ]H“LMH›MˆˆˆˆˆÏ‚ˆÜİ™Ï‚ˆØ]Û‚ˆˆÛ\ÜÓ˜[YOHœÙ][™ÜËZ]]H“˜]šYØ][ÛÚ‚ˆÙ]‚‚ˆ]ˆÛ\ÜÓ˜[YOHœÙ][™ÜËX›ÙH‚ˆ]ˆÛ\ÜÓ˜[YOH˜Ş‹[›İH‘˜YÈÈ™[Ü™\ˆ[İ\ˆXˆ˜\‹ˆÙÙÛHHXˆÙ™ˆÈ[İ™H][ÈHY[Kˆ]X\İÓRS—Õ’TÒP“_HXœÈİ^H[ˆH˜\‹Ù]‚‚ˆ]ˆÛ\ÜÓ˜[YOH˜Ş‹YÜ›İ\‚ˆÛÜ™\‹›X\
+  if (!mounted) return null
 
-Ù^JHOˆÂˆÛÛœİY]HHP—Ğ–WÒÑVVÚÙ^WBˆYˆ
-[Y]JH™]\›ˆ[ˆÛÛœİÛˆH›ÛÛX[Š[˜X›YÚÙ^WJBˆËÈ›ØÚÈÛ›HHİÚ]Ú]Ûİ[œ™XXÚH›ÛÜÈİ\œÈİ^H]™K‚ˆÛÛœİØÚÓÙ™ˆHÛˆ	‰ˆ]›ÛÜ‚ˆ™]\›ˆ
-ˆ]‚ˆÙ^O^ÚÙ^_Bˆ™Y^Ê[
-HOˆÂˆ][T™YœË˜İ\œ™[ÚÙ^WHH[ˆ_BˆÛ\ÜÓ˜[YO^ØŞ‹\›İÉÛÛˆÈ	ÉÈˆ	ÈÙ™‰ßIÙ˜YÒÙ^HOOHÙ^HÈ	È˜YÙÚ[™ÉÈˆ	ÉßXBˆ‚ˆÜ[‚ˆÛ\ÜÓ˜[YOH˜Ş‹YÜš\‚ˆ›ÛOH˜]Ûˆ‚ˆ\šXK[X™[^Ø™[Ü™\ˆ	ÛY]K›X™[XBˆÛ”Ú[\‘İÛ^ÊJHOˆÂˆKœ™]™[Y˜][
+  return (
+    <div className={`settings-page${closing ? ' closing' : ''}`} role="dialog" aria-label="Navigation">
+      <div className="settings-hd">
+        <button type="button" className="settings-back" onClick={onClose} aria-label="Back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M15 6l-6 6 6 6" />
+          </svg>
+        </button>
+        <h2 className="settings-hd-title">Navigation</h2>
+      </div>
 
-BˆÙ]˜YÒÙ^JÙ^JBˆ_Bˆ‚ˆÑÔ’TBˆÜÜ[‚ˆÜ[ˆÛ\ÜÓ˜[YOH˜Ş‹]X‹ZXÛÛˆˆ\šXKZY[HYH‚ˆÕP—ÒPÓÓ”ÖÚÙ^W_BˆÜÜ[‚ˆÜ[ˆÛ\ÜÓ˜[YOH˜Ş‹\›‚ˆÛY]K›X™[OØ‚ˆÛÛˆÈ[ˆÛX[’[ˆY[OÜÛX[ŸBˆÜÜ[‚ˆ]Û‚ˆ\OH˜]Ûˆ‚ˆÛ\ÜÓ˜[YO^ØŞ‹]ÙÙÛIÛÛˆÈ	ÈÛ‰Èˆ	ÉßXBˆ›ÛOHœİÚ]Ú‚ˆ\šXKXÚXÚÙY^ÛÛŸBˆ\šXK[X™[^Ø	ÛÛˆÈ	Ó[İ™HÈY[IÈˆ	ÔÚİÈ[ˆ˜\‰ßNˆ	ÛY]K›X™[XBˆÛÛXÚÏ^Ê
-HOˆÙÙÛJÙ^J_Bˆ\ØX›Y^ÛØÚÓÙ™ŸBˆ‚ˆHÏ‚ˆØ]Û‚ˆÙ]‚ˆ
-BˆJ_BˆÙ]‚‚ˆ]ˆÛ\ÜÓ˜[YOH˜Ş‹[›İHˆİ[O^ŞÈY[™ÕÜˆN_O\X\˜[˜ÙOÙ]‚ˆ]ˆÛ\ÜÓ˜[YOH˜Ş‹YÜ›İ\‚ˆ]ˆÛ\ÜÓ˜[YOH˜Ş‹\›İÈ‚ˆÜ[ˆÛ\ÜÓ˜[YOH˜Ş‹\›‚ˆ”ÚİÈX™[ÏØ‚ˆÛX[•^[™\ˆXXÚXˆXÛÛÜÛX[‚ˆÜÜ[‚ˆ]Û‚ˆ\OH˜]Ûˆ‚ˆÛ\ÜÓ˜[YO^ØŞ‹]ÙÙÛIÛX™[ÈÈ	ÈÛ‰Èˆ	ÉßXBˆ›ÛOHœİÚ]Ú‚ˆ\šXKXÚXÚÙY^ÛX™[ßBˆ\šXK[X™[H”ÚİÈXˆX™[È‚ˆÛÛXÚÏ^İÙÙÛSX™[ßBˆ‚ˆHÏ‚ˆØ]Û‚ˆÙ]‚ˆÙ]‚‚ˆ]Ûˆ\OH˜]ÛˆˆÛ\ÜÓ˜[YOH˜Ş‹\™\Ù]ˆÛÛXÚÏ^ÙÔ™\Ù]O‚ˆ™\Ù]ÈY˜][ˆØ]Û‚ˆÙ]‚ˆÙ]‚ˆ
-BŸB
+      <div className="settings-body">
+        <div className="cz-note">Drag to reorder your tab bar. Toggle a tab off to move it into the menu. At least {MIN_VISIBLE} tabs stay in the bar.</div>
+
+        <div className="cz-group">
+          {order.map((key) => {
+            const meta = TAB_BY_KEY[key]
+            if (!meta) return null
+            const on = Boolean(enabled[key])
+            // Block only the switch that would breach the floor; others stay live.
+            const lockOff = on && atFloor
+            return (
+              <div
+                key={key}
+                ref={(el) => {
+                  itemRefs.current[key] = el
+                }}
+                className={`cz-row${on ? '' : ' off'}${dragKey === key ? ' dragging' : ''}`}
+              >
+                <span
+                  className="cz-grip"
+                  role="button"
+                  aria-label={`Reorder ${meta.label}`}
+                  onPointerDown={(e) => {
+                    e.preventDefault()
+                    setDragKey(key)
+                  }}
+                >
+                  {GRIP}
+                </span>
+                <span className="cz-tab-icon" aria-hidden="true">
+                  {TAB_ICONS[key]}
+                </span>
+                <span className="cz-rl">
+                  <b>{meta.label}</b>
+                  {on ? null : <small>In menu</small>}
+                </span>
+                <button
+                  type="button"
+                  className={`cz-toggle${on ? ' on' : ''}`}
+                  role="switch"
+                  aria-checked={on}
+                  aria-label={`${on ? 'Move to menu' : 'Show in bar'}: ${meta.label}`}
+                  onClick={() => toggle(key)}
+                  disabled={lockOff}
+                >
+                  <i />
+                </button>
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="cz-note" style={{ paddingTop: 18 }}>Appearance</div>
+        <div className="cz-group">
+          <div className="cz-row">
+            <span className="cz-rl">
+              <b>Show labels</b>
+              <small>Text under each tab icon</small>
+            </span>
+            <button
+              type="button"
+              className={`cz-toggle${labels ? ' on' : ''}`}
+              role="switch"
+              aria-checked={labels}
+              aria-label="Show tab labels"
+              onClick={toggleLabels}
+            >
+              <i />
+            </button>
+          </div>
+        </div>
+
+        <button type="button" className="cz-reset" onClick={doReset}>
+          Reset to default
+        </button>
+      </div>
+    </div>
+  )
+}
