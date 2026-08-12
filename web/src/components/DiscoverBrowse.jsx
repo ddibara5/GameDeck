@@ -176,10 +176,22 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
   )
   const railKeySig = enabledRailKeys.join(',')
   // The active narrowing, as a stable string, so the rails refetch when it moves.
-  const railFilters = useMemo(
-    () => ({ preset: preset || undefined, ...filters }),
-    [preset, filters]
-  )
+  //
+  // `sort` is only included when the user has actually chosen one. Spreading the
+  // whole filter object sent the DEFAULT sort ('popularity') on every home
+  // request, which silently re-ordered every rail: "Recently released" became
+  // popular-games-that-happen-to-be-recent (Palworld, 007 First Light) instead of
+  // newest-first, and Coming soon and Most anticipated collapsed into near
+  // duplicates of each other. The see-all pages sent no sort, so they showed the
+  // rail's real order - which is why a row never matched the page it opened.
+  const railFilters = useMemo(() => {
+    const { sort, ...rest } = filters
+    return {
+      preset: preset || undefined,
+      ...rest,
+      sort: sort !== DEFAULT_FILTERS.sort ? sort : undefined,
+    }
+  }, [preset, filters])
   const railFilterSig = JSON.stringify(railFilters)
 
   // Fetch every enabled rail in ONE batched request instead of one call per rail.

@@ -73,7 +73,7 @@ export default function DiscoverRailList({ row, seedItems, isOwned, wishIds, onC
     let alive = true
     const reqId = ++reqRef.current
     setLoading(true)
-    fetchDiscover({ rail: row.key, sort: sort || undefined, page: 0, limit: PAGE, ...(filters || {}) })
+    fetchDiscover({ ...(filters || {}), rail: row.key, sort: sort || (filters && filters.sort) || undefined, page: 0, limit: PAGE })
       .then((games) => {
         if (!alive || reqId !== reqRef.current) return
         setRows(games)
@@ -97,7 +97,7 @@ export default function DiscoverRailList({ row, seedItems, isOwned, wishIds, onC
     const next = page + 1
     setLoading(true)
     try {
-      const games = await fetchDiscover({ rail: row.key, sort: sort || undefined, page: next, limit: PAGE, ...(filters || {}) })
+      const games = await fetchDiscover({ ...(filters || {}), rail: row.key, sort: sort || (filters && filters.sort) || undefined, page: next, limit: PAGE })
       if (reqId !== reqRef.current) return
       setRows((prev) => [...prev, ...games])
       setPage(next)
