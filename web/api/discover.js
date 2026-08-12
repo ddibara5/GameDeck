@@ -189,31 +189,50 @@ function precisionFromHuman(h) {
   return null;
 }
 
-// Normalized release: the earliest concrete release across platforms/regions, plus
-// how precise IGDB actually is about it. { ts, precision, label }.
-function computeRelease(g, nowTs) {
+// Normalized release: the date the rails actually select on, plus how precise
+// IGDB is about it. { ts, precision, label }.
+//
+// This used to report the EARLIEST date across every platform and region, which
+// disagreed with `first_release_date` - the field every rail filters and sorts
+// by - because IGDB does not define one as the minimum of the other. A game that
+// launched in early access in 2015 and hit 1.0 last month carries both dates, so
+// "Recently released" was showing "Jan 20, 2016" for a game it had selected as
+// released this quarter. The same mismatch, pointing the other way, made
+// "Coming soon" show dates already in the past.
+//
+// So anchor the label to first_release_date: pick the release_dates entry that
+// sits closest to it and borrow that entry's precision and wording. The date on
+// screen then always agrees with the reason the game is in the rail at all.
+function computeRelease(g) {
   const rds = (g.release_dates || []).filter(Boolean);
   const dated = rds.filter((r) => typeof r.date === 'number');
+  const anchor = Number(g.first_release_date) || null;
+
   if (!dated.length) {
     const withHuman = rds.find((r) => r.human);
-    return { ts: g.first_release_date || null, precision: 'tba', label: (withHuman && withHuman.human) || 'TBA' };
+    return { ts: anchor, precision: 'tba', label: (withHuman && withHuman.human) || 'TBA' };
   }
-  dated.sort((a, b) => a.date - b.date);
-  let first = dated[0];
-  // A game can carry release_dates in the past AND the future - already out in
-  // one region or on one platform, still pending elsewhere. Taking the global
-  // earliest then shows a date that has already been and gone, which is why
-  // "Coming soon" was listing things like "Aug 18, 2025". When IGDB itself still
-  // considers the game unreleased, report the soonest date that is also still
-  // ahead of us.
-  if (typeof nowTs === 'number' && Number(g.first_release_date) > nowTs) {
-    first = dated.find((r) => r.date > nowTs) || first;
+
+  let best = dated[0];
+  if (anchor) {
+    let bestGap = Infinity;
+    for (const r of dated) {
+      const gap = Math.abs(r.date - anchor);
+      if (gap < bestGap) {
+        bestGap = gap;
+        best = r;
+      }
+    }
+  } else {
+    dated.sort((a, b) => a.date - b.date);
+    best = dated[0];
   }
-  const precision = precisionFromCategory(first.category) || precisionFromHuman(first.human) || 'day';
-  return { ts: first.date, precision, label: first.human || null };
+
+  const precision = precisionFromCategory(best.category) || precisionFromHuman(best.human) || 'day';
+  return { ts: best.date, precision, label: best.human || null };
 }
 
-function normalize(g, nowTs) {
+function normalize(g) {
   const companies = (g.involved_companies || [])
     .filter((c) => c && c.company && c.company.name)
     .map((c) => ({ name: c.company.name, developer: !!c.developer }));
@@ -225,7 +244,7 @@ function normalize(g, nowTs) {
     coverId: (g.cover && g.cover.image_id) || null,
     year: g.first_release_date ? new Date(g.first_release_date * 1000).getUTCFullYear() : null,
     released: g.first_release_date || null,
-    release: computeRelease(g, nowTs),
+    release: computeRelease(g),
     rating: g.total_rating != null ? Math.round(g.total_rating) : null,
     ratingCount: g.total_rating_count || 0,
     genres: (g.genres || []).map((x) => x.name),
@@ -265,7 +284,7 @@ export default async function handler(req, res) {
       const body = `${GAME_FIELDS}; where id = (${idList.slice(0, 20).join(',')}); limit ${idList.length};`;
       const rows = await igdb('games', body);
       res.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate=604800');
-      res.status(200).json({ games: rows.map((g) => normalize(g, nowTs)) });
+      res.status(200).json({ games: rows.map(normalize) });
       return;
     }
 
@@ -286,7 +305,7 @@ export default async function handler(req, res) {
           if (!body) return [k, []];
           try {
             const rows = await igdb('games', body);
-            return [k, rows.map((g) => normalize(g, nowTs))];
+            return [k, rows.map(normalize)];
           } catch {
             return [k, []];
           }
@@ -355,7 +374,7 @@ export default async function handler(req, res) {
 
     const rows = await igdb('games', body);
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=1800');
-    res.status(200).json({ games: rows.map((g) => normalize(g, nowTs)) });
+    res.status(200).json({ games: rows.map(normalize) });
   } catch (err) {
     res.status(500).json({ error: 'Discover failed', detail: String((err && err.message) || err) });
   }
