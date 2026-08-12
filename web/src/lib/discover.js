@@ -3,6 +3,17 @@
 // user's own library titles (so we can badge games already owned).
 
 import { supabase } from './supabase.js'
+import { swr } from './idbCache.js'
+
+// How long a persisted payload is served without even asking the network.
+// Discover rails are editorial-ish lists that barely move hour to hour; the Game
+// Pass catalog is rebuilt nightly; library titles only feed the "In library"
+// badge. Past these windows the cached value is still shown instantly, it just
+// gets refreshed in the background too.
+const HOME_TTL = 30 * 60 * 1000 // 30 minutes
+const GAMEPASS_TTL = 12 * 60 * 60 * 1000 // 12 hours
+const LIB_TITLES_TTL = 60 * 60 * 1000 // 1 hour
+const GAME_TTL = 7 * 24 * 60 * 60 * 1000 // 7 days (per-game metadata barely moves)
 
 // --- IGDB catalog fetch (via our serverless proxy) --------------------------
 // Results are cached in-memory per query so flipping between Browse and Ask, or
@@ -35,28 +46,54 @@ export async function fetchDiscover(params) {
 // per exact rail set. `keys` is the ordered list of enabled rail keys.
 const _homeCache = new Map()
 
-export async function fetchDiscoverHome(keys, limit = 20) {
+async function fetchHomeNetwork(list, limit) {
+  const qs = new URLSearchParams({ home: list.join(','), limit: String(limit) })
+  const res = await fetch(`/api/discover?${qs.toString()}`)
+  if (!res.ok) throw new Error(`Discover home failed (${res.status})`)
+  const data = await res.json()
+  return data && data.rails && typeof data.rails === 'object' ? data.rails : {}
+}
+
+// Local-first: the previous rail payload is persisted, so re-opening the app
+// paints the home from disk instead of showing skeletons until IGDB answers.
+// Pass `onFresh` to receive a background refresh (only fires when the resolved
+// value came off disk, so it never double-applies).
+export async function fetchDiscoverHome(keys, limit = 20, { onFresh } = {}) {
   const list = (keys || []).filter(Boolean)
   if (!list.length) return {}
   const cacheKey = `${list.join(',')}|${limit}`
   if (_homeCache.has(cacheKey)) return _homeCache.get(cacheKey)
 
-  const qs = new URLSearchParams({ home: list.join(','), limit: String(limit) })
-  const res = await fetch(`/api/discover?${qs.toString()}`)
-  if (!res.ok) throw new Error(`Discover home failed (${res.status})`)
-  const data = await res.json()
-  const rails = data && data.rails && typeof data.rails === 'object' ? data.rails : {}
-  _homeCache.set(cacheKey, rails)
-  return rails
+  const { value } = await swr(`discover:home:${cacheKey}`, () => fetchHomeNetwork(list, limit), {
+    maxAge: HOME_TTL,
+    onFresh: (rails) => {
+      _homeCache.set(cacheKey, rails)
+      if (onFresh) onFresh(rails)
+    },
+  })
+  _homeCache.set(cacheKey, value)
+  return value
 }
 
 // Fetch a single IGDB game by its id (normalized shape), for the game sheet to
-// enrich owned / wishlisted games with a summary + screenshots. Cached per id.
+// enrich owned / wishlisted games with a summary + screenshots.
+//
+// Persisted per id: a game's blurb, screenshots and studio are effectively
+// static, so re-opening a sheet you've seen before resolves off disk with no
+// request at all. That is what stops the sheet from popping in its body a beat
+// after it slides up.
 export async function fetchGameById(igdbId) {
   const id = Number(igdbId)
   if (!id) return null
-  const games = await fetchDiscover({ ids: id })
-  return games[0] || null
+  const { value } = await swr(
+    `discover:game:${id}`,
+    async () => {
+      const games = await fetchDiscover({ ids: id })
+      return games[0] || null
+    },
+    { maxAge: GAME_TTL }
+  )
+  return value || null
 }
 
 // --- "In library" matching --------------------------------------------------
@@ -74,23 +111,28 @@ export function normTitle(t) {
 // the same covers/rating/timing as every other rail). Session-cached.
 let _gpPromise = null
 
+async function fetchGamePass() {
+  const { data, error } = await supabase
+    .from('gamepass')
+    .select('igdb_id, name, cover, year, rating, released')
+    .order('rating', { ascending: false, nullsFirst: false })
+  if (error) throw new Error(error.message || 'Game Pass request failed')
+  return (data || []).map((r) => ({
+    id: r.igdb_id,
+    name: r.name,
+    cover: r.cover,
+    year: r.year,
+    rating: r.rating,
+    released: r.released,
+  }))
+}
+
+// Persisted between sessions: the rail renders from disk on open and the catalog
+// refreshes in the background once the cached copy is older than GAMEPASS_TTL.
 export function loadGamePass() {
   if (!_gpPromise) {
-    _gpPromise = supabase
-      .from('gamepass')
-      .select('igdb_id, name, cover, year, rating, released')
-      .order('rating', { ascending: false, nullsFirst: false })
-      .then(({ data, error }) => {
-        if (error) return []
-        return (data || []).map((r) => ({
-          id: r.igdb_id,
-          name: r.name,
-          cover: r.cover,
-          year: r.year,
-          rating: r.rating,
-          released: r.released,
-        }))
-      })
+    _gpPromise = swr('discover:gamepass', fetchGamePass, { maxAge: GAMEPASS_TTL })
+      .then(({ value }) => value || [])
       .catch(() => [])
   }
   return _gpPromise
@@ -98,19 +140,23 @@ export function loadGamePass() {
 
 let _libPromise = null
 
+// Stored as a plain array (not a Set) so the persisted record stays simple and
+// inspectable; callers get a Set built from it.
+async function fetchLibraryTitles() {
+  const { data, error } = await supabase.from('games').select('title')
+  if (error) throw new Error(error.message || 'Library titles request failed')
+  const seen = new Set()
+  ;(data || []).forEach((r) => {
+    const n = normTitle(r.title)
+    if (n) seen.add(n)
+  })
+  return Array.from(seen)
+}
+
 export function loadLibraryTitles() {
   if (!_libPromise) {
-    _libPromise = supabase
-      .from('games')
-      .select('title')
-      .then(({ data }) => {
-        const set = new Set()
-        ;(data || []).forEach((r) => {
-          const n = normTitle(r.title)
-          if (n) set.add(n)
-        })
-        return set
-      })
+    _libPromise = swr('discover:libraryTitles', fetchLibraryTitles, { maxAge: LIB_TITLES_TTL })
+      .then(({ value }) => new Set(value || []))
       .catch(() => new Set())
   }
   return _libPromise

@@ -175,9 +175,16 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
   useEffect(() => {
     if (!enabledRailKeys.length) return undefined
     let alive = true
-    fetchDiscoverHome(enabledRailKeys, RAIL_PREVIEW)
+    const merge = (map) => setRails((prev) => ({ ...prev, ...map }))
+    fetchDiscoverHome(enabledRailKeys, RAIL_PREVIEW, {
+      // Cached rails paint immediately; this swaps in the refreshed set when the
+      // background request lands (only fires if we rendered from disk).
+      onFresh: (map) => {
+        if (alive) merge(map)
+      },
+    })
       .then((map) => {
-        if (alive) setRails((prev) => ({ ...prev, ...map }))
+        if (alive) merge(map)
       })
       .catch(() => {
         // Total failure: mark the requested rails empty so they stop showing a
