@@ -10,6 +10,46 @@ import { fetchGameById } from '../lib/discover.js'
 import Lightbox from './Lightbox.jsx'
 import './gameSheet.css'
 
+// Holds the vertical space that the summary + screenshot strip + genre chips
+// will occupy once the IGDB media fetch lands. Without it the sheet paints
+// short, finishes sliding up, and then snaps ~230px taller the moment the fetch
+// resolves - which is the jolt that reads as the sheet "glitching" just as its
+// images appear. Sized to match the real content it stands in for.
+function MediaSkeleton({ owned }) {
+  // The media response also fills in fact rows lower down - Studio for an owned
+  // game, Platforms + Studio otherwise - so those are reserved here too. They
+  // sit slightly higher than where the real rows land, which is invisible while
+  // everything is shimmer and keeps the total height right, which is the part
+  // that matters.
+  const rows = owned ? 1 : 2
+  return (
+    <div aria-hidden="true">
+      <div className="gs-sk-summary">
+        <div className="skeleton gs-sk-line" />
+        <div className="skeleton gs-sk-line" />
+        <div className="skeleton gs-sk-line" />
+        <div className="skeleton gs-sk-line" />
+        <div className="skeleton gs-sk-line last" />
+      </div>
+      <div className="gs-sk-strip">
+        <div className="skeleton gs-sk-shot" />
+        <div className="skeleton gs-sk-shot" />
+      </div>
+      <div className="gs-sk-chips">
+        <div className="skeleton gs-sk-chip" />
+        <div className="skeleton gs-sk-chip" />
+        <div className="skeleton gs-sk-chip" />
+      </div>
+      {Array.from({ length: rows }).map((_, i) => (
+        <div className="detail-row" key={i}>
+          <span className="skeleton gs-sk-cell label" />
+          <span className="skeleton gs-sk-cell" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // One sheet for a game across Library (owned), Discover, and Wishlist. Same shell
 // and section order everywhere (cover -> title -> meta -> primary control ->
 // summary -> screenshots -> chips -> facts -> link); empty sections hide. The
@@ -37,26 +77,38 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
     variant === 'discover' && game && (game.summary || (game.screenshots && game.screenshots.length))
   )
   const [media, setMedia] = useState(discoverHasMedia ? game : null)
+  // True while we are still waiting on the IGDB fetch, so the body can hold the
+  // space that summary + screenshots + chips will need. Seeded by the useState
+  // initialiser rather than an effect so the very first paint already reserves
+  // the room; reserving it one render late would reintroduce the jump.
+  const [mediaPending, setMediaPending] = useState(() => !discoverHasMedia && Boolean(igdbId))
   useEffect(() => {
     if (discoverHasMedia) {
       setMedia(game)
+      setMediaPending(false)
       return undefined
     }
     let alive = true
     let t = null
     setMedia(null)
+    setMediaPending(Boolean(igdbId))
     if (igdbId) {
       fetchGameById(igdbId)
         .then((m) => {
           if (!alive) return
-          // Apply after the ~200ms open animation settles. A cached fetch resolves
-          // almost instantly, and injecting the summary + screenshots mid-slide
-          // reflows the sheet and hitches the animation; this defers that reflow.
+          // Swap in after the ~200ms open animation settles. The skeleton above
+          // already holds the space, so this is only belt-and-braces: any small
+          // residual difference in height lands after the slide, not during it.
           t = setTimeout(() => {
-            if (alive) setMedia(m)
+            if (!alive) return
+            setMedia(m)
+            setMediaPending(false)
           }, 240)
         })
-        .catch(() => {})
+        .catch(() => {
+          // Fetch failed: drop the placeholder rather than shimmer forever.
+          if (alive) setMediaPending(false)
+        })
     }
     return () => {
       alive = false
@@ -220,33 +272,39 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
           </div>
         ) : null}
 
-        {summary ? <p className="discover-summary">{summary}</p> : null}
+        {mediaPending ? (
+          <MediaSkeleton owned={owned} />
+        ) : (
+          <>
+            {summary ? <p className="discover-summary">{summary}</p> : null}
 
-        {screenshots.length ? (
-          <div className="shot-strip">
-            {screenshots.map((s, i) => (
-              <button
-                type="button"
-                className="shot-btn"
-                key={i}
-                onClick={() => setShotIndex(i)}
-                aria-label={`View ${title} screenshot ${i + 1} larger`}
-              >
-                <img className="shot" src={s} alt={`${title} screenshot ${i + 1}`} loading="lazy" decoding="async" />
-              </button>
-            ))}
-          </div>
-        ) : null}
+            {screenshots.length ? (
+              <div className="shot-strip">
+                {screenshots.map((s, i) => (
+                  <button
+                    type="button"
+                    className="shot-btn"
+                    key={i}
+                    onClick={() => setShotIndex(i)}
+                    aria-label={`View ${title} screenshot ${i + 1} larger`}
+                  >
+                    <img className="shot" src={s} alt={`${title} screenshot ${i + 1}`} loading="lazy" decoding="async" />
+                  </button>
+                ))}
+              </div>
+            ) : null}
 
-        {genres.length ? (
-          <div className="chip-wrap">
-            {genres.map((g) => (
-              <span className="meta-chip" key={g}>
-                {g}
-              </span>
-            ))}
-          </div>
-        ) : null}
+            {genres.length ? (
+              <div className="chip-wrap">
+                {genres.map((g) => (
+                  <span className="meta-chip" key={g}>
+                    {g}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+          </>
+        )}
 
         {owned ? (
           <>

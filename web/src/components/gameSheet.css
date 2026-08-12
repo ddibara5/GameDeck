@@ -121,6 +121,80 @@
   margin: 12px 0 4px;
 }
 
+/* ---------- Loading placeholder for the IGDB media block ----------
+   Mirrors the box model of .discover-summary, .shot-strip and .chip-wrap so the
+   sheet opens at the height it will settle at. Owned and wishlist games fetch
+   their blurb and screenshots by id, and that response used to arrive after the
+   sheet had already painted short, snapping it taller mid-open. */
+/* The shared .skeleton shimmer is built from --surface, which is also the
+   sheet's own background, so it would be invisible in here. Rebuild the ramp on
+   --line: that token is designed to be a visible divider against --surface, and
+   it stays visible in both the dark and light palettes (in dark it is lighter
+   than the sheet, in light it is darker). The shimmer animation itself still
+   comes from .skeleton. */
+.skeleton.gs-sk-line,
+.skeleton.gs-sk-shot,
+.skeleton.gs-sk-chip,
+.skeleton.gs-sk-cell {
+  background: linear-gradient(90deg, var(--line) 25%, var(--surface-2) 37%, var(--line) 63%);
+  background-size: 400% 100%;
+}
+
+.gs-sk-summary {
+  margin: 12px 0 4px;
+}
+
+.gs-sk-line {
+  height: 13px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.gs-sk-line.last {
+  width: 58%;
+  margin-bottom: 0;
+}
+
+.gs-sk-strip {
+  display: flex;
+  gap: 8px;
+  overflow: hidden;
+  padding: 8px 0 4px;
+}
+
+/* Same footprint as .shot, so the strip reserves an exact match. */
+.gs-sk-shot {
+  flex: 0 0 auto;
+  width: 240px;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+}
+
+.gs-sk-chips {
+  display: flex;
+  gap: 6px;
+  margin: 10px 0 2px;
+}
+
+.gs-sk-chip {
+  height: 23px;
+  width: 88px;
+  border-radius: 999px;
+}
+
+/* Placeholder fact rows. These sit inside a real .detail-row so the row's own
+   padding and divider match the rows they stand in for exactly. */
+.gs-sk-cell {
+  display: inline-block;
+  height: 12px;
+  width: 96px;
+  border-radius: 6px;
+}
+
+.gs-sk-cell.label {
+  width: 64px;
+}
+
 /* Screenshot strip. The .shot width/aspect-ratio is what keeps these images
    sized correctly; without it they render at full natural resolution. */
 .shot-strip {
