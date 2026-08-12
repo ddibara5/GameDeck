@@ -103,7 +103,14 @@ function railClauses(rail, nowTs) {
         sort: 'sort first_release_date desc',
       };
     case 'highly_rated':
-      return { where: ['total_rating >= 85', 'total_rating_count >= 40', NO_ALT_EDITIONS, NO_ADDONS], sort: 'sort total_rating desc' };
+      // The rating floor is deliberately looser than it looks: ranking is done
+      // by weightedRating below, so an 84-rated game with 900 votes can rightly
+      // outrank an 86-rated one with 45. The floor only shapes the pool.
+      return {
+        where: ['total_rating >= 75', 'total_rating_count >= 40', NO_ALT_EDITIONS, NO_ADDONS],
+        sort: 'sort total_rating_count desc',
+        rerank: true,
+      };
     case 'coming_soon':
       // Was `first_release_date > now` and nothing else, which returned the raw
       // daily storefront dump sorted by soonest: 40 of 40 results had no ratings
@@ -120,9 +127,12 @@ function railClauses(rail, nowTs) {
     case 'just_added':
       return { where: ['total_rating_count >= 1', NO_ALT_EDITIONS, NO_ADDONS], sort: 'sort created_at desc' };
     case 'hidden_gems':
+      // Hidden gems keeps its low-exposure vote band; weighting stops the
+      // thinnest-evidence entries from automatically taking the top slots.
       return {
-        where: ['total_rating >= 80', 'total_rating_count >= 8', 'total_rating_count <= 40', NO_ALT_EDITIONS, NO_ADDONS],
+        where: ['total_rating >= 75', 'total_rating_count >= 8', 'total_rating_count <= 40', NO_ALT_EDITIONS, NO_ADDONS],
         sort: 'sort total_rating desc',
+        rerank: true,
       };
     default:
       return null;
@@ -130,11 +140,57 @@ function railClauses(rail, nowTs) {
 }
 
 // Build the full IGDB query body for one rail (page 0, given limit).
-function railBody(rail, nowTs, limit) {
+// Bayesian (IMDb-style) weighted rating.
+//
+// Sorting by raw average rewards whoever has the fewest votes: "Hidden gems" was
+// returning seven games scored 100, among them "Bubsy 3D: Bubsy Visits the James
+// Turrell Retrospective", while "Critically acclaimed" led with "American
+// Chopper". Pull every score toward the global mean in proportion to how thin
+// the evidence behind it is:
+//
+//   weighted = (v / (v + m)) * R + (m / (v + m)) * C
+//
+// C is IGDB's approximate global mean rating; m is the vote count at which a
+// game's own score carries half the weight. A 100 from 8 voters lands near 79;
+// an 88 from 400 voters barely moves, staying around 87.
+const BAYES_C = 72;
+const BAYES_M = 25;
+
+function weightedRating(g) {
+  const R = Number(g.total_rating);
+  if (!Number.isFinite(R)) return 0;
+  const v = Number(g.total_rating_count) || 0;
+  return (v / (v + BAYES_M)) * R + (BAYES_M / (v + BAYES_M)) * BAYES_C;
+}
+
+// Rails ranked on quality rather than on a date can't be ordered by IGDB itself:
+// apicalypse has no computed sort. So pull a wider candidate pool, rank it here,
+// and hand back the requested slice. Pool size is a balance - big enough that the
+// ranking is meaningful, small enough that seven rails can still be fetched in
+// parallel on one warm function.
+const RERANK_POOL = 120;
+
+function railBody(rail, nowTs, limit, offset = 0) {
   const rc = railClauses(rail, nowTs);
   if (!rc) return null;
   const where = ['cover != null', ...rc.where];
-  return `${GAME_FIELDS}; where ${where.join(' & ')}; ${rc.sort}; limit ${limit}; offset 0;`;
+  const take = rc.rerank ? RERANK_POOL : limit;
+  const skip = rc.rerank ? 0 : offset;
+  return `${GAME_FIELDS}; where ${where.join(' & ')}; ${rc.sort}; limit ${take}; offset ${skip};`;
+}
+
+function rankByWeighted(rows, limit, offset = 0) {
+  return rows
+    .slice()
+    .sort((a, b) => weightedRating(b) - weightedRating(a))
+    .slice(offset, offset + limit);
+}
+
+// Apply a rail's re-ranking (if any) and return the requested window.
+function applyRerank(rail, nowTs, rows, limit, offset = 0) {
+  const rc = railClauses(rail, nowTs);
+  if (!rc || !rc.rerank) return rows;
+  return rankByWeighted(rows, limit, offset);
 }
 
 const GAME_FIELDS =
@@ -305,7 +361,7 @@ export default async function handler(req, res) {
           if (!body) return [k, []];
           try {
             const rows = await igdb('games', body);
-            return [k, rows.map(normalize)];
+            return [k, applyRerank(k, nowTs, rows, limit).map(normalize)];
           } catch {
             return [k, []];
           }
@@ -356,15 +412,22 @@ export default async function handler(req, res) {
     // passes an explicit sort (the "see all" list page's sort control), honor it
     // so the whole filtered set re-sorts consistently across pages. Without one,
     // the rail keeps the recommended order set above.
-    if (rail && q.sort && SORTS[q.sort]) sort = SORTS[q.sort];
+    const explicitSort = Boolean(rail && q.sort && SORTS[q.sort]);
+    if (explicitSort) sort = SORTS[q.sort];
+
+    // Quality rails rank on a value IGDB can't sort by, so fetch one pool from
+    // the top and page within it. Skipped when the user picked a sort from the
+    // list page's own control - that is an explicit instruction to order the
+    // set their way, not ours.
+    const wantsRerank = Boolean(rc && rc.rerank && !explicitSort && !search);
 
     // IGDB's `search` can't be combined with `sort`; drop sort when searching.
     const parts = [GAME_FIELDS + ';'];
     if (search) parts.push(search);
     if (where.length) parts.push(`where ${where.join(' & ')};`);
     if (!search) parts.push(sort + ';');
-    parts.push(`limit ${limit};`);
-    parts.push(`offset ${offset};`);
+    parts.push(`limit ${wantsRerank ? RERANK_POOL : limit};`);
+    parts.push(`offset ${wantsRerank ? 0 : offset};`);
     const body = parts.join(' ');
 
     if (q.debug) {
@@ -373,8 +436,9 @@ export default async function handler(req, res) {
     }
 
     const rows = await igdb('games', body);
+    const windowed = wantsRerank ? rankByWeighted(rows, limit, offset) : rows;
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=1800');
-    res.status(200).json({ games: rows.map(normalize) });
+    res.status(200).json({ games: windowed.map(normalize) });
   } catch (err) {
     res.status(500).json({ error: 'Discover failed', detail: String((err && err.message) || err) });
   }
