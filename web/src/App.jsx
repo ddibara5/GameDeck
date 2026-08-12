@@ -6,6 +6,7 @@ import SettingsPage from './components/SettingsPage.jsx'
 import TabBar from './components/TabBar.jsx'
 import { useNewsUnread } from './lib/news.js'
 import { useNavConfig, getNavConfig, visibleKeys, hiddenKeys } from './lib/navConfig.js'
+import { overlaysOpen } from './lib/useEdgeBack.js'
 import CustomizeRows from './components/CustomizeRows.jsx'
 import CustomizeNav from './components/CustomizeNav.jsx'
 
@@ -111,8 +112,10 @@ export default function App() {
     }
     const onMove = (e) => {
       if (!tracking) return
-      // Settings / Customize are full-screen pages with their own edge-back swipe.
-      if (settingsOpen || customizeOpen || customizeNavOpen) return
+      // Full-screen pages with their own edge-back swipe (Settings / Customize,
+      // and any overlay registered via useEdgeBack, e.g. the Discover rail page):
+      // don't also open the app drawer behind them on an edge swipe.
+      if (settingsOpen || customizeOpen || customizeNavOpen || overlaysOpen()) return
       const t = e.touches && e.touches[0]
       if (!t) return
       const dx = t.clientX - startX
@@ -160,7 +163,7 @@ export default function App() {
               <circle cx="12" cy="12" r="3" />
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
             </svg>
-          </span>
+         </span>
         </button>
       </header>
       <main className="app-main">
