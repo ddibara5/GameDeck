@@ -53,8 +53,12 @@ export function formatRelativeDay(value) {
  * so older catalog rows show nothing (and fall back to just the rating).
  *   tone 'amber'  -> upcoming (counting down)
  *   tone 'fresh'  -> released within the last ~10 days
- *   tone 'muted'  -> released 11-30 days ago
- * Windows: up to 120 days before release, up to 30 days after.
+ *   tone 'muted'  -> released 11-120 days ago
+ * Windows: up to 120 days either side of release.
+ *
+ * The backward window matches the "Recently released" rail, which selects games
+ * from the last 120 days. It used to stop at 30, so most of that rail carried no
+ * timing at all - the one place a "3w ago" is most worth reading.
  */
 export function releaseTiming(released) {
   const ts = Number(released)
@@ -77,11 +81,15 @@ export function releaseTiming(released) {
     return { label, tone: 'amber' }
   }
 
-  if (days > 30) return null
+  if (days > 120) return null
   let label
   if (days < 1) label = 'Today'
+  else if (days < 2) label = 'Yesterday'
   else if (days < 14) label = `${Math.round(days)}d ago`
-  else label = `${Math.round(days / 7)}w ago`
+  else if (days < 56) label = `${Math.round(days / 7)}w ago`
+  // Past ~8 weeks "14w ago" stops being readable at a glance; months are easier
+  // to place, and 120 days never rounds past 4.
+  else label = `${Math.round(days / 30)}mo ago`
   return { label, tone: days <= 10 ? 'fresh' : 'muted' }
 }
 

@@ -193,7 +193,26 @@
   pointer-events: none;
 }
 
-/* Two-line rail titles (reserve the height so rows stay aligned). */
+/* Rail titles wrap to at most two lines.
+   Reserving two lines on every card (min-height: 2.5em) kept the meta rows
+   aligned, but titles are usually one line, so nearly every card carried a dead
+   line between its title and its rating. Instead: let the flex row stretch every
+   card to the height of the tallest one, and push each card's meta to the bottom.
+   The meta rows still line up when a title wraps, and nothing is wasted when
+   none of them do. */
+/* The flex row stretches the WRAPPER (the heart's positioning context), so the
+   button has to be told to fill it before its own bottom-aligned meta can work. */
+.discover-browse .shelf-card-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.discover-browse .shelf-card {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+
 .discover-browse .shelf-card-title {
   white-space: normal;
   display: -webkit-box;
@@ -201,7 +220,11 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
   line-height: 1.25;
-  min-height: 2.5em;
+}
+
+.discover-browse .shelf-card-meta {
+  margin-top: auto;
+  padding-top: 2px;
 }
 
 /* Release-timing token on the meta line. The rating text stays --muted; only the
@@ -453,7 +476,19 @@ button.shelf-head:active {
   max-width: none;
   margin: 0;
 }
-/* Two-line titles in the grid (match the rail cards). */
+/* Two-line titles in the grid (match the rail cards). Grid items already stretch
+   to the row height, so the same bottom-aligned meta works here. */
+.rail-grid .shelf-card-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.rail-grid .shelf-card {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+
 .rail-grid .shelf-card-title {
   white-space: normal;
   display: -webkit-box;
@@ -461,5 +496,9 @@ button.shelf-head:active {
   -webkit-box-orient: vertical;
   overflow: hidden;
   line-height: 1.25;
-  min-height: 2.5em;
+}
+
+.rail-grid .shelf-card-meta {
+  margin-top: auto;
+  padding-top: 2px;
 }
