@@ -85,6 +85,52 @@ export function releaseTiming(released) {
   return { label, tone: days <= 10 ? 'fresh' : 'muted' }
 }
 
+const RELEASE_MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+]
+
+/**
+ * Full release date for the game sheet, honouring how precise IGDB actually is.
+ * Takes the normalized { ts, precision, label } the /api/discover proxy builds
+ * (precision: 'day' | 'month' | 'quarter' | 'year' | 'tba').
+ *
+ *   day     -> "Aug 5, 2026"
+ *   month   -> "August 2026"
+ *   quarter -> "Q3 2026"
+ *   year    -> "2026"
+ *   tba     -> IGDB's own wording, else "TBA"
+ *
+ * Never invents a day for a game IGDB only knows the month or year of, which is
+ * the whole reason precision is carried through from the API. Falls back to the
+ * bare year when there's no release object at all (older cached rows).
+ */
+export function releaseLabel(release, fallbackYear = null) {
+  const year = fallbackYear != null ? String(fallbackYear) : null
+  if (!release || typeof release !== 'object') return year
+  const { ts, precision } = release
+  const human = release.label || null
+
+  if (precision === 'tba') return human || 'TBA'
+  if (!ts) return human || year
+
+  // IGDB timestamps are UTC midnight; format in UTC so the day never slips by
+  // one for anyone west of Greenwich.
+  const d = new Date(Number(ts) * 1000)
+  if (Number.isNaN(d.getTime())) return human || year
+
+  const y = d.getUTCFullYear()
+  if (precision === 'year') return String(y)
+  if (precision === 'quarter') return `Q${Math.floor(d.getUTCMonth() / 3) + 1} ${y}`
+  if (precision === 'month') return `${RELEASE_MONTHS[d.getUTCMonth()]} ${y}`
+  return d.toLocaleDateString('en-US', {
+    timeZone: 'UTC',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
 /**
  * Build an IGDB cover URL from a stored image_id, at a given size preset.
  * Sizes: 't_cover_small' (90x128), 't_cover_big' (264x374), 't_720p', 't_1080p'.

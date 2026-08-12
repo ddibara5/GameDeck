@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import Cover from './Cover.jsx'
 import { useDelayedClose } from '../lib/useDelayedClose.js'
 import { lockScroll } from '../lib/scrollLock.js'
-import { igdbCover, platformMeta, minutesToHhm, formatDate } from '../lib/format.js'
+import { igdbCover, platformMeta, minutesToHhm, formatDate, releaseLabel } from '../lib/format.js'
 import { STATUSES, STATUS_LABELS, effectiveStatus, setStatus } from '../lib/userStatus.js'
 import { useWishlist, toggleWishlist } from '../lib/wishlist.js'
 import { fetchGameById } from '../lib/discover.js'
@@ -160,6 +160,11 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   const screenshots = (media && media.screenshots) || game.screenshots || []
   const url = (media && media.url) || game.url || null
   const year = game.release_year || game.year || (media && media.year) || null
+  // Exact release date, as precise as IGDB actually is about it (a full day for
+  // dated games, "August 2026" / "Q3 2026" for ones only pinned to a month or
+  // quarter). Comes from the media fetch for owned + wishlist games; Discover
+  // rail items already carry it. Falls back to the bare year.
+  const releaseText = releaseLabel((media && media.release) || game.release, year)
   const genreText = game.genre || genres[0] || null
   const platformText = owned ? platformMeta(game.environment).label : platforms.slice(0, 3).join(', ')
   const rating = owned
@@ -342,6 +347,12 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
                 <span className="detail-value">{studio}</span>
               </div>
             ) : null}
+            {releaseText ? (
+              <div className="detail-row">
+                <span className="detail-label">Released</span>
+                <span className="detail-value">{releaseText}</span>
+              </div>
+            ) : null}
           </>
         ) : (
           <>
@@ -357,10 +368,10 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
                 <span className="detail-value">{studio}</span>
               </div>
             ) : null}
-            {year ? (
+            {releaseText ? (
               <div className="detail-row">
                 <span className="detail-label">Released</span>
-                <span className="detail-value">{year}</span>
+                <span className="detail-value">{releaseText}</span>
               </div>
             ) : null}
           </>
