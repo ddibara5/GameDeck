@@ -7,6 +7,7 @@ import DiscoverDetail from './DiscoverDetail.jsx'
 import { fetchDiscover } from '../lib/discover.js'
 import { releaseTiming } from '../lib/format.js'
 import { useDelayedClose } from '../lib/useDelayedClose.js'
+import { useEdgeBack } from '../lib/useEdgeBack.js'
 import { lockScroll } from '../lib/scrollLock.js'
 
 // Full "see all" page for a Discover rail: every game in the list, in a grid,
@@ -56,6 +57,10 @@ export default function DiscoverRailList({ row, seedItems, isOwned, wishIds, onC
 
   // Lock the background while the page is open (shared ref-counted lock).
   useEffect(() => lockScroll(), [])
+
+  // Edge-swipe from the left to back out (same gesture as Settings / Customize).
+  // Suppressed while a nested sheet is up so the swipe closes that first.
+  useEdgeBack(requestClose, { disabled: sortOpen || Boolean(selected) })
 
   // Rail kinds: (re)fetch page 0 whenever the sort changes.
   useEffect(() => {
