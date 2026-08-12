@@ -166,6 +166,24 @@
   margin: 0;
 }
 
+/* Rail loading placeholders (reuse the global .skeleton shimmer). */
+.shelf-poster-sk {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border-radius: 16px;
+}
+
+.shelf-title-sk {
+  height: 10px;
+  width: 80%;
+  margin-top: 8px;
+  border-radius: 6px;
+}
+
+.shelf-head-sk {
+  pointer-events: none;
+}
+
 /* Two-line rail titles (reserve the height so rows stay aligned). */
 .discover-browse .shelf-card-title {
   white-space: normal;
