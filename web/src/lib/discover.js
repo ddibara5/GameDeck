@@ -29,6 +29,27 @@ export async function fetchDiscover(params) {
   return games
 }
 
+// Fetch every home rail in ONE request. The server runs the rails' IGDB queries
+// in parallel (one warm function, one token) and returns { key: games[] }, so the
+// Discover home makes a single round-trip instead of one per rail. Session-cached
+// per exact rail set. `keys` is the ordered list of enabled rail keys.
+const _homeCache = new Map()
+
+export async function fetchDiscoverHome(keys, limit = 20) {
+  const list = (keys || []).filter(Boolean)
+  if (!list.length) return {}
+  const cacheKey = `${list.join(',')}|${limit}`
+  if (_homeCache.has(cacheKey)) return _homeCache.get(cacheKey)
+
+  const qs = new URLSearchParams({ home: list.join(','), limit: String(limit) })
+  const res = await fetch(`/api/discover?${qs.toString()}`)
+  if (!res.ok) throw new Error(`Discover home failed (${res.status})`)
+  const data = await res.json()
+  const rails = data && data.rails && typeof data.rails === 'object' ? data.rails : {}
+  _homeCache.set(cacheKey, rails)
+  return rails
+}
+
 // Fetch a single IGDB game by its id (normalized shape), for the game sheet to
 // enrich owned / wishlisted games with a summary + screenshots. Cached per id.
 export async function fetchGameById(igdbId) {

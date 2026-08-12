@@ -81,6 +81,42 @@ const SORTS = {
   name: 'sort name asc',
 };
 
+// The where-fragments + sort that DEFINE each home rail. Returned without the
+// shared `cover != null` clause (callers always add that). Single source of truth
+// for both the single-rail endpoint (?rail=) and the batched home endpoint
+// (?home=a,b,c), so the two can never drift apart.
+function railClauses(rail, nowTs) {
+  switch (rail) {
+    case 'popular':
+      return { where: ['total_rating_count >= 20'], sort: 'sort total_rating_count desc' };
+    case 'upcoming':
+      return { where: [`first_release_date > ${nowTs}`, 'hypes > 1'], sort: 'sort hypes desc' };
+    case 'recent':
+      return {
+        where: [`first_release_date <= ${nowTs}`, `first_release_date > ${nowTs - 120 * 86400}`, 'total_rating_count >= 3'],
+        sort: 'sort first_release_date desc',
+      };
+    case 'highly_rated':
+      return { where: ['total_rating >= 85', 'total_rating_count >= 40'], sort: 'sort total_rating desc' };
+    case 'coming_soon':
+      return { where: [`first_release_date > ${nowTs}`], sort: 'sort first_release_date asc' };
+    case 'just_added':
+      return { where: ['total_rating_count >= 1'], sort: 'sort created_at desc' };
+    case 'hidden_gems':
+      return { where: ['total_rating >= 80', 'total_rating_count >= 8', 'total_rating_count <= 40'], sort: 'sort total_rating desc' };
+    default:
+      return null;
+  }
+}
+
+// Build the full IGDB query body for one rail (page 0, given limit).
+function railBody(rail, nowTs, limit) {
+  const rc = railClauses(rail, nowTs);
+  if (!rc) return null;
+  const where = ['cover != null', ...rc.where];
+  return `${GAME_FIELDS}; where ${where.join(' & ')}; ${rc.sort}; limit ${limit}; offset 0;`;
+}
+
 const GAME_FIELDS =
   'fields name,summary,cover.image_id,first_release_date,total_rating,total_rating_count,' +
   'genres.name,keywords.name,themes.name,platforms.name,platforms.abbreviation,' +
@@ -179,6 +215,36 @@ export default async function handler(req, res) {
       return;
     }
 
+    // Batched home rails: the Discover home requests all of its enabled rails in a
+    // SINGLE call (?home=popular,upcoming,...). One warm function + one token runs
+    // the rails' IGDB queries in parallel server-side, instead of the client firing
+    // one serverless invocation per rail. Returns { rails: { key: games[] } }.
+    const home = String(q.home || '');
+    if (home) {
+      const keys = home
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .slice(0, 12);
+      const pairs = await Promise.all(
+        keys.map(async (k) => {
+          const body = railBody(k, nowTs, limit);
+          if (!body) return [k, []];
+          try {
+            const rows = await igdb('games', body);
+            return [k, rows.map(normalize)];
+          } catch {
+            return [k, []];
+          }
+        })
+      );
+      const rails = {};
+      pairs.forEach(([k, v]) => (rails[k] = v));
+      res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=1800');
+      res.status(200).json({ rails });
+      return;
+    }
+
     // Base: games with art. (IGDB deprecated the old `category` enum, so we no
     // longer filter on it; `cover != null` keeps results to real, art-having games.)
     const where = ['cover != null'];
@@ -186,30 +252,10 @@ export default async function handler(req, res) {
     let search = '';
 
     const rail = String(q.rail || '');
-    if (rail === 'popular') {
-      where.push('total_rating_count >= 20', 'cover != null');
-      sort = 'sort total_rating_count desc';
-    } else if (rail === 'upcoming') {
-      where.push(`first_release_date > ${nowTs}`, 'hypes > 1', 'cover != null');
-      sort = 'sort hypes desc';
-    } else if (rail === 'recent') {
-      where.push(`first_release_date <= ${nowTs}`, `first_release_date > ${nowTs - 120 * 86400}`, 'cover != null', 'total_rating_count >= 3');
-      sort = 'sort first_release_date desc';
-    } else if (rail === 'highly_rated') {
-      where.push('total_rating >= 85', 'total_rating_count >= 40', 'cover != null');
-      sort = 'sort total_rating desc';
-    } else if (rail === 'coming_soon') {
-      // Upcoming, ordered by soonest release (complements 'upcoming', which sorts by hype).
-      where.push(`first_release_date > ${nowTs}`, 'cover != null');
-      sort = 'sort first_release_date asc';
-    } else if (rail === 'just_added') {
-      // Newest entries in the IGDB database.
-      where.push('cover != null', 'total_rating_count >= 1');
-      sort = 'sort created_at desc';
-    } else if (rail === 'hidden_gems') {
-      // Well-reviewed but low-profile: high rating, modest rating count.
-      where.push('total_rating >= 80', 'total_rating_count >= 8', 'total_rating_count <= 40', 'cover != null');
-      sort = 'sort total_rating desc';
+    const rc = rail ? railClauses(rail, nowTs) : null;
+    if (rc) {
+      where.push(...rc.where);
+      sort = rc.sort;
     } else {
       // browse / search / filter
       where.push('cover != null');
