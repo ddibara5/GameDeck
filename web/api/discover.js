@@ -88,9 +88,9 @@ const SORTS = {
 function railClauses(rail, nowTs) {
   switch (rail) {
     case 'popular':
-      return { where: ['total_rating_count >= 20', NO_ALT_EDITIONS], sort: 'sort total_rating_count desc' };
+      return { where: ['total_rating_count >= 20', NO_ALT_EDITIONS, NO_ADDONS], sort: 'sort total_rating_count desc' };
     case 'upcoming':
-      return { where: [`first_release_date > ${nowTs}`, 'hypes > 1', NO_ALT_EDITIONS], sort: 'sort hypes desc' };
+      return { where: [`first_release_date > ${nowTs}`, 'hypes > 1', NO_ALT_EDITIONS, NO_ADDONS], sort: 'sort hypes desc' };
     case 'recent':
       return {
         where: [
@@ -98,11 +98,12 @@ function railClauses(rail, nowTs) {
           `first_release_date > ${nowTs - 120 * 86400}`,
           'total_rating_count >= 3',
           NO_ALT_EDITIONS,
+          NO_ADDONS,
         ],
         sort: 'sort first_release_date desc',
       };
     case 'highly_rated':
-      return { where: ['total_rating >= 85', 'total_rating_count >= 40', NO_ALT_EDITIONS], sort: 'sort total_rating desc' };
+      return { where: ['total_rating >= 85', 'total_rating_count >= 40', NO_ALT_EDITIONS, NO_ADDONS], sort: 'sort total_rating desc' };
     case 'coming_soon':
       // Was `first_release_date > now` and nothing else, which returned the raw
       // daily storefront dump sorted by soonest: 40 of 40 results had no ratings
@@ -113,14 +114,14 @@ function railClauses(rail, nowTs) {
       // floor is set deliberately low here: it sorts by date, not by hypes, so
       // this threshold is doing all the work on its own.
       return {
-        where: [`first_release_date > ${nowTs}`, 'hypes >= 3', NO_ALT_EDITIONS],
+        where: [`first_release_date > ${nowTs}`, 'hypes >= 3', NO_ALT_EDITIONS, NO_ADDONS],
         sort: 'sort first_release_date asc',
       };
     case 'just_added':
-      return { where: ['total_rating_count >= 1', NO_ALT_EDITIONS], sort: 'sort created_at desc' };
+      return { where: ['total_rating_count >= 1', NO_ALT_EDITIONS, NO_ADDONS], sort: 'sort created_at desc' };
     case 'hidden_gems':
       return {
-        where: ['total_rating >= 80', 'total_rating_count >= 8', 'total_rating_count <= 40', NO_ALT_EDITIONS],
+        where: ['total_rating >= 80', 'total_rating_count >= 8', 'total_rating_count <= 40', NO_ALT_EDITIONS, NO_ADDONS],
         sort: 'sort total_rating desc',
       };
     default:
@@ -148,6 +149,19 @@ const GAME_FIELDS =
 // want in a release list, and unlike the game_type enum this field is not
 // deprecated, so it is safe to filter on today.
 const NO_ALT_EDITIONS = 'version_parent = null';
+
+// Sub-releases that are not a game you would go and play: add-on DLC, bundles,
+// mods, single episodes, seasons, content packs and patch entries. Verified
+// against live API responses, which return game_type ids matching the historical
+// category enum (0 main game, 2 expansion, 8 remake, 11 port, ...).
+//
+// Deliberately NOT excluded: expansions (2), standalone expansions (4), remakes
+// (8), remasters (9), expanded editions (10) and ports (11). Those are real
+// releases people wait for - Shadow of the Erdtree is an expansion, Onimusha:
+// Dawn of Dreams is a port - and dropping the whole family to kill add-on noise
+// would lose exactly the games worth surfacing. The hypes floor already keeps
+// the expansions that do appear to ones with a real following.
+const NO_ADDONS = 'game_type != (1,3,5,6,7,13,14)';
 
 // IGDB release_dates.category is a date-FORMAT enum (how precise the date is):
 //   0 YYYYMMMMDD (day), 1 YYYYMMMM (month), 2 YYYY (year),
