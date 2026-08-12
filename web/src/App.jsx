@@ -5,7 +5,9 @@ import Menu from './components/Menu.jsx'
 import SettingsPage from './components/SettingsPage.jsx'
 import TabBar from './components/TabBar.jsx'
 import { useNewsUnread } from './lib/news.js'
+import { useNavConfig, visibleKeys, hiddenKeys } from './lib/navConfig.js'
 import CustomizeRows from './components/CustomizeRows.jsx'
+import CustomizeNav from './components/CustomizeNav.jsx'
 
 // Code-split each tab and the overlay views into their own chunk so the initial
 // bundle only carries the shell + the first (Library) tab. The service worker
@@ -17,8 +19,6 @@ const DiscoverTab = lazy(() => import('./components/DiscoverTab.jsx'))
 const NewsTab = lazy(() => import('./components/NewsTab.jsx'))
 const WishlistTab = lazy(() => import('./components/WishlistTab.jsx'))
 const ListView = lazy(() => import('./components/ListView.jsx'))
-
-const TABS = ['library', 'activity', 'insights', 'discover', 'news']
 
 // Drawer edge-swipe: open with a swipe in from the left edge, close with a left swipe.
 const EDGE_PX = 24
@@ -32,6 +32,11 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [customizeOpen, setCustomizeOpen] = useState(false)
+  const [customizeNavOpen, setCustomizeNavOpen] = useState(false)
+  // Live tab bar layout (order + which tabs show + label visibility).
+  const nav = useNavConfig()
+  const visibleTabs = visibleKeys(nav)
+  const hiddenTabs = hiddenKeys(nav)
   // A drawer-opened overlay view (Wishlist / status lists) shown over the active tab.
   const [view, setView] = useState(null)
   const [viewClosing, setViewClosing] = useState(false)
@@ -67,6 +72,20 @@ export default function App() {
     return lockScroll()
   }, [view])
 
+  // When the visible set changes (the user edits Navigation) and that change
+  // hides the tab they're currently on, snap to the first visible tab so the bar
+  // isn't left highlighting nothing. Opening a hidden tab from the drawer's
+  // "More" list doesn't change the visible set, so it isn't snapped away.
+  const visibleKey = visibleTabs.join('|')
+  const prevVisibleKey = useRef(visibleKey)
+  useEffect(() => {
+    const changed = prevVisibleKey.current !== visibleKey
+    prevVisibleKey.current = visibleKey
+    if (!changed || view) return
+    if (!visibleTabs.includes(activeTab)) setActiveTab(visibleTabs[0])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleKey])
+
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 4)
     onScroll()
@@ -91,7 +110,7 @@ export default function App() {
     const onMove = (e) => {
       if (!tracking) return
       // Settings / Customize are full-screen pages with their own edge-back swipe.
-      if (settingsOpen || customizeOpen) return
+      if (settingsOpen || customizeOpen || customizeNavOpen) return
       const t = e.touches && e.touches[0]
       if (!t) return
       const dx = t.clientX - startX
@@ -127,7 +146,7 @@ export default function App() {
       window.removeEventListener('touchmove', onMove)
       window.removeEventListener('touchend', onEnd)
     }
-  }, [menuOpen, settingsOpen, customizeOpen, view, viewClosing])
+  }, [menuOpen, settingsOpen, customizeOpen, customizeNavOpen, view, viewClosing])
 
   return (
     <div className="app">
@@ -168,7 +187,8 @@ export default function App() {
           closeView()
           setActiveTab(t)
         }}
-        tabs={TABS}
+        tabs={visibleTabs}
+        showLabels={nav.labels}
         badges={{ news: newsUnread }}
       />
       <Menu
@@ -176,9 +196,14 @@ export default function App() {
         onClose={() => setMenuOpen(false)}
         onOpenWishlist={() => openView('wishlist')}
         onOpenList={(key) => openView(key)}
+        onOpenTab={(t) => {
+          closeView()
+          setActiveTab(t)
+        }}
       />
-      <SettingsPage open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <SettingsPage open={settingsOpen} onClose={() => setSettingsOpen(false)} onOpenNav={() => setCustomizeNavOpen(true)} />
       <CustomizeRows open={customizeOpen} onClose={() => setCustomizeOpen(false)} />
+      <CustomizeNav open={customizeNavOpen} onClose={() => setCustomizeNavOpen(false)} />
     </div>
   )
 }
