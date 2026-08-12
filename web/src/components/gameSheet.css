@@ -25,81 +25,13 @@
   z-index: 300;
 }
 
-/* Promote the sliding sheet to its own compositor layer so the transform doesn't
-   repaint the tall, image-heavy, scrollable contents every frame. Lives here
-   (bundled with the sheet) rather than in the global index.css. Applies to every
-   .modal-sheet once this stylesheet has loaded (which is whenever a sheet can
-   open), including the Discover filter / sort sheets. */
+/* Promote the sliding sheet to its own compositor layer so the slide-up transform
+   doesn't repaint the tall, image-heavy, scrollable contents every frame. Lives
+   here (bundled with the sheet) rather than in the global index.css. Applies to
+   every .modal-sheet once this stylesheet has loaded (which is whenever a sheet
+   can open), including the Discover filter / sort sheets. */
 .modal-sheet {
   will-change: transform;
-}
-
-/* ---------- Game sheet: a tall bottom sheet that grows out of the cover ----------
-
-   Shape is a normal bottom sheet - flush to the bottom and side edges, rounded
-   top corners only - so at rest it still reads as having been pulled up from the
-   bottom. Only the motion is special: it scales out of the cover that was
-   tapped, and collapses back into it.
-
-   Everything below is scoped to .game-sheet so the Discover filter / sort sheets
-   keep their plain slide-up; a pop-from-a-point animation would be wrong for
-   them. The doubled-up selectors out-specify the base .modal-sheet rules in
-   index.css without having to edit that 37KB global stylesheet.
-
-   Width, max-width, padding, radius and the bottom anchoring are all inherited
-   from that base rule on purpose - only the height cap and the animation differ.
-
-   --gs-ox / --gs-oy  centre of the tapped cover, in the sheet's own coordinates
-   --gs-scale         that cover's width as a fraction of the sheet's width
-   All three are set imperatively by GameSheet before first paint; the fallbacks
-   here produce a centred pop when no origin was recorded. */
-.modal-sheet.game-sheet {
-  /* Taller than the base 88vh, but stopping short of the status bar so the
-     notch / Dynamic Island and the clock stay clear of the sheet. */
-  max-height: calc(100vh - var(--safe-top) - 16px);
-  transform-origin: var(--gs-ox, 50%) var(--gs-oy, 50%);
-  animation: gs-pop 0.28s var(--enter-ease);
-  will-change: transform, opacity;
-}
-
-@keyframes gs-pop {
-  from {
-    transform: scale(var(--gs-scale, 0.5));
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-/* Closing normally (backdrop tap, Ask AI, More like this): collapse back into
-   the cover it came from, the exact reverse of the open. */
-.modal-backdrop.closing:not(.gs-drag-close) .modal-sheet.game-sheet {
-  animation: gs-collapse var(--overlay-out) var(--exit-ease) forwards;
-}
-
-@keyframes gs-collapse {
-  from {
-    transform: scale(1);
-    opacity: 1;
-  }
-  to {
-    transform: scale(var(--gs-scale, 0.5));
-    opacity: 0;
-  }
-}
-
-/* Closing by swipe-down: no CSS animation, so the inline translateY the gesture
-   is already driving carries the sheet off the bottom. Collapsing toward the
-   cover from a half-dragged position would visibly jump. */
-
-/* Respect reduced-motion: keep the fade, drop the movement. */
-@media (prefers-reduced-motion: reduce) {
-  .modal-sheet.game-sheet,
-  .modal-backdrop.closing:not(.gs-drag-close) .modal-sheet.game-sheet {
-    animation: none;
-  }
 }
 
 /* Shared game-sheet body styles. These live here (not in discover.css) so the

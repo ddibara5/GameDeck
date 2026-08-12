@@ -1,8 +1,7 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Cover from './Cover.jsx'
 import { useDelayedClose } from '../lib/useDelayedClose.js'
-import { takeOrigin } from '../lib/heroOrigin.js'
 import { lockScroll } from '../lib/scrollLock.js'
 import { igdbCover, platformMeta, minutesToHhm, formatDate } from '../lib/format.js'
 import { STATUSES, STATUS_LABELS, effectiveStatus, setStatus } from '../lib/userStatus.js'
@@ -22,38 +21,6 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   const owned = variant === 'owned'
   const { closing, requestClose } = useDelayedClose(onClose)
   const { ids: wishIds } = useWishlist()
-
-  const sheetRef = useRef(null)
-  // A close started by the swipe-down gesture keeps the flick-away exit that
-  // gesture implies; every other close collapses back into the cover.
-  const [dragClose, setDragClose] = useState(false)
-
-  // Anchor the open/close animation to the cover that was tapped so the sheet
-  // grows out of that artwork rather than the bottom edge. Runs before paint,
-  // and writes CSS custom properties rather than React-managed style keys, so a
-  // later re-render (the deferred media fetch, a status change) cannot wipe the
-  // anchor mid-animation. With no recorded origin the CSS defaults take over
-  // and the sheet simply pops from its own centre.
-  useLayoutEffect(() => {
-    const el = sheetRef.current
-    const origin = takeOrigin()
-    if (!el || !origin) return
-    // Measure the UNTRANSFORMED layout box. The pop animation is already on the
-    // element and its first keyframe scales it down, so a plain
-    // getBoundingClientRect() here reports the shrunken box and skews the anchor.
-    // Suppressing the animation for the measurement (and restoring it straight
-    // after, which restarts it from the top) is what keeps the maths honest.
-    el.style.animation = 'none'
-    const r = el.getBoundingClientRect()
-    el.style.animation = ''
-    if (!r.width || !r.height) return
-    el.style.setProperty('--gs-ox', `${Math.round(origin.x + origin.w / 2 - r.left)}px`)
-    el.style.setProperty('--gs-oy', `${Math.round(origin.y + origin.h / 2 - r.top)}px`)
-    // Track the cover's footprint, but never start so small that the text is an
-    // unreadable smear on the opening frames.
-    const scale = Math.min(0.72, Math.max(0.24, origin.w / r.width))
-    el.style.setProperty('--gs-scale', scale.toFixed(3))
-  }, [])
 
   // Status (owned only): reflect the current override/derived status.
   const [status, setStatusState] = useState('backlog')
@@ -119,10 +86,8 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   function onDragEnd() {
     const shouldClose = dragY > 110
     drag.current.active = false
-    if (shouldClose) {
-      setDragClose(true)
-      requestClose()
-    } else setDragY(0)
+    if (shouldClose) requestClose()
+    else setDragY(0)
   }
 
   // Lock background scroll while the sheet is open (shared ref-counted lock).
@@ -174,21 +139,14 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   // `will-change: transform`, which would otherwise trap this sheet and make it
   // glitch or open misaligned). Keeps every sheet in the app on one identical path.
   return createPortal(
-    <div
-      className={`modal-backdrop gs-backdrop${closing ? ' closing' : ''}${dragClose ? ' gs-drag-close' : ''}`}
-      onClick={handleBackdropClick}
-    >
+    <div className={`modal-backdrop${closing ? ' closing' : ''}`} onClick={handleBackdropClick}>
       <div
-        ref={sheetRef}
-        className="modal-sheet game-sheet"
+        className="modal-sheet"
         role="dialog"
         aria-modal="true"
         aria-label={title}
         style={{
-          // Only the drag gesture drives an inline transform. Opening and the
-          // collapse-back-into-the-cover exit are CSS animations anchored to
-          // --gs-ox / --gs-oy, so they stay on the compositor.
-          transform: dragClose ? 'translateY(110%)' : dragY ? `translateY(${dragY}px)` : undefined,
+          transform: closing ? 'translateY(110%)' : dragY ? `translateY(${dragY}px)` : undefined,
           transition: drag.current.active ? 'none' : 'transform 0.2s ease',
         }}
       >
