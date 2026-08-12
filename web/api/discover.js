@@ -88,22 +88,41 @@ const SORTS = {
 function railClauses(rail, nowTs) {
   switch (rail) {
     case 'popular':
-      return { where: ['total_rating_count >= 20'], sort: 'sort total_rating_count desc' };
+      return { where: ['total_rating_count >= 20', NO_ALT_EDITIONS], sort: 'sort total_rating_count desc' };
     case 'upcoming':
-      return { where: [`first_release_date > ${nowTs}`, 'hypes > 1'], sort: 'sort hypes desc' };
+      return { where: [`first_release_date > ${nowTs}`, 'hypes > 1', NO_ALT_EDITIONS], sort: 'sort hypes desc' };
     case 'recent':
       return {
-        where: [`first_release_date <= ${nowTs}`, `first_release_date > ${nowTs - 120 * 86400}`, 'total_rating_count >= 3'],
+        where: [
+          `first_release_date <= ${nowTs}`,
+          `first_release_date > ${nowTs - 120 * 86400}`,
+          'total_rating_count >= 3',
+          NO_ALT_EDITIONS,
+        ],
         sort: 'sort first_release_date desc',
       };
     case 'highly_rated':
-      return { where: ['total_rating >= 85', 'total_rating_count >= 40'], sort: 'sort total_rating desc' };
+      return { where: ['total_rating >= 85', 'total_rating_count >= 40', NO_ALT_EDITIONS], sort: 'sort total_rating desc' };
     case 'coming_soon':
-      return { where: [`first_release_date > ${nowTs}`], sort: 'sort first_release_date asc' };
+      // Was `first_release_date > now` and nothing else, which returned the raw
+      // daily storefront dump sorted by soonest: 40 of 40 results had no ratings
+      // and no following. `hypes` (people following a game before release) is the
+      // only signal that separates them, since an unreleased game has no ratings
+      // by definition. The neighbouring "Most anticipated" rail has used
+      // `hypes > 1` all along and returns GTA VI / Fable / Gears of War, so the
+      // floor is set deliberately low here: it sorts by date, not by hypes, so
+      // this threshold is doing all the work on its own.
+      return {
+        where: [`first_release_date > ${nowTs}`, 'hypes >= 3', NO_ALT_EDITIONS],
+        sort: 'sort first_release_date asc',
+      };
     case 'just_added':
-      return { where: ['total_rating_count >= 1'], sort: 'sort created_at desc' };
+      return { where: ['total_rating_count >= 1', NO_ALT_EDITIONS], sort: 'sort created_at desc' };
     case 'hidden_gems':
-      return { where: ['total_rating >= 80', 'total_rating_count >= 8', 'total_rating_count <= 40'], sort: 'sort total_rating desc' };
+      return {
+        where: ['total_rating >= 80', 'total_rating_count >= 8', 'total_rating_count <= 40', NO_ALT_EDITIONS],
+        sort: 'sort total_rating desc',
+      };
     default:
       return null;
   }
@@ -121,7 +140,14 @@ const GAME_FIELDS =
   'fields name,summary,cover.image_id,first_release_date,total_rating,total_rating_count,' +
   'genres.name,keywords.name,themes.name,platforms.name,platforms.abbreviation,' +
   'screenshots.image_id,involved_companies.company.name,involved_companies.developer,url,' +
-  'release_dates.date,release_dates.category,release_dates.human';
+  'release_dates.date,release_dates.category,release_dates.human,' +
+  'game_type,parent_game,version_parent';
+
+// Alternate editions ("Deluxe Edition", "Game of the Year Edition") are separate
+// IGDB rows pointing at the real game via version_parent. They are never what you
+// want in a release list, and unlike the game_type enum this field is not
+// deprecated, so it is safe to filter on today.
+const NO_ALT_EDITIONS = 'version_parent = null';
 
 // IGDB release_dates.category is a date-FORMAT enum (how precise the date is):
 //   0 YYYYMMMMDD (day), 1 YYYYMMMM (month), 2 YYYY (year),
@@ -151,7 +177,7 @@ function precisionFromHuman(h) {
 
 // Normalized release: the earliest concrete release across platforms/regions, plus
 // how precise IGDB actually is about it. { ts, precision, label }.
-function computeRelease(g) {
+function computeRelease(g, nowTs) {
   const rds = (g.release_dates || []).filter(Boolean);
   const dated = rds.filter((r) => typeof r.date === 'number');
   if (!dated.length) {
@@ -159,12 +185,21 @@ function computeRelease(g) {
     return { ts: g.first_release_date || null, precision: 'tba', label: (withHuman && withHuman.human) || 'TBA' };
   }
   dated.sort((a, b) => a.date - b.date);
-  const first = dated[0];
+  let first = dated[0];
+  // A game can carry release_dates in the past AND the future - already out in
+  // one region or on one platform, still pending elsewhere. Taking the global
+  // earliest then shows a date that has already been and gone, which is why
+  // "Coming soon" was listing things like "Aug 18, 2025". When IGDB itself still
+  // considers the game unreleased, report the soonest date that is also still
+  // ahead of us.
+  if (typeof nowTs === 'number' && Number(g.first_release_date) > nowTs) {
+    first = dated.find((r) => r.date > nowTs) || first;
+  }
   const precision = precisionFromCategory(first.category) || precisionFromHuman(first.human) || 'day';
   return { ts: first.date, precision, label: first.human || null };
 }
 
-function normalize(g) {
+function normalize(g, nowTs) {
   const companies = (g.involved_companies || [])
     .filter((c) => c && c.company && c.company.name)
     .map((c) => ({ name: c.company.name, developer: !!c.developer }));
@@ -176,7 +211,7 @@ function normalize(g) {
     coverId: (g.cover && g.cover.image_id) || null,
     year: g.first_release_date ? new Date(g.first_release_date * 1000).getUTCFullYear() : null,
     released: g.first_release_date || null,
-    release: computeRelease(g),
+    release: computeRelease(g, nowTs),
     rating: g.total_rating != null ? Math.round(g.total_rating) : null,
     ratingCount: g.total_rating_count || 0,
     genres: (g.genres || []).map((x) => x.name),
@@ -186,6 +221,11 @@ function normalize(g) {
     screenshots: (g.screenshots || []).map((s) => IMG(s.image_id, 'screenshot_med')).filter(Boolean).slice(0, 6),
     companies,
     url: g.url || null,
+    // Surfaced so the deprecated-`category` replacement can be checked against
+    // live data before anything filters on it. gameType is an id from IGDB's
+    // game_types table; parentGame is set on DLC, expansions and episodes.
+    gameType: g.game_type != null ? g.game_type : null,
+    parentGame: g.parent_game != null ? g.parent_game : null,
   };
 }
 
@@ -211,7 +251,7 @@ export default async function handler(req, res) {
       const body = `${GAME_FIELDS}; where id = (${idList.slice(0, 20).join(',')}); limit ${idList.length};`;
       const rows = await igdb('games', body);
       res.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate=604800');
-      res.status(200).json({ games: rows.map(normalize) });
+      res.status(200).json({ games: rows.map((g) => normalize(g, nowTs)) });
       return;
     }
 
@@ -232,7 +272,7 @@ export default async function handler(req, res) {
           if (!body) return [k, []];
           try {
             const rows = await igdb('games', body);
-            return [k, rows.map(normalize)];
+            return [k, rows.map((g) => normalize(g, nowTs))];
           } catch {
             return [k, []];
           }
@@ -258,7 +298,6 @@ export default async function handler(req, res) {
       sort = rc.sort;
     } else {
       // browse / search / filter
-      where.push('cover != null');
       if (q.q) search = `search "${String(q.q).replace(/"/g, '')}";`;
       if (q.preset && PRESETS[q.preset]) where.push(PRESETS[q.preset]);
       if (q.genre) where.push(`genres.slug = "${String(q.genre).replace(/"/g, '')}"`);
@@ -302,7 +341,7 @@ export default async function handler(req, res) {
 
     const rows = await igdb('games', body);
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=1800');
-    res.status(200).json({ games: rows.map(normalize) });
+    res.status(200).json({ games: rows.map((g) => normalize(g, nowTs)) });
   } catch (err) {
     res.status(500).json({ error: 'Discover failed', detail: String((err && err.message) || err) });
   }
