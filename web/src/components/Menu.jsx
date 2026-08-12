@@ -1,17 +1,23 @@
-import { useEffect, useMemo } from 'react'
+import { cloneElement, useEffect, useMemo } from 'react'
 import { useWishlist } from '../lib/wishlist.js'
 import { useMountTransition } from '../lib/useMountTransition.js'
 import { lockScroll } from '../lib/scrollLock.js'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
 import { useStatusMap, effectiveStatus, includeInLists } from '../lib/userStatus.js'
+import { useNavConfig, hiddenKeys, TAB_BY_KEY } from '../lib/navConfig.js'
+import { TAB_ICONS } from './TabBar.jsx'
 import { MenuItem, ICONS } from './menuUI.jsx'
 
 // Left drawer: a lists / content hub. App-wide settings live in the gear-opened
 // Settings page (see SettingsPage.jsx); this panel stays focused on collections.
-export default function Menu({ open, onClose, onOpenWishlist, onOpenList }) {
+// Tabs hidden from the bottom bar (via Navigation settings) surface here as a
+// "More" section so every destination stays reachable.
+export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpenTab }) {
   const { items: wishItems } = useWishlist()
   const { games } = useLibraryGames()
   const statusMap = useStatusMap()
+  const nav = useNavConfig()
+  const hidden = hiddenKeys(nav)
   const { mounted, closing } = useMountTransition(open)
 
   // Live counts for each status list, from the (session-cached) library + the
@@ -87,6 +93,27 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList }) {
           <MenuItem glyph={ICONS.check} label="Finished" value={String(counts.finished)} onClick={() => openList('status:finished')} />
           <MenuItem glyph={ICONS.xcircle} label="Abandoned" value={String(counts.abandoned)} onClick={() => openList('status:abandoned')} />
         </div>
+
+        {hidden.length && onOpenTab ? (
+          <div className="menu-sec">
+            <div className="menu-sec-label">More</div>
+            {hidden.map((key) => {
+              const meta = TAB_BY_KEY[key]
+              if (!meta) return null
+              return (
+                <MenuItem
+                  key={key}
+                  glyph={cloneElement(TAB_ICONS[key], { className: 'menu-icon' })}
+                  label={meta.label}
+                  onClick={() => {
+                    onOpenTab(key)
+                    onClose()
+                  }}
+                />
+              )
+            })}
+          </div>
+        ) : null}
 
         <div className="menu-foot">GameDeck</div>
       </aside>
