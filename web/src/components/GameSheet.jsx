@@ -43,16 +43,24 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
       return undefined
     }
     let alive = true
+    let t = null
     setMedia(null)
     if (igdbId) {
       fetchGameById(igdbId)
         .then((m) => {
-          if (alive) setMedia(m)
+          if (!alive) return
+          // Apply after the ~200ms open animation settles. A cached fetch resolves
+          // almost instantly, and injecting the summary + screenshots mid-slide
+          // reflows the sheet and hitches the animation; this defers that reflow.
+          t = setTimeout(() => {
+            if (alive) setMedia(m)
+          }, 240)
         })
         .catch(() => {})
     }
     return () => {
       alive = false
+      if (t) clearTimeout(t)
     }
   }, [variant, igdbId, discoverHasMedia]) // eslint-disable-line react-hooks/exhaustive-deps
 

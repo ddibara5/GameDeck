@@ -68,6 +68,10 @@ const RAILS = [
 
 const YEARS = ['all', 2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2016, 2014, 2011]
 const PAGE_SIZE = 30
+// Cards shown per rail on the home. The full list lives behind each rail's
+// "see all" page, so a small inline preview keeps the home light (fewer mounted
+// Cover components + image requests) without losing anything.
+const RAIL_PREVIEW = 12
 const DEFAULT_FILTERS = { genre: 'all', platform: 'all', year: 'all', status: 'all', sort: 'popularity' }
 
 // In-place placeholder for a rail whose batched data hasn't landed yet. Reserves
@@ -171,7 +175,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
   useEffect(() => {
     if (!enabledRailKeys.length) return undefined
     let alive = true
-    fetchDiscoverHome(enabledRailKeys, 20)
+    fetchDiscoverHome(enabledRailKeys, RAIL_PREVIEW)
       .then((map) => {
         if (alive) setRails((prev) => ({ ...prev, ...map }))
       })
@@ -425,7 +429,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
                   </span>
                 </button>
                 <div className="shelf-row">
-                  {items.map((g) => {
+                  {items.slice(0, RAIL_PREVIEW).map((g) => {
                     const timing = releaseTiming(g.released)
                     return (
                       <div className="shelf-card-wrap" key={g.id}>
