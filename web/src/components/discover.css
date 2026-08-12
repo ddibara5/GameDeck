@@ -193,26 +193,14 @@
   pointer-events: none;
 }
 
-/* Rail titles wrap to at most two lines.
-   Reserving two lines on every card (min-height: 2.5em) kept the meta rows
-   aligned, but titles are usually one line, so nearly every card carried a dead
-   line between its title and its rating. Instead: let the flex row stretch every
-   card to the height of the tallest one, and push each card's meta to the bottom.
-   The meta rows still line up when a title wraps, and nothing is wasted when
-   none of them do. */
-/* The flex row stretches the WRAPPER (the heart's positioning context), so the
-   button has to be told to fill it before its own bottom-aligned meta can work. */
-.discover-browse .shelf-card-wrap {
-  display: flex;
-  flex-direction: column;
-}
-
-.discover-browse .shelf-card {
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-}
-
+/* Rail titles wrap to at most two lines, and the meta line follows immediately
+   underneath whether the title took one line or two.
+   Two earlier attempts both left a visible gap under short titles: reserving two
+   lines (min-height: 2.5em) did it on every card, and stretching the cards to a
+   common height did it on any card shorter than its neighbours. Both were trying
+   to keep the meta rows on one baseline across the row; that alignment is not
+   worth a skipped line under every short title, which is the thing you actually
+   notice. */
 .discover-browse .shelf-card-title {
   white-space: normal;
   display: -webkit-box;
@@ -222,10 +210,6 @@
   line-height: 1.25;
 }
 
-.discover-browse .shelf-card-meta {
-  margin-top: auto;
-  padding-top: 2px;
-}
 
 /* Release-timing token on the meta line. The rating text stays --muted; only the
    timing carries color: amber counting down, green just-released, muted recent. */
@@ -476,19 +460,7 @@ button.shelf-head:active {
   max-width: none;
   margin: 0;
 }
-/* Two-line titles in the grid (match the rail cards). Grid items already stretch
-   to the row height, so the same bottom-aligned meta works here. */
-.rail-grid .shelf-card-wrap {
-  display: flex;
-  flex-direction: column;
-}
-
-.rail-grid .shelf-card {
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-}
-
+/* Two-line titles in the grid (match the rail cards). */
 .rail-grid .shelf-card-title {
   white-space: normal;
   display: -webkit-box;
@@ -498,7 +470,3 @@ button.shelf-head:active {
   line-height: 1.25;
 }
 
-.rail-grid .shelf-card-meta {
-  margin-top: auto;
-  padding-top: 2px;
-}

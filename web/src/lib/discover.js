@@ -3,7 +3,7 @@
 // user's own library titles (so we can badge games already owned).
 
 import { supabase } from './supabase.js'
-import { swr } from './idbCache.js'
+import { swr, idbGet, idbSet } from './idbCache.js'
 
 // How long a persisted payload is served without even asking the network.
 // Discover rails are editorial-ish lists that barely move hour to hour; the Game
@@ -112,6 +112,53 @@ export async function fetchGameById(igdbId) {
     { maxAge: GAME_TTL }
   )
   return value || null
+}
+
+// IGDB caps a by-id lookup at 20 ids per request (see the api/discover ids
+// branch), so ask in chunks and merge.
+const ID_CHUNK = 20
+
+/**
+ * Batch-fetch normalized IGDB records for a set of ids, keyed by id.
+ *
+ * The wishlist rails are built from locally stored rows that only carry
+ * title/cover/year, so their cards had no countdown, no rating and no real
+ * release date - visibly different from every IGDB-backed rail beside them.
+ * This gives them the same fields the rails get. Persisted for a week: a game's
+ * release timestamp does not move, and the "in 4d" label is derived from it on
+ * each render rather than being stored.
+ */
+export async function fetchGamesByIds(ids) {
+  const list = [...new Set((ids || []).map(Number).filter(Boolean))]
+  if (!list.length) return {}
+
+  // Cached per id under the SAME key the game sheet uses, not per batch. Keying
+  // by batch would mean adding one wishlist entry reshuffles the chunk
+  // boundaries and invalidates every one of them; per id, a new entry costs a
+  // single lookup, and a game whose sheet you have already opened is free.
+  const out = {}
+  const missing = []
+  await Promise.all(
+    list.map(async (id) => {
+      const hit = await idbGet(`discover:game:${id}`)
+      if (hit && hit.value && Date.now() - hit.ts < GAME_TTL) out[id] = hit.value
+      else missing.push(id)
+    })
+  )
+  if (!missing.length) return out
+
+  const chunks = []
+  for (let i = 0; i < missing.length; i += ID_CHUNK) chunks.push(missing.slice(i, i + ID_CHUNK))
+  const fetched = await Promise.all(
+    chunks.map((chunk) => fetchDiscover({ ids: chunk.join(','), limit: chunk.length }).catch(() => []))
+  )
+  fetched.flat().forEach((g) => {
+    if (g && g.id != null) {
+      out[g.id] = g
+      idbSet(`discover:game:${g.id}`, g)
+    }
+  })
+  return out
 }
 
 // --- "In library" matching --------------------------------------------------

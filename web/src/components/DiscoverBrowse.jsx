@@ -5,7 +5,7 @@ import DiscoverRailList from './DiscoverRailList.jsx'
 import Cover from './Cover.jsx'
 import Skeleton from './Skeleton.jsx'
 import WishHeart from './WishHeart.jsx'
-import { fetchDiscover, fetchDiscoverHome, loadLibraryTitles, loadGamePass, normTitle } from '../lib/discover.js'
+import { fetchDiscover, fetchDiscoverHome, fetchGamesByIds, loadLibraryTitles, loadGamePass, normTitle } from '../lib/discover.js'
 import { releaseTiming, shelfMetaDate } from '../lib/format.js'
 import { useWishlist } from '../lib/wishlist.js'
 import { useRowsConfig, ROW_BY_KEY } from '../lib/discoverRows.js'
@@ -163,9 +163,43 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
 
   const { items: wishItems, ids: wishIds } = useWishlist()
   const rowsConfig = useRowsConfig()
+
+  // Wishlist rows are stored locally with just title/cover/year, so their cards
+  // had no countdown, no rating and no real release date while every IGDB-backed
+  // rail beside them did. Pull the same fields for them, batched and cached.
+  const [wishMeta, setWishMeta] = useState({})
+  const wishIdSig = wishItems.map((r) => r.igdb_id).join(',')
+  useEffect(() => {
+    const ids = wishItems.map((r) => r.igdb_id).filter(Boolean)
+    if (!ids.length) {
+      setWishMeta({})
+      return undefined
+    }
+    let alive = true
+    fetchGamesByIds(ids).then((m) => alive && setWishMeta(m))
+    return () => {
+      alive = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wishIdSig])
+
   const wishGames = useMemo(
-    () => wishItems.map((r) => ({ id: r.igdb_id, name: r.title, cover: r.cover, year: r.year })),
-    [wishItems]
+    () =>
+      wishItems.map((r) => {
+        const m = wishMeta[r.igdb_id]
+        // The stored row wins for title and cover (it is what the user saw when
+        // they saved it); everything else comes from IGDB once it lands.
+        return {
+          id: r.igdb_id,
+          name: r.title,
+          cover: r.cover || (m && m.cover) || null,
+          year: r.year || (m && m.year) || null,
+          rating: (m && m.rating) || null,
+          released: (m && m.released) || null,
+          release: (m && m.release) || null,
+        }
+      }),
+    [wishItems, wishMeta]
   )
 
   // Enabled IGDB rails, in the user's configured order. (Local rows - wishlist,
@@ -174,6 +208,16 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
     () => rowsConfig.order.filter((k) => rowsConfig.enabled[k] && ROW_BY_KEY[k] && ROW_BY_KEY[k].kind === 'rail'),
     [rowsConfig]
   )
+  // "Wishlist - coming soon": genuinely unreleased entries, by release timestamp
+  // now that we have one. Falls back to the year while the metadata is in flight,
+  // which is what it used to do exclusively.
+  const wishSoonGames = useMemo(() => {
+    const now = Date.now() / 1000
+    return wishGames.filter((g) =>
+      g.released ? g.released > now : Boolean(g.year && g.year >= CURRENT_YEAR)
+    )
+  }, [wishGames])
+
   const railKeySig = enabledRailKeys.join(',')
   // The active narrowing, as a stable string, so the rails refetch when it moves.
   //
@@ -454,7 +498,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
             if (!row) return null
             let items
             if (row.kind === 'wishlist') items = wishGames
-            else if (row.kind === 'wishlistSoon') items = wishGames.filter((g) => g.year && g.year >= CURRENT_YEAR)
+            else if (row.kind === 'wishlistSoon') items = wishSoonGames
             else if (row.kind === 'gamepass') items = hideFromLibrary(gamePass)
             else {
               // IGDB rail: undefined = the batched fetch hasn't resolved yet, so
