@@ -34,14 +34,30 @@
   transform: scale(1.35);
   pointer-events: none;
 }
-.shuffle-bg .cover { width: 100%; height: 100%; border-radius: 0; }
+/* Cover renders .cover-lg, which caps at 240px, forces aspect-ratio 3/4 and
+   centres itself with auto margins. Left alone, the "full-bleed" wash was really
+   a 240px box floating near the top, which blurred into a horizontal stripe.
+   Every one of those three has to be undone for this to actually fill. */
+.shuffle-bg .cover {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  aspect-ratio: auto;
+  margin: 0;
+  border-radius: 0;
+  background: none;
+}
 .shuffle-bg .cover img { width: 100%; height: 100%; object-fit: cover; }
+/* .cover falls back to the title's initial when there is no art. In a decorative
+   wash that is just a giant blurred letter. */
+.shuffle-bg .cover span { display: none; }
 .shuffle-veil {
   position: absolute;
   inset: 0;
   pointer-events: none;
   background: linear-gradient(180deg, rgba(26, 25, 23, 0.45) 0%, rgba(26, 25, 23, 0.8) 42%, var(--bg) 88%);
 }
+[data-theme='light'] .shuffle-bg { opacity: 0.2; }
 [data-theme='light'] .shuffle-veil {
   background: linear-gradient(180deg, rgba(239, 232, 221, 0.45) 0%, rgba(239, 232, 221, 0.84) 42%, var(--bg) 88%);
 }
@@ -146,12 +162,21 @@
 .shuffle-seg button.on b { color: var(--accent); }
 
 .shuffle-filters { flex: none; }
+/* One scrolling line per group, the same pattern as Discover's .preset-row.
+   Wrapping produced six ragged lines with orphans ("Under 15h" alone, "Adventure"
+   alone), which is what made this read as cluttered. Rows bleed to the screen
+   edges so a scrolled chip is not clipped inside the padding. */
 .shuffle-chips {
   display: flex;
-  gap: 5px;
-  flex-wrap: wrap;
-  margin-bottom: 7px;
+  gap: 6px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  margin: 0 -16px 6px;
+  padding: 0 16px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
+.shuffle-chips::-webkit-scrollbar { display: none; }
 .sfchip {
   border: 1px solid var(--line);
   background: var(--bg);
@@ -165,6 +190,8 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  flex: 0 0 auto;
+  white-space: nowrap;
   -webkit-tap-highlight-color: transparent;
 }
 .sfchip.on {
@@ -182,6 +209,11 @@
 }
 .sfdot { width: 6px; height: 6px; border-radius: 50%; flex: none; }
 
+/* Swipe either way to skip to another title, right to step back to one you have
+   already seen. pan-y keeps vertical scrolling of the page itself intact; the
+   handler resolves the axis, this stops the browser claiming the gesture first.
+   The transition only ever runs on release, since .dragging removes it while a
+   finger is down and the card must track that finger exactly. */
 .shuffle-stage {
   flex: 1;
   display: flex;
@@ -191,7 +223,10 @@
   text-align: center;
   min-height: 0;
   padding: 8px 0 4px;
+  touch-action: pan-y;
+  transition: transform 0.16s var(--exit-ease), opacity 0.16s var(--exit-ease);
 }
+.shuffle-stage.dragging { transition: none; }
 .shuffle-cover {
   width: 168px;
   border: none;
@@ -209,7 +244,6 @@
   box-shadow: 0 20px 44px rgba(0, 0, 0, 0.55);
 }
 .shuffle-cover .cover img { width: 100%; height: 100%; object-fit: cover; }
-.shuffle-cover.rolling .cover { box-shadow: 0 0 0 2px rgba(200, 169, 126, 0.7), 0 20px 44px rgba(0, 0, 0, 0.55); }
 
 .shuffle-badges {
   display: flex;
@@ -302,7 +336,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .shuffle-page, .shuffle-page.closing { animation: none; }
-  .shuffle-cover.rolling .cover { box-shadow: 0 20px 44px rgba(0, 0, 0, 0.55); }
+  .shuffle-stage { transition: none; }
 }
 
 /* The header die (.header-actions / .dice-btn / .dice-glyph) is styled in

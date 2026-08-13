@@ -15,15 +15,14 @@ import {
 } from '../lib/shuffle.js'
 import './shuffle.css'
 
-// How many covers flick past before the roll settles. Not a loading state - the
-// data is already in memory - so it is deliberately short.
-const CYCLE_FRAMES = 8
-const CYCLE_MS = 70
-
-const prefersReducedMotion = () =>
-  typeof window !== 'undefined' &&
-  window.matchMedia &&
-  window.matchMedia('(prefers-reduced-motion: reduce)').matches
+// Horizontal travel before a drag counts as a swipe rather than a stray finger.
+const SWIPE_PX = 56
+// Below this the gesture has not committed to an axis yet, so vertical scrolling
+// through the filters still wins.
+const AXIS_PX = 8
+// The edge-back gesture owns this strip. Starting a card swipe inside it would
+// fire both, so the card simply ignores touches that begin there.
+const EDGE_PX = 24
 
 function coverSrc(item, mode) {
   if (mode === 'buy') return item.cover || null
@@ -51,11 +50,17 @@ export default function ShufflePicker({ open, onClose }) {
   const [snoozeMap, setSnoozeMap] = useState(() => loadSnooze())
   const [rerolls, setRerolls] = useState(REROLL_BUDGET)
   const [result, setResult] = useState(null)
-  const [flicker, setFlicker] = useState(null)
   // The picked game's sheet, rendered from here so "Open" reuses the same detail
   // view every other surface uses rather than inventing a second one.
   const [sheet, setSheet] = useState(null)
-  const timer = useRef(null)
+
+  // Every pick this session, so a swipe back can return to one you skipped past.
+  // A ref rather than state: nothing renders off it directly, `result` already
+  // drives the view, and keeping it out of state avoids a second render per roll.
+  const deck = useRef({ list: [], at: -1 })
+  // Live horizontal offset of the card while a finger is down.
+  const [dx, setDx] = useState(0)
+  const drag = useRef(null)
 
   useEffect(() => (open ? lockScroll() : undefined), [open])
   // Suppressed while the game sheet is up so a back-swipe closes that first.
@@ -73,8 +78,6 @@ export default function ShufflePicker({ open, onClose }) {
       alive = false
     }
   }, [])
-
-  useEffect(() => () => clearInterval(timer.current), [])
 
   const items = mode === 'buy' ? wishItems : games
   const filters = useMemo(
@@ -97,37 +100,36 @@ export default function ShufflePicker({ open, onClose }) {
     return out
   }, [items, mode, pools, filters, gamePass])
 
-  function roll(nextResult) {
-    clearInterval(timer.current)
-    const outcome = nextResult !== undefined ? nextResult : shuffle({
+  // `reset` starts a fresh deck: the question itself changed, so the earlier picks
+  // answered a different one and are not worth swiping back to.
+  function roll(reset) {
+    const d = deck.current
+    const current = d.at >= 0 ? d.list[d.at] : null
+    const outcome = shuffle({
       items, mode, pool, filters, gamePass, snoozeMap,
-      exclude: result && result.pick ? shuffleId(result.pick, mode) : null,
+      exclude: !reset && current && current.pick ? shuffleId(current.pick, mode) : null,
       boost,
     })
-    if (prefersReducedMotion() || !outcome.pick) {
-      setFlicker(null)
-      setResult(outcome)
-      return
-    }
-    const bag = items.length ? items : []
-    let n = 0
-    timer.current = setInterval(() => {
-      setFlicker(bag[Math.floor(Math.random() * bag.length)] || null)
-      if (++n >= CYCLE_FRAMES) {
-        clearInterval(timer.current)
-        setFlicker(null)
-        setResult(outcome)
-      }
-    }, CYCLE_MS)
+    // Rolling from the middle of the deck drops whatever was ahead, the same way
+    // a browser drops forward history once you navigate somewhere new.
+    const list = reset ? [outcome] : [...d.list.slice(0, d.at + 1), outcome]
+    deck.current = { list, at: list.length - 1 }
+    setResult(outcome)
   }
 
   // Roll on open, and again whenever the shape of the question changes. Landing
   // on a stale pick after switching pools would misrepresent the new filter.
+  //
+  // gamePass is deliberately NOT a dependency. It arrives a moment after open, and
+  // re-rolling on it made the first pick visibly swap itself out for another one.
+  // It only ever changes the odds, never the eligible set, so the pick made before
+  // it landed is still valid; its badges fill in on the next render, and every
+  // reroll from then on is weighted.
   useEffect(() => {
     if (!open) return
-    roll()
+    roll(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, mode, pool, platform, genre, vibe, maxMinutes, boost, gamePass, items.length])
+  }, [open, mode, pool, platform, genre, vibe, maxMinutes, boost, items.length])
 
   useEffect(() => {
     if (!open) return
@@ -148,19 +150,70 @@ export default function ShufflePicker({ open, onClose }) {
   function handleReroll() {
     if (rerolls <= 0) return
     setRerolls((n) => n - 1)
-    roll()
+    roll(false)
   }
 
   function handleSnooze() {
     const pick = result && result.pick
     if (pick) setSnoozeMap((m) => addSnooze(m, shuffleId(pick, mode)))
-    roll()
+    roll(false)
+  }
+
+  // Stepping through the deck costs nothing; only a genuinely new roll spends from
+  // the budget. Re-reading something you already saw is not a reroll.
+  function stepTo(at) {
+    deck.current = { list: deck.current.list, at }
+    setResult(deck.current.list[at])
+  }
+
+  function goForward() {
+    const d = deck.current
+    if (d.at < d.list.length - 1) stepTo(d.at + 1)
+    else handleReroll()
+  }
+
+  function goBack() {
+    const d = deck.current
+    // Nothing behind the first pick, so a right swipe there just skips onward -
+    // both directions have to do something or the gesture reads as broken.
+    if (d.at <= 0) return false
+    stepTo(d.at - 1)
+    return true
+  }
+
+  function onTouchStart(e) {
+    const t = e.touches && e.touches[0]
+    if (!t || t.clientX <= EDGE_PX) return
+    drag.current = { x: t.clientX, y: t.clientY, axis: null, dx: 0 }
+  }
+
+  function onTouchMove(e) {
+    const d = drag.current
+    const t = e.touches && e.touches[0]
+    if (!d || !t) return
+    const moveX = t.clientX - d.x
+    const moveY = t.clientY - d.y
+    if (!d.axis) {
+      if (Math.abs(moveX) < AXIS_PX && Math.abs(moveY) < AXIS_PX) return
+      d.axis = Math.abs(moveX) > Math.abs(moveY) ? 'x' : 'y'
+    }
+    if (d.axis !== 'x') return
+    d.dx = moveX
+    setDx(moveX)
+  }
+
+  function onTouchEnd() {
+    const d = drag.current
+    drag.current = null
+    setDx(0)
+    if (!d || d.axis !== 'x' || Math.abs(d.dx) < SWIPE_PX) return
+    if (d.dx < 0) goForward()
+    else if (!goBack()) goForward()
   }
 
   if (!open) return null
 
   const pick = result && result.pick
-  const shown = flicker || pick
   const gp = pick && gamePass ? gamePass.get(Number(pick.igdb_id)) : null
   const dayDelta = mode === 'buy' && pick ? releaseDayDelta(pick.released) : null
 
@@ -181,9 +234,9 @@ export default function ShufflePicker({ open, onClose }) {
 
   return createPortal(
     <div className={`shuffle-page${closing ? ' closing' : ''}`}>
-      {shown ? (
+      {pick ? (
         <div className="shuffle-bg" aria-hidden="true">
-          <Cover src={coverSrc(shown, mode)} title="" size="lg" />
+          <Cover src={coverSrc(pick, mode)} title="" size="lg" />
         </div>
       ) : null}
       <div className="shuffle-veil" aria-hidden="true" />
@@ -266,15 +319,22 @@ export default function ShufflePicker({ open, onClose }) {
           </div>
         </div>
 
-        <div className="shuffle-stage">
-          {shown ? (
+        <div
+          className={`shuffle-stage${dx ? ' dragging' : ''}`}
+          style={dx ? { transform: `translateX(${dx}px)`, opacity: 1 - Math.min(Math.abs(dx) / 320, 0.45) } : undefined}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          onTouchCancel={onTouchEnd}
+        >
+          {pick ? (
             <button
               type="button"
-              className={`shuffle-cover${flicker ? ' rolling' : ''}`}
+              className="shuffle-cover"
               onClick={() => pick && setSheet(pick)}
-              aria-label={`Open ${titleOf(shown, mode)}`}
+              aria-label={`Open ${titleOf(pick, mode)}`}
             >
-              <Cover src={coverSrc(shown, mode)} title={titleOf(shown, mode)} size="lg" />
+              <Cover src={coverSrc(pick, mode)} title={titleOf(pick, mode)} size="lg" />
             </button>
           ) : (
             <div className="shuffle-empty">
@@ -283,7 +343,7 @@ export default function ShufflePicker({ open, onClose }) {
             </div>
           )}
 
-          {pick && !flicker ? (
+          {pick ? (
             <>
               <div className="shuffle-badges">
                 {gp && !gp.leaving_soon ? <span className="shuffle-badge gp">On Game Pass</span> : null}

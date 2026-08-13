@@ -14,8 +14,11 @@ const BASE_COLUMNS =
   'master_id, environment, title, platforms, earned_awards, total_awards, percent, ' +
   'earned_points, earned_exp, playtime_minutes, playtime_label, status, beaten, ' +
   'last_played, first_played, completion_date, cover_small, cover_standard, cover_tile, ' +
-  'achievements_url, updated_at, length_minutes, genre, release_year, cover_igdb'
+  'achievements_url, updated_at, length_minutes, genre, release_year, cover_igdb, igdb_id'
 
+// igdb_id is in BASE_COLUMNS, not the optional tail: the shuffler joins library rows
+// to the Game Pass catalog on it, and without it every library game looks un-covered,
+// so the "favour Game Pass" weighting and its badges silently do nothing.
 // keywords powers the shuffler's soulslike-style filters; games.genre holds a single
 // IGDB genre and cannot express them.
 // igdb_rating is added by a later migration + populated by the IGDB enrich. Select
