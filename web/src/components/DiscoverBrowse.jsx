@@ -708,6 +708,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
                     : undefined
           }
           isOwned={isOwned}
+          hideOwned={hideOwned}
           wishIds={wishIds}
           onClose={() => setOpenRail(null)}
           onAsk={(g) => {

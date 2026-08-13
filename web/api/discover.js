@@ -96,7 +96,18 @@ function railClauses(rail, nowTs) {
         where: [
           `first_release_date <= ${nowTs}`,
           `first_release_date > ${nowTs - 120 * 86400}`,
-          'total_rating_count >= 3',
+          // This floor is the OTHER HALF of coming_soon's `hypes >= 3`, and the two
+          // must stay in sync: coming_soon selects on hype, so a game that leaves it
+          // at midnight has to be admitted here on the same signal or it lands
+          // nowhere. A ratings-only floor did exactly that. Ratings take days or
+          // weeks to accumulate, so every just-released game fell into a dead zone
+          // between the rails: measured 13 Aug 2026, only 8 of the newest 1000
+          // releases cleared `total_rating_count >= 3`, and the rail's front edge
+          // sat 8 days in the past. `hypes` is a pre-release follow count that
+          // PERSISTS after launch (193 of those 1000 still carried a non-zero
+          // value), which is what makes it usable on both sides of the boundary.
+          // Duskfade released with hypes 23 and 0 ratings; it now qualifies on day 0.
+          '(total_rating_count >= 3 | hypes >= 3)',
           NO_ALT_EDITIONS,
           NO_ADDONS,
         ],

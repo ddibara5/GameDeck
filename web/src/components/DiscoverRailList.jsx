@@ -37,7 +37,7 @@ function sortLocal(items, key) {
   return a
 }
 
-export default function DiscoverRailList({ row, seedItems, isOwned, wishIds, onClose, onAsk, onMoreLikeThis, filters }) {
+export default function DiscoverRailList({ row, seedItems, isOwned, hideOwned, wishIds, onClose, onAsk, onMoreLikeThis, filters }) {
   const { closing, requestClose } = useDelayedClose(onClose)
   const isRail = row.kind === 'rail'
 
@@ -110,7 +110,15 @@ export default function DiscoverRailList({ row, seedItems, isOwned, wishIds, onC
   }
 
   const localSorted = useMemo(() => (isRail ? [] : sortLocal(seedItems, sort)), [isRail, seedItems, sort])
-  const items = isRail ? rows : localSorted.slice(0, localCount)
+  // The hide-in-library toggle has to be applied HERE too, not just on the home.
+  // Local rows (wishlist, Game Pass) arrive pre-filtered through seedItems, but an
+  // IGDB rail is fetched fresh by this component, so with the toggle on the shelf
+  // dropped owned games and the page you opened from it put them straight back.
+  const visibleRows = useMemo(
+    () => (hideOwned ? rows.filter((g) => !isOwned(g.name)) : rows),
+    [hideOwned, rows, isOwned]
+  )
+  const items = isRail ? visibleRows : localSorted.slice(0, localCount)
   const moreAvailable = isRail ? hasMore : localCount < localSorted.length
 
   const count = isRail ? `${items.length}${hasMore ? '+' : ''} games` : `${localSorted.length} games`
