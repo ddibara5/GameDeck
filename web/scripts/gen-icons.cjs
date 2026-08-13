@@ -6,7 +6,8 @@
 //   icon-{120,152,167,180,192,512,1024}.png        dark graphite tile (home screen)
 //   icon-{120,152,167,180,192,512}-light.png        porcelain tile (light mode)
 //   favicon-16.png favicon-32.png favicon.ico        rounded, dark
-//   icon.svg                                         adaptive vector (dark/light)
+//   icon.svg                                         adaptive vector (browser favicon)
+//   icon-light.svg                                   porcelain vector (web manifest)
 //
 // Run with: node scripts/gen-icons.cjs
 'use strict';
@@ -177,7 +178,14 @@ function encodeIco(entries) {
   return Buffer.concat([header, dir, ...bodies]);
 }
 
-// --- adaptive SVG ----------------------------------------------------------
+// --- SVG -------------------------------------------------------------------
+// Two variants on purpose:
+//   icon.svg        adaptive, for the browser favicon, where following the
+//                   reader's appearance is right
+//   icon-light.svg  porcelain always, for the web manifest, which is an INSTALL
+//                   icon. An adaptive SVG there resolves to graphite at install
+//                   time for a dark-mode user, which is the dark tile we were
+//                   trying to get rid of.
 function buildSvg() {
   // Round on the way out. MARK_SCALE is fractional, so raw coordinates serialise as
   // 123.83999999999997 and the file churns on every regeneration for no visual gain.
@@ -190,6 +198,17 @@ function buildSvg() {
     @media (prefers-color-scheme: light){ .bg{fill:${PORCELAIN}} }
   </style>
   <rect class="bg" width="512" height="512" rx="114" ry="114"/>
+  <g>${marks}</g>
+</svg>
+`;
+}
+
+function buildLightSvg() {
+  const n = (v) => String(Math.round(v * 100) / 100);
+  const poly = (pts, fill) => `<polygon points="${pts.map((p) => p.map(n).join(',')).join(' ')}" fill="${fill}"/>`;
+  const marks = scenePolys(MARK_LIGHT).map((p) => poly(p.pts, p.color)).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="GameDeck">
+  <rect fill="${PORCELAIN}" width="512" height="512" rx="114" ry="114"/>
   <g>${marks}</g>
 </svg>
 `;
@@ -215,6 +234,8 @@ function main() {
 
   fs.writeFileSync(path.join(outDir, 'icon.svg'), buildSvg());
   console.log('wrote icon.svg');
+  fs.writeFileSync(path.join(outDir, 'icon-light.svg'), buildLightSvg());
+  console.log('wrote icon-light.svg');
 }
 
 main();
