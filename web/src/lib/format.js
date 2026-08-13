@@ -48,6 +48,38 @@ export function formatRelativeDay(value) {
 }
 
 /**
+ * Whole days between today and an IGDB first_release_date (unix SECONDS).
+ * Negative = already out, 0 = out today, positive = still to come.
+ * Returns null when there is no usable timestamp.
+ *
+ * This is the single date basis every release-aware surface shares: the card
+ * label, the "coming soon" predicate, and the wishlist rails. They used to each
+ * roll their own, which is how one game could be counted as unreleased by a rail
+ * and labelled "Today" by the card sitting inside it.
+ *
+ * Dates are compared as CALENDAR DATES, not as instants. IGDB stores
+ * first_release_date as UTC midnight, which means "this calendar day", not "this
+ * moment". Comparing it against a raw Date.now() made a game releasing today read
+ * "in 1h" in upcoming amber until UTC midnight passed, because the diff >= 0
+ * branch won at the boundary. It also put the released/upcoming flip at UTC
+ * midnight rather than the reader's own, which is up to 14 hours out.
+ */
+export function releaseDayDelta(released) {
+  const ts = Number(released)
+  if (!ts) return null
+
+  // The game's date, read in UTC (the timezone IGDB stamped it in).
+  const g = new Date(ts * 1000)
+  if (Number.isNaN(g.getTime())) return null
+  const gameDay = Date.UTC(g.getUTCFullYear(), g.getUTCMonth(), g.getUTCDate())
+  // Today, read in the reader's own timezone.
+  const n = new Date()
+  const today = Date.UTC(n.getFullYear(), n.getMonth(), n.getDate())
+
+  return Math.round((gameDay - today) / 86400000)
+}
+
+/**
  * Compact release timing for Discover cards, from an IGDB first_release_date
  * (unix SECONDS). Returns { label, tone } only when a game is near its release,
  * so older catalog rows show nothing (and fall back to just the rating).
@@ -59,26 +91,10 @@ export function formatRelativeDay(value) {
  * The backward window matches the "Recently released" rail, which selects games
  * from the last 120 days. It used to stop at 30, so most of that rail carried no
  * timing at all - the one place a "3w ago" is most worth reading.
- *
- * Dates are compared as CALENDAR DATES, not as instants. IGDB stores
- * first_release_date as UTC midnight, which means "this calendar day", not "this
- * moment". Comparing it against a raw Date.now() made a game releasing today read
- * "in 1h" in upcoming amber until UTC midnight passed, because the diff >= 0
- * branch won at the boundary. It also put the released/upcoming flip at UTC
- * midnight rather than the reader's own, which is up to 14 hours out.
  */
 export function releaseTiming(released) {
-  const ts = Number(released)
-  if (!ts) return null
-
-  // The game's date, read in UTC (the timezone IGDB stamped it in).
-  const g = new Date(ts * 1000)
-  const gameDay = Date.UTC(g.getUTCFullYear(), g.getUTCMonth(), g.getUTCDate())
-  // Today, read in the reader's own timezone.
-  const n = new Date()
-  const today = Date.UTC(n.getFullYear(), n.getMonth(), n.getDate())
-
-  const days = Math.round((gameDay - today) / 86400000)
+  const days = releaseDayDelta(released)
+  if (days === null) return null
   if (Math.abs(days) > 120) return null
 
   if (days === 0) return { label: 'Today', tone: 'fresh' }
