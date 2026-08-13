@@ -365,6 +365,34 @@ export default async function handler(req, res) {
   }
   try {
     const q = req.query || {};
+
+    // Keyword id lookup, for adding entries to PRESETS. PRESETS filters by IGDB
+    // keyword ID, and a guessed id fails silently: it returns games, just the
+    // wrong ones. This resolves names to ids from IGDB itself so a preset is
+    // never added on a hunch.
+    //   /api/discover?keywordLookup=open world,stealth,horror
+    if (q.keywordLookup) {
+      const names = String(q.keywordLookup)
+        .split(',')
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean)
+        .slice(0, 12);
+      const out = {};
+      for (const name of names) {
+        const esc = name.replace(/"/g, '');
+        // Exact match first, then a contains search, so "horror" reports both the
+        // plain keyword and things like "survival horror" rather than hiding them.
+        const rows = await igdb(
+          'keywords',
+          `fields id,name,slug; where name = "${esc}" | name ~ *"${esc}"*; limit 25; sort name asc;`
+        );
+        out[name] = (rows || []).map((r) => ({ id: r.id, name: r.name, slug: r.slug }));
+      }
+      res.setHeader('Cache-Control', 'no-store');
+      res.status(200).json({ keywordLookup: out });
+      return;
+    }
+
     const page = Math.max(0, parseInt(q.page, 10) || 0);
     const limit = Math.min(40, parseInt(q.limit, 10) || 30);
     const offset = page * limit;
