@@ -357,7 +357,20 @@ export default async function handler(req, res) {
     const page = Math.max(0, parseInt(q.page, 10) || 0);
     const limit = Math.min(40, parseInt(q.limit, 10) || 30);
     const offset = page * limit;
-    const nowTs = Math.floor(Date.now() / 1000);
+    // Day-aligned "now". IGDB stamps first_release_date at UTC MIDNIGHT, so it
+    // encodes a calendar day, not a moment. Comparing it against a mid-day
+    // Date.now() made every window ragged: `> nowTs - 120*86400` cut the
+    // "Recently released" pool at whatever hour the request happened to land on,
+    // so a game released exactly 120 days ago was in the rail in the morning and
+    // out of it in the afternoon. Anchoring to UTC midnight makes the boundaries
+    // whole days, and matches releaseDayDelta() on the client so a card's label
+    // and the rail that selected it can no longer disagree.
+    // Kept the name `nowTs` because it is threaded through railClauses /
+    // filterClauses / railBody / applyRerank as a parameter; only the basis moved.
+    const today = new Date();
+    const nowTs = Math.floor(
+      Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()) / 1000
+    );
 
     // Direct by-id lookup (used by the game sheet to enrich owned/wishlisted games
     // with the same summary + screenshots Discover shows). Bypasses rails/filters.

@@ -6,11 +6,33 @@ import Cover from './Cover.jsx'
 import Skeleton from './Skeleton.jsx'
 import WishHeart from './WishHeart.jsx'
 import { fetchDiscover, fetchDiscoverHome, fetchGamesByIds, loadLibraryTitles, loadGamePass, normTitle } from '../lib/discover.js'
-import { releaseTiming, shelfMetaDate } from '../lib/format.js'
+import { releaseDayDelta, releaseTiming, shelfMetaDate } from '../lib/format.js'
 import { useWishlist } from '../lib/wishlist.js'
 import { useRowsConfig, ROW_BY_KEY } from '../lib/discoverRows.js'
 
 const CURRENT_YEAR = new Date().getFullYear()
+
+// How long a wishlisted game stays on "Wishlist - out now" after release.
+const OUT_NOW_WINDOW_DAYS = 30
+
+// One definition of "not out yet", shared by the shelf and its see-all page.
+// The year fallback only applies while IGDB metadata is still in flight; a row
+// with a real timestamp is judged on that alone. The old year test on its own
+// was the Duskfade bug: a wishlist row whose `released` never got refreshed fell
+// through to `year >= CURRENT_YEAR` and sat in "coming soon" on release day.
+const isComingSoon = (g) => {
+  const d = releaseDayDelta(g.released)
+  if (d === null) return Boolean(g.year && g.year >= CURRENT_YEAR)
+  return d > 0
+}
+
+// Out, but recently enough that "finally" still applies. No year fallback here
+// on purpose: without a timestamp we cannot tell last week from last decade, and
+// guessing would fill this row with the back catalog.
+const isOutNow = (g) => {
+  const d = releaseDayDelta(g.released)
+  return d !== null && d <= 0 && d >= -OUT_NOW_WINDOW_DAYS
+}
 
 // Quick-access chips tuned to Dave's genre play history (no developer filters).
 // Each chip resolves to either an IGDB keyword/genre preset (server `preset=`)
@@ -211,12 +233,11 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
   // "Wishlist - coming soon": genuinely unreleased entries, by release timestamp
   // now that we have one. Falls back to the year while the metadata is in flight,
   // which is what it used to do exclusively.
-  const wishSoonGames = useMemo(() => {
-    const now = Date.now() / 1000
-    return wishGames.filter((g) =>
-      g.released ? g.released > now : Boolean(g.year && g.year >= CURRENT_YEAR)
-    )
-  }, [wishGames])
+  const wishSoonGames = useMemo(() => wishGames.filter(isComingSoon), [wishGames])
+  // "Wishlist - out now": the other side of the same boundary. Owned games drop
+  // out under the hide-owned toggle, since a game already in the library is no
+  // longer one you are waiting for.
+  const wishOutNowGames = useMemo(() => wishGames.filter(isOutNow), [wishGames])
 
   const railKeySig = enabledRailKeys.join(',')
   // The active narrowing, as a stable string, so the rails refetch when it moves.
@@ -499,6 +520,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
             let items
             if (row.kind === 'wishlist') items = wishGames
             else if (row.kind === 'wishlistSoon') items = wishSoonGames
+            else if (row.kind === 'wishlistOutNow') items = hideFromLibrary(wishOutNowGames)
             else if (row.kind === 'gamepass') items = hideFromLibrary(gamePass)
             else {
               // IGDB rail: undefined = the batched fetch hasn't resolved yet, so
@@ -678,10 +700,12 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
             openRail.kind === 'wishlist'
               ? wishGames
               : openRail.kind === 'wishlistSoon'
-                ? wishGames.filter((g) => g.year && g.year >= CURRENT_YEAR)
-                : openRail.kind === 'gamepass'
-                  ? hideFromLibrary(gamePass)
-                  : undefined
+                ? wishSoonGames
+                : openRail.kind === 'wishlistOutNow'
+                  ? hideFromLibrary(wishOutNowGames)
+                  : openRail.kind === 'gamepass'
+                    ? hideFromLibrary(gamePass)
+                    : undefined
           }
           isOwned={isOwned}
           wishIds={wishIds}

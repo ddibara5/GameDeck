@@ -8,9 +8,17 @@ const KEY = 'gamedeck_discover_rows_v1'
 const EVENT = 'gd-discover-rows-change'
 
 // kind:
-//   'wishlist'     -> the user's wishlist shelf
-//   'wishlistSoon' -> wishlisted games with an upcoming release
-//   'rail'         -> an IGDB rail fetched by `key` (see /api/discover?rail=)
+//   'wishlist'       -> the user's wishlist shelf
+//   'wishlistSoon'   -> wishlisted games with an upcoming release
+//   'wishlistOutNow' -> wishlisted games that came out in the last 30 days
+//   'rail'           -> an IGDB rail fetched by `key` (see /api/discover?rail=)
+//
+// The two wishlist timing rows exist because the IGDB rails are DISCOVERY
+// surfaces: they are filtered on hype and rating floors precisely to keep the
+// daily storefront dump out. Exempting wishlisted ids from those floors would
+// mean a second query per rail and would degrade what the rails are for. The
+// actual gap was never "my game is missing from Coming soon" - it was that
+// nothing said "a game you were waiting for is out". This row says it.
 export const ROW_CATALOG = [
   { key: 'wishlist', label: 'Your wishlist', kind: 'wishlist' },
   { key: 'popular', label: 'Popular right now', kind: 'rail' },
@@ -22,6 +30,7 @@ export const ROW_CATALOG = [
   { key: 'hidden_gems', label: 'Hidden gems', sub: 'Great, under the radar', kind: 'rail' },
   { key: 'gamepass', label: 'On Game Pass', sub: 'Your Xbox subscription catalog', kind: 'gamepass' },
   { key: 'wishlist_soon', label: 'Wishlist - coming soon', sub: 'Saved games releasing soon', kind: 'wishlistSoon' },
+  { key: 'wishlist_out_now', label: 'Wishlist - out now', sub: 'Games you were waiting for', kind: 'wishlistOutNow' },
 ]
 
 export const ROW_BY_KEY = ROW_CATALOG.reduce((m, r) => ((m[r.key] = r), m), {})
