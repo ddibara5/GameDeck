@@ -1,0 +1,171 @@
+/* Activity tab. Moved out of index.css when the timeline gained a rail, a week
+   header and per-row progress: ActivityTab is the only consumer of every class in
+   here and it is lazy-loaded, so this ships with its chunk. Nothing another
+   surface paints on first load may be defined in this file. */
+
+.activity-group-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 18px 16px 8px;
+}
+
+/* ------------------------------------------------------------- week header */
+
+.wk {
+  margin: 6px 16px 4px;
+  padding: 14px 15px 13px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.wk-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.wk-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.wk-trend { font-size: 11.5px; color: var(--muted); }
+.wk-stats { display: flex; gap: 6px; }
+.wk-stat { flex: 1; min-width: 0; }
+.wk-val { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+.wk-val .u { font-size: 12px; font-weight: 600; color: var(--muted); margin-left: 1px; }
+.wk-key { font-size: 10.5px; color: var(--muted); margin-top: 3px; }
+
+.wk-days { display: flex; gap: 4px; margin-top: 13px; }
+.wk-day { flex: 1; text-align: center; min-width: 0; }
+.wk-bar {
+  height: 30px;
+  border-radius: 5px;
+  background: var(--surface-2);
+  position: relative;
+  overflow: hidden;
+}
+.wk-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--accent);
+  border-radius: 5px;
+}
+.wk-dname { font-size: 9.5px; color: var(--muted); margin-top: 4px; }
+.wk-day.today .wk-dname { color: var(--accent); font-weight: 700; }
+
+/* ---------------------------------------------------------------- timeline */
+
+/* One gutter, one rail, drawn once per day group. Every node centres on it:
+   21 + 1 = 22 = 16 + 6. Drawing a rail per row as well put two lines side by side. */
+.tl { position: relative; }
+.tl::before {
+  content: '';
+  position: absolute;
+  left: 21px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--line);
+}
+
+.activity-row {
+  position: relative;
+  display: flex;
+  gap: 11px;
+  width: 100%;
+  padding: 9px 16px 9px 34px;
+  text-align: left;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.activity-row + .activity-row { border-top: 1px solid var(--line); }
+.activity-row:active { background: rgba(255, 255, 255, 0.03); }
+[data-theme='light'] .activity-row:active { background: rgba(0, 0, 0, 0.03); }
+/* A row whose game is no longer in the library has nothing to open. It still
+   renders, it just stops pretending to be a button. */
+.activity-row.flat { cursor: default; }
+
+.activity-node {
+  position: absolute;
+  left: 16px;
+  top: 22px;
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 2px solid var(--line);
+  z-index: 2;
+}
+.activity-row.cont .activity-node { background: var(--accent); border-color: var(--accent); }
+
+.activity-row .cover { width: 46px; height: 61px; border-radius: 7px; flex: none; }
+
+.activity-body { flex: 1; min-width: 0; }
+.activity-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 2px; }
+.activity-title {
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.activity-mins { margin-left: auto; font-size: 14px; font-weight: 700; white-space: nowrap; flex: none; }
+.activity-mins .u { font-size: 10.5px; color: var(--muted); font-weight: 600; }
+
+.activity-detail {
+  font-size: 11.5px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 7px;
+}
+.activity-sep { opacity: 0.45; }
+
+/* "Day N" of an unbroken run. Deliberately a chip rather than a merged card: the
+   daily timeline is the point of this tab, so continuity is annotated, not collapsed. */
+.activity-chip {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 2px 6px;
+  border-radius: 999px;
+  flex: none;
+  background: rgba(200, 169, 126, 0.16);
+  color: var(--accent);
+}
+[data-theme='light'] .activity-chip { background: rgba(156, 116, 73, 0.15); }
+
+/* Completion the day actually moved. The walnut segment is where the day started,
+   the accent segment is what it added, so a 2 -> 9 day reads differently from a
+   9 -> 12 day. Both come from percent_after; nothing here is a second copy of the
+   lifetime total, which the Library already owns. */
+.activity-arc { display: flex; align-items: center; gap: 8px; }
+.arc-track {
+  flex: 1;
+  height: 4px;
+  border-radius: 3px;
+  background: var(--surface-2);
+  position: relative;
+  overflow: hidden;
+}
+.arc-base { position: absolute; top: 0; bottom: 0; left: 0; background: var(--walnut); }
+.arc-gain { position: absolute; top: 0; bottom: 0; background: var(--accent); }
+.arc-txt { font-size: 10.5px; color: var(--muted); white-space: nowrap; flex: none; }
+.arc-txt b { color: var(--accent); font-weight: 700; }
