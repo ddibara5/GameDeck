@@ -14,12 +14,34 @@ export function minutesToHhm(mins) {
 }
 
 /**
+ * Parse a value that may be either a CALENDAR DAY or an INSTANT.
+ *
+ * A bare `YYYY-MM-DD` (what Postgres `date` columns like `play_events.event_date`
+ * return) means a day, not a moment. `new Date('2026-08-12')` parses it as UTC
+ * midnight, and every reader west of UTC then formats that with local getters and
+ * gets the evening of the 11th. That is why the whole Activity feed rendered one
+ * day early: a session logged on the 12th showed as "Aug 11", and "Today" could
+ * never appear at all. Building the Date from the components instead pins it to
+ * local midnight on the day the string actually names.
+ *
+ * Anything carrying a time (a timestamptz such as `last_played`) is a real
+ * instant and is parsed normally, so it still renders in the reader's zone.
+ */
+function parseDayOrInstant(value) {
+  if (typeof value === 'string') {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+    if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  }
+  return new Date(value)
+}
+
+/**
  * Format an ISO date/timestamp string as "Aug 5, 2026".
  * Returns a fallback string for null/invalid input.
  */
 export function formatDate(value, fallback = 'Never played') {
   if (!value) return fallback
-  const date = new Date(value)
+  const date = parseDayOrInstant(value)
   if (Number.isNaN(date.getTime())) return fallback
   return date.toLocaleDateString('en-US', {
     month: 'short',
@@ -34,7 +56,7 @@ export function formatDate(value, fallback = 'Never played') {
  */
 export function formatRelativeDay(value) {
   if (!value) return 'Unknown date'
-  const date = new Date(value)
+  const date = parseDayOrInstant(value)
   if (Number.isNaN(date.getTime())) return 'Unknown date'
 
   const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate())
@@ -44,7 +66,9 @@ export function formatRelativeDay(value) {
 
   if (diffDays === 0) return 'Today'
   if (diffDays === 1) return 'Yesterday'
-  return formatDate(value)
+  // Pass the parsed Date, not the raw string: re-parsing would reintroduce the
+  // UTC-midnight shift this function just corrected for.
+  return formatDate(date)
 }
 
 /**
