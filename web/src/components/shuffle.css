@@ -188,20 +188,29 @@
    The transition only ever runs on release, since .dragging removes it while a
    finger is down and the card must track that finger exactly. */
 .shuffle-stage {
-  flex: 1;
+  /* Grow to fill and centre, but never SHRINK below the content. With flex: 1 the
+     stage compressed on a short screen and the why line printed straight through
+     the buttons; refusing to shrink makes .shuffle-in (overflow-y: auto) scroll
+     instead, so the worst case is a short scroll rather than a collision. */
+  flex: 1 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  min-height: 0;
   padding: 8px 0 4px;
   touch-action: pan-y;
   transition: transform 0.16s var(--exit-ease), opacity 0.16s var(--exit-ease);
 }
 .shuffle-stage.dragging { transition: none; }
+/* The cover is the point of this screen, so it takes as much width as it can get.
+   Capped against viewport HEIGHT as well as an absolute maximum: at 3/4 aspect a
+   fixed width taller than about half the screen pushes the title, meta and why
+   line below the fold on a short phone. 32vh wide is ~43vh tall, measured to clear
+   the actions row at 667px with a two-line title, so the card grows on a large
+   screen and backs off on a small one rather than colliding with the buttons. */
 .shuffle-cover {
-  width: 212px;
+  width: min(248px, 32vh);
   border: none;
   background: none;
   padding: 0;
@@ -210,9 +219,13 @@
   border-radius: 12px;
   -webkit-tap-highlight-color: transparent;
 }
+/* .cover-lg caps itself at 240px and sets aspect-ratio 3/4. Releasing the cap lets
+   the button's width win; the aspect ratio then supplies the height, so there is
+   one number to change here rather than a width and a height that can disagree. */
 .shuffle-cover .cover {
-  width: 212px;
-  height: 283px;
+  width: 100%;
+  max-width: none;
+  height: auto;
   border-radius: 12px;
   box-shadow: 0 20px 44px rgba(0, 0, 0, 0.55);
 }
@@ -313,9 +326,7 @@
 }
 .shuffle-btn.primary { background: var(--accent); border-color: var(--accent); color: #1a1917; }
 [data-theme='light'] .shuffle-btn.primary { color: #fff; }
-.shuffle-btn.ghost { flex: 0 0 auto; padding: 12px 12px; color: var(--muted); }
 .shuffle-btn:disabled { opacity: 0.42; cursor: default; }
-.shuffle-count { display: block; font-size: 9.5px; font-weight: 500; opacity: 0.75; margin-top: 1px; }
 
 
 @media (prefers-reduced-motion: reduce) {
@@ -327,39 +338,6 @@
    index.css on purpose. This stylesheet ships with the lazy ShufflePicker chunk,
    so anything here is absent until the picker is first opened - fine for the
    picker itself, wrong for chrome that renders on first paint. */
-
-/* Undo bar for "Not tonight". Sits directly above the actions so it is impossible
-   to miss in the second after the tap that caused it. */
-.shuffle-undo {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: 10px;
-  padding: 9px 12px;
-  border-radius: 11px;
-  border: 1px solid var(--line);
-  background: var(--surface-2);
-  color: var(--muted);
-  font-size: 12.5px;
-}
-.shuffle-undo span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.shuffle-undo button {
-  flex: none;
-  border: none;
-  background: none;
-  padding: 2px 4px;
-  font: inherit;
-  font-weight: 700;
-  color: var(--accent);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
 
 /* The empty state can now offer the way out rather than only describing it. */
 .shuffle-empty .discover-action {

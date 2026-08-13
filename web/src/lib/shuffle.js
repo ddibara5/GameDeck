@@ -1,68 +1,15 @@
-// Shuffler selection rules: pools, filters, weighting and the snooze list.
+// Shuffler selection rules: pools, filters and weighting.
 //
 // Deliberately separate from the component. Everything here is a pure function of
-// its arguments (the one exception being the localStorage helpers), so the rules
-// that decide what you are offered can be tested without rendering anything.
+// its arguments, so the rules that decide what you are offered can be tested
+// without rendering anything.
+//
+// The 30-day snooze list is gone along with the "Not tonight" button it served.
+// Reroll already skips a pick, and a stored filter that nothing can add to but
+// that still quietly removes games from the pool is worse than no filter at all.
+// gamedeck_shuffle_snooze_v1 is now an orphan key; nothing reads it.
 import { releaseDayDelta } from './format.js'
 import { hasVibe } from './vibes.js'
-
-const SNOOZE_KEY = 'gamedeck_shuffle_snooze_v1'
-const SNOOZE_DAYS = 30
-
-// ---------------------------------------------------------------- snooze list
-
-// Shape on disk: { "<id>": <epoch ms the snooze expires> }. Expired entries are
-// dropped on read, so the record self-cleans and never grows without bound.
-export function loadSnooze(now = Date.now()) {
-  let raw = null
-  try {
-    raw = JSON.parse(localStorage.getItem(SNOOZE_KEY) || 'null')
-  } catch {
-    raw = null
-  }
-  const out = {}
-  if (raw && typeof raw === 'object') {
-    for (const k of Object.keys(raw)) {
-      const until = Number(raw[k])
-      if (Number.isFinite(until) && until > now) out[k] = until
-    }
-  }
-  return out
-}
-
-export function saveSnooze(map) {
-  try {
-    localStorage.setItem(SNOOZE_KEY, JSON.stringify(map))
-  } catch {
-    /* storage unavailable - the snooze just won't persist */
-  }
-}
-
-export function addSnooze(map, id, now = Date.now()) {
-  if (id == null) return map
-  const next = { ...map, [String(id)]: now + SNOOZE_DAYS * 86400000 }
-  saveSnooze(next)
-  return next
-}
-
-// Undo. "Not tonight" used to be a one-way door: a mis-tap hid a game for a month
-// with no way to see it had happened, let alone reverse it.
-export function removeSnooze(map, id) {
-  if (id == null) return map
-  const next = { ...map }
-  delete next[String(id)]
-  saveSnooze(next)
-  return next
-}
-
-export function clearSnooze() {
-  saveSnooze({})
-  return {}
-}
-
-export function isSnoozed(map, id) {
-  return id != null && Object.prototype.hasOwnProperty.call(map, String(id))
-}
 
 // A stable identity per shuffled thing. Library rows key on master_id, wishlist
 // rows on igdb_id, and the two never collide because they are prefixed.
@@ -193,9 +140,8 @@ export function weightedPick(list, weights, rand = Math.random) {
   return list[list.length - 1]
 }
 
-// Everything eligible under the current question, before the snooze list is
-// applied. Exported so the filter sheet can show live counts and never offer a
-// combination that returns nothing.
+// Everything eligible under the current question. Exported so the filter sheet
+// can show live counts and never offer a combination that returns nothing.
 export function eligible({ items, mode, pool, filters, gamePass, statusOf }) {
   const inPool = mode === 'buy'
     ? (it) => inBuyPool(it, pool)
@@ -205,12 +151,9 @@ export function eligible({ items, mode, pool, filters, gamePass, statusOf }) {
 
 // The whole selection, end to end. Returns the pick plus everything the "why"
 // line needs, so the UI never has to recompute the reasoning it displays.
-export function shuffle({ items, mode, pool, filters, gamePass, snoozeMap, exclude, boost, rand, statusOf }) {
+export function shuffle({ items, mode, pool, filters, gamePass, exclude, boost, rand, statusOf }) {
   const pooled = eligible({ items, mode, pool, filters, gamePass, statusOf })
-  const fresh = pooled.filter((it) => !isSnoozed(snoozeMap, shuffleId(it, mode)))
-  // Falling back to the snoozed set beats showing nothing: an empty result reads
-  // as a broken feature, and the snooze is a preference rather than a hard rule.
-  let pickable = fresh.length ? fresh : pooled
+  let pickable = pooled
   if (exclude != null && pickable.length > 1) {
     const without = pickable.filter((it) => shuffleId(it, mode) !== exclude)
     if (without.length) pickable = without
@@ -224,6 +167,5 @@ export function shuffle({ items, mode, pool, filters, gamePass, snoozeMap, exclu
     pick,
     poolSize: pooled.length,
     reason: idx >= 0 ? weighted[idx].reason : null,
-    usedSnoozed: !fresh.length && pooled.length > 0,
   }
 }

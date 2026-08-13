@@ -11,10 +11,7 @@ import { lockScroll } from '../lib/scrollLock.js'
 import { useDelayedClose } from '../lib/useDelayedClose.js'
 import { useEdgeBack } from '../lib/useEdgeBack.js'
 import { useStatusMap, effectiveStatus } from '../lib/userStatus.js'
-import {
-  PLAY_POOLS, BUY_POOLS, LENGTH_STEPS, shuffle, shuffleId, eligible,
-  loadSnooze, addSnooze, removeSnooze, clearSnooze, topGenres,
-} from '../lib/shuffle.js'
+import { PLAY_POOLS, BUY_POOLS, LENGTH_STEPS, shuffle, shuffleId, eligible, topGenres } from '../lib/shuffle.js'
 import { availableVibes } from '../lib/vibes.js'
 import './shuffle.css'
 
@@ -41,8 +38,10 @@ export default function ShufflePicker({ open, onClose }) {
   const statusMap = useStatusMap()
   const [gamePass, setGamePass] = useState(null)
 
-  const [mode, setMode] = useState('play')
-  const [pool, setPool] = useState('never')
+  // Buy opens first, so the initial pool must be a BUY pool - 'never' belongs to
+  // the play side and would leave the pool row with nothing selected.
+  const [mode, setMode] = useState('buy')
+  const [pool, setPool] = useState('outnow')
   const [platform, setPlatform] = useState('any')
   const [genre, setGenre] = useState('any')
   const [vibe, setVibe] = useState('any')
@@ -51,10 +50,6 @@ export default function ShufflePicker({ open, onClose }) {
   const [boost, setBoost] = useState(true)
   const [showFilters, setShowFilters] = useState(false)
 
-  const [snoozeMap, setSnoozeMap] = useState(() => loadSnooze())
-  // The last "Not tonight", kept only so it can be undone. A 30-day hide with no
-  // visible trace and no way back is too destructive for a one-tap button.
-  const [undo, setUndo] = useState(null)
   const [result, setResult] = useState(null)
   const [sheet, setSheet] = useState(null)
 
@@ -134,7 +129,6 @@ export default function ShufflePicker({ open, onClose }) {
   // the effect of a filter is visible before the sheet closes, and so the dead end
   // of "nothing matches that combination" is visible on the way in.
   const eligibleCount = poolCounts[pool] || 0
-  const snoozedCount = Object.keys(snoozeMap).length
   const activeCount =
     (platform !== 'any' ? 1 : 0) + (genre !== 'any' ? 1 : 0) + (vibe !== 'any' ? 1 : 0) +
     (maxMinutes ? 1 : 0) + (gamePassOnly ? 1 : 0)
@@ -145,7 +139,7 @@ export default function ShufflePicker({ open, onClose }) {
     const d = deck.current
     const current = d.at >= 0 ? d.list[d.at] : null
     const outcome = shuffle({
-      items, mode, pool, filters, gamePass, snoozeMap, statusOf,
+      items, mode, pool, filters, gamePass, statusOf,
       exclude: !reset && current && current.pick ? shuffleId(current.pick, mode) : null,
       boost,
     })
@@ -162,15 +156,9 @@ export default function ShufflePicker({ open, onClose }) {
   // dependency, through `filters`.
   useEffect(() => {
     if (!open) return
-    setUndo(null)
     roll(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, mode, pool, platform, genre, vibe, maxMinutes, gamePassOnly, boost, items.length, statusMap])
-
-  useEffect(() => {
-    if (!open) return
-    setSnoozeMap(loadSnooze())
-  }, [open])
 
   function switchMode(next) {
     setMode(next)
@@ -180,7 +168,6 @@ export default function ShufflePicker({ open, onClose }) {
     setVibe('any')
     setMaxMinutes(0)
     setGamePassOnly(false)
-    setUndo(null)
   }
 
   function resetFilters() {
@@ -189,21 +176,6 @@ export default function ShufflePicker({ open, onClose }) {
     setVibe('any')
     setMaxMinutes(0)
     setGamePassOnly(false)
-  }
-
-  function handleSnooze() {
-    const pick = result && result.pick
-    if (!pick) return
-    const id = shuffleId(pick, mode)
-    setSnoozeMap((m) => addSnooze(m, id))
-    setUndo({ id, title: titleOf(pick) })
-    roll(false)
-  }
-
-  function undoSnooze() {
-    if (!undo) return
-    setSnoozeMap((m) => removeSnooze(m, undo.id))
-    setUndo(null)
   }
 
   // Stepping back through the deck is free and always was; with the reroll budget
@@ -315,10 +287,10 @@ export default function ShufflePicker({ open, onClose }) {
         </div>
 
         <div className="shuffle-mode" role="tablist">
-          {/* Buy sits first, and the library side reads "Owned" - it names what the
-              pool IS rather than what you do with it, which is the same thing Buy
-              does. The `play` KEY is unchanged: it is what the pool rules and the
-              snooze ids are keyed on, and renaming it would strand every snooze. */}
+          {/* Buy sits first and opens selected. The library side reads "Owned" - it
+              names what the pool IS rather than what you do with it, which is the
+              same thing Buy does. The `play` KEY is unchanged: the pool rules and
+              shuffleId are built on it. */}
           {[['buy', 'Buy'], ['play', 'Owned']].map(([key, label]) => (
             <button
               key={key}
@@ -396,25 +368,14 @@ export default function ShufflePicker({ open, onClose }) {
               <p className="shuffle-why">
                 Chose from <b>{result.poolSize}</b> games {poolMeta.sub}
                 {result.reason ? <>{'. Favoured because it is '}<b>{result.reason}</b></> : null}
-                {result.usedSnoozed ? '. Everything fresh was snoozed, so this one came back around' : null}
               </p>
             </>
           ) : null}
         </div>
 
-        {undo ? (
-          <div className="shuffle-undo">
-            <span>Snoozed {undo.title} for 30 days</span>
-            <button type="button" onClick={undoSnooze}>Undo</button>
-          </div>
-        ) : null}
-
         <div className="shuffle-acts">
           <button type="button" className="shuffle-btn primary" onClick={openPick} disabled={!pick}>Open</button>
           <button type="button" className="shuffle-btn" onClick={() => roll(false)} disabled={!pick}>Reroll</button>
-          <button type="button" className="shuffle-btn ghost" onClick={handleSnooze} disabled={!pick}>
-            {mode === 'buy' ? 'Not now' : 'Not tonight'}
-          </button>
         </div>
       </div>
 
@@ -531,17 +492,6 @@ export default function ShufflePicker({ open, onClose }) {
                 </button>
               </div>
             </div>
-
-            {snoozedCount ? (
-              <div className="filter-group">
-                <span className="filter-label">Snoozed</span>
-                <div className="filter-options">
-                  <button type="button" className="filter-opt" onClick={() => setSnoozeMap(clearSnooze())}>
-                    Clear {snoozedCount} snoozed {snoozedCount === 1 ? 'game' : 'games'}
-                  </button>
-                </div>
-              </div>
-            ) : null}
 
             <div className="filter-sheet-actions">
               <button type="button" className="discover-action" onClick={resetFilters}>Reset</button>
