@@ -10,6 +10,15 @@ const REPO = 'ddibara5/GameDeck'
 const SOURCE_URL = 'https://github.com/ddibara5/GameDeck'
 const EXOPHASE_PROFILE_URL = 'https://www.exophase.com/user/Davizzle93/'
 
+// Each platform now syncs directly from its own API. They fail independently,
+// so each one gets its own freshness row: a dead PSN token used to be invisible
+// until you noticed the playtime had stopped moving.
+const DIRECT_SOURCES = [
+  { key: 'steam', label: 'Steam' },
+  { key: 'psn', label: 'PlayStation' },
+  { key: 'xbox', label: 'Xbox' },
+]
+
 const CHATS_KEY = 'gamedeck_chats_v1'
 const ACTIVE_CHAT_KEY = 'gamedeck_active_chat_v1'
 const SYNC_LOCK_KEY = 'gamedeck_sync_lock_v1'
@@ -47,8 +56,9 @@ const LIST_SIZE_OPTIONS = [
 
 export default function SettingsPage({ open, onClose, onOpenNav }) {
   const { mounted, closing } = useMountTransition(open)
-  const [lastSync, setLastSync] = useState(null)
-  const [exoActivity, setExoActivity] = useState(null)
+  const [fallbackSync, setFallbackSync] = useState(null)
+  const [latestPlay, setLatestPlay] = useState(null)
+  const [sourceSync, setSourceSync] = useState({})
   const [version, setVersion] = useState(null)
   const [keySet, setKeySet] = useState(() => Boolean(getAppKey()))
   const [theme, setThemeState] = useState(() => getTheme())
@@ -135,13 +145,32 @@ export default function SettingsPage({ open, onClose, onOpenNav }) {
     let cancelled = false
 
     ;(async () => {
-      const [syncRes, actRes] = await Promise.all([
+      // sync_runs is written only by the Exophase fallback workflow, so it is
+      // labelled as such. The direct syncs stamp direct_synced_at on the rows
+      // they own instead, which is what the per-source rows below read.
+      const [syncRes, actRes, ...srcRes] = await Promise.all([
         supabase.from('sync_runs').select('ran_at').not('games_seen', 'is', null).order('id', { ascending: false }).limit(1),
         supabase.from('games').select('last_played').not('last_played', 'is', null).order('last_played', { ascending: false }).limit(1),
+        ...DIRECT_SOURCES.map((s) =>
+          supabase
+            .from('games')
+            .select('direct_synced_at')
+            .eq('environment', s.key)
+            .not('direct_synced_at', 'is', null)
+            .order('direct_synced_at', { ascending: false })
+            .limit(1),
+        ),
       ])
       if (cancelled) return
-      if (syncRes.data && syncRes.data[0]) setLastSync(syncRes.data[0].ran_at)
-      if (actRes.data && actRes.data[0]) setExoActivity(actRes.data[0].last_played)
+      if (syncRes.data && syncRes.data[0]) setFallbackSync(syncRes.data[0].ran_at)
+      if (actRes.data && actRes.data[0]) setLatestPlay(actRes.data[0].last_played)
+
+      const next = {}
+      DIRECT_SOURCES.forEach((s, i) => {
+        const row = srcRes[i] && srcRes[i].data && srcRes[i].data[0]
+        if (row) next[s.key] = row.direct_synced_at
+      })
+      setSourceSync(next)
 
       try {
         const r = await fetch(`https://api.github.com/repos/${REPO}/commits/main`, {
@@ -339,12 +368,41 @@ export default function SettingsPage({ open, onClose, onOpenNav }) {
               disabled={syncing || locked}
               chevron={false}
             />
-            <MenuItem glyph={ICONS.clock} label="Last sync" value={relTime(lastSync) || '-'} disabled chevron={false} />
             <MenuItem
               glyph={ICONS.clock}
-              label="Exophase activity"
-              sub="Newest play Exophase has recorded"
-              value={relTime(exoActivity) || '-'}
+              label="Latest play"
+              sub="Newest session across all platforms"
+              value={relTime(latestPlay) || '-'}
+              disabled
+              chevron={false}
+            />
+          </div>
+        </div>
+
+        <div className="settings-section">
+          <div className="menu-sec-label">Direct sources</div>
+          <div className="settings-group">
+            {DIRECT_SOURCES.map((s) => (
+              <MenuItem
+                key={s.key}
+                glyph={ICONS.clock}
+                label={s.label}
+                value={relTime(sourceSync[s.key]) || '-'}
+                disabled
+                chevron={false}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="settings-section">
+          <div className="menu-sec-label">Fallback</div>
+          <div className="settings-group">
+            <MenuItem
+              glyph={ICONS.clock}
+              label="Exophase sync"
+              sub="Backup source, fills what the direct APIs cannot"
+              value={relTime(fallbackSync) || '-'}
               disabled
               chevron={false}
             />
