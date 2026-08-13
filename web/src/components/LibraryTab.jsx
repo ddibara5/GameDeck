@@ -6,12 +6,21 @@ import HomeShelf from './HomeShelf.jsx'
 import { useStatusMap, effectiveStatus } from '../lib/userStatus.js'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
 import { VIBES, hasVibe, availableVibes } from '../lib/vibes.js'
+import { topGenres } from '../lib/shuffle.js'
 
 const PLATFORM_FILTERS = [
   { key: 'all', label: 'All' },
   { key: 'xbox', label: 'Xbox' },
   { key: 'psn', label: 'PSN' },
   { key: 'steam', label: 'Steam' },
+]
+
+const STATUS_FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'playing', label: 'Playing' },
+  { key: 'backlog', label: 'Backlog' },
+  { key: 'finished', label: 'Finished' },
+  { key: 'abandoned', label: 'Abandoned' },
 ]
 
 const SORT_OPTIONS = [
@@ -34,6 +43,8 @@ export default function LibraryTab() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [sortKey, setSortKey] = useState('last_played')
   const [vibe, setVibe] = useState('any')
+  const [genre, setGenre] = useState('any')
+  const [showFilters, setShowFilters] = useState(false)
   const [selectedGame, setSelectedGame] = useState(null)
   const [visibleCount, setVisibleCount] = useState(12)
   const statusMap = useStatusMap()
@@ -41,6 +52,25 @@ export default function LibraryTab() {
   // Only offer chips that can return something, so tapping one never lands on an
   // empty library. Recomputed from the loaded set rather than hardcoded.
   const vibes = useMemo(() => availableVibes(games), [games])
+  const genres = useMemo(() => topGenres(games, 10), [games])
+
+  // Count of narrowing filters, shown on the button. The controls used to be
+  // visible in the header, so what was applied was self-evident; behind a sheet it
+  // is not, and a filtered library that looks unfiltered is how you conclude games
+  // are missing. Sort is excluded: it reorders, it does not hide anything.
+  const activeCount =
+    (platformFilter !== 'all' ? 1 : 0) +
+    (statusFilter !== 'all' ? 1 : 0) +
+    (genre !== 'any' ? 1 : 0) +
+    (vibe !== 'any' ? 1 : 0)
+
+  function resetFilters() {
+    setPlatformFilter('all')
+    setStatusFilter('all')
+    setGenre('any')
+    setVibe('any')
+    setSortKey('last_played')
+  }
 
   const visibleGames = useMemo(() => {
     let list = games
@@ -51,6 +81,10 @@ export default function LibraryTab() {
 
     if (statusFilter !== 'all') {
       list = list.filter((g) => effectiveStatus(g, statusMap) === statusFilter)
+    }
+
+    if (genre !== 'any') {
+      list = list.filter((g) => g.genre === genre)
     }
 
     if (vibe !== 'any') {
@@ -87,85 +121,40 @@ export default function LibraryTab() {
         break
     }
     return sorted
-  }, [games, platformFilter, statusFilter, vibe, search, sortKey, statusMap])
+  }, [games, platformFilter, statusFilter, genre, vibe, search, sortKey, statusMap])
 
   // Reset the visible window whenever the filter/search/sort changes.
   useEffect(() => {
     setVisibleCount(12)
-  }, [platformFilter, statusFilter, vibe, search, sortKey])
+  }, [platformFilter, statusFilter, genre, vibe, search, sortKey])
 
   return (
     <div>
       <div className="library-sticky">
-        <input
-          type="search"
-          className="search-input"
-          placeholder="Search your library"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          aria-label="Search games"
-        />
-        <div className="sort-row">
-          <select
-            className="sort-select"
-            value={platformFilter}
-            onChange={(e) => setPlatformFilter(e.target.value)}
-            aria-label="Filter by platform"
+        <div className="library-searchbar">
+          <input
+            type="search"
+            className="search-input"
+            placeholder="Search your library"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search games"
+          />
+          <button
+            type="button"
+            className={`filter-btn${activeCount ? ' active' : ''}`}
+            onClick={() => setShowFilters(true)}
+            aria-label={activeCount ? `Filters, ${activeCount} active` : 'Filters'}
           >
-            <option value="all">Platform: All</option>
-            <option value="xbox">Xbox</option>
-            <option value="psn">PSN</option>
-            <option value="steam">Steam</option>
-          </select>
-          <select
-            className="sort-select"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            aria-label="Filter by status"
-          >
-            <option value="all">Status: All</option>
-            <option value="playing">Playing</option>
-            <option value="backlog">Backlog</option>
-            <option value="finished">Finished</option>
-            <option value="abandoned">Abandoned</option>
-          </select>
-          <select
-            className="sort-select"
-            value={sortKey}
-            onChange={(e) => setSortKey(e.target.value)}
-            aria-label="Sort games"
-          >
-            {SORT_OPTIONS.map((opt) => (
-              <option key={opt.key} value={opt.key}>
-                Sort: {opt.label}
-              </option>
-            ))}
-          </select>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M4 6h16M7 12h10M10 18h4" />
+            </svg>
+            {activeCount ? <span className="filter-count">{activeCount}</span> : null}
+          </button>
         </div>
-        {vibes.length ? (
-          <div className="vibe-row">
-            <button
-              type="button"
-              className={`vibe-chip${vibe === 'any' ? ' on' : ''}`}
-              onClick={() => setVibe('any')}
-            >
-              All
-            </button>
-            {vibes.map((v) => (
-              <button
-                key={v.key}
-                type="button"
-                className={`vibe-chip${vibe === v.key ? ' on' : ''}`}
-                onClick={() => setVibe(vibe === v.key ? 'any' : v.key)}
-              >
-                {v.label}
-              </button>
-            ))}
-          </div>
-        ) : null}
       </div>
 
-      {!loading && !error && search.trim() === '' && platformFilter === 'all' && statusFilter === 'all' && vibe === 'any' ? (
+      {!loading && !error && search.trim() === '' && activeCount === 0 ? (
         <HomeShelf games={games} onSelect={setSelectedGame} />
       ) : null}
 
@@ -201,6 +190,124 @@ export default function LibraryTab() {
           ) : null}
         </>
       )}
+
+      {showFilters ? (
+        <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && setShowFilters(false)}>
+          <div className="modal-sheet filter-sheet" role="dialog" aria-modal="true" aria-label="Filters">
+            <div className="modal-handle" />
+            <div className="detail-title">Filters</div>
+
+            <div className="filter-group">
+              <span className="filter-label">Platform</span>
+              <div className="filter-options">
+                {PLATFORM_FILTERS.map((o) => (
+                  <button
+                    key={o.key}
+                    type="button"
+                    className={`filter-opt${platformFilter === o.key ? ' active' : ''}`}
+                    onClick={() => setPlatformFilter(o.key)}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="filter-group">
+              <span className="filter-label">Status</span>
+              <div className="filter-options">
+                {STATUS_FILTERS.map((o) => (
+                  <button
+                    key={o.key}
+                    type="button"
+                    className={`filter-opt${statusFilter === o.key ? ' active' : ''}`}
+                    onClick={() => setStatusFilter(o.key)}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {genres.length ? (
+              <div className="filter-group">
+                <span className="filter-label">Genre</span>
+                <div className="filter-options">
+                  <button
+                    type="button"
+                    className={`filter-opt${genre === 'any' ? ' active' : ''}`}
+                    onClick={() => setGenre('any')}
+                  >
+                    All genres
+                  </button>
+                  {genres.map((g) => (
+                    <button
+                      key={g}
+                      type="button"
+                      className={`filter-opt${genre === g ? ' active' : ''}`}
+                      onClick={() => setGenre(genre === g ? 'any' : g)}
+                    >
+                      {g.replace(' (RPG)', '')}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {/* Same six categories as Discover and the shuffler, from lib/vibes.js.
+                Only chips that can return something are offered. */}
+            {vibes.length ? (
+              <div className="filter-group">
+                <span className="filter-label">Vibe</span>
+                <div className="filter-options">
+                  <button
+                    type="button"
+                    className={`filter-opt${vibe === 'any' ? ' active' : ''}`}
+                    onClick={() => setVibe('any')}
+                  >
+                    Any
+                  </button>
+                  {vibes.map((v) => (
+                    <button
+                      key={v.key}
+                      type="button"
+                      className={`filter-opt${vibe === v.key ? ' active' : ''}`}
+                      onClick={() => setVibe(vibe === v.key ? 'any' : v.key)}
+                    >
+                      {v.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="filter-group">
+              <span className="filter-label">Sort by</span>
+              <div className="filter-options">
+                {SORT_OPTIONS.map((o) => (
+                  <button
+                    key={o.key}
+                    type="button"
+                    className={`filter-opt${sortKey === o.key ? ' active' : ''}`}
+                    onClick={() => setSortKey(o.key)}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="filter-sheet-actions">
+              <button type="button" className="discover-action" onClick={resetFilters}>
+                Reset
+              </button>
+              <button type="button" className="discover-action primary" onClick={() => setShowFilters(false)}>
+                Show {visibleGames.length} {visibleGames.length === 1 ? 'game' : 'games'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {selectedGame ? (
         <GameDetail game={selectedGame} onClose={() => setSelectedGame(null)} />
