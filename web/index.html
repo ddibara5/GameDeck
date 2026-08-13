@@ -42,15 +42,16 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="GameDeck" />
 
-    <!-- Home-screen icons: dark (default) + light-mode variants -->
-    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png" />
-    <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-167.png" />
-    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png" />
-    <link rel="apple-touch-icon" sizes="120x120" href="/icons/icon-120.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180-light.png" media="(prefers-color-scheme: light)" />
-    <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-167-light.png" media="(prefers-color-scheme: light)" />
-    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152-light.png" media="(prefers-color-scheme: light)" />
-    <link rel="apple-touch-icon" sizes="120x120" href="/icons/icon-120-light.png" media="(prefers-color-scheme: light)" />
+    <!-- Home-screen icon: the porcelain tile in BOTH appearances. The ember mark
+         reads with far more contrast on porcelain than on graphite, and iOS draws
+         the home screen over the user's wallpaper rather than over the app's own
+         background, so a dark tile was not buying the match it looked like it was.
+         The dark icon-*.png files are still generated and still used by the web
+         manifest; only the iOS home-screen link is pinned. -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180-light.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-167-light.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152-light.png" />
+    <link rel="apple-touch-icon" sizes="120x120" href="/icons/icon-120-light.png" />
 
     <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />

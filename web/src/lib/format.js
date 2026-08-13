@@ -27,7 +27,7 @@ export function minutesToHhm(mins) {
  * Anything carrying a time (a timestamptz such as `last_played`) is a real
  * instant and is parsed normally, so it still renders in the reader's zone.
  */
-function parseDayOrInstant(value) {
+export function parseDayOrInstant(value) {
   if (typeof value === 'string') {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
     if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
@@ -66,6 +66,10 @@ export function formatRelativeDay(value) {
 
   if (diffDays === 0) return 'Today'
   if (diffDays === 1) return 'Yesterday'
+  // Inside the last week a weekday name is how you actually remember a session
+  // ("Sunday", not "Aug 9, 2026"), and it matches the rolling 7-day header above
+  // the feed. Bounded to the past: a future date has no "last Tuesday" reading.
+  if (diffDays > 1 && diffDays < 7) return date.toLocaleDateString(undefined, { weekday: 'long' })
   // Pass the parsed Date, not the raw string: re-parsing would reintroduce the
   // UTC-midnight shift this function just corrected for.
   return formatDate(date)

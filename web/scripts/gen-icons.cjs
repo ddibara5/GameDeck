@@ -60,13 +60,23 @@ function encodePng(width, height, rgba) {
 // --- geometry (in a 512 unit space, then scaled) ---------------------------
 const U = 512;
 const CX = 256;
+const CY = 256;
+// How much of the tile the mark fills. Scaled about the tile centre (the stack is
+// already centred on 256), so raising this grows the mark without shifting it.
+// 1.12 takes the stack from 236x286 to 264x320 in the 512 unit space, which is
+// still ~124 units of clear tile on each side.
+const MARK_SCALE = 1.12;
+const sc = (v) => v * MARK_SCALE;
+// Scale a y ABOUT the centre rather than from the origin, otherwise the whole
+// stack slides down the tile as it grows.
+const scY = (y) => CY + (y - CY) * MARK_SCALE;
 // three slabs: [topY]. shifted so the stack is vertically centred in the tile.
 const SLABS = [
-  { y: 306, c: 'bottom' },
-  { y: 239, c: 'mid' },
-  { y: 172, c: 'top' },
+  { y: scY(306), c: 'bottom' },
+  { y: scY(239), c: 'mid' },
+  { y: scY(172), c: 'top' },
 ];
-const W = 118, H = 59, T = 34; // half-width, half-height, thickness
+const W = sc(118), H = sc(59), T = sc(34); // half-width, half-height, thickness
 
 function slabPolys(y, colors) {
   const T_ = [CX, y - H], R = [CX + W, y], B = [CX, y + H], L = [CX - W, y];
@@ -169,7 +179,10 @@ function encodeIco(entries) {
 
 // --- adaptive SVG ----------------------------------------------------------
 function buildSvg() {
-  const poly = (pts, fill) => `<polygon points="${pts.map((p) => p.join(',')).join(' ')}" fill="${fill}"/>`;
+  // Round on the way out. MARK_SCALE is fractional, so raw coordinates serialise as
+  // 123.83999999999997 and the file churns on every regeneration for no visual gain.
+  const n = (v) => String(Math.round(v * 100) / 100);
+  const poly = (pts, fill) => `<polygon points="${pts.map((p) => p.map(n).join(',')).join(' ')}" fill="${fill}"/>`;
   const marks = scenePolys(MARK_DARK).map((p) => poly(p.pts, p.color)).join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="GameDeck">
   <style>

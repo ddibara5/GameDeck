@@ -108,9 +108,14 @@ select
   round(avg(percent),1)                                as avg_completion
 from public.games;
 
+-- master_id lets an Activity row open the same game sheet every other surface
+-- opens; earned_awards_after + total_awards let it show "14 of 52" without a
+-- second query. They sit at the END of the select list because CREATE OR REPLACE
+-- VIEW may only append columns, and a DROP would take the anon grants with it.
 create or replace view public.v_recent_activity as
 select e.event_date, e.title, e.environment, e.minutes_delta,
-       e.achievements_delta, e.percent_after, g.cover_small
+       e.achievements_delta, e.percent_after, g.cover_small,
+       e.master_id, e.earned_awards_after, g.total_awards
 from public.play_events e
 left join public.games g on g.master_id = e.master_id
 where e.minutes_delta > 0 or e.achievements_delta > 0
