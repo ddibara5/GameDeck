@@ -11,3 +11,10 @@ dist/
 
 # vercel local
 .vercel/
+
+# Generated app icons. EVERY file in web/public/icons is produced by
+# web/scripts/gen-icons.cjs, which now runs before both `npm run build` and
+# `npm run dev`. Committing them only ever produced drift between the checked-in
+# art and the generator that defines it. If you ever add a hand-made asset in
+# there, un-ignore it explicitly - it will be invisible to git otherwise.
+web/public/icons/
