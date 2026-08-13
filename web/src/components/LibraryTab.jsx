@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { supabase } from '../lib/supabase.js'
 import GameCard from './GameCard.jsx'
 import GameDetail from './GameDetail.jsx'
 import Skeleton from './Skeleton.jsx'
 import HomeShelf from './HomeShelf.jsx'
 import { useStatusMap, effectiveStatus } from '../lib/userStatus.js'
+import { useLibraryGames } from '../lib/useLibraryGames.js'
+import { VIBES, hasVibe, availableVibes } from '../lib/vibes.js'
 
 const PLATFORM_FILTERS = [
   { key: 'all', label: 'All' },
@@ -21,52 +22,25 @@ const SORT_OPTIONS = [
   { key: 'achievements', label: 'Achievements' },
 ]
 
-const GAME_COLUMNS =
-  'master_id, environment, title, platforms, earned_awards, total_awards, percent, ' +
-  'earned_points, earned_exp, playtime_minutes, playtime_label, status, beaten, ' +
-  'last_played, first_played, completion_date, cover_small, cover_standard, cover_tile, ' +
-  'achievements_url, updated_at, length_minutes, genre, release_year, cover_igdb'
-
+// The library query used to live here as a second, private column list. It had
+// already drifted from the shared one, missing `keywords` and `igdb_rating`, which
+// would have made every vibe chip below return nothing while looking perfectly
+// healthy. Same shape of bug as the missing `igdb_id` that silently killed the
+// shuffler's Game Pass weighting. One list, one fetch, in useLibraryGames.
 export default function LibraryTab() {
-  const [games, setGames] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const { games, loading, error } = useLibraryGames()
   const [search, setSearch] = useState('')
   const [platformFilter, setPlatformFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [sortKey, setSortKey] = useState('last_played')
+  const [vibe, setVibe] = useState('any')
   const [selectedGame, setSelectedGame] = useState(null)
   const [visibleCount, setVisibleCount] = useState(12)
   const statusMap = useStatusMap()
 
-  useEffect(() => {
-    let cancelled = false
-
-    async function load() {
-      setLoading(true)
-      setError(null)
-
-      const { data, error: gamesErr } = await supabase
-        .from('games')
-        .select(GAME_COLUMNS)
-        .order('last_played', { ascending: false, nullsFirst: false })
-
-      if (cancelled) return
-
-      if (gamesErr) {
-        setError(gamesErr.message)
-      } else {
-        setGames(data || [])
-      }
-
-      setLoading(false)
-    }
-
-    load()
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  // Only offer chips that can return something, so tapping one never lands on an
+  // empty library. Recomputed from the loaded set rather than hardcoded.
+  const vibes = useMemo(() => availableVibes(games), [games])
 
   const visibleGames = useMemo(() => {
     let list = games
@@ -77,6 +51,10 @@ export default function LibraryTab() {
 
     if (statusFilter !== 'all') {
       list = list.filter((g) => effectiveStatus(g, statusMap) === statusFilter)
+    }
+
+    if (vibe !== 'any') {
+      list = list.filter((g) => hasVibe(g, vibe))
     }
 
     const query = search.trim().toLowerCase()
@@ -109,12 +87,12 @@ export default function LibraryTab() {
         break
     }
     return sorted
-  }, [games, platformFilter, statusFilter, search, sortKey, statusMap])
+  }, [games, platformFilter, statusFilter, vibe, search, sortKey, statusMap])
 
   // Reset the visible window whenever the filter/search/sort changes.
   useEffect(() => {
     setVisibleCount(12)
-  }, [platformFilter, statusFilter, search, sortKey])
+  }, [platformFilter, statusFilter, vibe, search, sortKey])
 
   return (
     <div>
@@ -164,9 +142,30 @@ export default function LibraryTab() {
             ))}
           </select>
         </div>
+        {vibes.length ? (
+          <div className="vibe-row">
+            <button
+              type="button"
+              className={`vibe-chip${vibe === 'any' ? ' on' : ''}`}
+              onClick={() => setVibe('any')}
+            >
+              All
+            </button>
+            {vibes.map((v) => (
+              <button
+                key={v.key}
+                type="button"
+                className={`vibe-chip${vibe === v.key ? ' on' : ''}`}
+                onClick={() => setVibe(vibe === v.key ? 'any' : v.key)}
+              >
+                {v.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
 
-      {!loading && !error && search.trim() === '' && platformFilter === 'all' && statusFilter === 'all' ? (
+      {!loading && !error && search.trim() === '' && platformFilter === 'all' && statusFilter === 'all' && vibe === 'any' ? (
         <HomeShelf games={games} onSelect={setSelectedGame} />
       ) : null}
 

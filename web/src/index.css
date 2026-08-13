@@ -785,6 +785,45 @@ textarea {
   min-height: 40px;
 }
 
+/* Keyword filter chips, the same set the shuffler offers. One scrolling line
+   rather than a wrapping block: these sit in the sticky header, so wrapping would
+   push the library itself down the screen every time a chip row grew a row.
+   Bleeds to the screen edges so a scrolled chip is not clipped by the padding. */
+.vibe-row {
+  margin: 10px -16px 0;
+  padding: 0 16px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.vibe-row::-webkit-scrollbar { display: none; }
+.vibe-chip {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.vibe-chip.on {
+  background: rgba(200, 169, 126, 0.16);
+  border-color: rgba(200, 169, 126, 0.5);
+  color: var(--text);
+}
+[data-theme='light'] .vibe-chip.on {
+  background: rgba(156, 116, 73, 0.15);
+  border-color: rgba(156, 116, 73, 0.5);
+}
+
 /* ---------- Stats strip ---------- */
 
 .stats-strip {

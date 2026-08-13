@@ -1,9 +1,25 @@
-// Client-side game status overrides (GameTrack-style), stored in localStorage.
+// Per-game status overrides (GameTrack-style).
 // Statuses: 'backlog' | 'playing' | 'finished' | 'abandoned'
 // Achievement % is NOT completion; the user's status (manual, or derived) is the truth.
+//
+// STORAGE: Supabase `game_status` is the source of truth; localStorage is a cache.
+//
+// This used to be localStorage only, which meant your tags were device-local,
+// absent on a second device, and gone if you cleared site data. They are now
+// synced. localStorage stays because `effectiveStatus(game, map)` is called from
+// render in half a dozen components and has to stay synchronous, so the cache is
+// what makes the first paint correct before the network answers.
+//
+// Only EXPLICIT overrides are stored. `derivedStatus` stays client-side, so the
+// table is a record of what you decided rather than what was inferred, and the
+// two never get confused.
 import { useEffect, useState } from 'react'
+import { supabase } from './supabase.js'
 
 const KEY = 'gamedeck_status_v1'
+// Set once the pre-existing local-only tags have been pushed up. After that the
+// server wins, so clearing a status on one device is not resurrected by another.
+const MIGRATED_KEY = 'gamedeck_status_migrated_v1'
 
 export const STATUSES = ['backlog', 'playing', 'finished', 'abandoned']
 export const STATUS_LABELS = {
@@ -29,6 +45,10 @@ function saveMap(map) {
   }
 }
 
+function emit() {
+  window.dispatchEvent(new Event('gd-status-change'))
+}
+
 export function getStatusMap() {
   return loadMap()
 }
@@ -37,13 +57,86 @@ export function getOverride(masterId) {
   return loadMap()[String(masterId)] || null
 }
 
+// Optimistic: the cache and the UI update immediately, the write follows. A failed
+// write reloads from the server rather than leaving the two disagreeing silently.
 export function setStatus(masterId, status) {
   const map = loadMap()
   const id = String(masterId)
   if (!status) delete map[id]
   else map[id] = status
   saveMap(map)
-  window.dispatchEvent(new Event('gd-status-change'))
+  emit()
+
+  const write = status
+    ? supabase.from('game_status').upsert(
+        { master_id: Number(masterId), status, updated_at: new Date().toISOString() },
+        { onConflict: 'master_id' }
+      )
+    : supabase.from('game_status').delete().eq('master_id', Number(masterId))
+
+  Promise.resolve(write)
+    .then(({ error }) => {
+      if (error) return pullFromServer()
+      return undefined
+    })
+    .catch(() => pullFromServer())
+}
+
+// ------------------------------------------------------------------ syncing
+
+let pulled = null
+
+async function pullFromServer() {
+  const { data, error } = await supabase.from('game_status').select('master_id, status')
+  if (error) return
+  const server = {}
+  for (const r of data || []) {
+    if (r && r.master_id != null && r.status) server[String(r.master_id)] = r.status
+  }
+
+  // One-time promotion of tags made before this table existed. Union, not
+  // overwrite: nothing set on this device is thrown away on the way up. After the
+  // flag is set the server is authoritative, so a status cleared elsewhere stays
+  // cleared instead of being pushed back by a stale local copy.
+  let migrated = false
+  try {
+    migrated = localStorage.getItem(MIGRATED_KEY) === '1'
+  } catch {
+    migrated = false
+  }
+
+  if (!migrated) {
+    const local = loadMap()
+    const onlyLocal = Object.keys(local).filter((id) => !server[id] && STATUSES.includes(local[id]))
+    if (onlyLocal.length) {
+      const rows = onlyLocal.map((id) => ({
+        master_id: Number(id),
+        status: local[id],
+        updated_at: new Date().toISOString(),
+      }))
+      const { error: upErr } = await supabase
+        .from('game_status')
+        .upsert(rows, { onConflict: 'master_id' })
+      // Only claim the migration is done if it actually landed, otherwise retry
+      // on the next load rather than stranding the tags locally.
+      if (upErr) return
+      for (const id of onlyLocal) server[id] = local[id]
+    }
+    try {
+      localStorage.setItem(MIGRATED_KEY, '1')
+    } catch {
+      /* storage unavailable - the union is idempotent, so retrying is harmless */
+    }
+  }
+
+  saveMap(server)
+  emit()
+}
+
+// Kicked off once per session, on first use of the hook.
+export function syncStatuses() {
+  if (!pulled) pulled = pullFromServer().catch(() => {})
+  return pulled
 }
 
 // A game counts as "playing" when its most recent play falls within this many
@@ -91,9 +184,11 @@ export function includeInLists(game, map) {
 }
 
 // React hook: returns the live status map, re-rendering on any change.
+// Paints from the cache immediately, then reconciles with the server once.
 export function useStatusMap() {
   const [map, setMap] = useState(loadMap)
   useEffect(() => {
+    syncStatuses()
     const handler = () => setMap(loadMap())
     window.addEventListener('gd-status-change', handler)
     window.addEventListener('storage', handler)

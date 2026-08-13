@@ -11,8 +11,9 @@ import { useDelayedClose } from '../lib/useDelayedClose.js'
 import { useEdgeBack } from '../lib/useEdgeBack.js'
 import {
   REROLL_BUDGET, PLAY_POOLS, BUY_POOLS, shuffle, shuffleId,
-  loadSnooze, addSnooze, topGenres, availableVibes,
+  loadSnooze, addSnooze, topGenres,
 } from '../lib/shuffle.js'
+import { availableVibes } from '../lib/vibes.js'
 import './shuffle.css'
 
 // Horizontal travel before a drag counts as a swipe rather than a stray finger.

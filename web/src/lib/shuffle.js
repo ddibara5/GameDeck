@@ -4,6 +4,7 @@
 // its arguments (the one exception being the localStorage helpers), so the rules
 // that decide what you are offered can be tested without rendering anything.
 import { releaseDayDelta } from './format.js'
+import { hasVibe } from './vibes.js'
 
 // Rerolls per session. High enough that it never feels like a cage; the counter
 // exists so a session that has clearly stopped deciding is visible, not to stop you.
@@ -93,31 +94,8 @@ export function inBuyPool(item, pool) {
 
 // ----------------------------------------------------------------- the filters
 
-// Curated keyword chips. `games.genre` holds a single IGDB genre, so Dark Souls
-// and Persona are both "Role-playing (RPG)"; these come from the keywords column
-// instead, which is the only place a soulslike is distinguishable from an RPG.
-// Each entry lists every spelling IGDB uses, since it is not consistent.
-export const VIBES = [
-  { key: 'soulslike', label: 'Soulslike', terms: ['souls-like', 'soulslike'] },
-  { key: 'openworld', label: 'Open world', terms: ['open world'] },
-  { key: 'stealth', label: 'Stealth', terms: ['stealth'] },
-  { key: 'postapoc', label: 'Post-apocalyptic', terms: ['post-apocalyptic'] },
-  { key: 'horror', label: 'Horror', terms: ['horror', 'survival horror'] },
-  { key: 'story', label: 'Story rich', terms: ['story rich'] },
-]
-
-export function hasVibe(game, vibeKey) {
-  const v = VIBES.find((x) => x.key === vibeKey)
-  if (!v) return true
-  const kw = (game && game.keywords) || []
-  return v.terms.some((t) => kw.indexOf(t) >= 0)
-}
-
-// Only offer a chip that can actually return something. A filter that always
-// yields an empty rail is worse than no filter at all.
-export function availableVibes(games, min = 5) {
-  return VIBES.filter((v) => games.filter((g) => hasVibe(g, v.key)).length >= min)
-}
+// VIBES / hasVibe / availableVibes moved to ./vibes.js so the Library filter can
+// use them without importing the shuffler's selection rules. Imported above.
 
 export function topGenres(games, count = 6) {
   const tally = new Map()
