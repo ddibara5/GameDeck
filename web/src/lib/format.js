@@ -104,22 +104,51 @@ export function releaseDayDelta(released) {
 }
 
 /**
+ * End of the window a release could land in, in ms, given its IGDB precision.
+ *
+ * A coarse date is not a date. IGDB stores "2026" as 31 Dec 2026, so treating it
+ * as an instant claims a game releases on New Year's Eve. Resolving to the END of
+ * the period instead means a vague date sorts AFTER every concrete date it
+ * overlaps, never before them: "sometime in 2026" cannot outrank "14 Sep 2026".
+ *
+ * This is why Ocarina of Time (precision `year`, label "2026") sat at the top of
+ * Wishlist - coming soon while the Wishlist page, which already modelled this,
+ * ranked it last.
+ */
+export function releaseWindowEndTs(released, precision) {
+  const ts = Number(released)
+  if (!ts) return null
+  const d = new Date(ts * 1000)
+  const y = d.getUTCFullYear()
+  const m = d.getUTCMonth()
+  if (precision === 'year') return Date.UTC(y, 11, 31)
+  if (precision === 'quarter') return Date.UTC(y, Math.floor(m / 3) * 3 + 3, 0)
+  if (precision === 'month') return Date.UTC(y, m + 1, 0)
+  return ts * 1000
+}
+
+/**
  * Compact release timing for Discover cards, from an IGDB first_release_date
  * (unix SECONDS). Returns { label, tone } only when a game is near its release,
  * so older catalog rows show nothing (and fall back to just the rating).
  *   tone 'amber'  -> upcoming (counting down)
  *   tone 'fresh'  -> released today or within the last ~10 days
- *   tone 'muted'  -> released 11-120 days ago
- * Windows: up to 120 days either side of release.
+ *   tone 'muted'  -> released 11-365 days ago
+ * Windows: up to 365 days either side of release.
  *
- * The backward window matches the "Recently released" rail, which selects games
- * from the last 120 days. It used to stop at 30, so most of that rail carried no
- * timing at all - the one place a "3w ago" is most worth reading.
+ * The backward window matches the widest rail that uses it, "Wishlist - out now"
+ * at 365 days. It has been widened twice for the same reason: at 30 days, and then
+ * at 120, most of the rail carried no timing at all, which is the one place a
+ * "3w ago" is most worth reading.
  */
 export function releaseTiming(released) {
   const days = releaseDayDelta(released)
   if (days === null) return null
-  if (Math.abs(days) > 120) return null
+  // A year, matching OUT_NOW_WINDOW_DAYS. At 120 days most of "Wishlist - out now"
+  // fell off the end of this and showed a bare date instead of a relative tag,
+  // which is the one thing that row is for. Anything older than a year still gets
+  // a date, because "17mo ago" stops meaning anything.
+  if (Math.abs(days) > 365) return null
 
   if (days === 0) return { label: 'Today', tone: 'fresh' }
 
@@ -137,7 +166,7 @@ export function releaseTiming(released) {
   else if (ago < 14) label = `${ago}d ago`
   else if (ago < 56) label = `${Math.round(ago / 7)}w ago`
   // Past ~8 weeks "14w ago" stops being readable at a glance; months are easier
-  // to place, and 120 days never rounds past 4.
+  // to place, and the 365-day cap never rounds past 12.
   else label = `${Math.round(ago / 30)}mo ago`
   return { label, tone: ago <= 10 ? 'fresh' : 'muted' }
 }

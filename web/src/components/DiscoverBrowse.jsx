@@ -6,7 +6,7 @@ import Cover from './Cover.jsx'
 import Skeleton from './Skeleton.jsx'
 import WishHeart from './WishHeart.jsx'
 import { fetchDiscover, fetchDiscoverHome, fetchGamesByIds, loadLibraryTitles, loadGamePass, normTitle } from '../lib/discover.js'
-import { releaseDayDelta, releaseTiming, shelfMetaDate } from '../lib/format.js'
+import { releaseDayDelta, releaseTiming, shelfMetaDate, releaseWindowEndTs } from '../lib/format.js'
 import { useWishlist } from '../lib/wishlist.js'
 import { useRowsConfig, ROW_BY_KEY } from '../lib/discoverRows.js'
 import { VIBES } from '../lib/vibes.js'
@@ -232,6 +232,8 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
           rating: (m && m.rating) || null,
           released: (m && m.released != null ? m.released : r.released) ?? null,
           release: (m && m.release) || null,
+          // Carried so the rails can tell "14 Sep 2026" from "sometime in 2026".
+          precision: (m && m.release && m.release.precision) || r.date_precision || null,
         }
       }),
     [wishItems, wishMeta]
@@ -246,11 +248,30 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
   // "Wishlist - coming soon": genuinely unreleased entries, by release timestamp
   // now that we have one. Falls back to the year while the metadata is in flight,
   // which is what it used to do exclusively.
-  const wishSoonGames = useMemo(() => wishGames.filter(isComingSoon), [wishGames])
+  // Soonest first, and a coarse date resolves to the END of its period so
+  // "sometime in 2026" never outranks a game with a real date in 2026. Without
+  // this the rail was in wishlist-added order, which is why Ocarina of Time sat
+  // at the top on a year-precision date while releasing last.
+  const wishSoonGames = useMemo(
+    () =>
+      wishGames
+        .filter(isComingSoon)
+        .sort(
+          (a, b) =>
+            (releaseWindowEndTs(a.released, a.precision) ?? Infinity) -
+            (releaseWindowEndTs(b.released, b.precision) ?? Infinity)
+        ),
+    [wishGames]
+  )
   // "Wishlist - out now": the other side of the same boundary. Owned games drop
   // out under the hide-owned toggle, since a game already in the library is no
   // longer one you are waiting for.
-  const wishOutNowGames = useMemo(() => wishGames.filter(isOutNow), [wishGames])
+  // Most recently released first: the thing you have been waiting for that just
+  // landed is the point of the row, and it was previously in wishlist-added order.
+  const wishOutNowGames = useMemo(
+    () => wishGames.filter(isOutNow).sort((a, b) => (Number(b.released) || 0) - (Number(a.released) || 0)),
+    [wishGames]
+  )
 
   const railKeySig = enabledRailKeys.join(',')
   // The active narrowing, as a stable string, so the rails refetch when it moves.
