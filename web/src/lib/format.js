@@ -52,45 +52,54 @@ export function formatRelativeDay(value) {
  * (unix SECONDS). Returns { label, tone } only when a game is near its release,
  * so older catalog rows show nothing (and fall back to just the rating).
  *   tone 'amber'  -> upcoming (counting down)
- *   tone 'fresh'  -> released within the last ~10 days
+ *   tone 'fresh'  -> released today or within the last ~10 days
  *   tone 'muted'  -> released 11-120 days ago
  * Windows: up to 120 days either side of release.
  *
  * The backward window matches the "Recently released" rail, which selects games
  * from the last 120 days. It used to stop at 30, so most of that rail carried no
  * timing at all - the one place a "3w ago" is most worth reading.
+ *
+ * Dates are compared as CALENDAR DATES, not as instants. IGDB stores
+ * first_release_date as UTC midnight, which means "this calendar day", not "this
+ * moment". Comparing it against a raw Date.now() made a game releasing today read
+ * "in 1h" in upcoming amber until UTC midnight passed, because the diff >= 0
+ * branch won at the boundary. It also put the released/upcoming flip at UTC
+ * midnight rather than the reader's own, which is up to 14 hours out.
  */
 export function releaseTiming(released) {
   const ts = Number(released)
   if (!ts) return null
-  const DAY = 86400
-  const diff = ts - Date.now() / 1000 // >0 upcoming, <0 already out
-  const days = Math.abs(diff) / DAY
 
-  if (diff >= 0) {
-    if (days > 120) return null
+  // The game's date, read in UTC (the timezone IGDB stamped it in).
+  const g = new Date(ts * 1000)
+  const gameDay = Date.UTC(g.getUTCFullYear(), g.getUTCMonth(), g.getUTCDate())
+  // Today, read in the reader's own timezone.
+  const n = new Date()
+  const today = Date.UTC(n.getFullYear(), n.getMonth(), n.getDate())
+
+  const days = Math.round((gameDay - today) / 86400000)
+  if (Math.abs(days) > 120) return null
+
+  if (days === 0) return { label: 'Today', tone: 'fresh' }
+
+  if (days > 0) {
     let label
-    if (diff < 2 * DAY) {
-      const h = Math.max(1, Math.round(diff / 3600))
-      label = h >= 24 ? 'Tomorrow' : `in ${h}h`
-    } else if (days < 14) {
-      label = `in ${Math.round(days)}d`
-    } else {
-      label = `in ${Math.round(days / 7)}w`
-    }
+    if (days === 1) label = 'Tomorrow'
+    else if (days < 14) label = `in ${days}d`
+    else label = `in ${Math.round(days / 7)}w`
     return { label, tone: 'amber' }
   }
 
-  if (days > 120) return null
+  const ago = Math.abs(days)
   let label
-  if (days < 1) label = 'Today'
-  else if (days < 2) label = 'Yesterday'
-  else if (days < 14) label = `${Math.round(days)}d ago`
-  else if (days < 56) label = `${Math.round(days / 7)}w ago`
+  if (ago === 1) label = 'Yesterday'
+  else if (ago < 14) label = `${ago}d ago`
+  else if (ago < 56) label = `${Math.round(ago / 7)}w ago`
   // Past ~8 weeks "14w ago" stops being readable at a glance; months are easier
   // to place, and 120 days never rounds past 4.
-  else label = `${Math.round(days / 30)}mo ago`
-  return { label, tone: days <= 10 ? 'fresh' : 'muted' }
+  else label = `${Math.round(ago / 30)}mo ago`
+  return { label, tone: ago <= 10 ? 'fresh' : 'muted' }
 }
 
 const RELEASE_MONTHS = [
