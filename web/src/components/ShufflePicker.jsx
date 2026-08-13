@@ -315,7 +315,11 @@ export default function ShufflePicker({ open, onClose }) {
         </div>
 
         <div className="shuffle-mode" role="tablist">
-          {[['play', 'Play'], ['buy', 'Buy']].map(([key, label]) => (
+          {/* Buy sits first, and the library side reads "Owned" - it names what the
+              pool IS rather than what you do with it, which is the same thing Buy
+              does. The `play` KEY is unchanged: it is what the pool rules and the
+              snooze ids are keyed on, and renaming it would strand every snooze. */}
+          {[['buy', 'Buy'], ['play', 'Owned']].map(([key, label]) => (
             <button
               key={key}
               type="button"
