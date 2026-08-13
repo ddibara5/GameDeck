@@ -179,7 +179,7 @@ let _gpPromise = null
 async function fetchGamePass() {
   const { data, error } = await supabase
     .from('gamepass')
-    .select('igdb_id, name, cover, year, rating, released')
+    .select('igdb_id, name, cover, year, rating, released, leaving_soon')
     .order('rating', { ascending: false, nullsFirst: false })
   if (error) throw new Error(error.message || 'Game Pass request failed')
   return (data || []).map((r) => ({
@@ -189,6 +189,9 @@ async function fetchGamePass() {
     year: r.year,
     rating: r.rating,
     released: r.released,
+    // Membership only. Microsoft's "Leaving soon" collection publishes no departure
+    // date, so this must never be rendered as a countdown.
+    leaving_soon: Boolean(r.leaving_soon),
   }))
 }
 

@@ -16,10 +16,12 @@ const BASE_COLUMNS =
   'last_played, first_played, completion_date, cover_small, cover_standard, cover_tile, ' +
   'achievements_url, updated_at, length_minutes, genre, release_year, cover_igdb'
 
+// keywords powers the shuffler's soulslike-style filters; games.genre holds a single
+// IGDB genre and cannot express them.
 // igdb_rating is added by a later migration + populated by the IGDB enrich. Select
 // it when present; if the column doesn't exist yet, fall back so the library and
 // the status lists still load. Only "Best of your backlog" needs the rating.
-export const LIST_GAME_COLUMNS = `${BASE_COLUMNS}, igdb_rating`
+export const LIST_GAME_COLUMNS = `${BASE_COLUMNS}, igdb_rating, keywords`
 
 const CACHE_KEY = 'library:games'
 
@@ -30,7 +32,7 @@ async function fetchLibrary() {
     supabase.from('games').select(cols).order('last_played', { ascending: false, nullsFirst: false })
 
   let { data, error } = await ordered(LIST_GAME_COLUMNS)
-  if (error && /igdb_rating/i.test(error.message || '')) {
+  if (error && /igdb_rating|keywords/i.test(error.message || '')) {
     ;({ data, error } = await ordered(BASE_COLUMNS))
   }
   if (error) throw new Error(error.message || 'Library request failed')

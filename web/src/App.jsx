@@ -20,6 +20,7 @@ const DiscoverTab = lazy(() => import('./components/DiscoverTab.jsx'))
 const NewsTab = lazy(() => import('./components/NewsTab.jsx'))
 const WishlistTab = lazy(() => import('./components/WishlistTab.jsx'))
 const ListView = lazy(() => import('./components/ListView.jsx'))
+const ShufflePicker = lazy(() => import('./components/ShufflePicker.jsx'))
 
 // Drawer edge-swipe: open with a swipe in from the left edge, close with a left swipe.
 const EDGE_PX = 24
@@ -36,6 +37,7 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [customizeOpen, setCustomizeOpen] = useState(false)
   const [customizeNavOpen, setCustomizeNavOpen] = useState(false)
+  const [shuffleOpen, setShuffleOpen] = useState(false)
   // Live tab bar layout (order + which tabs show + label visibility).
   const nav = useNavConfig()
   const visibleTabs = visibleKeys(nav)
@@ -115,7 +117,7 @@ export default function App() {
       // Full-screen pages with their own edge-back swipe (Settings / Customize,
       // and any overlay registered via useEdgeBack, e.g. the Discover rail page):
       // don't also open the app drawer behind them on an edge swipe.
-      if (settingsOpen || customizeOpen || customizeNavOpen || overlaysOpen()) return
+      if (settingsOpen || customizeOpen || customizeNavOpen || shuffleOpen || overlaysOpen()) return
       const t = e.touches && e.touches[0]
       if (!t) return
       const dx = t.clientX - startX
@@ -151,20 +153,35 @@ export default function App() {
       window.removeEventListener('touchmove', onMove)
       window.removeEventListener('touchend', onEnd)
     }
-  }, [menuOpen, settingsOpen, customizeOpen, customizeNavOpen, view, viewClosing])
+  }, [menuOpen, settingsOpen, customizeOpen, customizeNavOpen, shuffleOpen, view, viewClosing])
 
   return (
     <div className="app">
       <header className={`app-header${scrolled ? ' scrolled' : ''}`}>
         <Brand onOpen={() => setMenuOpen(true)} />
-        <button type="button" className="gear-btn" onClick={() => setSettingsOpen(true)} aria-label="Settings" aria-haspopup="dialog">
-          <span className="gear-chip">
-            <svg className="gear-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-            </svg>
-          </span>
-        </button>
+        <div className="header-actions">
+          <button type="button" className="dice-btn" onClick={() => setShuffleOpen(true)} aria-label="Shuffle a game" aria-haspopup="dialog">
+            <span className="gear-chip">
+              <svg className="dice-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="3" y="3" width="18" height="18" rx="4" />
+                <circle cx="8.4" cy="7.6" r="1.05" fill="currentColor" stroke="none" />
+                <circle cx="8.4" cy="12" r="1.05" fill="currentColor" stroke="none" />
+                <circle cx="8.4" cy="16.4" r="1.05" fill="currentColor" stroke="none" />
+                <circle cx="15.6" cy="7.6" r="1.05" fill="currentColor" stroke="none" />
+                <circle cx="15.6" cy="12" r="1.05" fill="currentColor" stroke="none" />
+                <circle cx="15.6" cy="16.4" r="1.05" fill="currentColor" stroke="none" />
+              </svg>
+            </span>
+          </button>
+          <button type="button" className="gear-btn" onClick={() => setSettingsOpen(true)} aria-label="Settings" aria-haspopup="dialog">
+            <span className="gear-chip">
+              <svg className="gear-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </span>
+          </button>
+        </div>
       </header>
       <main className="app-main">
         <Suspense fallback={null}>
@@ -206,6 +223,9 @@ export default function App() {
           setActiveTab(t)
         }}
       />
+      <Suspense fallback={null}>
+        {shuffleOpen ? <ShufflePicker open onClose={() => setShuffleOpen(false)} /> : null}
+      </Suspense>
       <SettingsPage open={settingsOpen} onClose={() => setSettingsOpen(false)} onOpenNav={() => setCustomizeNavOpen(true)} />
       <CustomizeRows open={customizeOpen} onClose={() => setCustomizeOpen(false)} />
       <CustomizeNav open={customizeNavOpen} onClose={() => setCustomizeNavOpen(false)} />
