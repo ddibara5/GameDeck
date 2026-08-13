@@ -275,10 +275,19 @@ export function optImg(url, targetW = 240) {
   return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${w}&output=webp&q=82`
 }
 
+// Labels name the PLATFORM YOU PLAYED ON, not the storefront the row was synced
+// from. `steam` reads "PC" for that reason: the environment key stays `steam`
+// because that is where the data comes from, but nobody thinks of it as a console
+// called Steam. Settings still says "Steam" where it names the sync source, which
+// really is Steam.
+//
+// This is the only definition. The Library filter said "PSN", Discover said
+// "PC / Steam" and Insights kept a third private copy, so the same platform had
+// three names depending on which screen you were looking at.
 const PLATFORM_META = {
   xbox: { label: 'Xbox', color: 'var(--xbox)' },
   psn: { label: 'PlayStation', color: 'var(--psn)' },
-  steam: { label: 'Steam', color: 'var(--steam)' },
+  steam: { label: 'PC', color: 'var(--steam)' },
 }
 
 /**

@@ -4,15 +4,17 @@ import GameDetail from './GameDetail.jsx'
 import Skeleton from './Skeleton.jsx'
 import HomeShelf from './HomeShelf.jsx'
 import { useStatusMap, effectiveStatus } from '../lib/userStatus.js'
+import { platformMeta } from '../lib/format.js'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
 import { VIBES, hasVibe, availableVibes } from '../lib/vibes.js'
 import { topGenres } from '../lib/shuffle.js'
 
+// Derived from platformMeta so this cannot drift from the labels on the cards it
+// filters. It used to say "PSN" and "Steam" while the cards beside it said
+// "PlayStation" and Discover said "PC / Steam".
 const PLATFORM_FILTERS = [
   { key: 'all', label: 'All' },
-  { key: 'xbox', label: 'Xbox' },
-  { key: 'psn', label: 'PSN' },
-  { key: 'steam', label: 'Steam' },
+  ...['xbox', 'psn', 'steam'].map((key) => ({ key, label: platformMeta(key).label })),
 ]
 
 const STATUS_FILTERS = [

@@ -60,7 +60,7 @@ const PLATFORMS = [
   { key: 'xbox', label: 'Xbox' },
   { key: 'psn', label: 'PlayStation' },
   { key: 'switch', label: 'Switch' },
-  { key: 'steam', label: 'PC / Steam' },
+  { key: 'steam', label: 'PC' },
 ]
 
 const SORTS = [

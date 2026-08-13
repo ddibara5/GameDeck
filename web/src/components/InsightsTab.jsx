@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import Skeleton from './Skeleton.jsx'
+import { platformMeta } from '../lib/format.js'
 import './insights.css'
 
 /* ------------------------------------------------------------------ helpers */
@@ -243,10 +244,12 @@ export default function InsightsTab() {
     }
 
     // platforms
+    // Was a third private copy of the platform labels, which is how "Steam" here
+    // outlived "PC" everywhere else. One definition, in format.js.
     const P = {
-      xbox: { label: 'Xbox', color: 'var(--xbox)' },
-      psn: { label: 'PlayStation', color: 'var(--psn)' },
-      steam: { label: 'Steam', color: 'var(--steam)' },
+      xbox: platformMeta('xbox'),
+      psn: platformMeta('psn'),
+      steam: platformMeta('steam'),
     }
     const plat = {}
     for (const g of games) {
