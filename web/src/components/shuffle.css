@@ -5,7 +5,11 @@
 .shuffle-page {
   position: fixed;
   inset: 0;
-  z-index: 320;
+  /* Below .modal-backdrop (300). The game sheet portals to <body> as a SIBLING of
+     this page, not a child, so at 320 the picker painted straight over it and
+     tapping the cover looked like a no-op. 212 puts this in the same band as the
+     other full-screen pages (Settings is 210). */
+  z-index: 212;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -86,6 +90,21 @@
   font-weight: 600;
   letter-spacing: -0.01em;
 }
+.shuffle-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+/* The filter button is the shared one from index.css; it is 44px there, which is
+   taller than this header's 34px close button, so it is scaled to match. */
+.shuffle-top-actions .filter-btn {
+  position: relative;
+  overflow: visible;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+}
 .shuffle-x {
   width: 34px;
   height: 34px;
@@ -161,52 +180,6 @@
 .shuffle-seg button.on { background: var(--surface-2); color: var(--text); }
 .shuffle-seg button.on b { color: var(--accent); }
 
-.shuffle-filters { flex: none; }
-/* One scrolling line per group, the same pattern as Discover's .preset-row.
-   Wrapping produced six ragged lines with orphans ("Under 15h" alone, "Adventure"
-   alone), which is what made this read as cluttered. Rows bleed to the screen
-   edges so a scrolled chip is not clipped inside the padding. */
-.shuffle-chips {
-  display: flex;
-  gap: 6px;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  margin: 0 -16px 6px;
-  padding: 0 16px;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-.shuffle-chips::-webkit-scrollbar { display: none; }
-.sfchip {
-  border: 1px solid var(--line);
-  background: var(--bg);
-  color: var(--muted);
-  border-radius: 999px;
-  padding: 5px 10px;
-  font: inherit;
-  font-size: 11.5px;
-  font-weight: 500;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  flex: 0 0 auto;
-  white-space: nowrap;
-  -webkit-tap-highlight-color: transparent;
-}
-.sfchip.on {
-  background: rgba(200, 169, 126, 0.16);
-  border-color: rgba(200, 169, 126, 0.5);
-  color: var(--text);
-}
-[data-theme='light'] .sfchip.on {
-  background: rgba(156, 116, 73, 0.15);
-  border-color: rgba(156, 116, 73, 0.5);
-}
-.sfchip.gp.on {
-  background: rgba(224, 135, 26, 0.18);
-  border-color: rgba(224, 135, 26, 0.55);
-}
 .sfdot { width: 6px; height: 6px; border-radius: 50%; flex: none; }
 
 /* Swipe either way to skip to another title, right to step back to one you have
@@ -228,7 +201,7 @@
 }
 .shuffle-stage.dragging { transition: none; }
 .shuffle-cover {
-  width: 168px;
+  width: 212px;
   border: none;
   background: none;
   padding: 0;
@@ -238,8 +211,8 @@
   -webkit-tap-highlight-color: transparent;
 }
 .shuffle-cover .cover {
-  width: 168px;
-  height: 224px;
+  width: 212px;
+  height: 283px;
   border-radius: 12px;
   box-shadow: 0 20px 44px rgba(0, 0, 0, 0.55);
 }
@@ -271,6 +244,17 @@
 }
 .shuffle-badge.owned { border-color: rgba(200, 169, 126, 0.5); color: var(--accent); }
 
+/* The title opens the same sheet as the cover. Two taps for one intent is fine;
+   a title that looks like a heading and does nothing is not. */
+.shuffle-title-btn {
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
 .shuffle-title {
   font-size: 19px;
   font-weight: 600;
@@ -343,3 +327,43 @@
    index.css on purpose. This stylesheet ships with the lazy ShufflePicker chunk,
    so anything here is absent until the picker is first opened - fine for the
    picker itself, wrong for chrome that renders on first paint. */
+
+/* Undo bar for "Not tonight". Sits directly above the actions so it is impossible
+   to miss in the second after the tap that caused it. */
+.shuffle-undo {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 9px 12px;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.shuffle-undo span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.shuffle-undo button {
+  flex: none;
+  border: none;
+  background: none;
+  padding: 2px 4px;
+  font: inherit;
+  font-weight: 700;
+  color: var(--accent);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The empty state can now offer the way out rather than only describing it. */
+.shuffle-empty .discover-action {
+  margin-top: 12px;
+  flex: 0 0 auto;
+  padding: 0 16px;
+}

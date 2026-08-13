@@ -6,10 +6,6 @@
 import { releaseDayDelta } from './format.js'
 import { hasVibe } from './vibes.js'
 
-// Rerolls per session. High enough that it never feels like a cage; the counter
-// exists so a session that has clearly stopped deciding is visible, not to stop you.
-export const REROLL_BUDGET = 25
-
 const SNOOZE_KEY = 'gamedeck_shuffle_snooze_v1'
 const SNOOZE_DAYS = 30
 
@@ -49,6 +45,21 @@ export function addSnooze(map, id, now = Date.now()) {
   return next
 }
 
+// Undo. "Not tonight" used to be a one-way door: a mis-tap hid a game for a month
+// with no way to see it had happened, let alone reverse it.
+export function removeSnooze(map, id) {
+  if (id == null) return map
+  const next = { ...map }
+  delete next[String(id)]
+  saveSnooze(next)
+  return next
+}
+
+export function clearSnooze() {
+  saveSnooze({})
+  return {}
+}
+
 export function isSnoozed(map, id) {
   return id != null && Object.prototype.hasOwnProperty.call(map, String(id))
 }
@@ -62,10 +73,15 @@ export function shuffleId(item, mode) {
 
 // ------------------------------------------------------------------- the pools
 
+// `unfinished` is the old "Anything" with the games you are done with removed. A
+// picker whose job is "what should I play" must not offer something you marked
+// Finished or walked away from; before this it did, and there are 38 games that
+// already derive as finished from playtime alone.
 export const PLAY_POOLS = [
   { key: 'never', label: 'Never played', sub: 'you have never started' },
   { key: 'barely', label: 'Barely started', sub: 'you barely started' },
-  { key: 'all', label: 'Anything', sub: 'in your library' },
+  { key: 'unfinished', label: 'Anything', sub: 'you have not finished' },
+  { key: 'finished', label: 'Replay', sub: 'you have already finished' },
 ]
 
 export const BUY_POOLS = [
@@ -76,7 +92,13 @@ export const BUY_POOLS = [
 
 const mins = (g) => Number(g && g.playtime_minutes) || 0
 
-export function inPlayPool(game, pool) {
+// `statusOf` is injected rather than imported so these stay pure and testable:
+// the caller decides whether that means an explicit tag or a derived one.
+export function inPlayPool(game, pool, statusOf) {
+  const status = statusOf ? statusOf(game) : null
+  if (pool === 'finished') return status === 'finished'
+  // Done is done. Finished and abandoned are excluded from every other pool.
+  if (status === 'finished' || status === 'abandoned') return false
   if (pool === 'never') return mins(game) === 0
   if (pool === 'barely') return mins(game) > 0 && mins(game) <= 120
   return true
@@ -94,14 +116,27 @@ export function inBuyPool(item, pool) {
 
 // ----------------------------------------------------------------- the filters
 
-// VIBES / hasVibe / availableVibes moved to ./vibes.js so the Library filter can
-// use them without importing the shuffler's selection rules. Imported above.
+// How long you have got. One coarse "Under 15h" toggle could not express "I have
+// an evening" or "I want something I can actually finish".
+export const LENGTH_STEPS = [
+  { key: 0, label: 'Any length' },
+  { key: 300, label: 'Under 5h' },
+  { key: 900, label: 'Under 15h' },
+  { key: 2400, label: 'Under 40h' },
+]
+
+// Library rows carry ONE genre string; wishlist rows enriched from IGDB carry a
+// `genres` array. Normalising here is what lets the same filter run over both.
+export function gameGenres(item) {
+  if (!item) return []
+  if (Array.isArray(item.genres)) return item.genres
+  return item.genre ? [item.genre] : []
+}
 
 export function topGenres(games, count = 6) {
   const tally = new Map()
   for (const g of games) {
-    const key = g && g.genre
-    if (key) tally.set(key, (tally.get(key) || 0) + 1)
+    for (const key of gameGenres(g)) tally.set(key, (tally.get(key) || 0) + 1)
   }
   return [...tally.entries()]
     .sort((a, b) => b[1] - a[1])
@@ -111,13 +146,19 @@ export function topGenres(games, count = 6) {
 
 // A game with no genre is NOT excluded unless a genre chip is active. Same for
 // length: a missing figure must never silently hide a game.
-export function matchesFilters(game, f) {
+export function matchesFilters(game, f, gamePass) {
+  if (!f) return true
   if (f.platform && f.platform !== 'any' && game.environment !== f.platform) return false
-  if (f.genre && f.genre !== 'any' && game.genre !== f.genre) return false
+  if (f.genre && f.genre !== 'any' && !gameGenres(game).includes(f.genre)) return false
   if (f.vibe && f.vibe !== 'any' && !hasVibe(game, f.vibe)) return false
   if (f.maxMinutes) {
     const len = Number(game.length_minutes) || 0
     if (len > 0 && len > f.maxMinutes) return false
+  }
+  // A hard filter, not a nudge. "Favour Game Pass" changes the odds; this answers
+  // the different question of what you can play tonight without paying for it.
+  if (f.gamePassOnly) {
+    if (!gamePass || !gamePass.has(Number(game.igdb_id))) return false
   }
   return true
 }
@@ -152,31 +193,37 @@ export function weightedPick(list, weights, rand = Math.random) {
   return list[list.length - 1]
 }
 
+// Everything eligible under the current question, before the snooze list is
+// applied. Exported so the filter sheet can show live counts and never offer a
+// combination that returns nothing.
+export function eligible({ items, mode, pool, filters, gamePass, statusOf }) {
+  const inPool = mode === 'buy'
+    ? (it) => inBuyPool(it, pool)
+    : (it) => inPlayPool(it, pool, statusOf)
+  return items.filter((it) => inPool(it) && matchesFilters(it, filters, gamePass))
+}
+
 // The whole selection, end to end. Returns the pick plus everything the "why"
 // line needs, so the UI never has to recompute the reasoning it displays.
-export function shuffle({ items, mode, pool, filters, gamePass, snoozeMap, exclude, boost, rand }) {
-  const inPool = mode === 'buy' ? inBuyPool : inPlayPool
-  const eligible = items.filter(
-    (it) => inPool(it, pool) && (mode === 'buy' || matchesFilters(it, filters)) &&
-      (mode !== 'buy' || !filters.vibe || filters.vibe === 'any')
-  )
-  const fresh = eligible.filter((it) => !isSnoozed(snoozeMap, shuffleId(it, mode)))
+export function shuffle({ items, mode, pool, filters, gamePass, snoozeMap, exclude, boost, rand, statusOf }) {
+  const pooled = eligible({ items, mode, pool, filters, gamePass, statusOf })
+  const fresh = pooled.filter((it) => !isSnoozed(snoozeMap, shuffleId(it, mode)))
   // Falling back to the snoozed set beats showing nothing: an empty result reads
   // as a broken feature, and the snooze is a preference rather than a hard rule.
-  let pickable = fresh.length ? fresh : eligible
+  let pickable = fresh.length ? fresh : pooled
   if (exclude != null && pickable.length > 1) {
     const without = pickable.filter((it) => shuffleId(it, mode) !== exclude)
     if (without.length) pickable = without
   }
-  if (!pickable.length) return { pick: null, poolSize: eligible.length, reason: null }
+  if (!pickable.length) return { pick: null, poolSize: pooled.length, reason: null }
 
   const weighted = pickable.map((it) => weightFor(it, { mode, gamePass, boost }))
   const pick = weightedPick(pickable, weighted.map((w) => w.weight), rand)
   const idx = pickable.indexOf(pick)
   return {
     pick,
-    poolSize: eligible.length,
+    poolSize: pooled.length,
     reason: idx >= 0 ? weighted[idx].reason : null,
-    usedSnoozed: !fresh.length && eligible.length > 0,
+    usedSnoozed: !fresh.length && pooled.length > 0,
   }
 }
