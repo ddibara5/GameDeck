@@ -13,7 +13,12 @@ import { useRowsConfig, ROW_BY_KEY } from '../lib/discoverRows.js'
 const CURRENT_YEAR = new Date().getFullYear()
 
 // How long a wishlisted game stays on "Wishlist - out now" after release.
-const OUT_NOW_WINDOW_DAYS = 30
+//
+// A year, not a month. At 30 days the row showed 2 of 34 released wishlist games,
+// because a wishlist is not a release calendar: things sit on it long after they
+// come out, waiting to be bought. A year reads the row as "wishlisted, out, still
+// not yours" rather than "released this month", which is the useful question.
+const OUT_NOW_WINDOW_DAYS = 365
 
 // One definition of "not out yet", shared by the shelf and its see-all page.
 // The year fallback only applies while IGDB metadata is still in flight; a row
@@ -211,13 +216,20 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
         const m = wishMeta[r.igdb_id]
         // The stored row wins for title and cover (it is what the user saw when
         // they saved it); everything else comes from IGDB once it lands.
+        //
+        // `released` reads live metadata FIRST but falls back to the stored column,
+        // which is what `GameDeck | Wishlist - Refresh release dates` exists to keep
+        // current. Reading only the live value meant a wishlist row had no release
+        // date until IGDB answered, and none at all if IGDB never returned it, so
+        // the coming-soon and out-now rows silently under-reported. Live first
+        // because a date that has moved should move here too.
         return {
           id: r.igdb_id,
           name: r.title,
           cover: r.cover || (m && m.cover) || null,
           year: r.year || (m && m.year) || null,
           rating: (m && m.rating) || null,
-          released: (m && m.released) || null,
+          released: (m && m.released != null ? m.released : r.released) ?? null,
           release: (m && m.release) || null,
         }
       }),
