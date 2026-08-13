@@ -40,16 +40,6 @@ const isOutNow = (g) => {
   return d !== null && d <= 0 && d >= -OUT_NOW_WINDOW_DAYS
 }
 
-// Quick-access chips tuned to Dave's genre play history (no developer filters).
-// Each chip resolves to either an IGDB keyword/genre preset (server `preset=`)
-// or a plain genre slug (server `genre=`); the API supports both natively.
-const CHIPS = [
-  { key: 'soulslike', label: 'Soulslike', preset: 'soulslike' },
-  { key: 'arpg', label: 'RPG', preset: 'arpg' },
-  { key: 'adventure', label: 'Adventure', genre: 'adventure' },
-  { key: 'simulator', label: 'Simulator', genre: 'simulator' },
-]
-
 const GENRES = [
   { key: 'all', label: 'All genres' },
   { key: 'role-playing-rpg', label: 'RPG' },
@@ -158,7 +148,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
     filters.status !== 'all' ||
     filters.sort !== 'popularity'
   // Typing a title is a request for ranked matches, so search still collapses the
-  // page into one flat list. Filters and preset chips are a different intent -
+  // page into one flat list. Filters and the vibe preset are a different intent -
   // "show me the same shelves, but only RPGs" - so they narrow every rail in
   // place and the browsable structure survives. Rails that filter down to nothing
   // hide themselves.
@@ -377,25 +367,6 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
     }
   }
 
-  // A chip is either a preset (keyword/company/genre-id bundle) or a plain
-  // genre slug. Selecting one clears the other so only a single chip is active.
-  const isChipActive = (chip) =>
-    chip.genre ? !preset && filters.genre === chip.genre : preset === chip.key
-
-  function toggleChip(chip) {
-    setQuery('')
-    if (chip.genre) {
-      setPreset(null)
-      setFilters((f) => ({
-        ...DEFAULT_FILTERS,
-        genre: !preset && f.genre === chip.genre ? 'all' : chip.genre,
-      }))
-    } else {
-      setFilters(DEFAULT_FILTERS)
-      setPreset((cur) => (cur === chip.key ? null : chip.key))
-    }
-  }
-
   function resetAll() {
     setQuery('')
     setPreset(null)
@@ -472,19 +443,6 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
             )}
           </svg>
         </button>
-      </div>
-
-      <div className="preset-row">
-        {CHIPS.map((chip) => (
-          <button
-            key={chip.key}
-            type="button"
-            className={`preset-chip${isChipActive(chip) ? ' active' : ''}`}
-            onClick={() => toggleChip(chip)}
-          >
-            {chip.label}
-          </button>
-        ))}
       </div>
 
       {!searchMode && narrowed ? (
@@ -637,6 +595,35 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
               </div>
             </div>
 
+            {/* Same six categories the Library and shuffler offer. They set `preset`,
+                which the API resolves to IGDB keyword/theme ids, so the filtering
+                happens server side rather than over whatever page is loaded.
+                They sit next to Genre because both answer the same question:
+                what kind of game. This replaced the standalone chip row that used
+                to sit under the Discover header. */}
+            <div className="filter-group">
+              <span className="filter-label">Vibe</span>
+              <div className="filter-options">
+                <button
+                  type="button"
+                  className={`filter-opt${VIBES.every((v) => v.key !== preset) ? ' active' : ''}`}
+                  onClick={() => setPreset(null)}
+                >
+                  Any
+                </button>
+                {VIBES.map((v) => (
+                  <button
+                    key={v.key}
+                    type="button"
+                    className={`filter-opt${preset === v.key ? ' active' : ''}`}
+                    onClick={() => setPreset((cur) => (cur === v.key ? null : v.key))}
+                  >
+                    {v.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="filter-group">
               <span className="filter-label">Platform</span>
               <div className="filter-options">
@@ -680,34 +667,6 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
                     onClick={() => setFilters((f) => ({ ...f, year: y }))}
                   >
                     {y === 'all' ? 'Any year' : y}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Same six categories the Library and shuffler offer. They set `preset`,
-                which the API resolves to IGDB keyword/theme ids, so the filtering
-                happens server side rather than over whatever page is loaded.
-                Unlike the chip row these do NOT reset the other filters: the sheet
-                is for composing a query, a chip is a jump straight to one. */}
-            <div className="filter-group">
-              <span className="filter-label">Vibe</span>
-              <div className="filter-options">
-                <button
-                  type="button"
-                  className={`filter-opt${VIBES.every((v) => v.key !== preset) ? ' active' : ''}`}
-                  onClick={() => setPreset(null)}
-                >
-                  Any
-                </button>
-                {VIBES.map((v) => (
-                  <button
-                    key={v.key}
-                    type="button"
-                    className={`filter-opt${preset === v.key ? ' active' : ''}`}
-                    onClick={() => setPreset((cur) => (cur === v.key ? null : v.key))}
-                  >
-                    {v.label}
                   </button>
                 ))}
               </div>
