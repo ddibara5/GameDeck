@@ -54,8 +54,25 @@ async function igdb(endpoint, body) {
 // preset -> extra where-clause fragment. IGDB keyword/company/genre ids confirmed
 // live: soulslike kw 17326, metroidvania kw 477, jrpg kw 521, RPG genre 12,
 // FromSoftware company 1012, Rockstar Games company 29.
+// The vibe presets below mirror lib/vibes.js, which the Library and the shuffler
+// filter by. Every id was resolved live via ?keywordLookup= rather than guessed.
+//
+// They are NOT all keywords. IGDB splits this vocabulary across two endpoints with
+// no obvious rule: post-apocalyptic (kw 69) and story rich (kw 2426) are keywords,
+// while open world (theme 38), stealth (theme 23) and horror (theme 19) are THEMES.
+// Searching keywords for "open world" returns "open world adventure" and friends
+// but no exact match, which looks like a plausible answer and is not one.
+//
+// soulslike carries BOTH ids: IGDB uses two spellings, `soulslike` (17326) and
+// `souls-like` (56427), and this preset only had the first, so it had been quietly
+// under-reporting. lib/vibes.js already matched both on the library side.
 const PRESETS = {
-  soulslike: 'keywords = (17326)',
+  soulslike: 'keywords = (17326, 56427)',
+  openworld: 'themes = (38)',
+  stealth: 'themes = (23)',
+  postapoc: 'keywords = (69)',
+  horror: 'themes = (19)',
+  story: 'keywords = (2426)',
   metroidvania: 'keywords = (477)',
   jrpg: 'keywords = (521)',
   arpg: 'genres = (12)',

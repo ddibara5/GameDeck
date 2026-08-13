@@ -9,6 +9,7 @@ import { fetchDiscover, fetchDiscoverHome, fetchGamesByIds, loadLibraryTitles, l
 import { releaseDayDelta, releaseTiming, shelfMetaDate } from '../lib/format.js'
 import { useWishlist } from '../lib/wishlist.js'
 import { useRowsConfig, ROW_BY_KEY } from '../lib/discoverRows.js'
+import { VIBES } from '../lib/vibes.js'
 
 const CURRENT_YEAR = new Date().getFullYear()
 
@@ -663,6 +664,34 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
               </div>
             </div>
 
+            {/* Same six categories the Library and shuffler offer. They set `preset`,
+                which the API resolves to IGDB keyword/theme ids, so the filtering
+                happens server side rather than over whatever page is loaded.
+                Unlike the chip row these do NOT reset the other filters: the sheet
+                is for composing a query, a chip is a jump straight to one. */}
+            <div className="filter-group">
+              <span className="filter-label">Vibe</span>
+              <div className="filter-options">
+                <button
+                  type="button"
+                  className={`filter-opt${VIBES.every((v) => v.key !== preset) ? ' active' : ''}`}
+                  onClick={() => setPreset(null)}
+                >
+                  Any
+                </button>
+                {VIBES.map((v) => (
+                  <button
+                    key={v.key}
+                    type="button"
+                    className={`filter-opt${preset === v.key ? ' active' : ''}`}
+                    onClick={() => setPreset((cur) => (cur === v.key ? null : v.key))}
+                  >
+                    {v.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="filter-group">
               <span className="filter-label">Sort by</span>
               <div className="filter-options">
@@ -680,7 +709,14 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
             </div>
 
             <div className="filter-sheet-actions">
-              <button type="button" className="discover-action" onClick={() => setFilters(DEFAULT_FILTERS)}>
+              <button
+                type="button"
+                className="discover-action"
+                onClick={() => {
+                  setFilters(DEFAULT_FILTERS)
+                  setPreset(null)
+                }}
+              >
                 Reset
               </button>
               <button type="button" className="discover-action primary" onClick={() => setShowFilters(false)}>
