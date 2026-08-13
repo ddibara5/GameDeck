@@ -366,30 +366,42 @@ export default async function handler(req, res) {
   try {
     const q = req.query || {};
 
-    // Keyword id lookup, for adding entries to PRESETS. PRESETS filters by IGDB
-    // keyword ID, and a guessed id fails silently: it returns games, just the
-    // wrong ones. This resolves names to ids from IGDB itself so a preset is
-    // never added on a hunch.
-    //   /api/discover?keywordLookup=open world,stealth,horror
+    // Taxonomy lookup, for adding entries to PRESETS. PRESETS filters by IGDB id,
+    // and a guessed id fails silently in the worst way: the query still succeeds
+    // and still returns games, just the wrong ones. This resolves names to ids
+    // from IGDB itself so a preset is never added on a hunch.
+    //
+    // IGDB splits this vocabulary across two endpoints and it is NOT obvious which
+    // holds what: "post-apocalyptic" and "story rich" are keywords, while "open
+    // world", "stealth" and "horror" are THEMES. Looking only at keywords returns
+    // near-miss variants ("open world adventure") and reads like a valid answer.
+    //
+    //   /api/discover?keywordLookup=open world,stealth        (keywords, default)
+    //   /api/discover?keywordLookup=*&lookupIn=themes         (list all themes)
+    //   /api/discover?keywordLookup=17326&lookupIn=keywords   (reverse, by id)
     if (q.keywordLookup) {
-      const names = String(q.keywordLookup)
+      const endpoint = q.lookupIn === 'themes' ? 'themes' : q.lookupIn === 'genres' ? 'genres' : 'keywords';
+      const terms = String(q.keywordLookup)
         .split(',')
         .map((s) => s.trim().toLowerCase())
         .filter(Boolean)
         .slice(0, 12);
       const out = {};
-      for (const name of names) {
-        const esc = name.replace(/"/g, '');
-        // Exact match first, then a contains search, so "horror" reports both the
-        // plain keyword and things like "survival horror" rather than hiding them.
-        const rows = await igdb(
-          'keywords',
-          `fields id,name,slug; where name = "${esc}" | name ~ *"${esc}"*; limit 25; sort name asc;`
-        );
-        out[name] = (rows || []).map((r) => ({ id: r.id, name: r.name, slug: r.slug }));
+      for (const term of terms) {
+        let where;
+        if (term === '*') where = '';
+        else if (/^\d+$/.test(term)) where = ` where id = ${term};`;
+        else {
+          const esc = term.replace(/"/g, '');
+          // Exact OR contains, so "horror" reports the plain entry alongside
+          // "survival horror" rather than hiding either.
+          where = ` where name = "${esc}" | name ~ *"${esc}"*;`;
+        }
+        const rows = await igdb(endpoint, `fields id,name,slug;${where} limit 100; sort name asc;`);
+        out[term] = (rows || []).map((r) => ({ id: r.id, name: r.name, slug: r.slug }));
       }
       res.setHeader('Cache-Control', 'no-store');
-      res.status(200).json({ keywordLookup: out });
+      res.status(200).json({ lookupIn: endpoint, keywordLookup: out });
       return;
     }
 
