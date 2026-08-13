@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="GameDeck">
-  <style>
-    .bg{fill:#1a1917}
-    @media (prefers-color-scheme: light){ .bg{fill:#ece2d2} }
-  </style>
-  <rect class="bg" width="512" height="512" rx="114" ry="114"/>
-  <g><polygon points="123.84,312 256,378.08 256,416.16 123.84,350.08" fill="#792d08"/><polygon points="388.16,312 256,378.08 256,416.16 388.16,350.08" fill="#5c2206"/><polygon points="256,245.92 388.16,312 256,378.08 123.84,312" fill="#9a3b0c"/><polygon points="123.84,236.96 256,303.04 256,341.12 123.84,275.04" fill="#9a3b0c"/><polygon points="388.16,236.96 256,303.04 256,341.12 388.16,275.04" fill="#792d08"/><polygon points="256,170.88 388.16,236.96 256,303.04 123.84,236.96" fill="#c85c15"/><polygon points="123.84,161.92 256,228 256,266.08 123.84,200" fill="#d97716"/><polygon points="388.16,161.92 256,228 256,266.08 388.16,200" fill="#b4590f"/><polygon points="256,95.84 388.16,161.92 256,228 123.84,161.92" fill="#f5a623"/></g>
-</svg>
