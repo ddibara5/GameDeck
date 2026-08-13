@@ -150,6 +150,37 @@
   transform: scale(0.9);
 }
 
+/* Shuffler die, sitting left of the gear and sharing its chip.
+   These rules MUST live here, not in components/shuffle.css. That stylesheet is
+   imported by ShufflePicker, which is lazy-loaded, so its chunk does not arrive
+   until the die is first tapped. Styling the header from there left the wrapper
+   as an unstyled block on first paint and the two chips stacked vertically. */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dice-btn {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.dice-btn:active .gear-chip {
+  transform: scale(0.9);
+}
+.dice-glyph {
+  width: 24px;
+  height: 24px;
+}
+
 .gear-glyph {
   width: 24px;
   height: 24px;
