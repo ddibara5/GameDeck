@@ -177,15 +177,21 @@ export function releaseTiming(released) {
 
 // The same timing, split for the cover overlay: a big figure and a word.
 //
-// Derived from releaseDayDelta and reusing releaseTiming's tone rather than
-// parsing releaseTiming's own label back apart, so the thresholds and colours
-// have one definition and the two renderings can never disagree about whether a
-// game is "fresh" or how many weeks out it is.
+// Derived from releaseDayDelta, and gated on releaseTiming so the two agree on
+// exactly when a game has timing worth showing at all (including the 365-day cap).
+//
+// The TONE vocabulary is deliberately its own, and much smaller than
+// releaseTiming's. On the cover the figure sits on a dark scrim, where plain white
+// is the highest-contrast thing available and a tinted amber or green reads as
+// weaker, not louder. Only the day a game actually lands is worth a colour, so
+// there are two tones: 'today' and 'plain'. releaseTiming's amber/fresh/muted
+// scale was built for coloured text on the page background, which is a different
+// problem.
 export function timingParts(released) {
   const t = releaseTiming(released)
   if (!t) return null
   const days = releaseDayDelta(released)
-  if (days === 0) return { big: 'Today', lab: '', tone: t.tone }
+  if (days === 0) return { big: 'Today', lab: '', tone: 'today' }
   const ahead = days > 0
   const n = Math.abs(days)
   const suffix = ahead ? 'away' : 'ago'
@@ -202,7 +208,7 @@ export function timingParts(released) {
     v = Math.round(n / 30)
     word = 'month'
   }
-  return { big: String(v), lab: `${word}${v === 1 ? '' : 's'} ${suffix}`, tone: t.tone }
+  return { big: String(v), lab: `${word}${v === 1 ? '' : 's'} ${suffix}`, tone: 'plain' }
 }
 
 const RELEASE_MONTHS = [

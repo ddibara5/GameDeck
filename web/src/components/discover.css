@@ -229,13 +229,14 @@
   font-size: 11px;
   line-height: 1.2;
   margin-top: 1px;
-  color: rgba(255, 255, 255, 0.74);
+  color: rgba(255, 255, 255, 0.88);
 }
-/* Only the figure carries the tone; the caption stays quiet in both themes, and
-   the scrim is dark in both, so these are fixed colours rather than tokens. */
-.sc-ov.amber .sc-ov-big { color: #f0b34a; }
-.sc-ov.fresh .sc-ov-big { color: #6fd3a3; }
-.sc-ov.muted .sc-ov-big { color: rgba(255, 255, 255, 0.86); }
+/* White on the dark scrim is the highest contrast available here, so it is the
+   default and almost everything keeps it. Release day is the one moment worth
+   colouring; a countdown in amber read as lower contrast than plain white, not
+   higher. Fixed colours rather than tokens because the scrim is dark in both
+   themes. */
+.sc-ov.today .sc-ov-big { color: #6fd3a3; }
 
 .in-library-dot {
   position: absolute;
