@@ -18,3 +18,10 @@ dist/
 # art and the generator that defines it. If you ever add a hand-made asset in
 # there, un-ignore it explicitly - it will be invisible to git otherwise.
 web/public/icons/
+
+# Design mockups (activity-proposal.html, news-proposal.html, ...). Built from a
+# snapshot of the live data, delivered for review, then summarised in the project
+# docs. The shipped code and the findings write-up are what outlive them; keeping
+# the mockup would leave a picture of a proposal sitting next to the
+# implementation that superseded it.
+*-proposal.html
