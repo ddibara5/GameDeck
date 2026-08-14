@@ -262,12 +262,29 @@ function main() {
 // warning (harmless, but usually means a rename was left half done).
 function verifyReferences(written) {
   const webDir = path.join(__dirname, '..');
-  const sources = ['index.html', path.join('public', 'manifest.webmanifest')];
+  const indexPath = path.join(webDir, 'index.html');
+  const indexHtml = fs.readFileSync(indexPath, 'utf8');
+
+  // The manifest is found THROUGH index.html rather than by a hardcoded name. Its url
+  // is versioned too, and a hardcoded name here would have gone on silently checking a
+  // file nothing links to - which is exactly the failure this guard exists to catch.
+  // iOS reads the manifest for the home-screen icon, so a dead link here shows up as a
+  // blank letter tile on the phone and nowhere else.
+  const manifestHref = (indexHtml.match(/rel="manifest"\s+href="([^"]+)"/) || [])[1];
+  if (!manifestHref) throw new Error('index.html has no <link rel="manifest">.');
+  const manifestPath = path.join(webDir, 'public', manifestHref.replace(/^\//, ''));
+  if (!fs.existsSync(manifestPath)) {
+    throw new Error(`index.html links ${manifestHref} but public${manifestHref} does not exist.`);
+  }
+  // The service worker precaches the manifest by url; if that list still names the old
+  // one, phones keep replaying a stale manifest full of dead icon paths.
+  const swPath = path.join(webDir, 'public', 'sw.js');
+  if (fs.existsSync(swPath) && !fs.readFileSync(swPath, 'utf8').includes(manifestHref)) {
+    throw new Error(`sw.js does not reference ${manifestHref}; its APP_SHELL is still precaching a different manifest.`);
+  }
+
   const referenced = new Set();
-  for (const rel of sources) {
-    const file = path.join(webDir, rel);
-    if (!fs.existsSync(file)) continue;
-    const text = fs.readFileSync(file, 'utf8');
+  for (const text of [indexHtml, fs.readFileSync(manifestPath, 'utf8')]) {
     for (const m of text.matchAll(/\/icons\/([A-Za-z0-9._-]+)/g)) referenced.add(m[1]);
   }
   const missing = [...referenced].filter((f) => !written.has(f));

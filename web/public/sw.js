@@ -18,7 +18,7 @@ const SHELL_CACHE = 'gamedeck-shell-v4';
 const IMG_CACHE = 'gamedeck-img-v1';
 const IMG_CACHE_LIMIT = 300; // ~300 covers/screenshots; oldest evicted first (FIFO).
 const KEEP = [SHELL_CACHE, IMG_CACHE];
-const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest'];
+const APP_SHELL = ['/', '/index.html', '/manifest.v2.webmanifest'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

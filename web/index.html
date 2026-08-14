@@ -61,7 +61,11 @@
     <link rel="icon" type="image/svg+xml" href="/icons/icon.v2.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.v2.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.v2.png" />
-    <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- Versioned for the same reason the icons are: the OLD url is precached in the
+         service worker's APP_SHELL, so a phone kept reading a stale manifest listing
+         pre-v2 icon names. iOS reads the MANIFEST for the home-screen icon, so that
+         stale copy outranked every apple-touch-icon above. -->
+    <link rel="manifest" href="/manifest.v2.webmanifest" />
   </head>
   <body>
     <div id="root"></div>
