@@ -105,8 +105,15 @@
 
 .wk-sheet { padding-bottom: calc(20px + var(--safe-bottom)); }
 
+/* A 40x4px grabber is not a touch target. The padding gives the swipe zone a
+   real height without moving the bar itself, and negative margins claw back the
+   sheet's own top padding so the header does not sit lower than it used to. */
+.wks-grab { margin: -16px -20px 0; padding: 16px 20px 8px; }
+.wks-grab .modal-handle { margin-bottom: 0; }
+
 /* flex on the title, or the close button sits against the heading instead of
-   the far edge. */
+   the far edge. The title block doubles as a drag zone; the close button stays
+   outside it so a tap on the button is never read as the start of a swipe. */
 .wks-top { display: flex; align-items: flex-start; gap: 10px; }
 .wks-th { flex: 1; min-width: 0; }
 .wks-range { font-size: 12px; color: var(--muted); margin-top: 2px; }

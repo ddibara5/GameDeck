@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Cover from './Cover.jsx'
 import { useDelayedClose } from '../lib/useDelayedClose.js'
+import { useSheetDrag } from '../lib/useSheetDrag.js'
 import { lockScroll } from '../lib/scrollLock.js'
 import { igdbCover, platformMeta, minutesToHhm, formatDate, releaseLabel } from '../lib/format.js'
 import { STATUSES, STATUS_LABELS, effectiveStatus, setStatus } from '../lib/userStatus.js'
@@ -117,31 +118,10 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   }, [variant, igdbId, discoverHasMedia]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Swipe-down-to-close, from the cover/handle zone so details below still scroll.
-  const drag = useRef({ startY: 0, active: false })
-  const [dragY, setDragY] = useState(0)
+  const { dragY, dragging, handlers: dragHandlers } = useSheetDrag(requestClose)
 
   // Screenshot lightbox (null = closed, else the index being viewed).
   const [shotIndex, setShotIndex] = useState(null)
-  function onDragStart(e) {
-    drag.current = { startY: e.touches[0].clientY, active: true }
-  }
-  function onDragMove(e) {
-    if (!drag.current.active) return
-    const dy = e.touches[0].clientY - drag.current.startY
-    if (dy > 0) {
-      setDragY(dy)
-      if (e.cancelable) e.preventDefault()
-    } else {
-      setDragY(0)
-    }
-  }
-  function onDragEnd() {
-    const shouldClose = dragY > 110
-    drag.current.active = false
-    if (shouldClose) requestClose()
-    else setDragY(0)
-  }
-
   // Lock background scroll while the sheet is open (shared ref-counted lock).
   useEffect(() => lockScroll(), [])
 
@@ -204,10 +184,10 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
         aria-label={title}
         style={{
           transform: closing ? 'translateY(110%)' : dragY ? `translateY(${dragY}px)` : undefined,
-          transition: drag.current.active ? 'none' : 'transform 0.2s ease',
+          transition: dragging ? 'none' : 'transform 0.2s ease',
         }}
       >
-        <div className="sheet-drag-zone" onTouchStart={onDragStart} onTouchMove={onDragMove} onTouchEnd={onDragEnd}>
+        <div className="sheet-drag-zone" {...dragHandlers}>
           <div className="modal-handle" />
           <Cover src={coverSrc} title={title} size="lg" />
         </div>

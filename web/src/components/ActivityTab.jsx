@@ -4,6 +4,9 @@ import Cover from './Cover.jsx'
 import GameDetail from './GameDetail.jsx'
 import Skeleton from './Skeleton.jsx'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
+import { useDelayedClose } from '../lib/useDelayedClose.js'
+import { useSheetDrag } from '../lib/useSheetDrag.js'
+import { lockScroll } from '../lib/scrollLock.js'
 import { formatRelativeDay, minutesToHhm, platformMeta, parseDayOrInstant } from '../lib/format.js'
 import './activity.css'
 
@@ -388,25 +391,50 @@ function WeekSheet({ week, gamesById, onClose, onOpenGame }) {
   const last = week.days[week.days.length - 1]
   const range = (d) => parseDayOrInstant(d.key).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
 
+  // Same close path as every other sheet in the app: exit animation, swipe down
+  // to dismiss, and the background locked while it is open.
+  const { closing, requestClose } = useDelayedClose(onClose)
+  const { dragY, dragging, handlers: dragHandlers } = useSheetDrag(requestClose)
+
+  useEffect(() => lockScroll(), [])
+
   useEffect(() => {
-    const onKey = (e) => e.key === 'Escape' && onClose()
+    const onKey = (e) => e.key === 'Escape' && requestClose()
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
-    <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal-sheet wk-sheet" role="dialog" aria-modal="true" aria-label="Week detail">
-        <div className="modal-handle" />
+    <div
+      className={`modal-backdrop${closing ? ' closing' : ''}`}
+      onClick={(e) => e.target === e.currentTarget && requestClose()}
+    >
+      <div
+        className="modal-sheet wk-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Week detail"
+        style={{
+          transform: closing ? 'translateY(110%)' : dragY ? `translateY(${dragY}px)` : undefined,
+          transition: dragging ? 'none' : 'transform 0.2s ease',
+        }}
+      >
+        {/* Drag zone is the grabber plus the title block: neither scrolls and
+            neither holds a control, so preventDefault on move cannot eat the
+            sheet's own scrolling or swallow a tap on the close button. */}
+        <div className="wks-grab sheet-drag-zone" {...dragHandlers}>
+          <div className="modal-handle" />
+        </div>
 
         <div className="wks-top">
-          <div className="wks-th">
+          <div className="wks-th sheet-drag-zone" {...dragHandlers}>
             <div className="detail-title">Last {week.span} days</div>
             <div className="wks-range">
               {range(first)} to {range(last)}
             </div>
           </div>
-          <button type="button" className="wks-x" onClick={onClose} aria-label="Close">
+          <button type="button" className="wks-x" onClick={requestClose} aria-label="Close">
             ×
           </button>
         </div>
