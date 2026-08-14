@@ -487,6 +487,28 @@
   margin-left: 5px;
 }
 
+/* The tail of a heavily refreshed week. Nothing is deleted to keep the list
+   short, so this reveals rather than loads: the rows are already in hand. */
+.news-more {
+  display: block;
+  width: calc(100% - 32px);
+  margin: 2px 16px 8px;
+  padding: 11px 12px;
+  border: 1px dashed var(--line);
+  border-radius: 11px;
+  background: none;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 650;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.news-more:active {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
 .news-footer {
   text-align: center;
   color: var(--muted);

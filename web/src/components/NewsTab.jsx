@@ -5,6 +5,8 @@ import {
   dedupeSources,
   buildLibraryIndex,
   splitForYou,
+  byNewest,
+  WEEK_VISIBLE,
   cardArtChain,
   coverSrc,
   outletCount,
@@ -179,28 +181,32 @@ export default function NewsTab() {
   )
 }
 
-// Only the newest week is split into For you / Also this week. Older weeks are
-// already receded and re-sorting them would shuffle history under the reader.
+// Only the newest week is split into For you / Also this week. Older weeks stay
+// as one list; splitting a week you have already read just moves things around.
 function WeekSection({ group, past, sets, readSet, onOpenGame }) {
-  const split = useMemo(() => (past ? null : splitForYou(group.items, sets)), [group.items, past, sets])
+  const split = useMemo(() => splitForYou(group.items, sets), [group.items, sets])
 
-  const render = (entry) => (
-    <NewsCard
-      key={entry.item.id}
-      item={entry.item}
-      rel={entry.rel}
-      read={readSet.has(entry.item.primaryUrl)}
+  const list = (entries, key) => (
+    <CappedList
+      key={key}
+      entries={entries}
+      readSet={readSet}
       onOpenGame={onOpenGame}
+      // For you is the reason the tab exists, so it is never truncated. The cap
+      // is for the long tail that a heavily refreshed week accumulates.
+      cap={key === 'foryou' ? Infinity : WEEK_VISIBLE}
     />
   )
 
   if (past) {
+    const all = [...split.forYou, ...split.also].sort((a, b) => byNewest(a.item, b.item))
     return (
       <section className="news-week-past">
-        <div className="news-week-label">{weekLabel(group.weekOf)}</div>
-        <div className="news-list">
-          {group.items.map((item) => render({ item, rel: resolveInline(item, sets) }))}
+        <div className="news-week-label">
+          {weekLabel(group.weekOf)}
+          <span className="news-week-count">&middot; {all.length}</span>
         </div>
+        {list(all, 'past')}
       </section>
     )
   }
@@ -212,7 +218,7 @@ function WeekSection({ group, past, sets, readSet, onOpenGame }) {
           <div className="news-week-label foryou">
             For you <span className="news-week-count">&middot; {split.forYou.length} of {group.items.length}</span>
           </div>
-          <div className="news-list">{split.forYou.map(render)}</div>
+          {list(split.forYou, 'foryou')}
         </>
       ) : null}
       {split.also.length > 0 ? (
@@ -221,18 +227,44 @@ function WeekSection({ group, past, sets, readSet, onOpenGame }) {
             {split.forYou.length > 0 ? 'Also this week' : weekLabel(group.weekOf)}
             <span className="news-week-count">&middot; {split.also.length}</span>
           </div>
-          <div className="news-list">{split.also.map(render)}</div>
+          {list(split.also, 'also')}
         </>
       ) : null}
     </section>
   )
 }
 
-// Older weeks still need the status pill and the open target, just not the
-// re-ordering, so they resolve one row at a time instead of being split.
-function resolveInline(item, sets) {
-  const { forYou, also } = splitForYou([item], sets)
-  return (forYou[0] || also[0]).rel
+// Renders at most `cap` cards and offers the rest.
+//
+// Nothing is deleted to keep a week short - a refresh appends, so the week grows
+// and the tail is simply not drawn until asked for. That way a story pushed down
+// by a later refresh is one tap away instead of gone, and the read state keyed
+// on its url stays meaningful.
+function CappedList({ entries, readSet, onOpenGame, cap }) {
+  const [showAll, setShowAll] = useState(false)
+  const hidden = Math.max(0, entries.length - cap)
+  const shown = showAll || hidden === 0 ? entries : entries.slice(0, cap)
+
+  return (
+    <>
+      <div className="news-list">
+        {shown.map((entry) => (
+          <NewsCard
+            key={entry.item.id}
+            item={entry.item}
+            rel={entry.rel}
+            read={readSet.has(entry.item.primaryUrl)}
+            onOpenGame={onOpenGame}
+          />
+        ))}
+      </div>
+      {hidden > 0 ? (
+        <button type="button" className="news-more" onClick={() => setShowAll((v) => !v)}>
+          {showAll ? 'Show fewer' : `Show ${hidden} older ${hidden === 1 ? 'story' : 'stories'}`}
+        </button>
+      ) : null}
+    </>
+  )
 }
 
 function NewsCard({ item, rel, read, onOpenGame }) {

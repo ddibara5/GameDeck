@@ -221,9 +221,32 @@ export function outletCount(sources) {
   return dedupeSources(sources).length
 }
 
-// Split a week into the stories that touch this library and the rest. For you is
-// ordered by relevance, then by how widely the story was covered, then by the
-// digest's own rank; Also this week keeps the digest order untouched.
+// Newest story first.
+//
+// Deliberately NOT by `rank`. Rank is assigned within a single curation pass, so
+// it only compares stories the same run ranked against each other. Now that a
+// refresh appends to the week instead of replacing it, a week can hold several
+// runs each numbered from zero, and sorting on rank interleaves them into an
+// order that means nothing. published_at is the one field that stays comparable
+// across runs. created_at breaks the tie for a story with no publish date, so
+// undated rows land next to the run that fetched them rather than at the end.
+export function byNewest(a, b) {
+  const at = a.publishedAt || a.createdAt || ''
+  const bt = b.publishedAt || b.createdAt || ''
+  if (at !== bt) return at < bt ? 1 : -1
+  return (a.rank ?? 0) - (b.rank ?? 0)
+}
+
+// How many stories a week renders before it asks. Nothing is deleted - the cap
+// is purely what is on screen, so a story pushed below the fold by later
+// refreshes is one tap away rather than gone.
+export const WEEK_VISIBLE = 6
+
+// Split a week into the stories that touch this library and the rest.
+//
+// For you is ordered by relevance, then by how widely the story was covered,
+// then by recency. Everything else is simply newest first: with no personal
+// hook to rank on, "what happened most recently" is the only honest order.
 export function splitForYou(items, sets) {
   const forYou = []
   const also = []
@@ -237,8 +260,9 @@ export function splitForYou(items, sets) {
     (a, b) =>
       b.rel.tier - a.rel.tier ||
       outletCount(b.item.sources) - outletCount(a.item.sources) ||
-      (a.item.rank ?? 0) - (b.item.rank ?? 0),
+      byNewest(a.item, b.item),
   )
+  also.sort((a, b) => byNewest(a.item, b.item))
   return { forYou, also }
 }
 
