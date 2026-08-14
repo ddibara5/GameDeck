@@ -1,38 +1,48 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   fetchNews,
   groupByWeek,
   dedupeSources,
-  gameStatus,
+  buildLibraryIndex,
+  splitForYou,
+  cardArtChain,
+  coverSrc,
+  outletCount,
+  OUTLET_CHIP_MIN,
   markNewsSeen,
+  newestStamp,
+  markRead,
+  useReadNews,
   hostOf,
 } from '../lib/news.js'
 import { useWishlist, addToWishlist } from '../lib/wishlist.js'
-import { loadGamePass, loadLibraryTitles, fetchGameById } from '../lib/discover.js'
-import { igdbCover } from '../lib/format.js'
+import { useLibraryGames } from '../lib/useLibraryGames.js'
+import { loadGamePass, fetchGameById } from '../lib/discover.js'
 import DiscoverDetail from './DiscoverDetail.jsx'
+import GameDetail from './GameDetail.jsx'
 import Skeleton from './Skeleton.jsx'
+import usePullRefresh from '../lib/usePullRefresh.js'
 import './news.css'
-
-const PULL_THRESHOLD = 68
 
 export default function NewsTab() {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
   const [gamepassIds, setGamepassIds] = useState(null)
-  const [libraryTitles, setLibraryTitles] = useState(null)
   const [openGame, setOpenGame] = useState(null)
-  const [openInLibrary, setOpenInLibrary] = useState(false)
   const mountedRef = useRef(true)
   const { ids: wishlistIds } = useWishlist()
+  const { games } = useLibraryGames()
+  const readSet = useReadNews()
 
-  const load = async () => {
+  const load = useCallback(async () => {
     const data = await fetchNews()
-    if (!mountedRef.current) return
+    if (!mountedRef.current) return data
     setRows(data)
-    if (data.length) markNewsSeen(data[0].weekOf) // newest week -> clears the tab dot
-  }
+    // Seen is tracked by the newest created_at rather than the week, because a
+    // refresh adds to the current week without moving week_of.
+    markNewsSeen(newestStamp(data))
+    return data
+  }, [])
 
   useEffect(() => {
     mountedRef.current = true
@@ -41,85 +51,89 @@ export default function NewsTab() {
       await load()
       if (mountedRef.current) setLoading(false)
     })()
-    // Membership sets for status badges (Game Pass by igdb id, library by title).
-    Promise.all([loadGamePass(), loadLibraryTitles()]).then(([gp, lib]) => {
+    loadGamePass().then((gp) => {
       if (!mountedRef.current) return
       setGamepassIds(new Set((gp || []).map((g) => Number(g.id)).filter(Boolean)))
-      setLibraryTitles(lib || new Set())
     })
     return () => {
       mountedRef.current = false
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [load])
 
-  const refresh = async () => {
-    if (refreshing) return
-    setRefreshing(true)
-    await load()
-    if (mountedRef.current) setRefreshing(false)
-  }
+  // The library arrives as rows, not just titles: the row is what lets a card
+  // open the OWNED sheet and what supplies the playtime in the "because" line.
+  const libIndex = useMemo(() => buildLibraryIndex(games), [games])
+  const sets = useMemo(
+    () => ({ libIndex, wishlistIds, gamepassIds }),
+    [libIndex, wishlistIds, gamepassIds],
+  )
 
   const groups = useMemo(() => groupByWeek(rows), [rows])
-  const sets = useMemo(
-    () => ({ wishlistIds, gamepassIds, libraryTitles }),
-    [wishlistIds, gamepassIds, libraryTitles],
+
+  // Read through a ref, not through `rows`: the hook holds this callback across
+  // the whole gesture and a captured `rows` would be the count from whenever the
+  // callback was last rebuilt, which is exactly the value that just changed.
+  const countRef = useRef(0)
+  countRef.current = rows.length
+
+  const onRefresh = useCallback(
+    async ({ canTrigger }) => {
+      const before = countRef.current
+      // The n8n run takes minutes, so the trigger is fire-and-forget and the
+      // reload below shows whatever has landed so far. New stories from this
+      // run appear on a later visit; that is the cost of not blocking the
+      // gesture for two minutes.
+      if (canTrigger) {
+        try {
+          await fetch('/api/news-refresh', { method: 'POST' })
+        } catch {
+          // Offline, or the route is not deployed yet. Re-reading the table is
+          // still the useful half of a refresh, so carry on.
+        }
+      }
+      const data = await load()
+      const gained = data.length - before
+      if (gained > 0) return `${gained} new ${gained === 1 ? 'story' : 'stories'}`
+      return canTrigger ? 'Checking for new stories' : 'Up to date'
+    },
+    [load],
   )
-  const updatedLabel = useMemo(() => freshestLabel(rows), [rows])
 
-  async function openSheet(item, inLib) {
-    const g = await fetchGameById(item.gameIgdbId)
-    if (!g || !mountedRef.current) return
-    setOpenInLibrary(Boolean(inLib))
-    setOpenGame(g)
-  }
+  const pull = usePullRefresh({ onRefresh })
 
-  // Pull-to-refresh (only engages when the page is scrolled to the very top).
-  const pull = useRef({ startY: 0, active: false })
-  const [pullY, setPullY] = useState(0)
-  const onTouchStart = (e) => {
-    if (window.scrollY > 0 || refreshing) return
-    pull.current = { startY: e.touches[0].clientY, active: true }
-  }
-  const onTouchMove = (e) => {
-    if (!pull.current.active) return
-    const dy = e.touches[0].clientY - pull.current.startY
-    if (dy <= 0 || window.scrollY > 0) {
-      setPullY(0)
+  // A library game opens the owned sheet, which knows about playtime and
+  // achievements. Anything else opens the discover sheet, which is the same
+  // GameSheet with the IGDB payload instead.
+  async function openGameFor(item, rel) {
+    if (rel.row) {
+      setOpenGame({ kind: 'owned', game: rel.row })
       return
     }
-    setPullY(Math.min(dy * 0.5, 90)) // damped
+    if (!item.gameIgdbId) return
+    const g = await fetchGameById(item.gameIgdbId)
+    if (!g || !mountedRef.current) return
+    setOpenGame({ kind: 'discover', game: g, inLibrary: false })
   }
-  const onTouchEnd = () => {
-    if (!pull.current.active) return
-    pull.current.active = false
-    if (pullY >= PULL_THRESHOLD) refresh()
-    setPullY(0)
-  }
-
-  const pulling = pullY > 0 || refreshing
 
   return (
-    <div onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
-      <div
-        className={`news-pull${pulling ? ' on' : ''}`}
-        style={{ height: refreshing ? 40 : pullY }}
-      >
-        <span className="news-pull-label">
-          {refreshing ? 'Refreshing…' : pullY >= PULL_THRESHOLD ? 'Release to refresh' : 'Pull to refresh'}
+    <div {...pull.handlers}>
+      <div className="news-pull" ref={pull.gutterRef}>
+        <span className="news-pull-inner">
+          <span className={`news-pull-spin${pull.phase === 'working' ? ' spinning' : ''}`} ref={pull.spinRef} />
+          <span className="news-pull-label" ref={pull.labelRef} />
         </span>
       </div>
 
       <div className="page-header">
         <h1 className="page-title">News</h1>
-        <p className="page-subtitle">This week in gaming, curated.</p>
+        <p className="page-subtitle">This week in gaming, for your library.</p>
         {!loading && rows.length > 0 ? (
-          <button type="button" className="news-refresh-note" onClick={refresh}>
+          <button type="button" className="news-refresh-note" onClick={pull.refreshNow} disabled={pull.busy}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 12a9 9 0 1 1-3-6.7L21 8" strokeLinecap="round" strokeLinejoin="round" />
               <path d="M21 3v5h-5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            {updatedLabel ? `Updated ${updatedLabel} · tap to refresh` : 'Tap to refresh'}
+            {pull.busy ? 'Fetching new stories' : pull.note || 'Tap to refresh'}
           </button>
         ) : null}
       </div>
@@ -136,33 +150,28 @@ export default function NewsTab() {
       ) : (
         <>
           {groups.map((group, gi) => (
-            <section key={group.weekOf} className={gi > 0 ? 'news-week-past' : undefined}>
-              <div className="news-week-label">{weekLabel(group.weekOf)}</div>
-              <div className="news-list">
-                {group.items.map((item) => (
-                  <NewsCard
-                    key={item.id}
-                    item={item}
-                    sets={sets}
-                    onWishlist={() =>
-                      addToWishlist({ id: item.gameIgdbId, name: item.gameName, cover: item.gameCover })
-                    }
-                    onOpen={(inLib) => openSheet(item, inLib)}
-                  />
-                ))}
-              </div>
-            </section>
+            <WeekSection
+              key={group.weekOf}
+              group={group}
+              past={gi > 0}
+              sets={sets}
+              readSet={readSet}
+              onOpenGame={openGameFor}
+            />
           ))}
           <div className="news-footer">
-            You're all caught up · next digest <b>Sunday</b>
+            You're all caught up &middot; next digest <b>Sunday</b>
           </div>
         </>
       )}
 
-      {openGame ? (
+      {openGame?.kind === 'owned' ? (
+        <GameDetail game={openGame.game} onClose={() => setOpenGame(null)} />
+      ) : null}
+      {openGame?.kind === 'discover' ? (
         <DiscoverDetail
-          game={openGame}
-          inLibrary={openInLibrary}
+          game={openGame.game}
+          inLibrary={openGame.inLibrary}
           onClose={() => setOpenGame(null)}
         />
       ) : null}
@@ -170,48 +179,131 @@ export default function NewsTab() {
   )
 }
 
-function NewsCard({ item, sets, onWishlist, onOpen }) {
-  const [imgFailed, setImgFailed] = useState(false)
-  const status = gameStatus(item, sets)
+// Only the newest week is split into For you / Also this week. Older weeks are
+// already receded and re-sorting them would shuffle history under the reader.
+function WeekSection({ group, past, sets, readSet, onOpenGame }) {
+  const split = useMemo(() => (past ? null : splitForYou(group.items, sets)), [group.items, past, sets])
+
+  const render = (entry) => (
+    <NewsCard
+      key={entry.item.id}
+      item={entry.item}
+      rel={entry.rel}
+      read={readSet.has(entry.item.primaryUrl)}
+      onOpenGame={onOpenGame}
+    />
+  )
+
+  if (past) {
+    return (
+      <section className="news-week-past">
+        <div className="news-week-label">{weekLabel(group.weekOf)}</div>
+        <div className="news-list">
+          {group.items.map((item) => render({ item, rel: resolveInline(item, sets) }))}
+        </div>
+      </section>
+    )
+  }
+
+  return (
+    <section>
+      {split.forYou.length > 0 ? (
+        <>
+          <div className="news-week-label foryou">
+            For you <span className="news-week-count">&middot; {split.forYou.length} of {group.items.length}</span>
+          </div>
+          <div className="news-list">{split.forYou.map(render)}</div>
+        </>
+      ) : null}
+      {split.also.length > 0 ? (
+        <>
+          <div className="news-week-label">
+            {split.forYou.length > 0 ? 'Also this week' : weekLabel(group.weekOf)}
+            <span className="news-week-count">&middot; {split.also.length}</span>
+          </div>
+          <div className="news-list">{split.also.map(render)}</div>
+        </>
+      ) : null}
+    </section>
+  )
+}
+
+// Older weeks still need the status pill and the open target, just not the
+// re-ordering, so they resolve one row at a time instead of being split.
+function resolveInline(item, sets) {
+  const { forYou, also } = splitForYou([item], sets)
+  return (forYou[0] || also[0]).rel
+}
+
+function NewsCard({ item, rel, read, onOpenGame }) {
+  // Index into the art chain, advanced on load failure. The article image is a
+  // hotlink and dies on someone else's schedule; the cover behind it is ours.
+  const [artStep, setArtStep] = useState(0)
   const sources = dedupeSources(item.sources)
   const lead = sources[0] || null
   const fav = lead ? faviconFor(lead.url) : ''
   const when = relTime(item.publishedAt)
-  const sourceLabel = sources.length <= 1 ? (lead ? lead.name : '') : `${sources.length} sources`
+  const chain = cardArtChain(item)
+  const art = chain[artStep] || null
+  const outlets = outletCount(item.sources)
 
   const shownSources = sources.slice(0, 2)
   const extra = sources.length - shownSources.length
+  const onRead = () => markRead(item.primaryUrl)
 
   return (
-    <article className="news-card">
-      {item.image && !imgFailed ? (
-        <img
-          className="news-card-img"
-          src={item.image}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          onError={() => setImgFailed(true)}
-        />
+    <article className={`news-card${read ? ' read' : ''}${rel.tier >= 4 ? ' pin' : ''}`}>
+      {art ? (
+        <div className={`news-card-band${art.kind === 'cover' ? ' cover' : ''}`}>
+          <img
+            key={art.src}
+            className="news-card-img"
+            src={art.src}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            onError={() => setArtStep((s) => s + 1)}
+          />
+        </div>
       ) : null}
       <div className="news-card-body">
         <div className="news-meta">
           {fav ? <img className="news-meta-fav" src={fav} alt="" width="16" height="16" /> : null}
-          {sourceLabel ? <span className="news-meta-source">{sourceLabel}</span> : null}
+          {lead ? <span className="news-meta-source">{lead.name}</span> : null}
           {when ? <span className="news-meta-time">{when}</span> : null}
+          {read ? <span className="news-read-flag">Read</span> : null}
+          {!read && outlets >= OUTLET_CHIP_MIN ? (
+            <span className="news-heat">{outlets} outlets</span>
+          ) : null}
         </div>
         <h2 className="news-card-title">{item.title}</h2>
         <p className="news-card-summary">{item.summary}</p>
 
+        {rel.why ? (
+          <div className="news-why">
+            <span className="news-why-dot" />
+            <span>
+              {rel.why}
+              {rel.qty ? <span className="news-why-qty"> &middot; {rel.qty}</span> : null}
+            </span>
+          </div>
+        ) : null}
+
         {item.gameName ? (
-          <GameRow item={item} status={status} onWishlist={onWishlist} onOpen={onOpen} />
+          <GameRow item={item} rel={rel} onOpen={() => onOpenGame(item, rel)} />
         ) : null}
 
         <div className="news-sources">
           {shownSources.map((s, i) => (
             <span key={s.url + i}>
               {i > 0 ? <span className="news-source-sep" aria-hidden="true">|</span> : null}
-              <a className="news-source-link" href={s.url} target="_blank" rel="noopener noreferrer">
+              <a
+                className="news-source-link"
+                href={s.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={onRead}
+              >
                 {sources.length === 1 ? 'Read article →' : `${s.name} →`}
               </a>
             </span>
@@ -223,34 +315,47 @@ function NewsCard({ item, sets, onWishlist, onOpen }) {
   )
 }
 
-function GameRow({ item, status, onWishlist, onOpen }) {
+function GameRow({ item, rel, onOpen }) {
   const [imgFailed, setImgFailed] = useState(false)
-  const owned = status === 'library' || status === 'wishlist'
-  const coverUrl = item.gameCover ? igdbCover(item.gameCover, 't_cover_small') : ''
+  const owned = rel.status === 'library' || rel.status === 'wishlist'
+  const coverUrl = coverSrc(item.gameCover, 't_cover_small')
   const initial = (item.gameName || '?').trim().charAt(0).toUpperCase()
+
+  // The whole cover-plus-name block is the open target, not just a trailing
+  // button, and it works for any matched game rather than only owned ones - a
+  // Game Pass match previously had no way to open at all. Opening needs an IGDB
+  // id (or a library row); without either the block stays plain text rather
+  // than a button that does nothing.
+  const canOpen = Boolean(rel.row || item.gameIgdbId)
+  const Hit = canOpen ? 'button' : 'span'
+  const hitProps = canOpen ? { type: 'button', onClick: onOpen } : {}
 
   return (
     <div className="news-game">
-      <span className="news-game-thumb">
-        {coverUrl && !imgFailed ? (
-          <img src={coverUrl} alt="" loading="lazy" decoding="async" onError={() => setImgFailed(true)} />
-        ) : (
-          <span aria-hidden="true">{initial}</span>
-        )}
-      </span>
-      <div className="news-game-meta">
-        <span className="news-game-name">{item.gameName}</span>
-        {status ? <StatusPill status={status} /> : null}
-      </div>
-      {owned ? (
-        <button type="button" className="news-game-btn" onClick={() => onOpen(status === 'library')}>
-          Open
-        </button>
-      ) : (
-        <button type="button" className="news-game-btn primary" onClick={onWishlist}>
+      <Hit className={`news-game-hit${canOpen ? '' : ' flat'}`} {...hitProps}>
+        <span className="news-game-thumb">
+          {coverUrl && !imgFailed ? (
+            <img src={coverUrl} alt="" loading="lazy" decoding="async" onError={() => setImgFailed(true)} />
+          ) : (
+            <span aria-hidden="true">{initial}</span>
+          )}
+        </span>
+        <span className="news-game-meta">
+          <span className="news-game-name">{rel.row?.title || item.gameName}</span>
+          {rel.status ? <StatusPill status={rel.status} /> : null}
+        </span>
+      </Hit>
+      {!owned ? (
+        <button
+          type="button"
+          className="news-game-btn primary"
+          onClick={() =>
+            addToWishlist({ id: item.gameIgdbId, name: item.gameName, cover: item.gameCover })
+          }
+        >
           + Wishlist
         </button>
-      )}
+      ) : null}
     </div>
   )
 }
@@ -299,15 +404,6 @@ function relTime(iso) {
   if (diffH < 24) return `${diffH}h ago`
   const d = Math.round(diffH / 24)
   return d === 1 ? '1 day ago' : `${d} days ago`
-}
-
-function freshestLabel(rows) {
-  let newest = 0
-  for (const r of rows) {
-    const t = r.publishedAt ? new Date(r.publishedAt).getTime() : 0
-    if (t && t > newest) newest = t
-  }
-  return newest ? relTime(new Date(newest).toISOString()) : ''
 }
 
 // week_of is 'YYYY-MM-DD' (Monday). Label relative to the current week.
