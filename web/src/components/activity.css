@@ -15,18 +15,26 @@
 /* ------------------------------------------------------------- week header */
 
 .wk {
+  display: block;
+  width: calc(100% - 32px);
   margin: 6px 16px 4px;
-  padding: 14px 15px 13px;
+  padding: 15px 16px 12px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
+.wk:active { background: var(--surface-2); }
+
 .wk-top {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 12px;
 }
 .wk-label {
   font-size: 11px;
@@ -35,32 +43,170 @@
   text-transform: uppercase;
   color: var(--muted);
 }
-.wk-trend { font-size: 11.5px; color: var(--muted); }
-.wk-stats { display: flex; gap: 6px; }
-.wk-stat { flex: 1; min-width: 0; }
-.wk-val { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
-.wk-val .u { font-size: 12px; font-weight: 600; color: var(--muted); margin-left: 1px; }
-.wk-key { font-size: 10.5px; color: var(--muted); margin-top: 3px; }
+.wk-right { display: flex; align-items: baseline; gap: 5px; flex: none; }
+/* The one thing the header could not previously tell you. Rendered only when the
+   preceding window actually holds events, so it never reports a gain over a
+   window that does not exist - play_events only starts 2026-08-08. */
+.wk-delta { font-size: 11.5px; font-weight: 650; color: var(--accent); white-space: nowrap; }
+.wk-delta.flat { color: var(--muted); font-weight: 500; }
+.wk-chev { font-size: 15px; line-height: 1; color: var(--accent); opacity: 0.85; }
 
-.wk-days { display: flex; gap: 4px; margin-top: 13px; }
-.wk-day { flex: 1; text-align: center; min-width: 0; }
-.wk-bar {
-  height: 30px;
-  border-radius: 5px;
+.wk-hero { display: flex; align-items: baseline; gap: 9px; margin-top: 9px; }
+.wk-big { font-size: 31px; font-weight: 700; letter-spacing: -0.035em; line-height: 1; }
+.wk-big .u { font-size: 15px; font-weight: 600; color: var(--muted); margin: 0 1px; }
+.wk-played { font-size: 11.5px; color: var(--muted); }
+
+.wk-meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.wk-meta b { color: var(--text); font-weight: 650; }
+.wk-dot { opacity: 0.4; }
+
+/* No track behind the bars. --surface-2 is BRIGHTER than --surface in light mode,
+   so the old filled track drew every day with nothing played as the most prominent
+   block in the header. The 2px stubs draw the baseline only where it is needed. */
+.wk-chart { display: flex; align-items: flex-end; gap: 5px; margin-top: 13px; }
+.wk-col { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; }
+.wk-cap {
+  height: 12px;
+  font-size: 9px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--muted);
+}
+.wk-cap.peak { color: var(--accent); }
+.wk-track { height: 34px; display: flex; align-items: flex-end; }
+.wk-fill { width: 100%; background: var(--walnut-light); border-radius: 3px 3px 0 0; }
+.wk-fill.peak { background: var(--accent); }
+.wk-fill.zero { height: 2px; background: var(--line); border-radius: 1px; }
+/* Today, with nothing logged yet. An outline rather than a stub, so "not played"
+   and "not over yet" do not read as the same thing. */
+.wk-fill.today-empty {
+  height: 0;
+  border-top: 2px dashed var(--accent);
+  border-radius: 0;
+  opacity: 0.55;
+}
+
+.wk-names { display: flex; gap: 5px; margin-top: 6px; }
+.wk-name { flex: 1; min-width: 0; text-align: center; font-size: 9.5px; color: var(--muted); }
+.wk-name.today { color: var(--accent); font-weight: 700; }
+
+/* -------------------------------------------------------------- week sheet */
+/* The shell (.modal-backdrop / .modal-sheet / .modal-handle) is a shared, always
+   loaded primitive in index.css. Only the week-specific parts live here, because
+   this stylesheet ships with ActivityTab's lazy chunk. */
+
+.wk-sheet { padding-bottom: calc(20px + var(--safe-bottom)); }
+
+/* flex on the title, or the close button sits against the heading instead of
+   the far edge. */
+.wks-top { display: flex; align-items: flex-start; gap: 10px; }
+.wks-th { flex: 1; min-width: 0; }
+.wks-range { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.wks-x {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
   background: var(--surface-2);
-  position: relative;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.wks-hero { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; margin-top: 10px; }
+.wks-big { font-size: 27px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
+.wks-big .u { font-size: 14px; font-weight: 600; color: var(--muted); margin: 0 1px; }
+.wks-delta { font-size: 12px; font-weight: 650; color: var(--accent); }
+.wks-delta.flat { color: var(--muted); font-weight: 500; }
+
+.wks-sec {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 20px 0 8px;
+}
+/* --surface-2, not --surface: .modal-sheet is already --surface, so a card at the
+   same value would have no edge at all. */
+.wks-card {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
   overflow: hidden;
 }
-.wk-fill {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--accent);
-  border-radius: 5px;
+
+.wks-chart { display: flex; align-items: flex-end; gap: 6px; padding: 14px 14px 0; }
+.wks-col { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; }
+.wks-v { height: 14px; font-size: 9.5px; font-weight: 700; text-align: center; }
+.wks-v.off { color: var(--muted); font-weight: 500; opacity: 0.45; }
+.wks-track { height: 74px; display: flex; align-items: flex-end; }
+.wks-fill { width: 100%; background: var(--walnut-light); border-radius: 4px 4px 0 0; }
+.wks-fill.peak { background: var(--accent); }
+.wks-fill.zero { height: 2px; background: var(--line); }
+.wks-days { display: flex; gap: 6px; padding: 7px 14px 13px; }
+.wks-day { flex: 1; min-width: 0; text-align: center; font-size: 10px; color: var(--muted); }
+.wks-day.today { color: var(--accent); font-weight: 700; }
+
+.wks-game {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 11px 13px;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
-.wk-dname { font-size: 9.5px; color: var(--muted); margin-top: 4px; }
-.wk-day.today .wk-dname { color: var(--accent); font-weight: 700; }
+.wks-game + .wks-game { border-top: 1px solid var(--line); }
+.wks-game.flat { cursor: default; }
+.wks-game .cover { width: 34px; height: 45px; border-radius: 6px; flex: none; }
+.wks-gb { flex: 1; min-width: 0; display: block; }
+.wks-gn {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wks-gs { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
+.wks-gtrack {
+  display: block;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--line);
+  margin-top: 6px;
+  overflow: hidden;
+}
+.wks-gfill { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
+.wks-gt { font-size: 13.5px; font-weight: 700; white-space: nowrap; flex: none; }
+
+.wks-kv {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px;
+}
+.wks-kv + .wks-kv { border-top: 1px solid var(--line); }
+.wks-kv .k { font-size: 12.5px; color: var(--muted); }
+.wks-kv .v { font-size: 13px; font-weight: 650; }
 
 /* ---------------------------------------------------------------- timeline */
 
