@@ -479,6 +479,13 @@
   overflow: hidden;
 }
 
+/* A section may hold more than one card: Data & sync uses two, so the sync-time
+   list can be scanned as one column without a second header above it. Without this
+   they butt together and read as a single card with a doubled rule. */
+.settings-group + .settings-group {
+  margin-top: 10px;
+}
+
 .settings-group .menu-item {
   border-radius: 0;
 }

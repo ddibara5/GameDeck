@@ -355,13 +355,21 @@ export default function SettingsPage({ open, onClose, onOpenNav }) {
           </div>
         </div>
 
+        {/* One header, two cards. "Direct sources" and "Fallback" were architecture
+            vocabulary, and worse, they put Exophase's timestamp in a different card
+            from the three it is meant to be compared against. The job of this screen
+            is spotting a stale source, which is a scan down one list.
+
+            Latest play stays out of that list on purpose: it is when you last PLAYED,
+            not when we last synced, so sitting among sync times it reads as staleness
+            when nothing is wrong. */}
         <div className="settings-section">
           <div className="menu-sec-label">Data &amp; sync</div>
           <div className="settings-group">
             <MenuItem
               glyph={ICONS.refresh}
-              label="Refresh library"
-              sub={syncNote || null}
+              label="Sync now"
+              sub={syncNote || 'Pulls all four sources. Takes a few minutes.'}
               value={syncing ? 'Syncing' : 'Refresh'}
               valueAccent
               onClick={triggerRefresh}
@@ -377,10 +385,7 @@ export default function SettingsPage({ open, onClose, onOpenNav }) {
               chevron={false}
             />
           </div>
-        </div>
 
-        <div className="settings-section">
-          <div className="menu-sec-label">Direct sources</div>
           <div className="settings-group">
             {DIRECT_SOURCES.map((s) => (
               <MenuItem
@@ -392,15 +397,11 @@ export default function SettingsPage({ open, onClose, onOpenNav }) {
                 chevron={false}
               />
             ))}
-          </div>
-        </div>
-
-        <div className="settings-section">
-          <div className="menu-sec-label">Fallback</div>
-          <div className="settings-group">
+            {/* Reads in parallel with the three above it; the subtitle carries the
+                backup-source distinction the Fallback header used to. */}
             <MenuItem
               glyph={ICONS.clock}
-              label="Exophase sync"
+              label="Exophase"
               sub="Backup source, fills what the direct APIs cannot"
               value={relTime(fallbackSync) || '-'}
               disabled
