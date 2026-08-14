@@ -19,6 +19,8 @@ const zlib = require('zlib');
 // --- palette ---------------------------------------------------------------
 const GRAPHITE = '#1a1917';
 const PORCELAIN = '#ece2d2';
+// The disc behind the mark: a step down from the tile, enough to define a field.
+const DISC = '#ded0b8';
 
 // amber -> ember ramp, brightest slab on top. Dark-tile version.
 const MARK_DARK = {
@@ -64,9 +66,10 @@ const CX = 256;
 const CY = 256;
 // How much of the tile the mark fills. Scaled about the tile centre (the stack is
 // already centred on 256), so raising this grows the mark without shifting it.
-// 1.12 takes the stack from 236x286 to 264x320 in the 512 unit space, which is
-// still ~124 units of clear tile on each side.
-const MARK_SCALE = 1.12;
+// 1.25 takes the stack to 295x358 in the 512 unit space. Its furthest vertex sits
+// 181 from centre, inside both the maskable safe radius (204.8) and the disc drawn
+// behind it (205), so the mark never touches the circle edge.
+const MARK_SCALE = 1.25;
 const sc = (v) => v * MARK_SCALE;
 // Scale a y ABOUT the centre rather than from the origin, otherwise the whole
 // stack slides down the tile as it grows.
@@ -113,12 +116,13 @@ function insideRounded(x, y, size, r) {
 }
 
 // --- render one icon at `size`, supersampled for smooth edges --------------
-function drawIcon(size, { bg, mark, rounded }) {
+function drawIcon(size, { bg, mark, rounded, disc }) {
   const SS = 4;
   const hi = size * SS;
   const scale = hi / U;
   const polys = scenePolys(mark).map((p) => ({ color: hex(p.color), pts: p.pts.map(([x, y]) => [x * scale, y * scale]) }));
   const bgRGB = hex(bg);
+  const discRGB = disc ? hex(disc) : null;
   const cornerR = rounded ? hi * 0.223 : 0;
 
   const buf = Buffer.alloc(hi * hi * 4);
@@ -128,6 +132,13 @@ function drawIcon(size, { bg, mark, rounded }) {
       const px = x + 0.5, py = y + 0.5;
       if (rounded && !insideRounded(px, py, hi, cornerR)) { buf[idx + 3] = 0; continue; }
       let col = bgRGB;
+      // Disc behind the mark. Radius 0.40 of the canvas = 204.8 of 512, which is the
+      // maskable safe radius, so the visible circle IS the safe boundary rather than an
+      // arbitrary size. Drawn before the polygons so the mark always sits on top.
+      if (disc) {
+        const dx = px - hi / 2, dy = py - hi / 2;
+        if (dx * dx + dy * dy <= (hi * 0.40) * (hi * 0.40)) col = discRGB;
+      }
       // painter's order: last matching polygon wins
       for (let k = 0; k < polys.length; k++) {
         if (pointInPoly(px, py, polys[k].pts)) col = polys[k].color;
@@ -209,6 +220,7 @@ function buildLightSvg() {
   const marks = scenePolys(MARK_LIGHT).map((p) => poly(p.pts, p.color)).join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="GameDeck">
   <rect fill="${PORCELAIN}" width="512" height="512" rx="114" ry="114"/>
+  <circle cx="256" cy="256" r="204.8" fill="${DISC}"/>
   <g>${marks}</g>
 </svg>
 `;
@@ -224,7 +236,7 @@ function buildLightSvg() {
 // URL has no entry in that cache, in the service worker, or on the CDN, so a version
 // bump is the change that actually reaches the device. Same reason Vite hashes its
 // bundle filenames.
-const ICON_VERSION = 'v3';
+const ICON_VERSION = 'v4';
 // Hyphen, not a second dot: one dot, one extension. Nothing should have to guess
 // where the extension starts.
 const v = (base, ext) => `${base}-${ICON_VERSION}.${ext}`;
@@ -239,20 +251,22 @@ function main() {
     console.log(`wrote ${name} (${buf.length} b)`);
   };
 
-  const DARK = { bg: GRAPHITE, mark: MARK_DARK, rounded: false };
-  const LIGHT = { bg: PORCELAIN, mark: MARK_LIGHT, rounded: false };
+  // ONE icon set, porcelain, everywhere. The dark tiles used to be generated as an
+  // adaptive counterpart, but nothing referenced them and their mere existence made
+  // "which icon did iOS pick?" unanswerable. A site that serves no dark icon cannot
+  // show a dark icon.
+  const LIGHT = { bg: PORCELAIN, mark: MARK_LIGHT, rounded: false, disc: DISC };
 
-  for (const s of [120, 152, 167, 180, 192, 512, 1024]) write(v(`icon-${s}`, 'png'), encodePng(s, s, drawIcon(s, DARK)));
-  for (const s of [120, 152, 167, 180, 192, 512]) write(v(`icon-${s}-light`, 'png'), encodePng(s, s, drawIcon(s, LIGHT)));
+  for (const s of [120, 152, 167, 180, 192, 512, 1024]) write(v(`icon-${s}-light`, 'png'), encodePng(s, s, drawIcon(s, LIGHT)));
 
-  const fav16 = encodePng(16, 16, drawIcon(16, { bg: GRAPHITE, mark: MARK_DARK, rounded: true }));
-  const fav32 = encodePng(32, 32, drawIcon(32, { bg: GRAPHITE, mark: MARK_DARK, rounded: true }));
+  const favOpts = { bg: PORCELAIN, mark: MARK_LIGHT, rounded: true, disc: DISC };
+  const fav16 = encodePng(16, 16, drawIcon(16, favOpts));
+  const fav32 = encodePng(32, 32, drawIcon(32, favOpts));
   write(v('favicon-16', 'png'), fav16);
   write(v('favicon-32', 'png'), fav32);
   write(v('favicon', 'ico'), encodeIco([{ size: 16, png: fav16 }, { size: 32, png: fav32 }]));
 
-  write(v('icon', 'svg'), Buffer.from(buildSvg(), 'utf8'));
-  write(v('icon-light', 'svg'), Buffer.from(buildLightSvg(), 'utf8'));
+  write(v('icon', 'svg'), Buffer.from(buildLightSvg(), 'utf8'));
 
   verifyReferences(written);
 }
