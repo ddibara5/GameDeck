@@ -30,14 +30,20 @@ const THEME_OPTIONS = [
   { key: 'system', label: 'System' },
 ]
 
-// Color themes. `ring` is the swatch's outer disc (a theme surface), `dot` the
+// Color themes. `ring` is the swatch's outer disc (a theme neutral), `dot` the
 // inner accent. Palettes live in index.css under :root[data-accent="..."].
+//
+// Each theme carries BOTH modes, because a swatch should preview the theme as it
+// will actually look right now. The single dark-only set these replaced meant
+// light mode showed a dark disc - the "dark ring" - around a pale dark-mode
+// accent that was never the colour you would get. Which pair is used is decided
+// in CSS off data-theme, not here, so "System" resolves for free.
 const ACCENT_OPTIONS = [
-  { key: 'walnut', label: 'Walnut', ring: '#232120', dot: '#c8a97e' },
-  { key: 'slate', label: 'Slate', ring: '#1d2026', dot: '#86a0c2' },
-  { key: 'sage', label: 'Sage', ring: '#1e211a', dot: '#9aab83' },
-  { key: 'plum', label: 'Plum', ring: '#201d23', dot: '#b191b0' },
-  { key: 'graphite', label: 'Graphite', ring: '#202124', dot: '#98a2ae' },
+  { key: 'walnut', label: 'Walnut', ring: '#232120', dot: '#c8a97e', ringLight: '#efe8dd', dotLight: '#9c7449' },
+  { key: 'slate', label: 'Slate', ring: '#1d2026', dot: '#86a0c2', ringLight: '#e7eaef', dotLight: '#4d6d95' },
+  { key: 'sage', label: 'Sage', ring: '#1e211a', dot: '#9aab83', ringLight: '#e9ebe0', dotLight: '#5e7046' },
+  { key: 'plum', label: 'Plum', ring: '#201d23', dot: '#b191b0', ringLight: '#ece6ed', dotLight: '#7c567b' },
+  { key: 'graphite', label: 'Graphite', ring: '#202124', dot: '#98a2ae', ringLight: '#e8e9ec', dotLight: '#59626f' },
 ]
 
 // Poster width on horizontal rails (Continue Playing, Discover, wishlist, Game Pass).
@@ -304,8 +310,16 @@ export default function SettingsPage({ open, onClose, onOpenNav }) {
                   aria-pressed={accent === opt.key}
                   title={opt.label}
                 >
-                  <span className="accent-dot" style={{ background: opt.ring }}>
-                    <i style={{ background: opt.dot }} />
+                  <span
+                    className="accent-dot"
+                    style={{
+                      '--sw-ring': opt.ring,
+                      '--sw-dot': opt.dot,
+                      '--sw-ring-l': opt.ringLight,
+                      '--sw-dot-l': opt.dotLight,
+                    }}
+                  >
+                    <i />
                   </span>
                   <span className="accent-name">{opt.label}</span>
                 </button>

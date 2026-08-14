@@ -1729,6 +1729,21 @@ textarea {
   border-right-color: #e3dacb;
   box-shadow: 8px 0 40px rgba(60, 45, 30, 0.14);
 }
+/* Light mode swaps to each theme's LIGHT pair. Without this the picker drew a
+   dark disc on a cream drawer - a heavy dark ring - around the dark-mode accent,
+   which is not the colour light mode actually uses. The discs are close in tone
+   to the drawer by design, so a hairline gives them an edge without reinstating
+   a ring; the selected state keeps its accent halo and adds the hairline rather
+   than replacing it, since one box-shadow would otherwise overwrite the other. */
+[data-theme="light"] .accent-dot {
+  background: var(--sw-ring-l);
+  box-shadow: inset 0 0 0 1px rgba(60, 45, 30, 0.14);
+}
+[data-theme="light"] .accent-dot i { background: var(--sw-dot-l); }
+[data-theme="light"] .accent-opt.on .accent-dot {
+  box-shadow: 0 0 0 2px var(--accent), inset 0 0 0 1px rgba(60, 45, 30, 0.14);
+}
+
 [data-theme="light"] .menu-sec-label { color: #9a8f7e; }
 [data-theme="light"] .menu-item:active { background: rgba(60, 45, 30, 0.05); }
 [data-theme="light"] .menu-item .menu-chev { color: #b3a898; }
@@ -1909,11 +1924,16 @@ textarea {
   cursor: pointer;
 }
 
+/* The swatch is a small preview of the theme: outer disc is that theme's page
+   neutral, inner dot its accent. Both pairs arrive as custom properties from
+   SettingsPage and the mode is chosen HERE rather than in JS, so "System"
+   resolves without the component having to watch the OS preference. */
 .accent-dot {
   width: 30px;
   height: 30px;
   border-radius: 50%;
   position: relative;
+  background: var(--sw-ring);
   transition: box-shadow 0.15s ease;
 }
 
@@ -1921,6 +1941,7 @@ textarea {
   position: absolute;
   inset: 6px;
   border-radius: 50%;
+  background: var(--sw-dot);
 }
 
 .accent-opt.on .accent-dot {
