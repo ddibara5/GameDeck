@@ -6,6 +6,7 @@ import Skeleton from './Skeleton.jsx'
 import DiscoverDetail from './DiscoverDetail.jsx'
 import { fetchDiscover } from '../lib/discover.js'
 import { releaseTiming, shelfMetaDate } from '../lib/format.js'
+import { groupByRelease } from '../lib/wishlistRelease.js'
 import { useDelayedClose } from '../lib/useDelayedClose.js'
 import { useEdgeBack } from '../lib/useEdgeBack.js'
 import { lockScroll } from '../lib/scrollLock.js'
@@ -15,6 +16,17 @@ import { lockScroll } from '../lib/scrollLock.js'
 // <body> so its fixed overlay anchors to the viewport (same as the game sheet),
 // never to a transformed ancestor.
 const PAGE = 30
+
+// Wishlist pages get the same date sections as the Wishlist tab, from the same
+// grouping function. A wishlist is read as a release calendar - "what is coming,
+// and when" - and a flat grid of 30 answers neither. Only for the wishlist kinds:
+// an IGDB discovery rail is a ranked list, and chopping it into months would
+// destroy the ranking that IS the list.
+const isWishKind = (kind) => kind === 'wishlist' || kind === 'wishlistSoon' || kind === 'wishlistOutNow'
+// ...and only while the order is still release-shaped. Under "Name A-Z" or
+// "Highest rated" the rows no longer run in date order, so month headings would
+// be labelling arbitrary slices.
+const SECTIONED_SORTS = new Set(['', 'release'])
 
 // Sort options. '' = the rail's own recommended order (server default). The rest
 // map to the API's shared SORTS; the API applies them within the rail's own set.
@@ -35,6 +47,30 @@ function sortLocal(items, key) {
     a.sort((x, y) => (Number(y.released) || 0) - (Number(x.released) || 0) || (Number(y.year) || 0) - (Number(x.year) || 0))
   else if (key === 'name') a.sort((x, y) => String(x.name || '').localeCompare(String(y.name || '')))
   return a
+}
+
+function RailCard({ g, isOwned, wishIds, onOpen }) {
+  const timing = releaseTiming(g.released)
+  // Only set when the line would otherwise be blank.
+  const metaDate = shelfMetaDate(g, timing)
+  return (
+    <div className="shelf-card-wrap">
+      <button type="button" className="shelf-card" onClick={() => onOpen(g)}>
+        <div className="shelf-poster">
+          <Cover src={g.cover} title={g.name} size="lg" />
+          {isOwned(g.name) ? <span className="in-library-dot" title="In library" /> : null}
+        </div>
+        <div className="shelf-card-title">{g.name}</div>
+        <div className="shelf-card-meta">
+          {timing ? <span className={`sc-time ${timing.tone}`}>{timing.label}</span> : null}
+          {timing && g.rating ? <span className="sc-sep">{' · '}</span> : null}
+          {g.rating ? <span>{'★'} {g.rating}</span> : null}
+          {metaDate ? <span className="sc-date">{metaDate}</span> : null}
+        </div>
+      </button>
+      <WishHeart game={g} active={wishIds.has(g.id)} />
+    </div>
+  )
 }
 
 export default function DiscoverRailList({ row, seedItems, isOwned, hideOwned, wishIds, onClose, onAsk, onMoreLikeThis, filters }) {
@@ -121,6 +157,16 @@ export default function DiscoverRailList({ row, seedItems, isOwned, hideOwned, w
   const items = isRail ? visibleRows : localSorted.slice(0, localCount)
   const moreAvailable = isRail ? hasMore : localCount < localSorted.length
 
+  // Sections are built from the VISIBLE page, not the whole list, so "Show more"
+  // grows the sections you can already see rather than silently rewriting them.
+  const sections = useMemo(() => {
+    if (!isWishKind(row.kind) || !SECTIONED_SORTS.has(sort)) return null
+    const secs = groupByRelease(items)
+    // One section is not a grouping, it is a redundant heading. The out-now rail
+    // collapses to exactly that, since every row in it has already shipped.
+    return secs.length > 1 ? secs : null
+  }, [row.kind, sort, items])
+
   const count = isRail ? `${items.length}${hasMore ? '+' : ''} games` : `${localSorted.length} games`
   const sub = row.sub ? `${count}  ·  ${row.sub}` : count
   const sortLabel = (SORTS.find((s) => s.key === sort) || SORTS[0]).label
@@ -157,31 +203,27 @@ export default function DiscoverRailList({ row, seedItems, isOwned, hideOwned, w
           </div>
         ) : (
           <>
-            <div className="rail-grid">
-              {items.map((g) => {
-                const timing = releaseTiming(g.released)
-                // Only set when the line would otherwise be blank.
-                const metaDate = shelfMetaDate(g, timing)
-                return (
-                  <div className="shelf-card-wrap" key={g.id}>
-                    <button type="button" className="shelf-card" onClick={() => setSelected(g)}>
-                      <div className="shelf-poster">
-                        <Cover src={g.cover} title={g.name} size="lg" />
-                        {isOwned(g.name) ? <span className="in-library-dot" title="In library" /> : null}
-                      </div>
-                      <div className="shelf-card-title">{g.name}</div>
-                      <div className="shelf-card-meta">
-                        {timing ? <span className={`sc-time ${timing.tone}`}>{timing.label}</span> : null}
-                        {timing && g.rating ? <span className="sc-sep">{' · '}</span> : null}
-                        {g.rating ? <span>{'★'} {g.rating}</span> : null}
-                        {metaDate ? <span className="sc-date">{metaDate}</span> : null}
-                      </div>
-                    </button>
-                    <WishHeart game={g} active={wishIds.has(g.id)} />
+            {sections ? (
+              sections.map((sec) => (
+                <section key={sec.id}>
+                  <div className={`rail-sech${sec.amber ? ' amber' : ''}`}>
+                    <span className="rail-sech-l">{sec.label}</span>
+                    <span className="rail-sech-c">{sec.rows.length}</span>
                   </div>
-                )
-              })}
-            </div>
+                  <div className="rail-grid">
+                    {sec.rows.map((g) => (
+                      <RailCard key={g.id} g={g} isOwned={isOwned} wishIds={wishIds} onOpen={setSelected} />
+                    ))}
+                  </div>
+                </section>
+              ))
+            ) : (
+              <div className="rail-grid">
+                {items.map((g) => (
+                  <RailCard key={g.id} g={g} isOwned={isOwned} wishIds={wishIds} onOpen={setSelected} />
+                ))}
+              </div>
+            )}
             {moreAvailable ? (
               <div className="show-more-row">
                 <button

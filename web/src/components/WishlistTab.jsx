@@ -3,6 +3,7 @@ import Cover from './Cover.jsx'
 import GameSheet from './GameSheet.jsx'
 import { useWishlist, removeFromWishlist, restoreToWishlist, reconcileWishlist } from '../lib/wishlist.js'
 import { loadLibraryTitles } from '../lib/discover.js'
+import { relOf, effTs, isOut, byTitle, groupByRelease } from '../lib/wishlistRelease.js'
 import './wishlist.css'
 
 const SORT_KEY = 'gamedeck_wishlist_sort'
@@ -15,46 +16,6 @@ const SORTS = [
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const DAY = 86400000
 
-function byTitle(a, b) {
-  return (a.title || '').localeCompare(b.title || '')
-}
-
-// --- release model ---------------------------------------------------------
-// Rows may carry released (unix seconds) + date_precision + release_label from the
-// IGDB sync, or just `year` before the refresh has run. Normalize both to one shape:
-// { k: 'day'|'month'|'quarter'|'year'|'tba', ts, label }.
-function relOf(r) {
-  const prec = r.date_precision
-  const ts = r.released != null ? r.released * 1000 : null
-  if (prec === 'tba') return { k: 'tba', ts: null, label: r.release_label || 'TBA' }
-  if (ts != null) return { k: prec || 'day', ts, label: r.release_label || null }
-  if (r.year) return { k: 'year', ts: Date.UTC(r.year, 5, 1), label: String(r.year) }
-  return { k: 'tba', ts: null, label: 'TBA' }
-}
-
-// End of the known release window: the last day the game could land given its
-// precision. Coarser dates (quarter, year) resolve to the END of their period so
-// they sort AFTER the concrete dates they overlap, never before them.
-function windowEnd(rel) {
-  if (rel.ts == null) return Infinity
-  const d = new Date(rel.ts)
-  const y = d.getUTCFullYear()
-  const m = d.getUTCMonth()
-  if (rel.k === 'year') return Date.UTC(y, 11, 31)
-  if (rel.k === 'quarter') return Date.UTC(y, Math.floor(m / 3) * 3 + 3, 0)
-  if (rel.k === 'month') return Date.UTC(y, m + 1, 0)
-  return rel.ts
-}
-
-// Instant used for sorting + countdown: the end of the window, so a vaguer date
-// never jumps ahead of the specific ones inside the same period.
-function effTs(rel) {
-  return windowEnd(rel)
-}
-
-function isOut(rel) {
-  return rel.k !== 'tba' && rel.ts != null && windowEnd(rel) < Date.now()
-}
 
 function fmtDay(ts) {
   const d = new Date(ts)
@@ -99,22 +60,6 @@ function shortOf(rel) {
   return String(new Date(rel.ts).getUTCFullYear())
 }
 
-// Which dated section a row belongs to, and its sort order.
-function sectionOf(rel) {
-  if (rel.k === 'tba') return { order: 8e15, id: 'tba', label: 'To be announced', amber: false }
-  if (isOut(rel)) return { order: 9e15, id: 'out', label: 'Out now', amber: false }
-  const d = new Date(rel.ts)
-  const y = d.getUTCFullYear()
-  const m = d.getUTCMonth()
-  const now = new Date()
-  if (rel.k === 'day' || rel.k === 'month') {
-    const thisMonth = y === now.getUTCFullYear() && m === now.getUTCMonth()
-    return { order: Date.UTC(y, m, 1), id: `m${y}-${m}`, label: thisMonth ? 'This month' : `${MON[m]} ${y}`, amber: thisMonth }
-  }
-  if (rel.k === 'quarter') { const q = Math.floor(m / 3) + 1; return { order: Date.UTC(y, q * 3, 0), id: `q${y}-${q}`, label: `Q${q} ${y}`, amber: false } }
-  return { order: Date.UTC(y, 11, 31), id: `y${y}`, label: `${y}`, amber: false }
-}
-
 // Group + order the wishlist. "release" builds smart date sections; the other sorts
 // are one flat list.
 function buildSections(items, sort) {
@@ -122,23 +67,7 @@ function buildSections(items, sort) {
   if (sort === 'added') {
     return [{ id: 'added', rows: [...items].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)) }]
   }
-  const groups = new Map()
-  for (const r of items) {
-    const rel = relOf(r)
-    const s = sectionOf(rel)
-    if (!groups.has(s.id)) groups.set(s.id, { ...s, rows: [] })
-    groups.get(s.id).rows.push(r)
-  }
-  const secs = [...groups.values()].sort((a, b) => a.order - b.order)
-  for (const g of secs) {
-    const past = g.id === 'out'
-    g.rows.sort((a, b) => {
-      const ta = effTs(relOf(a))
-      const tb = effTs(relOf(b))
-      return past ? tb - ta || byTitle(a, b) : ta - tb || byTitle(a, b)
-    })
-  }
-  return secs
+  return groupByRelease(items)
 }
 
 function Chip({ rel }) {
