@@ -5,7 +5,7 @@ import Skeleton from './Skeleton.jsx'
 import HomeShelf from './HomeShelf.jsx'
 import { useStatusMap, effectiveStatus } from '../lib/userStatus.js'
 import { platformMeta } from '../lib/format.js'
-import { useLibraryGames } from '../lib/useLibraryGames.js'
+import { useLibraryGames, useVibeKeywords } from '../lib/useLibraryGames.js'
 import { VIBES, hasVibe, availableVibes } from '../lib/vibes.js'
 import { topGenres } from '../lib/shuffle.js'
 
@@ -65,7 +65,11 @@ export default function LibraryTab() {
 
   // Only offer chips that can return something, so tapping one never lands on an
   // empty library. Recomputed from the loaded set rather than hardcoded.
-  const vibes = useMemo(() => availableVibes(games), [games])
+  // keywords arrive separately from the library rows; see useVibeKeywords. They
+  // are only fetched once the filter sheet has been opened, because that is the
+  // only place in this tab that reads them, and the Library is the landing tab.
+  const kwMap = useVibeKeywords(showFilters)
+  const vibes = useMemo(() => availableVibes(games, 5, kwMap), [games, kwMap])
   const genres = useMemo(() => topGenres(games, 10), [games])
 
   // Count of narrowing filters, shown on the button. The controls used to be
@@ -102,7 +106,7 @@ export default function LibraryTab() {
     }
 
     if (vibe !== 'any') {
-      list = list.filter((g) => hasVibe(g, vibe))
+      list = list.filter((g) => hasVibe(g, vibe, kwMap))
     }
 
     const query = search.trim().toLowerCase()
@@ -135,7 +139,10 @@ export default function LibraryTab() {
         break
     }
     return sorted
-  }, [games, platformFilter, statusFilter, genre, vibe, search, sortKey, statusMap])
+    // kwMap is a dependency: the vibe filter reads it, and it arrives after the
+    // first render. Without it here, picking a vibe before the keywords land
+    // would filter against an empty map and never recompute.
+  }, [games, platformFilter, statusFilter, genre, vibe, search, sortKey, statusMap, kwMap])
 
   // Reset the visible window whenever the filter/search/sort changes.
   useEffect(() => {

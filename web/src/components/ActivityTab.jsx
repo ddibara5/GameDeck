@@ -156,7 +156,7 @@ function ActivityRow({ row, game, onOpen }) {
   const mins = Number(row.minutes_delta) || 0
 
   const cover = game
-    ? game.cover_standard || game.cover_small || row.cover_small
+    ? game.cover_small || row.cover_small
     : row.cover_small
 
   return (

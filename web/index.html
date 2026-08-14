@@ -6,6 +6,15 @@
     <title>GameDeck</title>
     <meta name="description" content="Your personal video-game library, activity, and AI game picks." />
 
+    <!-- Supabase serves the very first request of a cold start (the library), so
+         the DNS lookup and TLS handshake are on the critical path before anything
+         can render from the network. crossorigin IS required here and must not be
+         copied from the image hints below: this origin is reached by fetch() with
+         CORS, and a preconnect whose crossorigin does not match the eventual
+         request opens a second connection instead of reusing the warmed one. -->
+    <link rel="preconnect" href="https://eiskobjlvxzwvucgpenk.supabase.co" crossorigin />
+    <link rel="dns-prefetch" href="https://eiskobjlvxzwvucgpenk.supabase.co" />
+
     <!-- Warm the connection to the image hosts before the first cover renders.
          wsrv.nl is the primary (resized WebP CDN); images.igdb.com is the source +
          fallback. No crossorigin: <img> loads here are non-CORS, so preconnect must match. -->

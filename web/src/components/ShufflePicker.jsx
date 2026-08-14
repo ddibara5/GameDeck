@@ -13,6 +13,7 @@ import { useEdgeBack } from '../lib/useEdgeBack.js'
 import { useStatusMap, effectiveStatus } from '../lib/userStatus.js'
 import { PLAY_POOLS, BUY_POOLS, LENGTH_STEPS, shuffle, shuffleId, eligible, topGenres } from '../lib/shuffle.js'
 import { availableVibes } from '../lib/vibes.js'
+import { useVibeKeywords } from '../lib/useLibraryGames.js'
 import './shuffle.css'
 
 // Horizontal travel before a drag counts as a swipe rather than a stray finger.
@@ -26,7 +27,7 @@ const EDGE_PX = 24
 
 function coverSrc(item, mode) {
   if (mode === 'buy') return item.cover || null
-  return item.cover_igdb ? igdbCover(item.cover_igdb, 't_cover_big') : item.cover_standard || item.cover_small
+  return item.cover_igdb ? igdbCover(item.cover_igdb, 't_cover_big') : item.cover_small
 }
 
 const titleOf = (item) => (item && item.title) || 'Untitled'
@@ -113,7 +114,11 @@ export default function ShufflePicker({ open, onClose }) {
   )
 
   const genres = useMemo(() => topGenres(items), [items])
-  const vibes = useMemo(() => availableVibes(items, mode === 'buy' ? 2 : 5), [items, mode])
+  const kwMap = useVibeKeywords()
+  const vibes = useMemo(
+    () => availableVibes(items, mode === 'buy' ? 2 : 5, kwMap),
+    [items, mode, kwMap]
+  )
   const pools = mode === 'buy' ? BUY_POOLS : PLAY_POOLS
   const poolMeta = pools.find((p) => p.key === pool) || pools[0]
 

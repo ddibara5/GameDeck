@@ -4,6 +4,7 @@ import Cover from './Cover.jsx'
 import { useDelayedClose } from '../lib/useDelayedClose.js'
 import { useSheetDrag } from '../lib/useSheetDrag.js'
 import { lockScroll } from '../lib/scrollLock.js'
+import { useAchievementsUrl } from '../lib/useLibraryGames.js'
 import { igdbCover, platformMeta, minutesToHhm, formatDate, releaseLabel } from '../lib/format.js'
 import {
   STATUSES,
@@ -76,6 +77,11 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   // deliberate one and there is no way back out of an override.
   const [status, setStatusState] = useState('backlog')
   const [pinned, setPinned] = useState(false)
+
+  // achievements_url is no longer carried on library rows: it was 34 kB across
+  // 513 of them to serve this single link, on a sheet that shows one game at a
+  // time. Fetched per game instead, so the link appears a beat after the sheet.
+  const achievementsUrl = useAchievementsUrl(owned && game ? game.master_id : null, game)
   useEffect(() => {
     if (!owned || !game) return
     setPinned(Boolean(explicitStatus(game)))
@@ -144,7 +150,7 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   const coverSrc = owned
     ? game.cover_igdb
       ? igdbCover(game.cover_igdb, 't_720p')
-      : game.cover_tile || game.cover_standard || game.cover_small
+      : game.cover_small
     : game.cover
   const genres = (media && media.genres) || game.genres || []
   const platforms = (media && media.platforms) || game.platforms || []
@@ -386,8 +392,8 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
           </>
         )}
 
-        {owned && game.achievements_url ? (
-          <a className="detail-link" href={game.achievements_url} target="_blank" rel="noreferrer noopener">
+        {owned && achievementsUrl ? (
+          <a className="detail-link" href={achievementsUrl} target="_blank" rel="noreferrer noopener">
             View achievements
           </a>
         ) : null}

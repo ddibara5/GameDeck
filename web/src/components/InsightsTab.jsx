@@ -278,7 +278,7 @@ function WeekBlock({ week, gamesById, onOpenGame }) {
           <div className="wk-games">
             {week.byGame.map((g) => {
               const game = gamesById.get(g.master_id) || null
-              const cover = game ? game.cover_standard || game.cover_small || g.cover : g.cover
+              const cover = game ? game.cover_small || g.cover : g.cover
               return (
                 <button
                   type="button"

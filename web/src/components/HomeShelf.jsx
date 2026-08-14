@@ -43,7 +43,7 @@ export default function HomeShelf({ games, onSelect }) {
                       src={
                         g.cover_igdb
                           ? igdbCover(g.cover_igdb, 't_cover_big')
-                          : g.cover_tile || g.cover_standard || g.cover_small
+                          : g.cover_small
                       }
                       title={g.title}
                       size="lg"
