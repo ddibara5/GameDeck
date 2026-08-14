@@ -3,7 +3,8 @@ import Cover from './Cover.jsx'
 import GameSheet from './GameSheet.jsx'
 import { useWishlist, removeFromWishlist, restoreToWishlist, reconcileWishlist } from '../lib/wishlist.js'
 import { loadLibraryTitles } from '../lib/discover.js'
-import { relOf, effTs, isOut, byTitle, groupByRelease } from '../lib/wishlistRelease.js'
+import NextUp from './NextUp.jsx'
+import { relOf, effTs, isOut, byTitle, groupByRelease, shortOf, MON, DAY } from '../lib/wishlistRelease.js'
 import './wishlist.css'
 
 const SORT_KEY = 'gamedeck_wishlist_sort'
@@ -13,21 +14,11 @@ const SORTS = [
   { k: 'added', label: 'Added' },
   { k: 'az', label: 'A-Z' },
 ]
-const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const DAY = 86400000
 
 
 function fmtDay(ts) {
   const d = new Date(ts)
   return `${MON[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`
-}
-function fmtDayShort(ts) {
-  const d = new Date(ts)
-  return `${MON[d.getUTCMonth()]} ${d.getUTCDate()}`
-}
-function fmtMonthShort(ts) {
-  const d = new Date(ts)
-  return `${MON[d.getUTCMonth()]} '${String(d.getUTCFullYear()).slice(2)}`
 }
 function fmtQuarter(ts) {
   const d = new Date(ts)
@@ -49,17 +40,6 @@ function chipOf(rel) {
   return { cls: 'far', txt: rel.label || String(new Date(rel.ts).getUTCFullYear()) }
 }
 
-// Compact badge for grid cards.
-function shortOf(rel) {
-  if (rel.k === 'tba') return 'TBA'
-  if (isOut(rel)) return 'Owned'
-  const days = Math.round((effTs(rel) - Date.now()) / DAY)
-  if (rel.k === 'day') return days <= 30 ? `${Math.max(days, 0)}d` : fmtDayShort(rel.ts)
-  if (rel.k === 'month') return fmtMonthShort(rel.ts)
-  if (rel.k === 'quarter') { const d = new Date(rel.ts); return `Q${Math.floor(d.getUTCMonth() / 3) + 1} '${String(d.getUTCFullYear()).slice(2)}` }
-  return String(new Date(rel.ts).getUTCFullYear())
-}
-
 // Group + order the wishlist. "release" builds smart date sections; the other sorts
 // are one flat list.
 function buildSections(items, sort) {
@@ -73,42 +53,6 @@ function buildSections(items, sort) {
 function Chip({ rel }) {
   const c = chipOf(rel)
   return <span className={`wl-chip ${c.cls}`}>{c.txt}</span>
-}
-
-// --- Next up strip: nearest concrete upcoming releases ---------------------
-function NextUp({ items, onOpen }) {
-  const soon = useMemo(() => {
-    return items
-      .map((r) => ({ r, rel: relOf(r) }))
-      .filter(({ rel }) => (rel.k === 'day' || rel.k === 'month') && rel.ts != null && !isOut(rel))
-      .sort((a, b) => effTs(a.rel) - effTs(b.rel))
-      .slice(0, 6)
-  }, [items])
-  if (soon.length < 2) return null
-  return (
-    <div className="wl-next-wrap">
-      <div className="wl-next-lbl">Next up</div>
-      <div className="wl-next">
-        {soon.map(({ r, rel }) => {
-          const days = Math.round((effTs(rel) - Date.now()) / DAY)
-          const big = rel.k === 'day' && days <= 45 ? String(Math.max(days, 0)) : shortOf(rel)
-          const lab = rel.k === 'day' && days <= 45 ? (days === 1 ? 'day away' : 'days away') : ''
-          return (
-            <button type="button" key={r.igdb_id} className="wl-ncard" onClick={() => onOpen(r)}>
-              <div className="wl-nart">
-                <Cover src={r.cover} title={r.title} size="sm" className="wl-ncover" />
-                <div className="wl-nover">
-                  <div className="wl-nbig">{big}</div>
-                  <div className="wl-nlab">{lab || '\u00a0'}</div>
-                </div>
-              </div>
-              <div className="wl-nt">{r.title}</div>
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
 }
 
 // One wishlist row with iOS-style swipe-left-to-delete. Short swipe reveals the trash
@@ -361,7 +305,7 @@ export default function WishlistTab({ onClose }) {
         {back}
         <div>
           <div className="wl-title">Wishlist</div>
-          <div className="wl-sub">{loading ? 'Loading\u2026' : `${items.length} ${items.length === 1 ? 'game' : 'games'} you're tracking`}</div>
+          <div className="wl-sub">{loading ? 'Loading…' : `${items.length} ${items.length === 1 ? 'game' : 'games'} you're tracking`}</div>
         </div>
       </div>
 

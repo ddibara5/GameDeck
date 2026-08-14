@@ -4,6 +4,7 @@ import Cover from './Cover.jsx'
 import WishHeart from './WishHeart.jsx'
 import Skeleton from './Skeleton.jsx'
 import DiscoverDetail from './DiscoverDetail.jsx'
+import NextUp from './NextUp.jsx'
 import { fetchDiscover } from '../lib/discover.js'
 import { releaseTiming, shelfMetaDate } from '../lib/format.js'
 import { groupByRelease } from '../lib/wishlistRelease.js'
@@ -203,6 +204,10 @@ export default function DiscoverRailList({ row, seedItems, isOwned, hideOwned, w
           </div>
         ) : (
           <>
+            {/* Same countdown strip as the Wishlist tab, on the same condition:
+                only where the page is already reading as a release calendar. It
+                hides itself when there are fewer than two dated entries. */}
+            {sections ? <NextUp items={items} onOpen={setSelected} /> : null}
             {sections ? (
               sections.map((sec) => (
                 <section key={sec.id}>

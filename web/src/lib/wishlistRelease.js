@@ -6,7 +6,8 @@
 // in the Discover chunk, and the two would have drifted the first time a precision
 // rule changed - which is exactly how the Library ended up with two column lists.
 
-const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+export const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+export const DAY = 86400000
 
 // Rows reach this from two places with different field names for the same thing:
 // the `wishlist` table calls it `date_precision` and carries `release_label`, while
@@ -92,4 +93,28 @@ export function groupByRelease(items) {
     })
   }
   return secs
+}
+
+export function fmtDayShort(ts) {
+  const d = new Date(ts)
+  return `${MON[d.getUTCMonth()]} ${d.getUTCDate()}`
+}
+
+export function fmtMonthShort(ts) {
+  const d = new Date(ts)
+  return `${MON[d.getUTCMonth()]} '${String(d.getUTCFullYear()).slice(2)}`
+}
+
+// Compact badge: the shortest honest rendering of a release window.
+export function shortOf(rel) {
+  if (rel.k === 'tba') return 'TBA'
+  if (isOut(rel)) return 'Owned'
+  const days = Math.round((effTs(rel) - Date.now()) / DAY)
+  if (rel.k === 'day') return days <= 30 ? `${Math.max(days, 0)}d` : fmtDayShort(rel.ts)
+  if (rel.k === 'month') return fmtMonthShort(rel.ts)
+  if (rel.k === 'quarter') {
+    const d = new Date(rel.ts)
+    return `Q${Math.floor(d.getUTCMonth() / 3) + 1} '${String(d.getUTCFullYear()).slice(2)}`
+  }
+  return String(new Date(rel.ts).getUTCFullYear())
 }
