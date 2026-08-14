@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import Skeleton from './Skeleton.jsx'
-import { platformMeta } from '../lib/format.js'
+import Cover from './Cover.jsx'
+import Hhm from './Hhm.jsx'
+import GameDetail from './GameDetail.jsx'
+import { platformMeta, minutesToHhm } from '../lib/format.js'
+import { fetchRecentActivity } from '../lib/recentActivity.js'
+import { weekStats, compactHm, bars, WEEK_SPAN } from '../lib/playWeek.js'
 import './insights.css'
 
 /* ------------------------------------------------------------------ helpers */
@@ -201,17 +206,159 @@ function Histogram({ bars, peakYear, recentFrom }) {
 const GAME_COLUMNS =
   'title, environment, genre, percent, playtime_minutes, earned_awards, last_played, release_year'
 
+/* --------------------------------------------------------------- this week */
+
+// Moved here from the Activity tab, which is now purely the session timeline.
+// It sits at the top of Insights because it is the only block on this page about
+// the last seven days; everything below is lifetime shape.
+const WEEK_TRACK = 46
+
+function WeekBlock({ week, gamesById, onOpenGame }) {
+  const delta = week.hasPrev ? week.minutes - week.prevMinutes : null
+  const topMinutes = Math.max(week.byGame[0]?.minutes || 0, 1)
+
+  return (
+    <>
+      <div className="chart-card">
+        <div className="wk-top">
+          <h2 className="chart-title">Last {week.span} days</h2>
+          {/* Rendered only when the preceding window actually holds events, so it
+              never reports a gain over a window that does not exist. */}
+          {delta === null ? null : delta === 0 ? (
+            <span className="wk-delta flat">Level with last week</span>
+          ) : (
+            <span className="wk-delta">
+              {delta > 0 ? '↑' : '↓'} {minutesToHhm(Math.abs(delta))}
+            </span>
+          )}
+        </div>
+
+        <div className="wk-hero">
+          <span className="wk-big"><Hhm mins={week.minutes} /></span>
+          <span className="wk-played">played</span>
+        </div>
+
+        <div className="wk-meta">
+          <span><b>{week.games}</b> {week.games === 1 ? 'game' : 'games'}</span>
+          <span className="wk-dot">·</span>
+          <span><b>{week.achievements}</b> {week.achievements === 1 ? 'achievement' : 'achievements'}</span>
+          <span className="wk-dot">·</span>
+          <span><b>{week.activeDays}</b> of {week.span} days</span>
+        </div>
+
+        {/* No track behind the bars: --surface-2 is BRIGHTER than the card in light
+            mode, so a filled track drew every day with nothing played as the most
+            prominent block. Empty days are a stub, today-with-nothing-yet a dash. */}
+        <div className="wk-chart">
+          {bars(week.days, WEEK_TRACK).map((d) => (
+            <div className="wk-col" key={d.key}>
+              <span className="wk-cap">{d.minutes ? compactHm(d.minutes) : ''}</span>
+              <span className="wk-track">
+                <span
+                  className={`wk-fill${d.isPeak ? ' peak' : ''}${d.minutes ? '' : d.isToday ? ' today-empty' : ' zero'}`}
+                  style={d.minutes ? { height: `${d.h}px` } : undefined}
+                />
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="wk-names">
+          {week.days.map((d) => (
+            <span className={`wk-name${d.isToday ? ' today' : ''}`} key={d.key}>
+              {/* Full short names, because 'narrow' gives S/S and T/T. */}
+              {d.short}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {week.byGame.length ? (
+        <div className="chart-card">
+          <h2 className="chart-title">What you played this week</h2>
+          <div className="wk-games">
+            {week.byGame.map((g) => {
+              const game = gamesById.get(g.master_id) || null
+              const cover = game ? game.cover_standard || game.cover_small || g.cover : g.cover
+              return (
+                <button
+                  type="button"
+                  className={`wk-game${game ? '' : ' flat'}`}
+                  key={g.master_id}
+                  onClick={game ? () => onOpenGame(game) : undefined}
+                >
+                  <Cover src={cover} title={g.title} size="sm" />
+                  <span className="wk-gb">
+                    <span className="wk-gn">{g.title}</span>
+                    <span className="wk-gs">
+                      {g.days} {g.days === 1 ? 'day' : 'days'}
+                      {g.achievements > 0
+                        ? ` · ${g.achievements} ${g.achievements === 1 ? 'achievement' : 'achievements'}`
+                        : ''}
+                    </span>
+                    <span className="wk-gtrack">
+                      <span className="wk-gfill" style={{ width: `${Math.round((g.minutes / topMinutes) * 100)}%` }} />
+                    </span>
+                  </span>
+                  <span className="wk-gt">{minutesToHhm(g.minutes)}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="wk-kvs">
+            {week.best ? (
+              <div className="wk-kv">
+                <span className="k">Best day</span>
+                <span className="v">{week.best.short}, {minutesToHhm(week.best.minutes)}</span>
+              </div>
+            ) : null}
+            {week.activeDays > 0 ? (
+              <div className="wk-kv">
+                <span className="k">Average per active day</span>
+                <span className="v">{minutesToHhm(week.avgActive)}</span>
+              </div>
+            ) : null}
+            {week.run ? (
+              <div className="wk-kv">
+                <span className="k">Longest run</span>
+                <span className="v">
+                  {week.run.length} {week.run.length === 1 ? 'day' : 'days'}
+                  {week.run.length > 1 ? `, ${week.run.from.short} to ${week.run.to.short}` : ''}
+                </span>
+              </div>
+            ) : null}
+            {week.platforms.length ? (
+              <div className="wk-kv">
+                <span className="k">{week.platforms.length === 1 ? 'Platform' : 'Platforms'}</span>
+                <span className="v">{week.platforms.map((p) => platformMeta(p).label).join(', ')}</span>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+    </>
+  )
+}
+
 export default function InsightsTab() {
   const [games, setGames] = useState([])
+  const [events, setEvents] = useState([])
+  const [selected, setSelected] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
     async function load() {
       setLoading(true)
-      const { data } = await supabase.from('games').select(GAME_COLUMNS)
+      // Two windows of activity, so the week block can compare against the one
+      // before it. No row cap: the totals must cover the whole fortnight.
+      const [lib, act] = await Promise.all([
+        supabase.from('games').select(GAME_COLUMNS),
+        fetchRecentActivity({ days: WEEK_SPAN * 2 }),
+      ])
       if (cancelled) return
-      setGames(data || [])
+      setGames(lib.data || [])
+      setEvents(act.data || [])
       setLoading(false)
     }
     load()
@@ -310,6 +457,9 @@ export default function InsightsTab() {
     }
   }, [games])
 
+  const week = useMemo(() => weekStats(events), [events])
+  const gamesById = useMemo(() => new Map(games.map((g) => [g.master_id, g])), [games])
+
   if (loading) {
     return (
       <div>
@@ -348,6 +498,8 @@ export default function InsightsTab() {
           </div>
         ))}
       </div>
+
+      <WeekBlock week={week} gamesById={gamesById} onOpenGame={setSelected} />
 
       <ChartCard
         title="Completion distribution"
@@ -424,6 +576,8 @@ export default function InsightsTab() {
           <div className="ins-rec"><div className="l">Biggest genre</div><div className="v">{s.topGenre?.label || '-'}</div><div className="m">{n(s.topGenre?.hrs)} h</div></div>
         </div>
       </ChartCard>
+
+      {selected ? <GameDetail game={selected} onClose={() => setSelected(null)} /> : null}
     </div>
   )
 }
