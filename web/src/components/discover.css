@@ -5,25 +5,31 @@
    are defined here; cards, shelves and sheets reuse global classes.
    ============================================================ */
 
+/* The large title and the Browse/Ask switch stack rather than sharing a row, so
+   the title matches every other tab. The height stays a single declared number
+   because the Ask view's chat pane is sized by subtracting it from the viewport;
+   letting this box grow freely would push the composer off the bottom. */
 .discover-page {
-  --disc-topbar-h: 60px;
+  --disc-topbar-h: 116px;
   position: relative;
 }
 
 .discover-topbar {
   height: var(--disc-topbar-h);
+  box-sizing: border-box;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 0 16px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 0 12px;
   border-bottom: 1px solid var(--line);
   background: var(--bg);
 }
 
 .discover-seg {
-  flex: 0 0 auto;
-  width: 176px;
+  flex: none;
+  align-self: stretch;
+  margin: 0 16px;
 }
 
 /* Ask view keeps the chat's fixed-height, input-pinned layout, minus the
@@ -74,15 +80,15 @@
   flex: 0 0 auto;
   min-height: 36px;
   padding: 0 14px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   border: 1px solid var(--line);
   background: var(--surface);
   color: var(--muted);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--t-foot);
+  font-weight: var(--w-semi);
   white-space: nowrap;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition: background var(--d-fast) ease, color var(--d-fast) ease, border-color var(--d-fast) ease;
 }
 
 .preset-chip.active {
@@ -101,17 +107,17 @@
 }
 
 .results-count {
-  font-size: 13px;
+  font-size: var(--t-foot);
   color: var(--muted);
-  font-weight: 600;
+  font-weight: var(--w-semi);
 }
 
 .results-clear {
   border: none;
   background: none;
   color: var(--accent);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--t-foot);
+  font-weight: var(--w-semi);
   cursor: pointer;
   padding: 6px;
 }
@@ -123,13 +129,13 @@
 .discover-card-tags {
   display: flex;
   gap: 5px;
-  font-size: 12px;
+  font-size: var(--t-cap);
   color: var(--muted);
 }
 
 .discover-rating {
   color: var(--amber);
-  font-weight: 600;
+  font-weight: var(--w-semi);
 }
 
 /* ---------- Browse: discovery rails ---------- */
@@ -161,14 +167,14 @@
 .shelf-poster-sk {
   width: 100%;
   aspect-ratio: 3 / 4;
-  border-radius: 16px;
+  border-radius: var(--r-md);
 }
 
 .shelf-title-sk {
   height: 10px;
   width: 80%;
   margin-top: 8px;
-  border-radius: 6px;
+  border-radius: var(--r-xs);
 }
 
 .shelf-head-sk {
@@ -207,7 +213,7 @@
   bottom: 0;
   display: block;
   padding: 20px 9px 7px;
-  border-radius: 0 0 16px 16px;
+  border-radius: 0 0 var(--r-md) var(--r-md);
   background: linear-gradient(to top, rgba(10, 9, 8, 0.92), rgba(10, 9, 8, 0));
   pointer-events: none;
 }
@@ -216,17 +222,17 @@
    (112px shelf poster, 128px Next up card). */
 .sc-ov-big {
   display: block;
-  font-size: 20px;
-  font-weight: 800;
+  font-size: var(--t-t3);
+  font-weight: var(--w-bold);
   line-height: 1;
-  letter-spacing: -0.02em;
+  letter-spacing: var(--t-t3-tr);
   color: #fff;
   font-variant-numeric: tabular-nums;
 }
 .sc-ov-lab {
   display: block;
   min-height: 13px;
-  font-size: 11px;
+  font-size: var(--t-cap2);
   line-height: 1.2;
   margin-top: 1px;
   color: rgba(255, 255, 255, 0.88);
@@ -280,8 +286,12 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  -webkit-backdrop-filter: blur(2px);
-  backdrop-filter: blur(2px);
+  /* This one keeps its glass: it is a control floating over artwork, which is
+     the case the material is for. 2px did nothing though, so it now blurs for
+     real and dims what is behind it, which is what actually buys the glyph its
+     contrast over a pale cover. */
+  -webkit-backdrop-filter: blur(12px) saturate(140%) brightness(0.72);
+  backdrop-filter: blur(12px) saturate(140%) brightness(0.72);
   z-index: 2;
 }
 
@@ -317,7 +327,7 @@ button.shelf-head {
 }
 button.shelf-head:active {
   background: var(--surface);
-  border-radius: 10px;
+  border-radius: var(--r-sm);
 }
 .shelf-title-wrap {
   display: inline-flex;
@@ -380,15 +390,15 @@ button.shelf-head:active {
   min-width: 0;
 }
 .rail-title {
-  font-size: 18px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
+  font-size: var(--t-t3);
+  font-weight: var(--w-bold);
+  letter-spacing: var(--t-t3-tr);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .rail-sub {
-  font-size: 12px;
+  font-size: var(--t-cap);
   color: var(--muted);
   margin-top: 1px;
 }
@@ -398,12 +408,12 @@ button.shelf-head:active {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 12.5px;
-  font-weight: 600;
+  font-size: var(--t-cap);
+  font-weight: var(--w-semi);
   color: var(--accent);
   border: 1px solid var(--line);
   background: var(--surface);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   padding: 7px 12px;
   cursor: pointer;
 }
@@ -464,15 +474,14 @@ button.shelf-head:active {
   background: var(--bg);
 }
 .rail-sech-l {
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-size: var(--t-sub);
+  font-weight: var(--w-bold);
   color: var(--text);
 }
 .rail-sech.amber .rail-sech-l { color: var(--amber); }
 .rail-sech-c {
   margin-left: auto;
-  font-size: 12px;
+  font-size: var(--t-cap);
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
