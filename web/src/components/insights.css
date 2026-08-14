@@ -2,14 +2,14 @@
 /* All colors read from the global tokens in index.css so light theme is free. */
 
 .ins-sub {
-  font-size: 12px;
+  font-size: var(--t-cap);
   color: var(--muted);
   margin: -4px 0 12px;
   line-height: 1.4;
 }
 
 .ins-take {
-  font-size: 12px;
+  font-size: var(--t-cap);
   color: var(--accent);
   font-style: italic;
   line-height: 1.45;
@@ -40,7 +40,7 @@
 }
 
 .ins-flabel {
-  font-size: 13px;
+  font-size: var(--t-foot);
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
@@ -48,14 +48,14 @@
 }
 
 .ins-flabel b {
-  font-weight: 700;
+  font-weight: var(--w-bold);
   margin-left: 5px;
 }
 
 .ins-ftrack {
   display: block;
   height: 24px;
-  border-radius: 7px;
+  border-radius: var(--r-xs);
   background: var(--surface-2);
   overflow: hidden;
 }
@@ -64,7 +64,7 @@
   display: block;
   height: 100%;
   min-width: 3px;
-  border-radius: 7px;
+  border-radius: var(--r-xs);
   background: linear-gradient(90deg, var(--walnut), var(--walnut-light));
   transition: width 0.5s ease;
 }
@@ -74,7 +74,7 @@
 }
 
 .ins-fpct {
-  font-size: 12.5px;
+  font-size: var(--t-cap);
   color: var(--muted);
   font-variant-numeric: tabular-nums;
   text-align: right;
@@ -90,21 +90,21 @@
 .ins-rec {
   background: var(--surface-2);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--r-sm);
   padding: 10px 11px;
   min-width: 0;
 }
 
 .ins-rec .l {
-  font-size: 10px;
+  font-size: var(--t-cap2);
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .ins-rec .v {
-  font-size: 14px;
-  font-weight: 650;
+  font-size: var(--t-sub);
+  font-weight: var(--w-semi);
   margin-top: 3px;
   line-height: 1.25;
   white-space: nowrap;
@@ -113,7 +113,7 @@
 }
 
 .ins-rec .m {
-  font-size: 11.5px;
+  font-size: var(--t-cap);
   color: var(--accent);
   margin-top: 2px;
   font-variant-numeric: tabular-nums;
@@ -138,7 +138,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  font-size: 12.5px;
+  font-size: var(--t-cap);
   color: var(--muted);
 }
 
@@ -157,7 +157,7 @@
 
 .ins-legend b {
   color: var(--text);
-  font-weight: 600;
+  font-weight: var(--w-semi);
   font-variant-numeric: tabular-nums;
 }
 
@@ -175,13 +175,13 @@
 .wk-top .chart-title { margin: 0; }
 /* Rendered only when the preceding window actually holds events - play_events
    only starts 2026-08-08, so early windows have no predecessor to compare to. */
-.wk-delta { font-size: 12px; font-weight: 650; color: var(--accent); white-space: nowrap; }
-.wk-delta.flat { color: var(--muted); font-weight: 500; }
+.wk-delta { font-size: var(--t-cap); font-weight: var(--w-semi); color: var(--accent); white-space: nowrap; }
+.wk-delta.flat { color: var(--muted); font-weight: var(--w-med); }
 
 .wk-hero { display: flex; align-items: baseline; gap: 9px; margin-top: 10px; }
-.wk-big { font-size: 31px; font-weight: 700; letter-spacing: -0.035em; line-height: 1; }
-.wk-big .u { font-size: 15px; font-weight: 600; color: var(--muted); margin: 0 1px; }
-.wk-played { font-size: 11.5px; color: var(--muted); }
+.wk-big { font-size: var(--t-t1); font-weight: var(--w-bold); letter-spacing: var(--t-t1-tr); line-height: 1; }
+.wk-big .u { font-size: var(--t-sub); font-weight: var(--w-semi); color: var(--muted); margin: 0 1px; }
+.wk-played { font-size: var(--t-cap); color: var(--muted); }
 
 /* One line, three facts, each stated exactly once. */
 .wk-meta {
@@ -189,11 +189,11 @@
   align-items: center;
   gap: 7px;
   flex-wrap: wrap;
-  font-size: 12px;
+  font-size: var(--t-cap);
   color: var(--muted);
   margin-top: 6px;
 }
-.wk-meta b { color: var(--text); font-weight: 650; }
+.wk-meta b { color: var(--text); font-weight: var(--w-semi); }
 .wk-dot { opacity: 0.4; }
 
 /* No track behind the bars. --surface-2 is BRIGHTER than the card in light mode,
@@ -201,7 +201,7 @@
    block. The 2px stubs draw the baseline only where it is needed. */
 .wk-chart { display: flex; align-items: flex-end; gap: 6px; margin-top: 16px; }
 .wk-col { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; }
-.wk-cap { height: 13px; font-size: 9.5px; font-weight: 700; text-align: center; color: var(--muted); }
+.wk-cap { height: 13px; font-size: var(--t-cap2); font-weight: var(--w-bold); text-align: center; color: var(--muted); }
 .wk-track { height: 46px; display: flex; align-items: flex-end; }
 .wk-fill { width: 100%; background: var(--walnut-light); border-radius: 3px 3px 0 0; }
 .wk-fill.peak { background: var(--accent); }
@@ -216,8 +216,8 @@
 }
 
 .wk-names { display: flex; gap: 6px; margin-top: 7px; }
-.wk-name { flex: 1; min-width: 0; text-align: center; font-size: 10px; color: var(--muted); }
-.wk-name.today { color: var(--accent); font-weight: 700; }
+.wk-name { flex: 1; min-width: 0; text-align: center; font-size: var(--t-cap2); color: var(--muted); }
+.wk-name.today { color: var(--accent); font-weight: var(--w-bold); }
 
 .wk-games { margin-top: 4px; }
 .wk-game {
@@ -236,18 +236,18 @@
 }
 .wk-game + .wk-game { border-top: 1px solid var(--line); }
 .wk-game.flat { cursor: default; }
-.wk-game .cover { width: 34px; height: 45px; border-radius: 6px; flex: none; }
+.wk-game .cover { width: 34px; height: 45px; border-radius: var(--r-xs); flex: none; }
 .wk-gb { flex: 1; min-width: 0; display: block; }
 .wk-gn {
   display: block;
-  font-size: 13.5px;
-  font-weight: 650;
+  font-size: var(--t-foot);
+  font-weight: var(--w-semi);
   letter-spacing: -0.01em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.wk-gs { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
+.wk-gs { display: block; font-size: var(--t-cap2); color: var(--muted); margin-top: 2px; }
 .wk-gtrack {
   display: block;
   height: 3px;
@@ -257,7 +257,7 @@
   overflow: hidden;
 }
 .wk-gfill { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
-.wk-gt { font-size: 13.5px; font-weight: 700; white-space: nowrap; flex: none; }
+.wk-gt { font-size: var(--t-foot); font-weight: var(--w-bold); white-space: nowrap; flex: none; }
 
 .wk-kvs { margin-top: 12px; border-top: 1px solid var(--line); }
 .wk-kv {
@@ -268,5 +268,5 @@
   padding: 9px 0;
 }
 .wk-kv + .wk-kv { border-top: 1px solid var(--line); }
-.wk-kv .k { font-size: 12.5px; color: var(--muted); }
-.wk-kv .v { font-size: 13px; font-weight: 650; }
+.wk-kv .k { font-size: var(--t-cap); color: var(--muted); }
+.wk-kv .v { font-size: var(--t-foot); font-weight: var(--w-semi); }

@@ -50,7 +50,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
+  border-radius: var(--r-sm);
   cursor: pointer;
 }
 
@@ -59,14 +59,14 @@
 }
 
 .wl-title {
-  font-size: 22px;
-  font-weight: 640;
-  letter-spacing: -0.01em;
+  font-size: var(--t-t2);
+  font-weight: var(--w-semi);
+  letter-spacing: var(--t-t2-tr);
   line-height: 1.1;
 }
 
 .wl-sub {
-  font-size: 12.5px;
+  font-size: var(--t-cap);
   color: var(--muted);
   margin-top: 2px;
 }
@@ -77,8 +77,8 @@
   gap: 9px;
   margin: 8px 16px 4px;
   padding: 10px 12px;
-  border-radius: 11px;
-  font-size: 12.5px;
+  border-radius: var(--r-sm);
+  font-size: var(--t-cap);
   color: #8fd3b6;
   background: rgba(29, 158, 117, 0.12);
   border: 1px solid #1d9e75;
@@ -98,7 +98,8 @@
   border: none;
   background: none;
   color: inherit;
-  font-size: 18px;
+  font-size: var(--t-t3);
+  letter-spacing: var(--t-t3-tr);
   line-height: 1;
   cursor: pointer;
   opacity: 0.7;
@@ -106,8 +107,8 @@
 }
 
 .wl-group {
-  font-size: 11.5px;
-  font-weight: 700;
+  font-size: var(--t-cap);
+  font-weight: var(--w-bold);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--muted);
@@ -130,13 +131,12 @@
   border: 1px solid var(--line);
   background: var(--surface);
   color: var(--muted);
-  font-size: 12.5px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-size: var(--t-cap);
+  font-weight: var(--w-semi);
   padding: 6px 13px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition: background var(--d-fast) ease, color var(--d-fast) ease, border-color var(--d-fast) ease;
 }
 
 .wl-sort-b.on {
@@ -197,10 +197,11 @@
 .cover.wish-cover {
   width: 60px;
   height: 80px;
-  border-radius: 10px;
-  font-size: 22px;
+  border-radius: var(--r-sm);
+  font-size: var(--t-t2);
+  letter-spacing: var(--t-t2-tr);
   flex: 0 0 auto;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+  box-shadow: var(--e1);
 }
 
 .wl-rb {
@@ -209,8 +210,8 @@
 }
 
 .wl-rt {
-  font-size: 14.5px;
-  font-weight: 600;
+  font-size: var(--t-sub);
+  font-weight: var(--w-semi);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -220,18 +221,18 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--t-cap);
   color: var(--muted);
   margin-top: 4px;
 }
 
 .wl-soon {
-  font-size: 10px;
-  font-weight: 700;
+  font-size: var(--t-cap2);
+  font-weight: var(--w-bold);
   color: var(--amber);
   border: 1px solid rgba(224, 135, 26, 0.4);
   background: rgba(224, 135, 26, 0.12);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   padding: 1px 7px;
 }
 
@@ -247,13 +248,13 @@
   gap: 14px;
   max-width: calc(100vw - 32px);
   padding: 11px 12px 11px 16px;
-  border-radius: 13px;
+  border-radius: var(--r-sm);
   background: var(--surface-2);
   border: 1px solid var(--line);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-  font-size: 13.5px;
+  box-shadow: var(--e2);
+  font-size: var(--t-foot);
   color: var(--text);
-  animation: wl-toast-in 0.2s var(--enter-ease);
+  animation: wl-toast-in var(--d-base) var(--enter-ease);
 }
 
 .wl-toast-t {
@@ -267,8 +268,8 @@
   border: none;
   background: none;
   color: var(--amber);
-  font-size: 13.5px;
-  font-weight: 700;
+  font-size: var(--t-foot);
+  font-weight: var(--w-bold);
   cursor: pointer;
   padding: 2px 4px;
 }
@@ -308,7 +309,7 @@
   display: flex;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   padding: 3px;
   gap: 2px;
 }
@@ -319,7 +320,7 @@
   border: 0;
   background: transparent;
   color: var(--muted);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -339,13 +340,12 @@
 /* ---------- Proximity chip ---------- */
 .wl-chip {
   flex: none;
-  font-size: 11.5px;
-  font-weight: 700;
+  font-size: var(--t-cap);
+  font-weight: var(--w-bold);
   padding: 5px 9px;
-  border-radius: 8px;
+  border-radius: var(--r-xs);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.01em;
 }
 
 .wl-chip.soon {
@@ -389,9 +389,8 @@
 }
 
 .wl-sech-l {
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-size: var(--t-sub);
+  font-weight: var(--w-bold);
   color: var(--text);
 }
 
@@ -401,7 +400,7 @@
 
 .wl-sech-c {
   margin-left: auto;
-  font-size: 12px;
+  font-size: var(--t-cap);
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -427,29 +426,32 @@
 .wl-gcov {
   position: relative;
   aspect-ratio: 3 / 4;
-  border-radius: 12px;
+  border-radius: var(--r-sm);
   overflow: hidden;
 }
 
 .wl-gcov > .cover {
   width: 100%;
   height: 100%;
-  border-radius: 12px;
+  border-radius: var(--r-sm);
   box-shadow: none;
-  font-size: 22px;
+  font-size: var(--t-t2);
+  letter-spacing: var(--t-t2-tr);
 }
 
 .wl-gbadge {
   position: absolute;
   top: 6px;
   right: 6px;
-  font-size: 10.5px;
-  font-weight: 800;
+  font-size: var(--t-cap2);
+  font-weight: var(--w-bold);
   padding: 3px 6px;
-  border-radius: 7px;
+  border-radius: var(--r-xs);
   font-variant-numeric: tabular-nums;
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
+  /* No backdrop-filter here. This is a label printed on artwork, not a control
+     floating over it, and at 3px the blur cost a compositing layer on every
+     wishlist tile while being invisible. Every variant below is already 78%
+     opaque or more, so the blur had nothing left to show through it. */
 }
 
 .wl-gbadge.soon {
@@ -478,8 +480,8 @@
 }
 
 .wl-gt {
-  font-size: 11.5px;
-  font-weight: 600;
+  font-size: var(--t-cap);
+  font-weight: var(--w-semi);
   margin-top: 6px;
   line-height: 1.2;
   display: -webkit-box;
