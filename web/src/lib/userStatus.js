@@ -164,6 +164,17 @@ export function effectiveStatus(game, map) {
   return m[String(game.master_id)] || derivedStatus(game)
 }
 
+// The stored override, or null when nothing was ever set and what you are
+// looking at is derived. The picker needs the difference: highlighting a derived
+// status exactly like a chosen one leaves no way to tell what you decided from
+// what the app guessed, and no way back to the guess once you have overridden
+// it. This is what makes `setStatus(id, null)` reachable.
+export function explicitStatus(game, map) {
+  if (!game) return null
+  const m = map || loadMap()
+  return m[String(game.master_id)] || null
+}
+
 // A synced row is a real game (not an app / media tile) when it has at least one
 // achievement OR it matched a game on IGDB (so it got cover art). This is the same
 // guard the Library "Fresh from your backlog" shelf uses, lifted so every status

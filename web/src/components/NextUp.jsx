@@ -9,9 +9,11 @@ import { relOf, effTs, isOut, shortOf, DAY } from '../lib/wishlistRelease.js'
 // cards use id/name - so both spellings are read here rather than making either
 // caller reshape its data on the way in.
 //
-// Styles live in index.css, not wishlist.css: two lazily loaded chunks render this
-// now, and a Discover visitor who had never opened the Wishlist tab would get an
-// unstyled strip. Same reason the filter-sheet primitives sit there.
+// Styles live in wishlist.css. They sat in index.css from the day the Discover
+// page rendered this too, because two lazily loaded chunks cannot share a
+// definition that lives inside one of them. The Discover copy was dropped in
+// f0e5111 and the styles stayed behind. If a second surface ever renders this
+// again, move the block back to index.css in the same commit.
 export default function NextUp({ items, onOpen }) {
   const soon = useMemo(
     () =>

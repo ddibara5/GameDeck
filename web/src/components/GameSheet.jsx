@@ -5,7 +5,14 @@ import { useDelayedClose } from '../lib/useDelayedClose.js'
 import { useSheetDrag } from '../lib/useSheetDrag.js'
 import { lockScroll } from '../lib/scrollLock.js'
 import { igdbCover, platformMeta, minutesToHhm, formatDate, releaseLabel } from '../lib/format.js'
-import { STATUSES, STATUS_LABELS, effectiveStatus, setStatus } from '../lib/userStatus.js'
+import {
+  STATUSES,
+  STATUS_LABELS,
+  effectiveStatus,
+  explicitStatus,
+  derivedStatus,
+  setStatus,
+} from '../lib/userStatus.js'
 import { useWishlist, toggleWishlist } from '../lib/wishlist.js'
 import { fetchGameById } from '../lib/discover.js'
 import Lightbox from './Lightbox.jsx'
@@ -63,10 +70,16 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   const { closing, requestClose } = useDelayedClose(onClose)
   const { ids: wishIds } = useWishlist()
 
-  // Status (owned only): reflect the current override/derived status.
+  // Status (owned only). Two pieces of state, not one: which status is showing,
+  // and whether that is something you chose or something the app derived from
+  // your playtime. Without the second, a derived "Playing" looks identical to a
+  // deliberate one and there is no way back out of an override.
   const [status, setStatusState] = useState('backlog')
+  const [pinned, setPinned] = useState(false)
   useEffect(() => {
-    if (owned && game) setStatusState(effectiveStatus(game))
+    if (!owned || !game) return
+    setPinned(Boolean(explicitStatus(game)))
+    setStatusState(effectiveStatus(game))
   }, [owned, game])
 
   // IGDB media. Discover rail items already carry their summary + screenshots, so
@@ -202,21 +215,37 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
         {!owned && inLibrary ? <span className="in-library-badge sheet">In your library</span> : null}
 
         {owned ? (
-          <div className="status-picker" role="group" aria-label="Your status for this game">
-            {STATUSES.map((s) => (
-              <button
-                key={s}
-                type="button"
-                className={`status-btn${status === s ? ' active' : ''}`}
-                onClick={() => {
-                  setStatus(game.master_id, s)
-                  setStatusState(s)
-                }}
-              >
-                {STATUS_LABELS[s]}
-              </button>
-            ))}
-          </div>
+          <>
+            <div className="status-picker" role="group" aria-label="Your status for this game">
+              {STATUSES.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  aria-pressed={status === s}
+                  className={`status-btn${status === s ? ' active' : ''}${
+                    pinned && status === s ? ' pinned' : ''
+                  }`}
+                  onClick={() => {
+                    // Tapping the status you already chose clears it, which is
+                    // the only route back to the derived value. That branch of
+                    // setStatus deletes the row; until now nothing in the app
+                    // called it, so a status was permanent once set.
+                    const clearing = pinned && status === s
+                    setStatus(game.master_id, clearing ? null : s)
+                    setPinned(!clearing)
+                    setStatusState(clearing ? derivedStatus(game) : s)
+                  }}
+                >
+                  {STATUS_LABELS[s]}
+                </button>
+              ))}
+            </div>
+            <p className="status-hint">
+              {pinned
+                ? 'Set by you. Tap it again to clear.'
+                : 'Worked out from your playtime. Tap to set your own.'}
+            </p>
+          </>
         ) : (
           <div className="discover-actions">
             <button

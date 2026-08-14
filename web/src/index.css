@@ -1794,10 +1794,24 @@ textarea {
   transition: color var(--d-fast) ease, background var(--d-fast) ease, border-color var(--d-fast) ease;
 }
 
+/* Active means "this is the status showing". Pinned means "you chose it", and
+   only a pinned button can be tapped again to clear. A derived status is drawn
+   flatter so the two never read as the same commitment. */
 .status-btn.active {
   border-color: var(--accent);
   color: var(--bg);
+  background: color-mix(in srgb, var(--accent) 62%, transparent);
+}
+
+.status-btn.active.pinned {
   background: var(--accent);
+  box-shadow: var(--e1);
+}
+
+.status-hint {
+  margin: 0 0 4px;
+  font-size: var(--t-cap);
+  color: var(--muted);
 }
 
 .detail-percent-label {
@@ -2233,89 +2247,3 @@ textarea {
   overflow: visible;
 }
 
-/* ---------- Next up strip (shared) ----------
-   Rendered by BOTH the Wishlist tab and the Discover "Your wishlist" page, which
-   ship in different lazily loaded chunks. Same rule as the filter-sheet
-   primitives above: a lazy stylesheet must not own anything a second surface
-   renders, or whichever surface you reach first is the only one that looks
-   right. One definition, always loaded. */
-.wl-next-lbl {
-  font-size: var(--t-cap);
-  font-weight: var(--w-bold);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--muted);
-  padding: 14px 16px 8px;
-}
-
-.wl-next {
-  display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  padding: 0 16px 6px;
-  scrollbar-width: none;
-}
-
-.wl-next::-webkit-scrollbar {
-  display: none;
-}
-
-.wl-ncard {
-  flex: none;
-  width: 128px;
-  text-align: left;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  overflow: hidden;
-  padding: 0;
-  cursor: pointer;
-  color: inherit;
-  font: inherit;
-}
-
-.wl-nart {
-  position: relative;
-  height: 150px;
-  background: var(--surface-2);
-}
-
-.wl-nart > .cover {
-  width: 100%;
-  height: 100%;
-  border-radius: 0;
-  box-shadow: none;
-}
-
-.wl-nover {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 16px 10px 8px;
-  background: linear-gradient(to top, rgba(10, 9, 8, 0.92), rgba(10, 9, 8, 0));
-}
-
-.wl-nbig {
-  font-size: var(--t-t3);
-  font-weight: var(--w-bold);
-  line-height: 1;
-  letter-spacing: var(--t-t3-tr);
-  color: #fff;
-}
-
-.wl-nlab {
-  font-size: var(--t-cap2);
-  color: rgba(255, 255, 255, 0.72);
-  margin-top: 2px;
-}
-
-.wl-nt {
-  font-size: var(--t-cap);
-  font-weight: var(--w-semi);
-  padding: 8px 10px 10px;
-  line-height: 1.25;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
