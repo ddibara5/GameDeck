@@ -215,27 +215,71 @@ function buildLightSvg() {
 }
 
 // --- main ------------------------------------------------------------------
+// Bump this whenever the ARTWORK changes. It goes into every icon filename, which
+// is the only reliable way to change an app icon that iOS has already seen.
+//
+// iOS keys its home-screen icon cache on the icon URL and holds it far beyond any
+// HTTP cache header: redrawing icon-180-light.png in place left phones showing the
+// original art indefinitely, through re-adds and through a service-worker fix. A new
+// URL has no entry in that cache, in the service worker, or on the CDN, so a version
+// bump is the change that actually reaches the device. Same reason Vite hashes its
+// bundle filenames.
+const ICON_VERSION = 'v2';
+const v = (base, ext) => `${base}.${ICON_VERSION}.${ext}`;
+
 function main() {
   const outDir = path.join(__dirname, '..', 'public', 'icons');
   fs.mkdirSync(outDir, { recursive: true });
-  const write = (name, buf) => { fs.writeFileSync(path.join(outDir, name), buf); console.log(`wrote ${name} (${buf.length} b)`); };
+  const written = new Set();
+  const write = (name, buf) => {
+    fs.writeFileSync(path.join(outDir, name), buf);
+    written.add(name);
+    console.log(`wrote ${name} (${buf.length} b)`);
+  };
 
   const DARK = { bg: GRAPHITE, mark: MARK_DARK, rounded: false };
   const LIGHT = { bg: PORCELAIN, mark: MARK_LIGHT, rounded: false };
 
-  for (const s of [120, 152, 167, 180, 192, 512, 1024]) write(`icon-${s}.png`, encodePng(s, s, drawIcon(s, DARK)));
-  for (const s of [120, 152, 167, 180, 192, 512]) write(`icon-${s}-light.png`, encodePng(s, s, drawIcon(s, LIGHT)));
+  for (const s of [120, 152, 167, 180, 192, 512, 1024]) write(v(`icon-${s}`, 'png'), encodePng(s, s, drawIcon(s, DARK)));
+  for (const s of [120, 152, 167, 180, 192, 512]) write(v(`icon-${s}-light`, 'png'), encodePng(s, s, drawIcon(s, LIGHT)));
 
   const fav16 = encodePng(16, 16, drawIcon(16, { bg: GRAPHITE, mark: MARK_DARK, rounded: true }));
   const fav32 = encodePng(32, 32, drawIcon(32, { bg: GRAPHITE, mark: MARK_DARK, rounded: true }));
-  write('favicon-16.png', fav16);
-  write('favicon-32.png', fav32);
-  write('favicon.ico', encodeIco([{ size: 16, png: fav16 }, { size: 32, png: fav32 }]));
+  write(v('favicon-16', 'png'), fav16);
+  write(v('favicon-32', 'png'), fav32);
+  write(v('favicon', 'ico'), encodeIco([{ size: 16, png: fav16 }, { size: 32, png: fav32 }]));
 
-  fs.writeFileSync(path.join(outDir, 'icon.svg'), buildSvg());
-  console.log('wrote icon.svg');
-  fs.writeFileSync(path.join(outDir, 'icon-light.svg'), buildLightSvg());
-  console.log('wrote icon-light.svg');
+  write(v('icon', 'svg'), Buffer.from(buildSvg(), 'utf8'));
+  write(v('icon-light', 'svg'), Buffer.from(buildLightSvg(), 'utf8'));
+
+  verifyReferences(written);
+}
+
+// A versioned filename is only safe if every consumer moves with it. index.html and
+// the manifest are hand-written, so a bump could otherwise ship four dead icon links
+// and a silently missing app icon. Fail the BUILD instead: any /icons/... reference
+// that was not generated is an error, and any generated icon nobody references is a
+// warning (harmless, but usually means a rename was left half done).
+function verifyReferences(written) {
+  const webDir = path.join(__dirname, '..');
+  const sources = ['index.html', path.join('public', 'manifest.webmanifest')];
+  const referenced = new Set();
+  for (const rel of sources) {
+    const file = path.join(webDir, rel);
+    if (!fs.existsSync(file)) continue;
+    const text = fs.readFileSync(file, 'utf8');
+    for (const m of text.matchAll(/\/icons\/([A-Za-z0-9._-]+)/g)) referenced.add(m[1]);
+  }
+  const missing = [...referenced].filter((f) => !written.has(f));
+  if (missing.length) {
+    throw new Error(
+      `These icons are referenced by index.html or manifest.webmanifest but were not generated: ${missing.join(', ')}. ` +
+        `Did ICON_VERSION change without updating them?`
+    );
+  }
+  const orphans = [...written].filter((f) => !referenced.has(f));
+  if (orphans.length) console.log(`note: generated but unreferenced: ${orphans.join(', ')}`);
+  console.log(`verified ${referenced.size} icon references against ${written.size} generated files`);
 }
 
 main();
