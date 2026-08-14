@@ -136,16 +136,29 @@ export function coverSrc(cover, size = 't_cover_big') {
 // drop to the matched game's cover rather than losing its band, which is a
 // bigger visual change than the missing photo. Only a story with neither draws
 // no band at all.
-export function cardArtChain(item) {
+//
+// `fallbackCover` is the IGDB image id of a library row the story matched by
+// FRANCHISE. Such a story named no game, so it carries no cover of its own, and
+// without this it would be the one card in the section with no art at all -
+// despite being the one with the strongest connection to the library.
+export function cardArtChain(item, fallbackCover) {
   if (!item) return []
   const chain = []
   if (item.image) chain.push({ kind: 'article', src: item.image })
   const cover = coverSrc(item.gameCover, 't_cover_big')
   if (cover) chain.push({ kind: 'cover', src: cover })
+  const fb = coverSrc(fallbackCover, 't_cover_big')
+  if (fb && !chain.some((c) => c.src === fb)) chain.push({ kind: 'cover', src: fb })
   return chain
 }
 
 // --- Relevance -------------------------------------------------------------
+
+// Franchise names shorter than this are not searched for inside a headline.
+// "Ico" or "Tron" would match half the words in the English language once you
+// allow them loose in a sentence, and a false "because you own this" is worse
+// than a missed match.
+const MIN_FRANCHISE = 5
 
 // Index the library once per load. A game owned on several platforms has one row
 // per environment (Grand Theft Auto V has three), and the row worth showing is
@@ -153,6 +166,7 @@ export function cardArtChain(item) {
 export function buildLibraryIndex(games) {
   const byId = new Map()
   const byTitle = new Map()
+  const franchises = new Map()
   const better = (a, b) => (Number(a?.playtime_minutes) || 0) > (Number(b?.playtime_minutes) || 0)
   for (const g of games || []) {
     if (!g) continue
@@ -160,8 +174,41 @@ export function buildLibraryIndex(games) {
     if (id && (!byId.has(id) || better(g, byId.get(id)))) byId.set(id, g)
     const key = normTitle(g.title || '')
     if (key && (!byTitle.has(key) || better(g, byTitle.get(key)))) byTitle.set(key, g)
+    for (const raw of g.franchises || []) {
+      const name = String(raw || '').trim()
+      if (name.length < MIN_FRANCHISE) continue
+      const k = name.toLowerCase()
+      // The row that represents a series is the one carrying the most time, so
+      // "the Persona series" resolves to Persona 5 Royal rather than the two
+      // hours of Persona 5 from 2020.
+      if (!franchises.has(k) || better(g, franchises.get(k).row)) franchises.set(k, { name, row: g })
+    }
   }
-  return { byId, byTitle }
+  // Longest first, so a story about Persona 5 credits the Persona 5 collection
+  // rather than the broader Persona franchise that also matches.
+  const franchiseList = [...franchises.values()].sort((a, b) => b.name.length - a.name.length)
+  return { byId, byTitle, franchiseList }
+}
+
+// Does this story's text mention a series in the library?
+//
+// Word-boundary matched so "Persona" does not fire on "personal", and length
+// gated in buildLibraryIndex. The story TITLE is searched rather than the
+// summary: a summary mentions half a dozen games in passing, a headline is
+// about its subject.
+function franchiseHit(item, franchiseList) {
+  const hay = `${item.title || ''} ${item.gameName || ''}`.toLowerCase()
+  if (!hay.trim()) return null
+  for (const f of franchiseList || []) {
+    const k = f.name.toLowerCase()
+    const at = hay.indexOf(k)
+    if (at < 0) continue
+    const before = at === 0 ? ' ' : hay[at - 1]
+    const after = at + k.length >= hay.length ? ' ' : hay[at + k.length]
+    if (/[a-z0-9]/.test(before) || /[a-z0-9]/.test(after)) continue
+    return f
+  }
+  return null
 }
 
 const RECENT_DAYS = 14
@@ -174,9 +221,13 @@ const RECENT_DAYS = 14
 // beats merely available. 0 means the story has no personal hook at all.
 export function resolveGame(item, sets) {
   const empty = { status: null, row: null, tier: 0, why: null, qty: null }
-  if (!item || (!item.gameIgdbId && !item.gameName)) return empty
+  if (!item) return empty
   const { libIndex, wishlistIds, gamepassIds } = sets || {}
   const id = Number(item.gameIgdbId) || 0
+  const daysSince = (row) => {
+    const played = row?.last_played ? new Date(row.last_played).getTime() : 0
+    return played ? Math.floor((Date.now() - played) / 86400000) : Infinity
+  }
 
   const row =
     (libIndex && id && libIndex.byId.get(id)) ||
@@ -184,19 +235,50 @@ export function resolveGame(item, sets) {
     null
 
   if (row) {
-    const played = row.last_played ? new Date(row.last_played).getTime() : 0
-    const days = played ? Math.floor((Date.now() - played) / 86400000) : Infinity
+    const days = daysSince(row)
     if (days <= RECENT_DAYS) {
       return {
         status: 'library',
         row,
-        tier: 4,
+        tier: 5,
         why: `Because you're playing ${row.title}`,
         qty: [row.playtime_label, playedWhen(days)].filter(Boolean).join(' · '),
       }
     }
     return { status: 'library', row, tier: 3, why: 'In your library', qty: row.playtime_label || null }
   }
+
+  // No exact game, but the headline may still be about a series in the library.
+  // This is the case the tab used to miss entirely: a story about Persona 1 and
+  // 2 names no game you own, while Persona 5 Royal is the thing you played today.
+  //
+  // Checked BEFORE wishlist and Game Pass when the series is one you are
+  // actively playing, because "the series you are mid-playthrough of" is a
+  // stronger hook than "a game you might buy".
+  const fr = libIndex && franchiseHit(item, libIndex.franchiseList)
+  if (fr) {
+    const days = daysSince(fr.row)
+    if (days <= RECENT_DAYS) {
+      return {
+        status: 'library',
+        row: fr.row,
+        tier: 4,
+        why: `From the ${fr.name} series`,
+        qty: `you're playing ${fr.row.title} · ${playedWhen(days)}`,
+      }
+    }
+    if (id && wishlistIds && wishlistIds.has(id)) {
+      return { status: 'wishlist', row: null, tier: 2, why: 'On your wishlist', qty: null }
+    }
+    return {
+      status: 'library',
+      row: fr.row,
+      tier: 2,
+      why: `From the ${fr.name} series`,
+      qty: `you own ${fr.row.title}`,
+    }
+  }
+
   if (id && wishlistIds && wishlistIds.has(id)) {
     return { status: 'wishlist', row: null, tier: 2, why: 'On your wishlist', qty: null }
   }

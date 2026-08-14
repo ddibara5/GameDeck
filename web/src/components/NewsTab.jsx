@@ -275,7 +275,7 @@ function NewsCard({ item, rel, read, onOpenGame }) {
   const lead = sources[0] || null
   const fav = lead ? faviconFor(lead.url) : ''
   const when = relTime(item.publishedAt)
-  const chain = cardArtChain(item)
+  const chain = cardArtChain(item, rel.row?.cover_igdb)
   const art = chain[artStep] || null
   const outlets = outletCount(item.sources)
 
@@ -321,7 +321,9 @@ function NewsCard({ item, rel, read, onOpenGame }) {
           </div>
         ) : null}
 
-        {item.gameName ? (
+        {/* A franchise match has no game of its own - the story named none - but it
+            does have the library row it matched, and that row is worth opening. */}
+        {item.gameName || rel.row ? (
           <GameRow item={item} rel={rel} onOpen={() => onOpenGame(item, rel)} />
         ) : null}
 
@@ -350,8 +352,16 @@ function NewsCard({ item, rel, read, onOpenGame }) {
 function GameRow({ item, rel, onOpen }) {
   const [imgFailed, setImgFailed] = useState(false)
   const owned = rel.status === 'library' || rel.status === 'wishlist'
-  const coverUrl = coverSrc(item.gameCover, 't_cover_small')
-  const initial = (item.gameName || '?').trim().charAt(0).toUpperCase()
+  // Three sources, narrowest first: the story's own cover, then the matched
+  // library row's IGDB id, then whatever art the platform sync stored. Only the
+  // first two are IGDB image ids; cover_small is a full platform url and must
+  // NOT go through coverSrc, which would mistake its filename for an image id.
+  const coverUrl =
+    coverSrc(item.gameCover, 't_cover_small') ||
+    coverSrc(rel.row?.cover_igdb, 't_cover_small') ||
+    rel.row?.cover_small ||
+    null
+  const initial = (rel.row?.title || item.gameName || '?').trim().charAt(0).toUpperCase()
 
   // The whole cover-plus-name block is the open target, not just a trailing
   // button, and it works for any matched game rather than only owned ones - a

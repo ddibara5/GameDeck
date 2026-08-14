@@ -24,7 +24,10 @@ const BASE_COLUMNS =
 // igdb_rating is added by a later migration + populated by the IGDB enrich. Select
 // it when present; if the column doesn't exist yet, fall back so the library and
 // the status lists still load. Only "Best of your backlog" needs the rating.
-export const LIST_GAME_COLUMNS = `${BASE_COLUMNS}, igdb_rating, keywords`
+// franchises is the News tab's series match: it is what lets a story about
+// Persona find Persona 5 Royal when the story names no owned title. Added by a
+// later migration, so it sits in the optional tail with the others.
+export const LIST_GAME_COLUMNS = `${BASE_COLUMNS}, igdb_rating, keywords, franchises`
 
 const CACHE_KEY = 'library:games'
 
@@ -35,7 +38,7 @@ async function fetchLibrary() {
     supabase.from('games').select(cols).order('last_played', { ascending: false, nullsFirst: false })
 
   let { data, error } = await ordered(LIST_GAME_COLUMNS)
-  if (error && /igdb_rating|keywords/i.test(error.message || '')) {
+  if (error && /igdb_rating|keywords|franchises/i.test(error.message || '')) {
     ;({ data, error } = await ordered(BASE_COLUMNS))
   }
   if (error) throw new Error(error.message || 'Library request failed')
