@@ -206,14 +206,17 @@
   right: 0;
   bottom: 0;
   display: block;
-  padding: 18px 8px 6px;
+  padding: 20px 9px 7px;
   border-radius: 0 0 16px 16px;
   background: linear-gradient(to top, rgba(10, 9, 8, 0.92), rgba(10, 9, 8, 0));
   pointer-events: none;
 }
+/* 20 / 11 matches the wishlist Next up cards exactly, which is the treatment this
+   was modelled on: the two now render at identical size on similar-width cards
+   (112px shelf poster, 128px Next up card). */
 .sc-ov-big {
   display: block;
-  font-size: 17px;
+  font-size: 20px;
   font-weight: 800;
   line-height: 1;
   letter-spacing: -0.02em;
@@ -222,8 +225,8 @@
 }
 .sc-ov-lab {
   display: block;
-  min-height: 12px;
-  font-size: 10px;
+  min-height: 13px;
+  font-size: 11px;
   line-height: 1.2;
   margin-top: 1px;
   color: rgba(255, 255, 255, 0.74);
