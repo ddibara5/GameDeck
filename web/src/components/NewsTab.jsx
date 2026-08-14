@@ -287,6 +287,17 @@ function NewsCard({ item, rel, read, onOpenGame }) {
     <article className={`news-card${read ? ' read' : ''}${rel.tier >= 4 ? ' pin' : ''}`}>
       {art ? (
         <div className={`news-card-band${art.kind === 'cover' ? ' cover' : ''}`}>
+          {/* A 3:4 cover cannot fill a 16:9 band, and the old answer was to
+              shrink it to 76px wide inside a 368px card: 29% of the pixels IGDB
+              actually served. It also cropped square key art, because the band
+              was `object-fit: cover`. The fix is the standard one: the same
+              image, blown up and blurred, fills the band behind a sharp copy at
+              a size worth looking at. Nothing is cropped and nothing is guessed,
+              since the fill is drawn from the artwork itself. Decorative, so it
+              stays out of the a11y tree. */}
+          {art.kind === 'cover' ? (
+            <img className="news-card-fill" src={art.src} alt="" aria-hidden="true" loading="lazy" decoding="async" />
+          ) : null}
           <img
             key={art.src}
             className="news-card-img"

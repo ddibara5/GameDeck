@@ -5,7 +5,7 @@ import Menu from './components/Menu.jsx'
 import SettingsPage from './components/SettingsPage.jsx'
 import TabBar from './components/TabBar.jsx'
 import { useNewsUnread } from './lib/news.js'
-import { useNavConfig, getNavConfig, visibleKeys, hiddenKeys } from './lib/navConfig.js'
+import { useNavConfig, getNavConfig, visibleKeys, hiddenKeys, TAB_BY_KEY } from './lib/navConfig.js'
 import { overlaysOpen } from './lib/useEdgeBack.js'
 import CustomizeRows from './components/CustomizeRows.jsx'
 import CustomizeNav from './components/CustomizeNav.jsx'
@@ -159,6 +159,14 @@ export default function App() {
     <div className="app">
       <header className={`app-header${scrolled ? ' scrolled' : ''}`}>
         <Brand onOpen={() => setMenuOpen(true)} />
+        {/* Each tab prints its own 34px large title, which scrolls away. This is
+            the inline stand-in that fades in to replace it, so the header always
+            answers "where am I?" without costing the screen a permanent 34px.
+            Hidden from the a11y tree while invisible: the tab's own <h1> is the
+            real heading, and two live copies would be read out twice. */}
+        <span className="app-header-title" aria-hidden={!scrolled}>
+          {view ? '' : TAB_BY_KEY[activeTab]?.label || ''}
+        </span>
         <div className="header-actions">
           <button type="button" className="dice-btn" onClick={() => setShuffleOpen(true)} aria-label="Shuffle a game" aria-haspopup="dialog">
             <span className="gear-chip">

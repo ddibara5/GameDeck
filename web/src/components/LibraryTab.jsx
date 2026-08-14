@@ -38,6 +38,18 @@ const SORT_OPTIONS = [
 // would have made every vibe chip below return nothing while looking perfectly
 // healthy. Same shape of bug as the missing `igdb_id` that silently killed the
 // shuffler's Game Pass weighting. One list, one fetch, in useLibraryGames.
+
+// Subtitle under the large title. Deliberately two facts rather than a stat
+// block: how big the library is, and how big the pile you have not started is.
+// An empty or still-loading library gets no line at all rather than "0 games",
+// which reads like the fetch failed.
+function librarySummary(games) {
+  if (!games || !games.length) return ''
+  const unplayed = games.filter((g) => !g.playtime_minutes).length
+  const total = `${games.length.toLocaleString()} games`
+  return unplayed ? `${total} · ${unplayed} unplayed` : total
+}
+
 export default function LibraryTab() {
   const { games, loading, error } = useLibraryGames()
   const [search, setSearch] = useState('')
@@ -132,6 +144,10 @@ export default function LibraryTab() {
 
   return (
     <div>
+      <div className="page-header">
+        <h1 className="page-title">Library</h1>
+        <p className="page-subtitle">{librarySummary(games)}</p>
+      </div>
       <div className="library-sticky">
         <div className="library-searchbar">
           <input

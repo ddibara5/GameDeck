@@ -22,7 +22,10 @@ export default function DiscoverTab({ onCustomize }) {
   return (
     <div className="discover-page">
       <div className="discover-topbar">
-        <h1 className="chat-topbar-title">Discover</h1>
+        <div className="page-header">
+          <h1 className="page-title">Discover</h1>
+          <p className="page-subtitle">New releases, and games picked against your library.</p>
+        </div>
         <div className="seg discover-seg" role="tablist" aria-label="Discover mode">
           <button
             type="button"
