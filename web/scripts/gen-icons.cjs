@@ -224,8 +224,10 @@ function buildLightSvg() {
 // URL has no entry in that cache, in the service worker, or on the CDN, so a version
 // bump is the change that actually reaches the device. Same reason Vite hashes its
 // bundle filenames.
-const ICON_VERSION = 'v2';
-const v = (base, ext) => `${base}.${ICON_VERSION}.${ext}`;
+const ICON_VERSION = 'v3';
+// Hyphen, not a second dot: one dot, one extension. Nothing should have to guess
+// where the extension starts.
+const v = (base, ext) => `${base}-${ICON_VERSION}.${ext}`;
 
 function main() {
   const outDir = path.join(__dirname, '..', 'public', 'icons');
@@ -276,11 +278,18 @@ function verifyReferences(written) {
   if (!fs.existsSync(manifestPath)) {
     throw new Error(`index.html links ${manifestHref} but public${manifestHref} does not exist.`);
   }
-  // The service worker precaches the manifest by url; if that list still names the old
-  // one, phones keep replaying a stale manifest full of dead icon paths.
+  // The service worker must not name ANY manifest other than the current one. It now
+  // bypasses the manifest entirely, so the correct state is zero references; a leftover
+  // name in APP_SHELL is how a phone ends up replaying a manifest full of dead paths.
   const swPath = path.join(webDir, 'public', 'sw.js');
-  if (fs.existsSync(swPath) && !fs.readFileSync(swPath, 'utf8').includes(manifestHref)) {
-    throw new Error(`sw.js does not reference ${manifestHref}; its APP_SHELL is still precaching a different manifest.`);
+  if (fs.existsSync(swPath)) {
+    const sw = fs.readFileSync(swPath, 'utf8');
+    const stale = [...sw.matchAll(/[A-Za-z0-9._/-]*\.webmanifest/g)]
+      .map((m) => m[0])
+      .filter((ref) => !manifestHref.endsWith(ref.replace(/^\//, '')) && ref !== '.webmanifest');
+    if (stale.length) {
+      throw new Error(`sw.js still references ${[...new Set(stale)].join(', ')}, but the live manifest is ${manifestHref}.`);
+    }
   }
 
   const referenced = new Set();

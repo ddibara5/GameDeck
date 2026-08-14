@@ -3,9 +3,9 @@
 //   (the fresh index.html points at the new hashed assets). Falls back to cache offline.
 // - Vite's /assets/* bundles: cache-first (the filename carries a content hash, so a
 //   changed file is a different URL and can never be served stale).
-// - Every OTHER same-origin file: network-first. Icons and the manifest have STABLE
-//   names and mutable content, so cache-first pinned whatever was cached first and
-//   served it forever. That is why a redrawn app icon never reached the phone.
+// - Icons and the manifest: NOT HANDLED AT ALL. They are fetched by iOS outside the
+//   page context, and a worker in that path can only serve something stale.
+// - Every OTHER same-origin file: network-first, since a stable url may change bytes.
 // - IGDB game art (cross-origin): cache-first in a capped image cache, so covers and
 //   screenshots load instantly on repeat views and work offline. This class of request
 //   was previously skipped entirely (cross-origin bail), which is why images felt slow.
@@ -18,7 +18,8 @@ const SHELL_CACHE = 'gamedeck-shell-v4';
 const IMG_CACHE = 'gamedeck-img-v1';
 const IMG_CACHE_LIMIT = 300; // ~300 covers/screenshots; oldest evicted first (FIFO).
 const KEEP = [SHELL_CACHE, IMG_CACHE];
-const APP_SHELL = ['/', '/index.html', '/manifest.v2.webmanifest'];
+// The manifest is deliberately NOT precached. See the bypass in the fetch handler.
+const APP_SHELL = ['/', '/index.html'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -99,6 +100,15 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (url.origin !== self.location.origin) return;
+
+  // Icons and the manifest are deliberately left alone: no respondWith, so the
+  // request goes to the network exactly as the browser would have sent it.
+  //
+  // iOS fetches these when adding to the home screen, outside the page's control, and
+  // a service worker sitting in that path has only ever been a way for a stale copy to
+  // outlive a deploy. There is nothing to gain by caching them - the phone keeps its
+  // own copy of the installed icon - and a whole class of bug to lose.
+  if (url.pathname.startsWith('/icons/') || url.pathname.endsWith('.webmanifest')) return;
 
   // HTML document / navigations: network-first so updates are picked up on reload.
   const isNavigation =
