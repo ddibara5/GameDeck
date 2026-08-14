@@ -25,3 +25,8 @@ web/public/icons/
 # the mockup would leave a picture of a proposal sitting next to the
 # implementation that superseded it.
 *-proposal.html
+
+# Review screenshots, same reasoning: captured from a build, delivered with the
+# file-sending tool, then superseded by the next capture. Root only - web/public
+# and the generated icons are tracked and must stay that way.
+/*.png
