@@ -24,19 +24,85 @@
   --psn: #0f3fa8;
   --steam: #66c0f4;
 
-  --radius: 14px;
-  --shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
+  /* ---------- Type scale ----------
+     Nine steps plus one display size, matching the sizes the system font is
+     actually cut for (iOS caption2 / caption1 / footnote / subheadline / body /
+     title3 / title2 / title1 / largeTitle). This replaced 23 ad hoc pixel sizes,
+     a third of which sat within 1px of a neighbour and so were invisible.
+
+     Tracking is part of the token, not an afterthought. SF is optically sized
+     and tightens as point size grows; a 34px title shipped with default spacing
+     is the tell that separates a web app from a native one. `font-optical-sizing`
+     on body lets the font pick its own Text vs Display cut at the 20px crossover.
+
+     Tracking tokens only exist from --t-body up. Below 17px the correction is
+     under a hundredth of an em, which is to say invisible, and declaring it
+     everywhere would have added ~80 no-op lines to these stylesheets. The font
+     handles the small end better than a hand-picked constant can.
+
+     Nothing outside this block should declare a raw px font-size. */
+  --t-cap2: 11px;
+  --t-cap: 12px;
+  --t-foot: 13px;
+  --t-sub: 15px;
+  --t-body: 17px;    --t-body-tr: -0.008em;
+  --t-t3: 20px;      --t-t3-tr: -0.014em;
+  --t-t2: 22px;      --t-t2-tr: -0.018em;
+  --t-t1: 28px;      --t-t1-tr: -0.021em;
+  --t-large: 34px;   --t-large-tr: -0.024em;
+  --t-display: 48px; --t-display-tr: -0.03em;
+
+  /* 640, 650 and 800 collapsed into these. 640 and 650 are the same weight to
+     the eye on every font this app can actually load. */
+  --w-med: 500;
+  --w-semi: 600;
+  --w-bold: 700;
+
+  /* ---------- Radius ----------
+     Five steps, down from 17. Nesting is concentric: a rounded thing inside a
+     rounded thing takes `calc(outer - padding)`, which keeps the gap between the
+     two curves constant instead of pinching at the corner. */
+  --r-xs: 8px;
+  --r-sm: 12px;
+  --r-md: 18px;
+  --r-lg: 26px;
+  --r-pill: 999px;
+  --radius: var(--r-md);
+
+  /* ---------- Elevation ----------
+     Three rungs, down from 20 one-off shadows. Depth is a ladder, so "how high
+     is this?" has an answer. Borders are the exception now rather than the rule:
+     content is separated by a hairline and a shadow, not by an outline on every
+     box. */
+  --e1: 0 1px 2px rgba(0, 0, 0, 0.26);
+  --e2: 0 1px 2px rgba(0, 0, 0, 0.26), 0 8px 24px rgba(0, 0, 0, 0.16);
+  --e3: 0 2px 4px rgba(0, 0, 0, 0.3), 0 18px 46px rgba(0, 0, 0, 0.3);
+  --shadow: var(--e1);
+
   --tabbar-height: 90px;
-  --app-header-h: 66px;
+  --app-header-h: 52px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
 
-  /* Overlay motion: shared timing so pages/drawers/sheets enter and exit with
-     one consistent, fluid feel. Enter and exit run at the same duration so
-     opening mirrors closing. */
-  --overlay-in: 0.2s;
-  --overlay-out: 0.2s;
-  --enter-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* ---------- Motion ----------
+     Three durations and three curves, down from 15 loose durations. The overlay
+     system below was already right; this generalises it to everything else.
+
+     Ration the spring. Apple uses overshoot for direct manipulation, where your
+     own finger caused the movement, and plain ease-out for everything the app
+     decided to do on its own. Spring on :active, ease-out on state changes. */
+  --d-fast: 0.16s;
+  --d-base: 0.24s;
+  --d-slow: 0.36s;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-std: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Overlay motion: pages, drawers and sheets enter and exit on the same clock,
+     so opening mirrors closing. */
+  --overlay-in: var(--d-base);
+  --overlay-out: var(--d-base);
+  --enter-ease: var(--ease-out);
   --exit-ease: cubic-bezier(0.4, 0, 0.9, 0.3);
 }
 
@@ -56,7 +122,7 @@
   border-bottom: 1px solid transparent;
   -webkit-backdrop-filter: blur(28px) saturate(180%);
   backdrop-filter: blur(28px) saturate(180%);
-  transition: background 0.25s ease, border-color 0.25s ease;
+  transition: background var(--d-base) ease, border-color var(--d-base) ease;
 }
 
 /* At the very top the header is near-solid and borderless so it blends into the
@@ -66,6 +132,56 @@
   background: rgba(38, 38, 42, 0.34);
   border-bottom-color: rgba(255, 255, 255, 0.14);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+/* Two things cannot both own the top-left. Once the inline title appears, the
+   wordmark fades out and leaves the mark behind: at 390px the word and a title
+   like "Discover" or "Insights" collide outright. Opacity rather than display,
+   so nothing reflows and the swap reads as a crossfade. */
+.app-header .brand-word,
+.app-header .brand-caret {
+  transition: opacity var(--d-base) var(--ease-out);
+}
+
+.app-header.scrolled .brand-word,
+.app-header.scrolled .brand-caret {
+  opacity: 0;
+}
+
+/* The large title's stand-in once it has scrolled off. Absolutely positioned so
+   it is centred on the header rather than on the space left between the brand
+   and the actions, and so adding it cannot shift either of them. */
+.app-header-title {
+  position: absolute;
+  left: 50%;
+  top: var(--safe-top);
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  transform: translateX(-50%) translateY(6px);
+  font-size: var(--t-body);
+  font-weight: var(--w-semi);
+  letter-spacing: var(--t-body-tr);
+  color: var(--text);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--d-base) var(--ease-out), transform var(--d-base) var(--ease-out);
+}
+
+.app-header.scrolled .app-header-title {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-header-title {
+    transition: opacity var(--d-fast) linear;
+    transform: translateX(-50%);
+  }
+  .app-header.scrolled .app-header-title {
+    transform: translateX(-50%);
+  }
 }
 
 .brand-btn {
@@ -85,23 +201,27 @@
   opacity: 0.7;
 }
 
+/* The brand lockup is an eyebrow, not the page heading. It used to be the only
+   thing in the header, at 27px, which left no room for the app to say which
+   screen you were on. The large title below the header does that job now, so the
+   lockup steps back: small, quieter, still tappable, still the drawer handle. */
 .brand-mark {
-  width: 35px;
-  height: 37px;
+  width: 23px;
+  height: 25px;
   display: block;
   flex: none;
 }
 
 .brand-word {
-  font-size: 27px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
+  font-size: var(--t-sub);
+  font-weight: var(--w-semi);
   color: var(--text);
+  opacity: 0.68;
 }
 
 .brand-word b {
   color: var(--amber);
-  font-weight: 700;
+  font-weight: var(--w-bold);
 }
 
 /* Logo facets read their fill from the theme ramp (inline fill = fallback). */
@@ -143,7 +263,7 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 5px 14px rgba(0, 0, 0, 0.3);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   backdrop-filter: blur(20px) saturate(180%);
-  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease;
+  transition: transform var(--d-base) var(--ease-spring), background var(--d-base) ease;
 }
 
 .gear-btn:active .gear-chip {
@@ -194,7 +314,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .gear-chip {
-    transition: background 0.2s ease;
+    transition: background var(--d-base) ease;
   }
   .gear-btn:active .gear-chip {
     transform: none;
@@ -277,19 +397,20 @@
 }
 
 .drawer-brand .brand-word {
-  font-size: 22px;
+  font-size: var(--t-t2);
+  letter-spacing: var(--t-t2-tr);
 }
 
 .drawer-summary {
   margin-top: 12px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--t-foot);
   line-height: 1.4;
 }
 
 .drawer-summary b {
   color: var(--text);
-  font-weight: 600;
+  font-weight: var(--w-semi);
 }
 
 .menu-sec {
@@ -297,8 +418,8 @@
 }
 
 .menu-sec-label {
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--t-cap2);
+  font-weight: var(--w-bold);
   letter-spacing: 0.09em;
   text-transform: uppercase;
   color: #8a8073;
@@ -311,11 +432,11 @@
   gap: 12px;
   width: 100%;
   padding: 12px;
-  border-radius: 12px;
+  border-radius: var(--r-sm);
   border: none;
   background: none;
   color: var(--text);
-  font-size: 15px;
+  font-size: var(--t-sub);
   text-align: left;
   text-decoration: none;
   cursor: pointer;
@@ -344,13 +465,13 @@
 
 .menu-item .menu-sub {
   display: block;
-  font-size: 12px;
+  font-size: var(--t-cap);
   color: var(--muted);
   margin-top: 2px;
 }
 
 .menu-item .menu-value {
-  font-size: 13px;
+  font-size: var(--t-foot);
   color: var(--muted);
   white-space: nowrap;
 }
@@ -364,7 +485,7 @@
 
 .menu-value.accent {
   color: var(--accent);
-  font-weight: 600;
+  font-weight: var(--w-semi);
 }
 
 .menu-divider {
@@ -378,7 +499,7 @@
   padding: 14px 20px calc(18px + var(--safe-bottom));
   border-top: 1px solid var(--line);
   color: #6f665a;
-  font-size: 12px;
+  font-size: var(--t-cap);
 }
 
 /* ---------- Settings page (gear-opened, full-screen) ---------- */
@@ -437,7 +558,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
+  border-radius: var(--r-sm);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
@@ -453,9 +574,9 @@
 
 .settings-hd-title {
   margin: 0;
-  font-size: 18px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
+  font-size: var(--t-t3);
+  font-weight: var(--w-semi);
+  letter-spacing: var(--t-t3-tr);
 }
 
 .settings-body {
@@ -475,7 +596,7 @@
   margin: 0 12px;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--r-sm);
   overflow: hidden;
 }
 
@@ -524,6 +645,11 @@ body {
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  /* system-ui resolves to SF on every Apple device, and SF is a variable font
+     with an optical-size axis. Letting it choose its own Text vs Display cut is
+     free: no webfont to download, no licence, and the 20px crossover is exactly
+     where the type scale above changes character. */
+  font-optical-sizing: auto;
 }
 
 #root {
@@ -552,7 +678,7 @@ textarea {
 }
 ::-webkit-scrollbar-thumb {
   background: var(--surface-2);
-  border-radius: 8px;
+  border-radius: var(--r-xs);
 }
 
 /* ---------- App shell ---------- */
@@ -586,7 +712,7 @@ textarea {
   display: flex;
   gap: 2px;
   padding: 4px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: rgba(38, 38, 42, 0.34);
   border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 -10px 16px rgba(0, 0, 0, 0.16);
@@ -605,15 +731,15 @@ textarea {
   gap: 3px;
   min-height: 56px;
   padding: 9px 4px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: none;
   border: none;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--t-cap2);
   letter-spacing: 0.02em;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: color 0.15s ease, transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: color var(--d-fast) ease, transform var(--d-base) var(--ease-spring);
 }
 
 /* Press-in movement on tap; springs back on release via the easing above. */
@@ -635,15 +761,15 @@ textarea {
   content: "";
   position: absolute;
   inset: 0;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: rgba(245, 240, 232, 0.16);
   z-index: 0;
-  animation: tab-pill-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: tab-pill-in var(--d-base) var(--ease-spring);
 }
 
 /* Icon gives a small bounce the moment its tab becomes active. */
 .tabbar-btn.active .tabbar-icon {
-  animation: tab-icon-pop 0.34s ease;
+  animation: tab-icon-pop var(--d-base) ease;
 }
 
 .tabbar-icon {
@@ -679,7 +805,7 @@ textarea {
   .tabbar-btn:active,
   .tabbar-btn.active::before,
   .tabbar-btn.active .tabbar-icon {
-    transition: color 0.15s ease;
+    transition: color var(--d-fast) ease;
     transform: none;
     animation: none;
   }
@@ -691,20 +817,25 @@ textarea {
   padding: 16px 16px 8px;
 }
 
+/* Large title. Every tab states where you are at 34px, then scrolls away and
+   hands the job to a 17px inline copy in the sticky header (.app-header-title).
+   Before this, every screen opened with the same brand bar, so Library, Activity
+   and News all read as the same page with different content in it. */
 .page-header {
-  padding: 18px 16px 4px;
+  padding: 4px 16px 10px;
 }
 
 .page-title {
-  font-size: 22px;
-  font-weight: 600;
-  margin: 0 0 4px;
-  letter-spacing: -0.01em;
+  font-size: var(--t-large);
+  font-weight: var(--w-bold);
+  margin: 0 0 3px;
+  line-height: 1.08;
+  letter-spacing: var(--t-large-tr);
 }
 
 .page-subtitle {
   color: var(--muted);
-  font-size: 14px;
+  font-size: var(--t-foot);
   margin: 0;
 }
 
@@ -727,10 +858,10 @@ textarea {
   width: 100%;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--r-sm);
   color: var(--text);
   padding: 11px 14px;
-  font-size: 15px;
+  font-size: var(--t-sub);
   min-height: 44px;
   outline: none;
 }
@@ -755,23 +886,23 @@ textarea {
   flex: 0 0 auto;
   min-height: 36px;
   padding: 0 14px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   border: 1px solid var(--line);
   background: var(--surface);
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--t-foot);
   display: inline-flex;
   align-items: center;
   cursor: pointer;
   white-space: nowrap;
-  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+  transition: border-color var(--d-fast) ease, color var(--d-fast) ease, background var(--d-fast) ease;
 }
 
 .chip.active {
   color: var(--bg);
   background: var(--accent);
   border-color: var(--accent);
-  font-weight: 600;
+  font-weight: var(--w-semi);
 }
 
 .sort-row {
@@ -786,9 +917,9 @@ textarea {
   background: var(--surface);
   border: 1px solid var(--line);
   color: var(--text);
-  border-radius: 10px;
+  border-radius: var(--r-sm);
   padding: 8px 10px;
-  font-size: 13px;
+  font-size: var(--t-foot);
   min-height: 40px;
 }
 
@@ -812,14 +943,15 @@ textarea {
 }
 
 .stat-value {
-  font-size: 17px;
-  font-weight: 700;
+  font-size: var(--t-body);
+  letter-spacing: var(--t-body-tr);
+  font-weight: var(--w-bold);
   color: var(--text);
   line-height: 1.2;
 }
 
 .stat-label {
-  font-size: 10.5px;
+  font-size: var(--t-cap2);
   color: var(--muted);
   margin-top: 2px;
   letter-spacing: 0.02em;
@@ -845,12 +977,12 @@ textarea {
   width: 100%;
   max-width: 320px;
   min-height: 44px;
-  border-radius: 12px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--line);
   background: var(--surface);
   color: var(--accent);
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--t-sub);
+  font-weight: var(--w-semi);
   cursor: pointer;
 }
 
@@ -886,8 +1018,8 @@ textarea {
 }
 
 .game-title {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: var(--t-sub);
+  font-weight: var(--w-semi);
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
@@ -898,7 +1030,7 @@ textarea {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--t-cap);
   color: var(--muted);
 }
 
@@ -914,7 +1046,7 @@ textarea {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 11.5px;
+  font-size: var(--t-cap);
   color: var(--muted);
 }
 
@@ -922,14 +1054,14 @@ textarea {
 
 .cover {
   flex: 0 0 auto;
-  border-radius: 10px;
+  border-radius: var(--r-sm);
   overflow: hidden;
   background: var(--walnut);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--accent);
-  font-weight: 700;
+  font-weight: var(--w-bold);
   position: relative;
 }
 
@@ -943,7 +1075,8 @@ textarea {
 .cover-sm {
   width: 52px;
   height: 52px;
-  font-size: 20px;
+  font-size: var(--t-t3);
+  letter-spacing: var(--t-t3-tr);
 }
 
 .cover-lg {
@@ -951,8 +1084,9 @@ textarea {
   max-width: 240px;
   margin: 0 auto 4px;
   aspect-ratio: 3 / 4;
-  border-radius: 16px;
-  font-size: 48px;
+  border-radius: var(--r-md);
+  font-size: var(--t-display);
+  letter-spacing: var(--t-display-tr);
 }
 
 /* ---------- Completion bar ---------- */
@@ -960,16 +1094,16 @@ textarea {
 .completion-bar-track {
   width: 100%;
   height: 6px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--surface-2);
   overflow: hidden;
 }
 
 .completion-bar-fill {
   height: 100%;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--accent);
-  transition: width 0.3s ease;
+  transition: width var(--d-base) ease;
 }
 
 /* ---------- Skeletons ---------- */
@@ -978,7 +1112,7 @@ textarea {
   background: linear-gradient(90deg, var(--surface) 25%, var(--surface-2) 37%, var(--surface) 63%);
   background-size: 400% 100%;
   animation: skeleton-shimmer 1.4s ease infinite;
-  border-radius: 8px;
+  border-radius: var(--r-xs);
 }
 
 @keyframes skeleton-shimmer {
@@ -1003,7 +1137,7 @@ textarea {
 .skeleton-cover {
   width: 52px;
   height: 52px;
-  border-radius: 10px;
+  border-radius: var(--r-sm);
   flex: 0 0 auto;
 }
 
@@ -1033,7 +1167,7 @@ textarea {
 
 .empty-state-title {
   color: var(--text);
-  font-weight: 600;
+  font-weight: var(--w-semi);
   margin-bottom: 6px;
 }
 
@@ -1080,7 +1214,7 @@ textarea {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   background: var(--surface);
-  border-radius: 20px 20px 0 0;
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
   border-top: 1px solid var(--line);
   padding: 16px 20px calc(24px + var(--safe-bottom));
   animation: slide-up var(--overlay-out) var(--enter-ease);
@@ -1098,7 +1232,7 @@ textarea {
 .modal-handle {
   width: 40px;
   height: 4px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--line);
   margin: 0 auto 14px;
 }
@@ -1122,12 +1256,14 @@ textarea {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 16px;
+  font-size: var(--t-body);
+  letter-spacing: var(--t-body-tr);
 }
 
 .detail-title {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: var(--t-t3);
+  letter-spacing: var(--t-t3-tr);
+  font-weight: var(--w-bold);
   margin: 14px 0 4px;
 }
 
@@ -1144,19 +1280,20 @@ textarea {
 
 .detail-label {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--t-foot);
 }
 
 .detail-value {
   color: var(--text);
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--t-sub);
+  font-weight: var(--w-semi);
   text-align: right;
 }
 
 .detail-percent {
-  font-size: 34px;
-  font-weight: 700;
+  font-size: var(--t-large);
+  letter-spacing: var(--t-large-tr);
+  font-weight: var(--w-bold);
   color: var(--accent);
   margin: 4px 0 2px;
 }
@@ -1166,12 +1303,12 @@ textarea {
   text-align: center;
   margin-top: 18px;
   padding: 13px;
-  border-radius: 12px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--walnut-light);
   color: var(--accent);
   text-decoration: none;
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: var(--w-semi);
+  font-size: var(--t-sub);
   min-height: 44px;
 }
 
@@ -1198,9 +1335,9 @@ textarea {
 }
 
 .chat-topbar-title {
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-size: var(--t-t2);
+  font-weight: var(--w-semi);
+  letter-spacing: var(--t-t2-tr);
   margin: 0;
 }
 
@@ -1210,12 +1347,12 @@ textarea {
   gap: 6px;
   min-height: 36px;
   padding: 0 14px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   border: 1px solid var(--walnut-light);
   background: var(--surface);
   color: var(--accent);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--t-foot);
+  font-weight: var(--w-semi);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -1241,7 +1378,7 @@ textarea {
 .chat-history-empty {
   padding: 20px 16px;
   color: var(--muted);
-  font-size: 14px;
+  font-size: var(--t-sub);
 }
 
 .chat-history-item {
@@ -1268,7 +1405,7 @@ textarea {
 .chat-history-title {
   flex: 1;
   min-width: 0;
-  font-size: 14px;
+  font-size: var(--t-sub);
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
@@ -1277,7 +1414,7 @@ textarea {
 
 .chat-history-time {
   flex: 0 0 auto;
-  font-size: 12px;
+  font-size: var(--t-cap);
   color: var(--muted);
 }
 
@@ -1289,7 +1426,8 @@ textarea {
   border: none;
   background: transparent;
   color: var(--muted);
-  font-size: 17px;
+  font-size: var(--t-body);
+  letter-spacing: var(--t-body-tr);
   line-height: 1;
   cursor: pointer;
 }
@@ -1313,10 +1451,10 @@ textarea {
   text-align: left;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--r-sm);
   padding: 12px 14px;
   color: var(--text);
-  font-size: 14px;
+  font-size: var(--t-sub);
   min-height: 44px;
   cursor: pointer;
 }
@@ -1349,8 +1487,8 @@ textarea {
 .chat-bubble {
   max-width: 84%;
   padding: 11px 14px;
-  border-radius: 16px;
-  font-size: 14.5px;
+  border-radius: var(--r-md);
+  font-size: var(--t-sub);
   line-height: 1.5;
 }
 
@@ -1391,7 +1529,7 @@ textarea {
   background: var(--surface-2);
   padding: 1px 5px;
   border-radius: 4px;
-  font-size: 13px;
+  font-size: var(--t-foot);
 }
 
 .typing-indicator {
@@ -1440,10 +1578,10 @@ textarea {
   flex: 1;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 22px;
+  border-radius: var(--r-lg);
   color: var(--text);
   padding: 11px 16px;
-  font-size: 15px;
+  font-size: var(--t-sub);
   min-height: 44px;
   outline: none;
   resize: none;
@@ -1460,7 +1598,7 @@ textarea {
   background: var(--accent);
   border: none;
   color: var(--bg);
-  font-weight: 700;
+  font-weight: var(--w-bold);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1486,12 +1624,16 @@ textarea {
   padding: 10px 16px 8px;
 }
 
+/* Sentence case, at headline size. Every rail label in discoverRows.js is
+   already written as a sentence ("Popular right now"); it was CSS shouting it.
+   Uppercase micro-labels are an Android and web convention, and greying a
+   section heading to --muted makes the row look like a caption for the row
+   above it rather than a heading for the covers below. */
 .shelf-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: var(--t-body);
+  font-weight: var(--w-semi);
+  color: var(--text);
+  letter-spacing: var(--t-body-tr);
 }
 
 .shelf-row {
@@ -1518,8 +1660,8 @@ textarea {
 }
 
 .shelf-card-title {
-  font-size: 12.5px;
-  font-weight: 600;
+  font-size: var(--t-cap);
+  font-weight: var(--w-semi);
   color: var(--text);
   margin-top: 2px;
   white-space: nowrap;
@@ -1528,7 +1670,7 @@ textarea {
 }
 
 .shelf-card-meta {
-  font-size: 11px;
+  font-size: var(--t-cap2);
   color: var(--muted);
   margin-top: 1px;
   white-space: nowrap;
@@ -1548,8 +1690,8 @@ textarea {
 }
 
 .chart-title {
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--t-foot);
+  font-weight: var(--w-bold);
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -1565,7 +1707,7 @@ textarea {
 }
 
 .bar-label {
-  font-size: 13px;
+  font-size: var(--t-foot);
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
@@ -1575,7 +1717,7 @@ textarea {
 .bar-track {
   display: block;
   height: 10px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--surface-2);
   overflow: hidden;
 }
@@ -1583,14 +1725,14 @@ textarea {
 .bar-fill {
   display: block;
   height: 100%;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--accent);
   min-width: 2px;
   transition: width 0.4s ease;
 }
 
 .bar-value {
-  font-size: 12.5px;
+  font-size: var(--t-cap);
   color: var(--muted);
   font-variant-numeric: tabular-nums;
   min-width: 44px;
@@ -1598,7 +1740,7 @@ textarea {
 }
 
 .chart-empty {
-  font-size: 13px;
+  font-size: var(--t-foot);
   color: var(--muted);
   padding: 4px 0 2px;
 }
@@ -1612,19 +1754,19 @@ textarea {
 .detail-extra-loading {
   display: block;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--t-foot);
   padding: 12px 0;
 }
 
 .detail-blurb {
   color: var(--muted);
-  font-size: 13.5px;
+  font-size: var(--t-foot);
   line-height: 1.5;
   margin: 10px 0 2px;
 }
 
 .detail-source {
-  font-size: 11px;
+  font-size: var(--t-cap2);
   color: var(--muted);
   opacity: 0.8;
 }
@@ -1642,14 +1784,14 @@ textarea {
   flex: 1 1 auto;
   min-height: 38px;
   padding: 0 10px;
-  border-radius: 10px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--line);
   background: var(--surface-2);
   color: var(--muted);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--t-foot);
+  font-weight: var(--w-semi);
   cursor: pointer;
-  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  transition: color var(--d-fast) ease, background var(--d-fast) ease, border-color var(--d-fast) ease;
 }
 
 .status-btn.active {
@@ -1659,19 +1801,19 @@ textarea {
 }
 
 .detail-percent-label {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--t-cap);
+  font-weight: var(--w-semi);
   color: var(--muted);
   margin-left: 8px;
   letter-spacing: 0.02em;
 }
 
 .status-badge {
-  font-size: 10px;
-  font-weight: 700;
+  font-size: var(--t-cap2);
+  font-weight: var(--w-bold);
   letter-spacing: 0.03em;
   padding: 1px 7px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   text-transform: uppercase;
   border: 1px solid var(--line);
   white-space: nowrap;
@@ -1861,7 +2003,7 @@ textarea {
 }
 
 .menu-appearance-head .menu-label {
-  font-size: 15px;
+  font-size: var(--t-sub);
 }
 
 .seg {
@@ -1869,7 +2011,7 @@ textarea {
   gap: 4px;
   background: var(--bg);
   border: 1px solid var(--line);
-  border-radius: 11px;
+  border-radius: var(--r-sm);
   padding: 4px;
 }
 
@@ -1880,12 +2022,12 @@ textarea {
   background: none;
   color: var(--muted);
   font: inherit;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--t-foot);
+  font-weight: var(--w-semi);
   padding: 8px 0;
-  border-radius: 8px;
+  border-radius: var(--r-xs);
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background var(--d-fast) ease, color var(--d-fast) ease;
 }
 
 .seg-btn.active {
@@ -1899,8 +2041,8 @@ textarea {
 }
 
 .menu-accent-label {
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--t-cap2);
+  font-weight: var(--w-bold);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
@@ -1934,7 +2076,7 @@ textarea {
   border-radius: 50%;
   position: relative;
   background: var(--sw-ring);
-  transition: box-shadow 0.15s ease;
+  transition: box-shadow var(--d-fast) ease;
 }
 
 .accent-dot i {
@@ -1949,13 +2091,13 @@ textarea {
 }
 
 .accent-name {
-  font-size: 10.5px;
+  font-size: var(--t-cap2);
   color: var(--muted);
 }
 
 .accent-opt.on .accent-name {
   color: var(--text);
-  font-weight: 600;
+  font-weight: var(--w-semi);
 }
 
 /* ---------- Filter sheet primitives (shared) ----------
@@ -1968,7 +2110,7 @@ textarea {
   flex: 0 0 auto;
   width: 44px;
   height: 44px;
-  border-radius: 12px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--line);
   background: var(--surface);
   color: var(--muted);
@@ -1990,8 +2132,8 @@ textarea {
 
 .filter-label {
   display: block;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: var(--t-cap);
+  font-weight: var(--w-bold);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted);
@@ -2007,14 +2149,14 @@ textarea {
 .filter-opt {
   min-height: 38px;
   padding: 0 13px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   border: 1px solid var(--line);
   background: var(--surface-2);
   color: var(--muted);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--t-foot);
+  font-weight: var(--w-semi);
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition: background var(--d-fast) ease, color var(--d-fast) ease, border-color var(--d-fast) ease;
 }
 
 .filter-opt.active {
@@ -2032,12 +2174,12 @@ textarea {
 .discover-action {
   flex: 1;
   min-height: 44px;
-  border-radius: 12px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--line);
   background: var(--surface-2);
   color: var(--text);
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--t-sub);
+  font-weight: var(--w-semi);
   cursor: pointer;
 }
 
@@ -2077,11 +2219,11 @@ textarea {
   height: 18px;
   padding: 0 5px;
   box-sizing: border-box;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--accent);
   color: var(--bg);
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--t-cap2);
+  font-weight: var(--w-bold);
   line-height: 18px;
   text-align: center;
 }
@@ -2098,8 +2240,8 @@ textarea {
    renders, or whichever surface you reach first is the only one that looks
    right. One definition, always loaded. */
 .wl-next-lbl {
-  font-size: 11.5px;
-  font-weight: 700;
+  font-size: var(--t-cap);
+  font-weight: var(--w-bold);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--muted);
@@ -2155,22 +2297,22 @@ textarea {
 }
 
 .wl-nbig {
-  font-size: 20px;
-  font-weight: 800;
+  font-size: var(--t-t3);
+  font-weight: var(--w-bold);
   line-height: 1;
-  letter-spacing: -0.02em;
+  letter-spacing: var(--t-t3-tr);
   color: #fff;
 }
 
 .wl-nlab {
-  font-size: 11px;
+  font-size: var(--t-cap2);
   color: rgba(255, 255, 255, 0.72);
   margin-top: 2px;
 }
 
 .wl-nt {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--t-cap);
+  font-weight: var(--w-semi);
   padding: 8px 10px 10px;
   line-height: 1.25;
   white-space: nowrap;
