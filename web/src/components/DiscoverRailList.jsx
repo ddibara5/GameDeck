@@ -4,8 +4,9 @@ import Cover from './Cover.jsx'
 import WishHeart from './WishHeart.jsx'
 import Skeleton from './Skeleton.jsx'
 import DiscoverDetail from './DiscoverDetail.jsx'
+import TimingOverlay from './TimingOverlay.jsx'
 import { fetchDiscover } from '../lib/discover.js'
-import { releaseTiming, shelfMetaDate } from '../lib/format.js'
+import { releaseTiming, timingParts, shelfMetaDate } from '../lib/format.js'
 import { groupByRelease } from '../lib/wishlistRelease.js'
 import { useDelayedClose } from '../lib/useDelayedClose.js'
 import { useEdgeBack } from '../lib/useEdgeBack.js'
@@ -51,6 +52,7 @@ function sortLocal(items, key) {
 
 function RailCard({ g, isOwned, wishIds, onOpen }) {
   const timing = releaseTiming(g.released)
+  const parts = timingParts(g.released)
   // Only set when the line would otherwise be blank.
   const metaDate = shelfMetaDate(g, timing)
   return (
@@ -59,11 +61,10 @@ function RailCard({ g, isOwned, wishIds, onOpen }) {
         <div className="shelf-poster">
           <Cover src={g.cover} title={g.name} size="lg" />
           {isOwned(g.name) ? <span className="in-library-dot" title="In library" /> : null}
+          <TimingOverlay parts={parts} />
         </div>
         <div className="shelf-card-title">{g.name}</div>
         <div className="shelf-card-meta">
-          {timing ? <span className={`sc-time ${timing.tone}`}>{timing.label}</span> : null}
-          {timing && g.rating ? <span className="sc-sep">{' · '}</span> : null}
           {g.rating ? <span>{'★'} {g.rating}</span> : null}
           {metaDate ? <span className="sc-date">{metaDate}</span> : null}
         </div>

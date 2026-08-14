@@ -175,6 +175,36 @@ export function releaseTiming(released) {
   return { label, tone: ago <= 10 ? 'fresh' : 'muted' }
 }
 
+// The same timing, split for the cover overlay: a big figure and a word.
+//
+// Derived from releaseDayDelta and reusing releaseTiming's tone rather than
+// parsing releaseTiming's own label back apart, so the thresholds and colours
+// have one definition and the two renderings can never disagree about whether a
+// game is "fresh" or how many weeks out it is.
+export function timingParts(released) {
+  const t = releaseTiming(released)
+  if (!t) return null
+  const days = releaseDayDelta(released)
+  if (days === 0) return { big: 'Today', lab: '', tone: t.tone }
+  const ahead = days > 0
+  const n = Math.abs(days)
+  const suffix = ahead ? 'away' : 'ago'
+  let v
+  let word
+  if (n < 14) {
+    v = n
+    word = 'day'
+  } else if (ahead || n < 56) {
+    // Upcoming never rolls up to months: releaseTiming caps the future at weeks.
+    v = Math.round(n / 7)
+    word = 'week'
+  } else {
+    v = Math.round(n / 30)
+    word = 'month'
+  }
+  return { big: String(v), lab: `${word}${v === 1 ? '' : 's'} ${suffix}`, tone: t.tone }
+}
+
 const RELEASE_MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',

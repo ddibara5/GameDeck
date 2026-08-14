@@ -6,7 +6,8 @@ import Cover from './Cover.jsx'
 import Skeleton from './Skeleton.jsx'
 import WishHeart from './WishHeart.jsx'
 import { fetchDiscover, fetchDiscoverHome, fetchGamesByIds, loadLibraryTitles, loadGamePass, normTitle } from '../lib/discover.js'
-import { releaseDayDelta, releaseTiming, shelfMetaDate, releaseWindowEndTs } from '../lib/format.js'
+import { releaseDayDelta, releaseTiming, timingParts, shelfMetaDate, releaseWindowEndTs } from '../lib/format.js'
+import TimingOverlay from './TimingOverlay.jsx'
 import { useWishlist } from '../lib/wishlist.js'
 import { useRowsConfig, ROW_BY_KEY } from '../lib/discoverRows.js'
 import { VIBES } from '../lib/vibes.js'
@@ -536,6 +537,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
                 <div className="shelf-row">
                   {items.slice(0, RAIL_PREVIEW).map((g) => {
                     const timing = releaseTiming(g.released)
+                    const parts = timingParts(g.released)
                     // Only set when the line would otherwise be blank.
                     const metaDate = shelfMetaDate(g, timing)
                     return (
@@ -544,11 +546,10 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
                           <div className="shelf-poster">
                             <Cover src={g.cover} title={g.name} size="lg" />
                             {isOwned(g.name) ? <span className="in-library-dot" title="In library" /> : null}
+                            <TimingOverlay parts={parts} />
                           </div>
                           <div className="shelf-card-title">{g.name}</div>
                           <div className="shelf-card-meta">
-                            {timing ? <span className={`sc-time ${timing.tone}`}>{timing.label}</span> : null}
-                            {timing && g.rating ? <span className="sc-sep"> · </span> : null}
                             {g.rating ? <span>★ {g.rating}</span> : null}
                             {metaDate ? <span className="sc-date">{metaDate}</span> : null}
                           </div>

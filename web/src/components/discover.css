@@ -193,23 +193,46 @@
 }
 
 
-/* Release-timing token on the meta line. The rating text stays --muted; only the
-   timing carries color: amber counting down, green just-released, muted recent. */
-.shelf-card-meta .sc-time {
-  font-weight: 600;
+/* Release timing, drawn ON the cover rather than under the title. Same treatment
+   as the wishlist Next up cards: the figure is the big element, the unit is the
+   caption, both over a scrim so they stay legible on any key art.
+
+   The scrim is a bottom gradient rather than a solid chip because cover art is
+   busiest in the middle and calmest at the edges, and a chip would have to sit
+   somewhere it could cover a face or a logo. */
+.sc-ov {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: block;
+  padding: 18px 8px 6px;
+  border-radius: 0 0 16px 16px;
+  background: linear-gradient(to top, rgba(10, 9, 8, 0.92), rgba(10, 9, 8, 0));
+  pointer-events: none;
 }
-.shelf-card-meta .sc-time.amber {
-  color: var(--amber);
+.sc-ov-big {
+  display: block;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
 }
-.shelf-card-meta .sc-time.fresh {
-  color: #4bbf8a;
+.sc-ov-lab {
+  display: block;
+  min-height: 12px;
+  font-size: 10px;
+  line-height: 1.2;
+  margin-top: 1px;
+  color: rgba(255, 255, 255, 0.74);
 }
-.shelf-card-meta .sc-time.muted {
-  color: var(--muted);
-}
-[data-theme='light'] .shelf-card-meta .sc-time.fresh {
-  color: #2f9e6e;
-}
+/* Only the figure carries the tone; the caption stays quiet in both themes, and
+   the scrim is dark in both, so these are fixed colours rather than tokens. */
+.sc-ov.amber .sc-ov-big { color: #f0b34a; }
+.sc-ov.fresh .sc-ov-big { color: #6fd3a3; }
+.sc-ov.muted .sc-ov-big { color: rgba(255, 255, 255, 0.86); }
 
 .in-library-dot {
   position: absolute;
@@ -398,6 +421,12 @@ button.shelf-head:active {
 .rail-grid .shelf-card,
 .rail-grid .shelf-poster {
   width: 100%;
+}
+/* Absolute children (the in-library dot, the timing overlay) need a positioned
+   ancestor. Only .discover-browse .shelf-poster had one, so the dot in this grid
+   was anchoring to whatever was positioned further up. */
+.rail-grid .shelf-poster {
+  position: relative;
 }
 .rail-grid .shelf-poster .cover-lg {
   max-width: none;
