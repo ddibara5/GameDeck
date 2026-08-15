@@ -324,6 +324,35 @@ export function byNewest(a, b) {
 // refreshes is one tap away rather than gone.
 export const WEEK_VISIBLE = 6
 
+// For you used to be uncapped, on the reasoning that it is the reason the tab
+// exists. That held when a week was the Sunday digest's ~7 stories. It stopped
+// holding once refreshes started APPENDING to the week: measured 15 Aug, one
+// week held 68 stories across 10 refresh bursts in 5 days, about half of them
+// qualifying for For you, so the section ran ~30 cards deep before "Also this
+// week" appeared at all. A recommendation that long is a feed.
+//
+// Higher than WEEK_VISIBLE because this is the section worth reading; the rest
+// is still one tap away behind the same Show more button.
+export const FORYOU_VISIBLE = 8
+
+// The lowest relevance tier that earns a place in For you.
+//
+// 2, so tier 1 is excluded. Tier 1 is Game Pass availability ALONE - a game you
+// do not own, have not wishlisted, and have no series connection to, which
+// happens to sit in a ~500-title catalog you subscribe to. That is a fact about
+// your subscription, not a personal hook. Everything from tier 2 up is something
+// you own, want, or are mid-series on.
+//
+// Measured honestly: on the week this was written it moves ONE story of 68. The
+// wide net turned out to be franchise matching (26 of 36), not Game Pass, since
+// news covers notable games and most notable games are already owned or
+// wishlisted. Kept because it is still the right rule and costs nothing.
+//
+// Demoted, not dropped: those stories still appear under Also this week and
+// still carry their "Playable now" chip, so nothing is hidden - it just stops
+// outranking a game you actually play.
+export const FORYOU_MIN_TIER = 2
+
 // --- Sort order ------------------------------------------------------------
 //
 // Two orders, because they answer different questions and neither is wrong.
@@ -367,13 +396,15 @@ export function setNewsSort(v) {
 // For you is ordered by relevance, then by how widely the story was covered,
 // then by recency. Everything else is simply newest first: with no personal
 // hook to rank on, "what happened most recently" is the only honest order.
+//
+// "Everything else" now includes Game Pass-only matches; see FORYOU_MIN_TIER.
 export function splitForYou(items, sets) {
   const forYou = []
   const also = []
   for (const item of items || []) {
     const rel = resolveGame(item, sets)
     const entry = { item, rel }
-    if (rel.tier > 0) forYou.push(entry)
+    if (rel.tier >= FORYOU_MIN_TIER) forYou.push(entry)
     else also.push(entry)
   }
   forYou.sort(

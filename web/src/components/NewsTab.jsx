@@ -7,6 +7,7 @@ import {
   splitForYou,
   byNewest,
   WEEK_VISIBLE,
+  FORYOU_VISIBLE,
   cardArtChain,
   coverSrc,
   outletCount,
@@ -216,9 +217,10 @@ function WeekSection({ group, past, sets, readSet, onOpenGame, sort }) {
       entries={entries}
       readSet={readSet}
       onOpenGame={onOpenGame}
-      // For you is the reason the tab exists, so it is never truncated. The cap
-      // is for the long tail that a heavily refreshed week accumulates.
-      cap={key === 'foryou' ? Infinity : WEEK_VISIBLE}
+      // Both lists cap now. For you was uncapped until a refreshed week grew to
+      // 68 stories and the section ran ~30 cards deep; it just gets a longer
+      // leash than the tail does.
+      cap={key === 'foryou' ? FORYOU_VISIBLE : WEEK_VISIBLE}
     />
   )
 
