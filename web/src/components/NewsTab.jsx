@@ -16,6 +16,9 @@ import {
   markRead,
   useReadNews,
   hostOf,
+  NEWS_SORTS,
+  getNewsSort,
+  setNewsSort,
 } from '../lib/news.js'
 import { useWishlist, addToWishlist } from '../lib/wishlist.js'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
@@ -35,6 +38,10 @@ export default function NewsTab() {
   const { ids: wishlistIds } = useWishlist()
   const { games } = useLibraryGames()
   const readSet = useReadNews()
+  // Read from storage on the first render, not in an effect, so the list never
+  // paints in one order and then reshuffles into the other.
+  const [sort, setSortState] = useState(getNewsSort)
+  const chooseSort = (v) => setSortState(setNewsSort(v))
 
   const load = useCallback(async () => {
     const data = await fetchNews()
@@ -140,6 +147,22 @@ export default function NewsTab() {
         ) : null}
       </div>
 
+      {!loading && groups.length > 0 ? (
+        <div className="seg news-seg" role="group" aria-label="Sort stories">
+          {NEWS_SORTS.map((o) => (
+            <button
+              key={o.key}
+              type="button"
+              className={`seg-btn${sort === o.key ? ' active' : ''}`}
+              aria-pressed={sort === o.key}
+              onClick={() => chooseSort(o.key)}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       {loading ? (
         <div style={{ padding: '0 16px' }}>
           <Skeleton count={4} />
@@ -159,6 +182,7 @@ export default function NewsTab() {
               sets={sets}
               readSet={readSet}
               onOpenGame={openGameFor}
+              sort={sort}
             />
           ))}
           <div className="news-footer">
@@ -183,7 +207,7 @@ export default function NewsTab() {
 
 // Only the newest week is split into For you / Also this week. Older weeks stay
 // as one list; splitting a week you have already read just moves things around.
-function WeekSection({ group, past, sets, readSet, onOpenGame }) {
+function WeekSection({ group, past, sets, readSet, onOpenGame, sort }) {
   const split = useMemo(() => splitForYou(group.items, sets), [group.items, sets])
 
   const list = (entries, key) => (
@@ -198,10 +222,18 @@ function WeekSection({ group, past, sets, readSet, onOpenGame }) {
     />
   )
 
-  if (past) {
+  // Newest collapses the For you / Also split rather than sorting inside it.
+  // The split IS the relevance ordering, so keeping the two headings while
+  // claiming to sort by date would still show a four-day-old story above this
+  // morning's - which is the exact thing this control exists to escape.
+  //
+  // Weeks stay as separate sections in both orders. They carry the date context
+  // the cards themselves only give as "4d", and the groups already arrive newest
+  // week first, so newest-within-newest reads correctly top to bottom.
+  if (past || sort === 'newest') {
     const all = [...split.forYou, ...split.also].sort((a, b) => byNewest(a.item, b.item))
     return (
-      <section className="news-week-past">
+      <section className={past ? 'news-week-past' : undefined}>
         <div className="news-week-label">
           {weekLabel(group.weekOf)}
           <span className="news-week-count">&middot; {all.length}</span>

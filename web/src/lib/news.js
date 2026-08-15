@@ -324,6 +324,44 @@ export function byNewest(a, b) {
 // refreshes is one tap away rather than gone.
 export const WEEK_VISIBLE = 6
 
+// --- Sort order ------------------------------------------------------------
+//
+// Two orders, because they answer different questions and neither is wrong.
+//
+// "For you" is relevance first, and it is the default because it is the reason
+// this tab exists rather than an RSS reader. It will happily put a four-day-old
+// story above this morning's when the older one is about a game you are actually
+// playing. That is the feature - but it is indistinguishable from a broken sort
+// if nothing on screen says so, which is why the control is visible rather than
+// buried in Settings.
+//
+// "Newest" is the escape hatch: pure recency, no personal weighting.
+export const NEWS_SORTS = [
+  { key: 'foryou', label: 'For you' },
+  { key: 'newest', label: 'Newest' },
+]
+const SORT_KEY = 'gamedeck_news_sort_v1'
+const SORT_KEYS = new Set(NEWS_SORTS.map((s) => s.key))
+
+export function getNewsSort() {
+  try {
+    const v = localStorage.getItem(SORT_KEY)
+    return SORT_KEYS.has(v) ? v : 'foryou'
+  } catch {
+    return 'foryou'
+  }
+}
+
+export function setNewsSort(v) {
+  const next = SORT_KEYS.has(v) ? v : 'foryou'
+  try {
+    localStorage.setItem(SORT_KEY, next)
+  } catch {
+    /* storage unavailable - the choice just won't persist */
+  }
+  return next
+}
+
 // Split a week into the stories that touch this library and the rest.
 //
 // For you is ordered by relevance, then by how widely the story was covered,

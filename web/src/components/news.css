@@ -573,3 +573,12 @@
   border: 2px solid var(--bg);
   z-index: 2;
 }
+
+/* Sort control. Sits between the page header and the first week rather than in
+   Settings: "For you" will put a four-day-old story above this morning's when
+   the older one is about a game you are playing, and an ordering rule you
+   cannot see is indistinguishable from a broken sort. Margin matches the
+   16px gutter every list on this tab uses. */
+.news-seg {
+  margin: 0 16px 14px;
+}
