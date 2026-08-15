@@ -9,7 +9,7 @@ import { fetchDiscover, fetchDiscoverHome, fetchGamesByIds, loadLibraryTitles, l
 import { releaseDayDelta, releaseTiming, timingParts, shelfMetaDate, releaseWindowEndTs } from '../lib/format.js'
 import TimingOverlay from './TimingOverlay.jsx'
 import { useWishlist } from '../lib/wishlist.js'
-import { useRowsConfig, ROW_BY_KEY } from '../lib/discoverRows.js'
+import { useRowsConfig, ROW_BY_KEY, getFilledRows, setFilledRows } from '../lib/discoverRows.js'
 import { VIBES } from '../lib/vibes.js'
 
 const CURRENT_YEAR = new Date().getFullYear()
@@ -135,7 +135,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
   const [selected, setSelected] = useState(null)
   const [openRail, setOpenRail] = useState(null)
   const [libTitles, setLibTitles] = useState(null)
-  const [gamePass, setGamePass] = useState([])
+  const [gamePass, setGamePass] = useState(null)
   const [hideOwned, setHideOwned] = useState(false)
 
   const debounceRef = useRef(null)
@@ -172,16 +172,21 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
 
   // Load the Game Pass catalog once (only used when the row is enabled, but the
   // fetch is cheap + cached, so we load it unconditionally).
+  // null, not [], until it resolves: the row map has to be able to tell "still
+  // loading" from "loaded and there is nothing on Game Pass".
   useEffect(() => {
     let alive = true
-    loadGamePass().then((list) => alive && setGamePass(list))
+    loadGamePass().then((list) => alive && setGamePass(list || []))
     return () => {
       alive = false
     }
   }, [])
 
-  const { items: wishItems, ids: wishIds } = useWishlist()
+  const { items: wishItems, ids: wishIds, loading: wishLoading } = useWishlist()
   const rowsConfig = useRowsConfig()
+  // Read once per mount. It is a hint about the PREVIOUS load, so re-reading it
+  // as it changes would defeat the point.
+  const [filledRows] = useState(getFilledRows)
 
   // Wishlist rows are stored locally with just title/cover/year, so their cards
   // had no countdown, no rating and no real release date while every IGDB-backed
@@ -263,6 +268,34 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
     () => wishGames.filter(isOutNow).sort((a, b) => (Number(b.released) || 0) - (Number(a.released) || 0)),
     [wishGames]
   )
+
+  // Remember which rows actually had something in them, so the next load knows
+  // which ones are worth holding a place for while their data is in flight.
+  //
+  // Only recorded once NOTHING is pending, and only for the unnarrowed home. A
+  // half-loaded page would teach it that every slow row is empty, and a filtered
+  // or searched page empties rails on purpose, so either would poison the hint
+  // and bring the layout jump back on the following load.
+  const railsPending = enabledRailKeys.some((k) => rails[k] === undefined)
+  const settled = !wishLoading && gamePass !== null && !railsPending && !searchMode && !narrowed
+  const filledSig = settled
+    ? rowsConfig.order
+        .filter((key) => {
+          if (!rowsConfig.enabled[key]) return false
+          const row = ROW_BY_KEY[key]
+          if (!row) return false
+          if (row.kind === 'wishlist') return wishGames.length > 0
+          if (row.kind === 'wishlistSoon') return wishSoonGames.length > 0
+          if (row.kind === 'wishlistOutNow') return wishOutNowGames.length > 0
+          if (row.kind === 'gamepass') return gamePass.length > 0
+          return Boolean(rails[key] && rails[key].length)
+        })
+        .join(',')
+    : null
+  useEffect(() => {
+    if (filledSig === null) return
+    setFilledRows(filledSig ? filledSig.split(',') : [])
+  }, [filledSig])
 
   const railKeySig = enabledRailKeys.join(',')
   // The active narrowing, as a stable string, so the rails refetch when it moves.
@@ -510,16 +543,38 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
             if (!rowsConfig.enabled[key]) return null
             const row = ROW_BY_KEY[key]
             if (!row) return null
+            // Pending is not the same as empty, and conflating the two is what
+            // made this tab reorder itself on every load. The IGDB rails always
+            // drew a skeleton for an unresolved key; the local rows could not,
+            // because an unloaded wishlist and an empty wishlist were both [],
+            // so they were dropped from the DOM and inserted themselves later.
+            // The rows then appeared in ARRIVAL order rather than the user's,
+            // measured at 0.24 CLS with the wishlist and Game Pass pulled to the
+            // top. Every row now reports pending explicitly.
             let items
-            if (row.kind === 'wishlist') items = wishGames
-            else if (row.kind === 'wishlistSoon') items = wishSoonGames
-            else if (row.kind === 'wishlistOutNow') items = hideFromLibrary(wishOutNowGames)
-            else if (row.kind === 'gamepass') items = hideFromLibrary(gamePass)
-            else {
-              // IGDB rail: undefined = the batched fetch hasn't resolved yet, so
-              // show an in-place skeleton instead of hiding the whole home.
-              if (rails[key] === undefined) return <ShelfSkeleton key={key} label={row.label} />
-              items = hideFromLibrary(rails[key])
+            let pending
+            if (row.kind === 'wishlist') {
+              items = wishGames
+              pending = wishLoading
+            } else if (row.kind === 'wishlistSoon') {
+              items = wishSoonGames
+              pending = wishLoading
+            } else if (row.kind === 'wishlistOutNow') {
+              items = hideFromLibrary(wishOutNowGames)
+              pending = wishLoading
+            } else if (row.kind === 'gamepass') {
+              items = hideFromLibrary(gamePass)
+              pending = gamePass === null
+            } else {
+              items = rails[key] === undefined ? null : hideFromLibrary(rails[key])
+              pending = rails[key] === undefined
+            }
+            // Only hold a place for a row that had content last time. Otherwise a
+            // row that is about to resolve empty (Wishlist - out now, most weeks)
+            // would flash a skeleton and disappear, which is the same shift again
+            // in the other direction. With no memory yet, reserve for everything.
+            if (pending) {
+              return filledRows && !filledRows.has(key) ? null : <ShelfSkeleton key={key} label={row.label} />
             }
             if (!items || !items.length) return null
             return (

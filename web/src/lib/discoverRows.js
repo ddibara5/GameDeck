@@ -71,13 +71,67 @@ function load() {
   return { order, enabled }
 }
 
+// Which rows had something in them last time the Discover home settled.
+//
+// This exists so a row can hold its place in the layout WHILE its data is in
+// flight, without a row that is going to turn out empty flashing a placeholder
+// and then vanishing. "Wishlist - out now" is empty most weeks, so reserving
+// space for it unconditionally would trade one layout shift for another.
+//
+// Deliberately a hint, not state: it is only ever used to decide whether to draw
+// a skeleton, so a stale or missing value costs a little jitter once and nothing
+// else. It is stored under the same key as the layout because it has the same
+// lifetime, is the same size, and is meaningless without it.
+export function getFilledRows() {
+  let stored = null
+  try {
+    stored = JSON.parse(localStorage.getItem(KEY) || 'null')
+  } catch {
+    stored = null
+  }
+  // No memory yet (first ever load) means every enabled row is assumed to have
+  // content. That is the right default: on a first run the wishlist rows really
+  // are empty, but so is everything else, so there is nothing to shift.
+  if (!stored || !Array.isArray(stored.filled)) return null
+  return new Set(stored.filled)
+}
+
+export function setFilledRows(keys) {
+  let stored = null
+  try {
+    stored = JSON.parse(localStorage.getItem(KEY) || 'null')
+  } catch {
+    stored = null
+  }
+  const next = {
+    order: (stored && stored.order) || DEFAULT_ORDER,
+    enabled: (stored && stored.enabled) || DEFAULT_ENABLED,
+    filled: [...keys],
+  }
+  try {
+    localStorage.setItem(KEY, JSON.stringify(next))
+  } catch {
+    /* storage unavailable */
+  }
+  // Deliberately no EVENT: this is written by the Discover home itself, and
+  // firing the change event would make every listener re-read the config and
+  // re-render on a value none of them read.
+}
+
 export function getRowsConfig() {
   return load()
 }
 
 export function setRowsConfig(config) {
+  let filled = []
   try {
-    localStorage.setItem(KEY, JSON.stringify({ order: config.order, enabled: config.enabled }))
+    const stored = JSON.parse(localStorage.getItem(KEY) || 'null')
+    if (stored && Array.isArray(stored.filled)) filled = stored.filled
+  } catch {
+    /* storage unavailable */
+  }
+  try {
+    localStorage.setItem(KEY, JSON.stringify({ order: config.order, enabled: config.enabled, filled }))
   } catch {
     /* storage unavailable */
   }
