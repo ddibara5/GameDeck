@@ -2,12 +2,10 @@
 // Draws the "Stack" mark: three isometric amber/ember slabs on a lit tile,
 // matching the japandi palette used across the app. Uses only Node built-ins.
 //
-// Outputs (public/icons):
-//   icon-{120,152,167,180,192,512,1024}.png        dark graphite tile (home screen)
-//   icon-{120,152,167,180,192,512}-light.png        porcelain tile (light mode)
-//   favicon-16.png favicon-32.png favicon.ico        rounded, dark
-//   icon.svg                                         adaptive vector (browser favicon)
-//   icon-light.svg                                   porcelain vector (web manifest)
+// Outputs (public/icons), ONE set, no appearance suffix on purpose:
+//   icon-{120,152,167,180,192,512,1024}.png   graphite tile (home screen + manifest)
+//   favicon-16.png favicon-32.png favicon.ico  rounded, flat graphite
+//   icon.svg                                   graphite vector (browser favicon)
 //
 // Run with: node scripts/gen-icons.cjs
 'use strict';
@@ -17,22 +15,23 @@ const path = require('path');
 const zlib = require('zlib');
 
 // --- palette ---------------------------------------------------------------
+// Exactly the app's --bg. The tile's outer field, the manifest's theme_color and
+// background_color, and the app's own background are now one value, so the icon,
+// the splash screen and the first frame of the app do not step in tone.
 const GRAPHITE = '#1a1917';
-const PORCELAIN = '#ece2d2';
 
-// The tile is lit from above rather than being one flat colour. Measured on the
-// old art, the background's luminance range was exactly 0: a dead field, which
-// is why the mark read as pasted on rather than sitting on anything.
+// The tile is a warm bloom behind the stack rather than one flat colour.
+// Measured on the pre-v6 art, the background's luminance range was exactly 0: a
+// dead field, which is why the mark read as pasted on rather than sitting on
+// anything.
 //
-// PORCELAIN is the midpoint of these two, so the tile's average weight is
-// unchanged and only its modelling is new. Range comes out at ~33 levels, which
-// is visible at 512 and still visible at the 120px the icon is actually drawn at.
-const TILE_TOP = '#f6efe2';
-const TILE_BOTTOM = '#ded0b8';
-// Soft contact shadow where the bottom slab meets the tile. This, not the
-// gradient, is what stops the stack floating. Alpha only: it darkens whatever
-// is behind it rather than painting a colour.
-const SHADOW = 0.1;
+// A vertical gradient plus a contact shadow was the right answer on porcelain
+// and the wrong one here. On graphite a contact shadow has nothing to darken,
+// and the only treatment that reads is one whose highlight carries HUE: the
+// bloom picks up the mark's own amber and lifts it off the tile. Mocked both
+// ways and compared before choosing.
+const HALO_CENTRE = '#42301d';
+const HALO_EDGE = GRAPHITE;
 
 // amber -> ember ramp, brightest slab on top. Dark-tile version.
 const MARK_DARK = {
@@ -40,12 +39,10 @@ const MARK_DARK = {
   mid: { top: '#c85c15', left: '#9a3b0c', right: '#792d08' },
   top: { top: '#f5a623', left: '#d97716', right: '#b4590f' },
 };
-// slightly deeper so it keeps contrast on the light porcelain tile.
-const MARK_LIGHT = {
-  bottom: { top: '#8a3409', left: '#6b2606', right: '#511d05' },
-  mid: { top: '#b44f12', left: '#8a3409', right: '#6b2606' },
-  top: { top: '#e0871a', left: '#c2610f', right: '#9a3b0c' },
-};
+// The porcelain ramp, MARK_LIGHT, was deleted with the porcelain tile. It was a
+// deeper ember set that only existed to hold contrast against a pale field, and
+// keeping an unused second palette around is how the wrong one gets picked.
+// It is in the history if the tile ever goes light again.
 
 const hex = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 
@@ -93,10 +90,6 @@ const SLABS = [
   { y: scY(172), c: 'top' },
 ];
 const W = sc(118), H = sc(59), T = sc(34); // half-width, half-height, thickness
-// The stack's lowest vertex, in 0..1 tile space. The shadow is anchored to the
-// GEOMETRY rather than to a hand-tuned constant, so it follows MARK_SCALE
-// instead of drifting off the bottom slab the next time the mark is resized.
-const STACK_BOTTOM = (scY(306) + H + T) / U;
 
 function slabPolys(y, colors) {
   const T_ = [CX, y - H], R = [CX + W, y], B = [CX, y + H], L = [CX - W, y];
@@ -132,7 +125,7 @@ function insideRounded(x, y, size, r) {
 }
 
 // --- tile lighting ---------------------------------------------------------
-// smoothstep, so the falloff reaches the end colour without a visible seam.
+// smoothstep, so the falloff reaches the edge colour without a visible seam.
 const smooth = (t) => { const c = t < 0 ? 0 : t > 1 ? 1 : t; return c * c * (3 - 2 * c); };
 const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 
@@ -140,22 +133,20 @@ const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[
 // neighbours on one hue, so the usual "blend in linear light" argument buys
 // nothing, and matching what a CSS gradient would do keeps the SVG below and
 // these PNGs identical.
-function tileAt(v, topHex, bottomHex) {
-  return mix(hex(topHex), hex(bottomHex), smooth(v * 0.92 + 0.04));
-}
-
-// Elliptical, soft edged, centred just under the stack's lowest vertex.
-function shadowAt(u, v) {
-  const dx = (u - 0.5) / 0.3;
-  const dy = (v - (STACK_BOTTOM + 0.015)) / 0.055;
-  return SHADOW * (1 - smooth(Math.hypot(dx, dy)));
+//
+// Centred slightly BELOW the tile centre (0.53) and very slightly wider than
+// tall, because the stack is taller than it is wide and a circular bloom on
+// centre leaves the bottom slab darker than the top one.
+const HALO_CX = 0.5, HALO_CY = 0.53, HALO_R = 0.62;
+function tileAt(u, v) {
+  const d = Math.hypot((u - HALO_CX) * 1.06, (v - HALO_CY) * 0.94) / HALO_R;
+  return mix(hex(HALO_CENTRE), hex(HALO_EDGE), smooth(d));
 }
 
 // --- render one icon at `size`, supersampled for smooth edges --------------
-// `flat` is for the favicons: at 16 and 32 pixels a 33-level gradient and a
-// 10% shadow are sub-quantisation noise, and the shadow lands on about one
-// pixel row. They get the plain tile, which is also what keeps favicon.ico
-// small.
+// `flat` is for the favicons: at 16 and 32 pixels the bloom spans about four
+// pixels and is sub-quantisation noise. They get the plain tile, which is also
+// what keeps favicon.ico small.
 function drawIcon(size, { bg, mark, rounded, flat }) {
   const SS = 4;
   const hi = size * SS;
@@ -171,12 +162,7 @@ function drawIcon(size, { bg, mark, rounded, flat }) {
       const px = x + 0.5, py = y + 0.5;
       if (rounded && !insideRounded(px, py, hi, cornerR)) { buf[idx + 3] = 0; continue; }
       let col = bgRGB;
-      if (!flat) {
-        const u = px / hi, v = py / hi;
-        col = tileAt(v, TILE_TOP, TILE_BOTTOM);
-        const a = shadowAt(u, v);
-        if (a > 0) col = [col[0] * (1 - a), col[1] * (1 - a), col[2] * (1 - a)];
-      }
+      if (!flat) col = tileAt(px / hi, py / hi);
       // painter's order: last matching polygon wins
       for (let k = 0; k < polys.length; k++) {
         if (pointInPoly(px, py, polys[k].pts)) col = polys[k].color;
@@ -228,59 +214,39 @@ function encodeIco(entries) {
 }
 
 // --- SVG -------------------------------------------------------------------
-// Two variants on purpose:
-//   icon.svg        adaptive, for the browser favicon, where following the
-//                   reader's appearance is right
-//   icon-light.svg  porcelain always, for the web manifest, which is an INSTALL
-//                   icon. An adaptive SVG there resolves to graphite at install
-//                   time for a dark-mode user, which is the dark tile we were
-//                   trying to get rid of.
+// ONE builder, matching the ONE raster set.
+//
+// The adaptive variant that used to live here is deleted, not commented out. It
+// carried `@media (prefers-color-scheme: light)` inside the SVG, and the web
+// manifest is an INSTALL icon: that media query resolves ONCE, at the moment the
+// app is added, so a dark-mode user installed a graphite tile and a light-mode
+// user installed a porcelain one, permanently, with no way to change it after.
+// That is the whole bug 9f2544f fixed, and leaving the function in the file as
+// dead code is how it comes back.
 function buildSvg() {
   // Round on the way out. MARK_SCALE is fractional, so raw coordinates serialise as
   // 123.83999999999997 and the file churns on every regeneration for no visual gain.
   const n = (v) => String(Math.round(v * 100) / 100);
   const poly = (pts, fill) => `<polygon points="${pts.map((p) => p.map(n).join(',')).join(' ')}" fill="${fill}"/>`;
   const marks = scenePolys(MARK_DARK).map((p) => poly(p.pts, p.color)).join('');
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="GameDeck">
-  <style>
-    .bg{fill:${GRAPHITE}}
-    @media (prefers-color-scheme: light){ .bg{fill:${PORCELAIN}} }
-  </style>
-  <rect class="bg" width="512" height="512" rx="114" ry="114"/>
-  <g>${marks}</g>
-</svg>
-`;
-}
-
-function buildLightSvg() {
-  const n = (v) => String(Math.round(v * 100) / 100);
-  const n2 = (v) => String(Math.round(v * 10000) / 10000);
-  const poly = (pts, fill) => `<polygon points="${pts.map((p) => p.map(n).join(',')).join(' ')}" fill="${fill}"/>`;
-  const marks = scenePolys(MARK_LIGHT).map((p) => poly(p.pts, p.color)).join('');
-  // Mirrors the raster: same two stops over the same span, and an ellipse in
-  // the same place at the same strength. If these drift, the SVG and the PNGs
-  // become two different icons and nobody notices until one of them is on a
-  // device. The 4% / 96% offsets are the `v * 0.92 + 0.04` in tileAt.
-  const shY = n((STACK_BOTTOM + 0.015) * 512);
-  // An SVG gradient ramps its stops LINEARLY, but shadowAt falls off on a
-  // smoothstep. Two stops therefore drew a measurably different shadow from the
-  // raster's. Sampling the real curve is what keeps the two in step, and it is
-  // derived from the same SHADOW constant so it cannot drift.
-  const shadowStops = [0, 0.25, 0.5, 0.75, 1]
-    .map((d) => `<stop offset="${d}" stop-color="#000" stop-opacity="${n2(SHADOW * (1 - smooth(d)))}"/>`)
+  // Mirrors the raster. An SVG gradient ramps its stops LINEARLY while tileAt
+  // falls off on a smoothstep, so sampling the real curve is what keeps the two
+  // in step; two stops alone drew a measurably different bloom. Generated from
+  // the same constants as the raster so they cannot drift apart.
+  const haloStops = [0, 0.25, 0.5, 0.75, 1]
+    .map((d) => {
+      const c = mix(hex(HALO_CENTRE), hex(HALO_EDGE), smooth(d)).map((x) => Math.round(x));
+      return `<stop offset="${d}" stop-color="rgb(${c[0]},${c[1]},${c[2]})"/>`;
+    })
     .join('\n      ');
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="GameDeck">
   <defs>
-    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0.04" stop-color="${TILE_TOP}"/>
-      <stop offset="0.96" stop-color="${TILE_BOTTOM}"/>
-    </linearGradient>
-    <radialGradient id="contact">
-      ${shadowStops}
+    <radialGradient id="halo" cx="${HALO_CX}" cy="${HALO_CY}" r="${n(HALO_R)}" gradientTransform="translate(${n(HALO_CX)} ${n(HALO_CY)}) scale(${n(1 / 1.06)} ${n(1 / 0.94)}) translate(${n(-HALO_CX)} ${n(-HALO_CY)})">
+      ${haloStops}
     </radialGradient>
   </defs>
-  <rect fill="url(#tile)" width="512" height="512" rx="114" ry="114"/>
-  <ellipse cx="256" cy="${shY}" rx="${n(0.3 * 512)}" ry="${n(0.055 * 512)}" fill="url(#contact)"/>
+  <rect fill="${GRAPHITE}" width="512" height="512" rx="114" ry="114"/>
+  <rect fill="url(#halo)" width="512" height="512" rx="114" ry="114"/>
   <g>${marks}</g>
 </svg>
 `;
@@ -291,12 +257,12 @@ function buildLightSvg() {
 // is the only reliable way to change an app icon that iOS has already seen.
 //
 // iOS keys its home-screen icon cache on the icon URL and holds it far beyond any
-// HTTP cache header: redrawing icon-180-light.png in place left phones showing the
+// HTTP cache header: redrawing icon-180.png in place left phones showing the
 // original art indefinitely, through re-adds and through a service-worker fix. A new
 // URL has no entry in that cache, in the service worker, or on the CDN, so a version
 // bump is the change that actually reaches the device. Same reason Vite hashes its
 // bundle filenames.
-const ICON_VERSION = 'v6';
+const ICON_VERSION = 'v7';
 // Hyphen, not a second dot: one dot, one extension. Nothing should have to guess
 // where the extension starts.
 const v = (base, ext) => `${base}-${ICON_VERSION}.${ext}`;
@@ -311,22 +277,34 @@ function main() {
     console.log(`wrote ${name} (${buf.length} b)`);
   };
 
-  // ONE icon set, porcelain, everywhere. The dark tiles used to be generated as an
-  // adaptive counterpart, but nothing referenced them and their mere existence made
-  // "which icon did iOS pick?" unanswerable. A site that serves no dark icon cannot
-  // show a dark icon.
-  const LIGHT = { bg: PORCELAIN, mark: MARK_LIGHT, rounded: false };
+  // ONE icon set, graphite, everywhere. Still one set for the reason it always
+  // was: iOS cannot select an icon by appearance, so whatever is served is what
+  // gets installed, permanently, and a second set only makes "which icon did iOS
+  // pick?" unanswerable. Only WHICH one changed.
+  //
+  // It is graphite rather than porcelain because a porcelain tile is the one
+  // bright square on a home screen that is otherwise in dark mode. The earlier
+  // argument for porcelain was contrast, that the ember mark reads better on a
+  // pale field, and that is true in isolation; the halo is what settles it, by
+  // lifting the mark off the graphite without needing a pale tile to do it.
+  // The manifest's theme_color and background_color are already #1a1917, so the
+  // splash screen now matches the icon as well.
+  //
+  // No -light in the filename any more. There is one set, so an appearance in
+  // the name can only ever be wrong, and it already was: v6 shipped porcelain
+  // art in files called -light while the app itself defaults to dark.
+  const TILE = { bg: GRAPHITE, mark: MARK_DARK, rounded: false };
 
-  for (const s of [120, 152, 167, 180, 192, 512, 1024]) write(v(`icon-${s}-light`, 'png'), encodePng(s, s, drawIcon(s, LIGHT)));
+  for (const s of [120, 152, 167, 180, 192, 512, 1024]) write(v(`icon-${s}`, 'png'), encodePng(s, s, drawIcon(s, TILE)));
 
-  const favOpts = { bg: PORCELAIN, mark: MARK_LIGHT, rounded: true, flat: true };
+  const favOpts = { bg: GRAPHITE, mark: MARK_DARK, rounded: true, flat: true };
   const fav16 = encodePng(16, 16, drawIcon(16, favOpts));
   const fav32 = encodePng(32, 32, drawIcon(32, favOpts));
   write(v('favicon-16', 'png'), fav16);
   write(v('favicon-32', 'png'), fav32);
   write(v('favicon', 'ico'), encodeIco([{ size: 16, png: fav16 }, { size: 32, png: fav32 }]));
 
-  write(v('icon', 'svg'), Buffer.from(buildLightSvg(), 'utf8'));
+  write(v('icon', 'svg'), Buffer.from(buildSvg(), 'utf8'));
 
   verifyReferences(written);
 }
