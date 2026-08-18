@@ -120,18 +120,31 @@
   padding: var(--safe-top) 16px 0;
   background: var(--bg);
   border-bottom: 1px solid transparent;
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  backdrop-filter: blur(28px) saturate(180%);
+  /* No backdrop-filter here, deliberately. See .app-header.scrolled below. */
   transition: background var(--d-base) ease, border-color var(--d-base) ease;
 }
 
 /* At the very top the header is near-solid and borderless so it blends into the
    page; once scrolled it turns frosted glass (matching the tab bar) and a hairline
-   separator fades in. Toggled by App.jsx adding .scrolled on window scroll. */
+   separator fades in. Toggled by App.jsx adding .scrolled on window scroll.
+
+   THE BLUR LIVES HERE, NOT ON .app-header. It used to run in both states, which
+   was worse than pointless at the top of a page: the unscrolled header is opaque
+   var(--bg), so there was nothing behind it to frost and the filter had no
+   visible effect at all. It still cost something, because an element carrying
+   backdrop-filter is promoted to its own compositing layer and iOS rasterises
+   text in that layer slightly softer. The wordmark and the gear read as out of
+   focus while identical type further down the page was crisp.
+
+   Switching the filter at the threshold does not pop, because the background is
+   going from opaque to translucent on the same clock; the much larger change
+   covers it. */
 .app-header.scrolled {
   background: rgba(38, 38, 42, 0.34);
   border-bottom-color: rgba(255, 255, 255, 0.14);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  backdrop-filter: blur(28px) saturate(180%);
 }
 
 /* Two things cannot both own the top-left. Once the inline title appears, the
