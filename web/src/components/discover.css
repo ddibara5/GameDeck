@@ -36,7 +36,7 @@
    Discover top bar we now render above it. */
 .discover-page .chat-page {
   height: calc(
-    100vh - var(--tabbar-height) - var(--safe-bottom) - var(--app-header-h) - var(--safe-top) - var(--disc-topbar-h)
+    100vh - var(--tabbar-height) - var(--safe-bottom) - var(--app-header-h) - var(--top-inset) - var(--disc-topbar-h)
   );
 }
 
@@ -368,7 +368,7 @@ button.shelf-head:active {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: calc(var(--safe-top) + 8px) 10px 8px 4px;
+  padding: calc(var(--top-inset) + 8px) 10px 8px 4px;
   border-bottom: 1px solid var(--line);
   flex: 0 0 auto;
 }

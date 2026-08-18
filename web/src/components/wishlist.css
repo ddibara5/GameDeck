@@ -36,7 +36,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: calc(var(--safe-top) + 14px) 16px 6px;
+  padding: calc(var(--top-inset) + 14px) 16px 6px;
 }
 
 .wl-back {

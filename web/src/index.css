@@ -84,6 +84,18 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
 
+  /* The top inset EVERY top-anchored surface pads by: the app header, the side
+     drawer, Settings, the Discover rail page, the Wishlist/status slide-over,
+     the Shuffler and the screenshot lightbox. Equal to --safe-top in a browser
+     tab; pushed further down in a standalone install to clear iOS 26's scroll
+     edge effect (see the @media (display-mode: standalone) block below).
+
+     One variable rather than a repeated calc because a surface's padding, its
+     absolutely positioned children and the page-height calcs that subtract the
+     header all consume it and must never drift apart. Use --safe-top directly
+     only where you genuinely want the raw hardware inset. */
+  --top-inset: var(--safe-top);
+
   /* ---------- Motion ----------
      Three durations and three curves, down from 15 loose durations. The overlay
      system below was already right; this generalises it to everything else.
@@ -113,15 +125,48 @@
   top: 0;
   z-index: 40;
   box-sizing: border-box;
-  height: calc(var(--app-header-h) + var(--safe-top));
+  height: calc(var(--app-header-h) + var(--top-inset));
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--safe-top) 16px 0;
+  padding: var(--top-inset) 16px 0;
   background: var(--bg);
   border-bottom: 1px solid transparent;
   /* No backdrop-filter here, deliberately. See .app-header.scrolled below. */
   transition: background var(--d-base) ease, border-color var(--d-base) ease;
+}
+
+/* iOS 26 draws a "scroll edge effect" over the top band of an installed web
+   app: a gradient fade plus a slight softening, painted by the compositor above
+   the web view. It is what made the wordmark and the chips look out of focus at
+   scroll top while identical type further down the page stayed crisp. It is not
+   a CSS problem and no CSS removes it: scrollEdgeEffectStyle is UIKit and AppKit
+   only, there is no web opt-out, and position: fixed does not escape it (static
+   and fixed text at the same offset were measured fading identically). A browser
+   tab never shows it, which is why every local harness reads clean. The only fix
+   is to keep painted content out of the band.
+
+   Measured on device with rulers of static text at known offsets: under
+   apple-mobile-web-app-status-bar-style="black-translucent", which this app
+   sets, the last faded row is y=75 and the first clean row is y=90. The safe
+   area inset is 59px, so the effect dies out about 31px below it.
+
+   26px is set by the gear and dice chips, the tallest painted elements in the
+   bar at 40px. They sit 5.5px below the padding edge, not 6px: the bar's 1px
+   transparent bottom border makes the content box 51px rather than 52, so with
+   the raw 59px inset their top edge lands at y=64.5, inside the tail. +26 puts
+   it at y=90.5, just clear, and clears every other top-anchored surface's head
+   as well. That number is the only knob here: 15px would clear the text alone
+   and leave the chips' top 11px in the weak tail, which is most of the win if
+   the header ever feels too tall.
+
+   Scoped to display-mode: standalone so a browser tab is untouched. The manifest
+   declares "display": "standalone", which is what makes it match. Re-measure
+   with a ruler page, not by eye, if Apple changes the effect. */
+@media (display-mode: standalone) {
+  :root {
+    --top-inset: calc(var(--safe-top) + 26px);
+  }
 }
 
 /* At the very top the header is near-solid and borderless so it blends into the
@@ -167,7 +212,7 @@
 .app-header-title {
   position: absolute;
   left: 50%;
-  top: var(--safe-top);
+  top: var(--top-inset);
   bottom: 0;
   display: flex;
   align-items: center;
@@ -406,7 +451,7 @@
 }
 
 .drawer-head {
-  padding: calc(18px + var(--safe-top)) 20px 16px;
+  padding: calc(18px + var(--top-inset)) 20px 16px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -562,7 +607,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: calc(var(--safe-top) + 12px) 16px 14px;
+  padding: calc(var(--top-inset) + 12px) 16px 14px;
   border-bottom: 1px solid var(--line);
   background: var(--bg);
 }
@@ -1341,7 +1386,7 @@ textarea {
 .chat-page {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - var(--tabbar-height) - var(--safe-bottom) - var(--app-header-h) - var(--safe-top));
+  height: calc(100vh - var(--tabbar-height) - var(--safe-bottom) - var(--app-header-h) - var(--top-inset));
 }
 
 .chat-topbar {
