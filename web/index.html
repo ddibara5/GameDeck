@@ -57,27 +57,27 @@
          background, so a dark tile was not buying the match it looked like it was.
          The manifest points at the same light art.
 
-         The .v2. in these names is load-bearing. iOS caches a home-screen icon
+         The -v6 in these names is load-bearing. iOS caches a home-screen icon
          against its URL and keeps it well past any HTTP header, so redrawing a file
          in place never reaches a phone that has already added the app. Bump
          ICON_VERSION in scripts/gen-icons.cjs and these names together; the
          generator fails the build if they ever disagree. -->
-    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180-light-v5.png" />
-    <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-167-light-v5.png" />
-    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152-light-v5.png" />
-    <link rel="apple-touch-icon" sizes="120x120" href="/icons/icon-120-light-v5.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180-light-v6.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-167-light-v6.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152-light-v6.png" />
+    <link rel="apple-touch-icon" sizes="120x120" href="/icons/icon-120-light-v6.png" />
     <!-- Precomposed alias: older iOS looks for this name first and does not fall
          back to the plain one if it is absent. Same file, both names linked. -->
-    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="/icons/icon-180-light-v5.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="/icons/icon-180-light-v6.png" />
 
-    <link rel="icon" type="image/svg+xml" href="/icons/icon-v5.svg" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32-v5.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16-v5.png" />
+    <link rel="icon" type="image/svg+xml" href="/icons/icon-v6.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32-v6.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16-v6.png" />
     <!-- Versioned for the same reason the icons are: the OLD url is precached in the
          service worker's APP_SHELL, so a phone kept reading a stale manifest listing
          pre-v2 icon names. iOS reads the MANIFEST for the home-screen icon, so that
          stale copy outranked every apple-touch-icon above. -->
-    <link rel="manifest" href="/manifest-v5.webmanifest" />
+    <link rel="manifest" href="/manifest-v6.webmanifest" />
   </head>
   <body>
     <div id="root"></div>

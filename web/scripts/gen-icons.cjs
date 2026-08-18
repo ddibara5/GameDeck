@@ -1,5 +1,5 @@
 // Dependency-free PNG/ICO icon generator for GameDeck.
-// Draws the "Stack" mark: three isometric amber/ember slabs on a solid tile,
+// Draws the "Stack" mark: three isometric amber/ember slabs on a lit tile,
 // matching the japandi palette used across the app. Uses only Node built-ins.
 //
 // Outputs (public/icons):
@@ -19,6 +19,20 @@ const zlib = require('zlib');
 // --- palette ---------------------------------------------------------------
 const GRAPHITE = '#1a1917';
 const PORCELAIN = '#ece2d2';
+
+// The tile is lit from above rather than being one flat colour. Measured on the
+// old art, the background's luminance range was exactly 0: a dead field, which
+// is why the mark read as pasted on rather than sitting on anything.
+//
+// PORCELAIN is the midpoint of these two, so the tile's average weight is
+// unchanged and only its modelling is new. Range comes out at ~33 levels, which
+// is visible at 512 and still visible at the 120px the icon is actually drawn at.
+const TILE_TOP = '#f6efe2';
+const TILE_BOTTOM = '#ded0b8';
+// Soft contact shadow where the bottom slab meets the tile. This, not the
+// gradient, is what stops the stack floating. Alpha only: it darkens whatever
+// is behind it rather than painting a colour.
+const SHADOW = 0.1;
 
 // amber -> ember ramp, brightest slab on top. Dark-tile version.
 const MARK_DARK = {
@@ -79,6 +93,10 @@ const SLABS = [
   { y: scY(172), c: 'top' },
 ];
 const W = sc(118), H = sc(59), T = sc(34); // half-width, half-height, thickness
+// The stack's lowest vertex, in 0..1 tile space. The shadow is anchored to the
+// GEOMETRY rather than to a hand-tuned constant, so it follows MARK_SCALE
+// instead of drifting off the bottom slab the next time the mark is resized.
+const STACK_BOTTOM = (scY(306) + H + T) / U;
 
 function slabPolys(y, colors) {
   const T_ = [CX, y - H], R = [CX + W, y], B = [CX, y + H], L = [CX - W, y];
@@ -113,8 +131,32 @@ function insideRounded(x, y, size, r) {
   return rx * rx + ry * ry <= r * r;
 }
 
+// --- tile lighting ---------------------------------------------------------
+// smoothstep, so the falloff reaches the end colour without a visible seam.
+const smooth = (t) => { const c = t < 0 ? 0 : t > 1 ? 1 : t; return c * c * (3 - 2 * c); };
+const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+
+// Interpolated in plain sRGB, deliberately. These are two low-contrast
+// neighbours on one hue, so the usual "blend in linear light" argument buys
+// nothing, and matching what a CSS gradient would do keeps the SVG below and
+// these PNGs identical.
+function tileAt(v, topHex, bottomHex) {
+  return mix(hex(topHex), hex(bottomHex), smooth(v * 0.92 + 0.04));
+}
+
+// Elliptical, soft edged, centred just under the stack's lowest vertex.
+function shadowAt(u, v) {
+  const dx = (u - 0.5) / 0.3;
+  const dy = (v - (STACK_BOTTOM + 0.015)) / 0.055;
+  return SHADOW * (1 - smooth(Math.hypot(dx, dy)));
+}
+
 // --- render one icon at `size`, supersampled for smooth edges --------------
-function drawIcon(size, { bg, mark, rounded }) {
+// `flat` is for the favicons: at 16 and 32 pixels a 33-level gradient and a
+// 10% shadow are sub-quantisation noise, and the shadow lands on about one
+// pixel row. They get the plain tile, which is also what keeps favicon.ico
+// small.
+function drawIcon(size, { bg, mark, rounded, flat }) {
   const SS = 4;
   const hi = size * SS;
   const scale = hi / U;
@@ -129,6 +171,12 @@ function drawIcon(size, { bg, mark, rounded }) {
       const px = x + 0.5, py = y + 0.5;
       if (rounded && !insideRounded(px, py, hi, cornerR)) { buf[idx + 3] = 0; continue; }
       let col = bgRGB;
+      if (!flat) {
+        const u = px / hi, v = py / hi;
+        col = tileAt(v, TILE_TOP, TILE_BOTTOM);
+        const a = shadowAt(u, v);
+        if (a > 0) col = [col[0] * (1 - a), col[1] * (1 - a), col[2] * (1 - a)];
+      }
       // painter's order: last matching polygon wins
       for (let k = 0; k < polys.length; k++) {
         if (pointInPoly(px, py, polys[k].pts)) col = polys[k].color;
@@ -206,10 +254,33 @@ function buildSvg() {
 
 function buildLightSvg() {
   const n = (v) => String(Math.round(v * 100) / 100);
+  const n2 = (v) => String(Math.round(v * 10000) / 10000);
   const poly = (pts, fill) => `<polygon points="${pts.map((p) => p.map(n).join(',')).join(' ')}" fill="${fill}"/>`;
   const marks = scenePolys(MARK_LIGHT).map((p) => poly(p.pts, p.color)).join('');
+  // Mirrors the raster: same two stops over the same span, and an ellipse in
+  // the same place at the same strength. If these drift, the SVG and the PNGs
+  // become two different icons and nobody notices until one of them is on a
+  // device. The 4% / 96% offsets are the `v * 0.92 + 0.04` in tileAt.
+  const shY = n((STACK_BOTTOM + 0.015) * 512);
+  // An SVG gradient ramps its stops LINEARLY, but shadowAt falls off on a
+  // smoothstep. Two stops therefore drew a measurably different shadow from the
+  // raster's. Sampling the real curve is what keeps the two in step, and it is
+  // derived from the same SHADOW constant so it cannot drift.
+  const shadowStops = [0, 0.25, 0.5, 0.75, 1]
+    .map((d) => `<stop offset="${d}" stop-color="#000" stop-opacity="${n2(SHADOW * (1 - smooth(d)))}"/>`)
+    .join('\n      ');
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="GameDeck">
-  <rect fill="${PORCELAIN}" width="512" height="512" rx="114" ry="114"/>
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0.04" stop-color="${TILE_TOP}"/>
+      <stop offset="0.96" stop-color="${TILE_BOTTOM}"/>
+    </linearGradient>
+    <radialGradient id="contact">
+      ${shadowStops}
+    </radialGradient>
+  </defs>
+  <rect fill="url(#tile)" width="512" height="512" rx="114" ry="114"/>
+  <ellipse cx="256" cy="${shY}" rx="${n(0.3 * 512)}" ry="${n(0.055 * 512)}" fill="url(#contact)"/>
   <g>${marks}</g>
 </svg>
 `;
@@ -225,7 +296,7 @@ function buildLightSvg() {
 // URL has no entry in that cache, in the service worker, or on the CDN, so a version
 // bump is the change that actually reaches the device. Same reason Vite hashes its
 // bundle filenames.
-const ICON_VERSION = 'v5';
+const ICON_VERSION = 'v6';
 // Hyphen, not a second dot: one dot, one extension. Nothing should have to guess
 // where the extension starts.
 const v = (base, ext) => `${base}-${ICON_VERSION}.${ext}`;
@@ -248,7 +319,7 @@ function main() {
 
   for (const s of [120, 152, 167, 180, 192, 512, 1024]) write(v(`icon-${s}-light`, 'png'), encodePng(s, s, drawIcon(s, LIGHT)));
 
-  const favOpts = { bg: PORCELAIN, mark: MARK_LIGHT, rounded: true };
+  const favOpts = { bg: PORCELAIN, mark: MARK_LIGHT, rounded: true, flat: true };
   const fav16 = encodePng(16, 16, drawIcon(16, favOpts));
   const fav32 = encodePng(32, 32, drawIcon(32, favOpts));
   write(v('favicon-16', 'png'), fav16);
