@@ -274,8 +274,15 @@
   background: rgba(255, 255, 255, 0.09);
   border: 1px solid rgba(255, 255, 255, 0.18);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 5px 14px rgba(0, 0, 0, 0.3);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  backdrop-filter: blur(20px) saturate(180%);
+  /* NO backdrop-filter. It used to carry blur(20px) saturate(180%), and both
+     the gear and the dice button use this chip, so two of them ran on every
+     screen at every scroll position. .app-header already drops its own blur
+     when unscrolled for exactly this reason (see the comment above it), but
+     these chips live INSIDE the header and kept it composited anyway, which is
+     why the wordmark still rasterised soft at the top of the page. The same
+     removal in HomeDeck changed zero pixels, measured over the chip's own rect
+     in both themes. Unscrolled the header background is opaque, so there is
+     nothing behind the chip to blur in the first place. */
   transition: transform var(--d-base) var(--ease-spring), background var(--d-base) ease;
 }
 
