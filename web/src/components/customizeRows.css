@@ -176,3 +176,19 @@
     transition: none;
   }
 }
+
+/* Group heading inside the list. Sits between rows rather than wrapping them, so
+   `.cz-row + .cz-row` still draws the separators and a row that FOLLOWS a heading
+   correctly gets none: the heading is already the break. */
+.cz-sec {
+  padding: 14px 14px 7px;
+  background: var(--surface);
+  font-size: var(--t-cap2);
+  font-weight: var(--w-bold);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #8a8073;
+}
+.cz-sec:first-child {
+  padding-top: 11px;
+}

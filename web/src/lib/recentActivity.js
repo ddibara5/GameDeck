@@ -1,5 +1,6 @@
 import { supabase } from './supabase.js'
 import { dayKey } from './playWeek.js'
+import { parseDayOrInstant } from './format.js'
 
 // One definition of the activity read. Two surfaces want it for different reasons
 // and over different windows - the Activity feed lists every row, Insights only
@@ -16,4 +17,18 @@ export async function fetchRecentActivity({ days, limit }) {
   let q = supabase.from(ACTIVITY_VIEW).select('*').gte('event_date', since).order('event_date', { ascending: false })
   if (limit) q = q.limit(limit)
   return q
+}
+
+// The earliest day the activity history holds, used to decide whether a
+// week-over-week comparison spans data that actually exists. One row, ascending,
+// rather than a min() aggregate, because PostgREST has no aggregate syntax and a
+// full scan of the view to compute one in the client would be absurd.
+export async function fetchActivityStart() {
+  const { data } = await supabase
+    .from(ACTIVITY_VIEW)
+    .select('event_date')
+    .order('event_date', { ascending: true })
+    .limit(1)
+  const first = data && data[0] && data[0].event_date
+  return first ? parseDayOrInstant(first) : null
 }

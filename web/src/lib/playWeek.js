@@ -40,7 +40,13 @@ export function compactHm(mins) {
 
 // Rolling window ending today, not a calendar week: a calendar week resets to zeros
 // every Monday, which reads as "you have not played" rather than "it is Monday".
-export function weekStats(rows, now = new Date(), span = WEEK_SPAN) {
+// `firstRecorded` is the earliest day the history holds AT ALL, not the earliest
+// day in `rows`. Without it the week-over-week line is computed over a window the
+// data only partly covers: on 18 Aug 2026 the preceding window ran 5 to 11 Aug
+// while play_events began on the 7th, so it held 594 minutes across 3 days and
+// the card would have announced a rise of 11h 20m that was really four missing
+// days. Pass it and the comparison waits until it can be honest.
+export function weekStats(rows, now = new Date(), span = WEEK_SPAN, firstRecorded = null) {
   const inWindow = rows.filter((r) => {
     const d = daysBetween(now, eventDay(r))
     return d >= 0 && d < span
@@ -54,6 +60,11 @@ export function weekStats(rows, now = new Date(), span = WEEK_SPAN) {
     const d = daysBetween(now, eventDay(r))
     return d >= span && d < span * 2
   })
+  // The first day of the preceding window. The comparison is only meaningful if
+  // the history reaches back to it, so an unknown start date is treated as not
+  // covered rather than assumed fine.
+  const prevStart = new Date(startOfDay(now).getTime() - (span * 2 - 1) * 86400000)
+  const prevCovered = Boolean(firstRecorded) && startOfDay(firstRecorded) <= prevStart
 
   const minutesOf = (list) => list.reduce((s, r) => s + (Number(r.minutes_delta) || 0), 0)
 
@@ -125,7 +136,11 @@ export function weekStats(rows, now = new Date(), span = WEEK_SPAN) {
     activeDays,
     days,
     span,
-    hasPrev: prevRows.length > 0,
+    // Both conditions, not either: a covered window that logged nothing is a real
+    // zero and may be compared against, an uncovered one may not.
+    hasPrev: prevCovered && prevRows.length > 0,
+    prevCovered,
+    prevStart,
     prevMinutes: minutesOf(prevRows),
     byGame,
     best: best && best.minutes > 0 ? best : null,
