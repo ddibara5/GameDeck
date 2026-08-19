@@ -120,47 +120,6 @@
 }
 
 /* Donut + legend */
-.ins-donut-wrap {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.ins-donut {
-  flex: 0 0 auto;
-  width: 118px;
-  height: 118px;
-}
-
-.ins-legend {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: var(--t-cap);
-  color: var(--muted);
-}
-
-.ins-legend .row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.ins-legend .dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex: none;
-}
-
-.ins-legend b {
-  color: var(--text);
-  font-weight: var(--w-semi);
-  font-variant-numeric: tabular-nums;
-}
-
 /* -------------------------------------------------------------- this week */
 /* Moved from components/activity.css when the week block left the Activity tab.
    Insights is now the only surface that renders these, and insights.css ships
@@ -270,3 +229,138 @@
 .wk-kv + .wk-kv { border-top: 1px solid var(--line); }
 .wk-kv .k { font-size: var(--t-cap); color: var(--muted); }
 .wk-kv .v { font-size: var(--t-foot); font-weight: var(--w-semi); }
+
+/* ---------- short-term cards ---------- */
+
+/* The held state of the week-over-week line. Dashed and muted on purpose: it is
+   not a value, it is the reason there is no value yet. */
+.wk-pend {
+  font-size: var(--t-cap2);
+  color: var(--muted);
+  border: 1px dashed var(--line);
+  border-radius: var(--r-pill);
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+/* Now playing */
+.np {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.np.flat { cursor: default; }
+.np:active:not(.flat) { opacity: 0.72; }
+.np .cover { width: 56px; height: 74px; border-radius: var(--r-sm); flex: none; }
+.np-b { flex: 1; min-width: 0; display: block; }
+.np-t {
+  display: block;
+  font-size: var(--t-body);
+  font-weight: var(--w-semi);
+  letter-spacing: var(--t-body-tr);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.np-s { display: block; font-size: var(--t-cap); color: var(--muted); margin-top: 3px; }
+.np-track {
+  display: block;
+  height: 8px;
+  margin-top: 9px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.np-fill { display: block; height: 100%; background: var(--accent); border-radius: var(--r-pill); }
+
+.np-kv { display: flex; gap: 14px; margin-top: 13px; padding-top: 12px; border-top: 1px solid var(--line); }
+.np-kv > div { flex: 1; min-width: 0; }
+.np-kv .k {
+  display: block;
+  font-size: var(--t-cap2);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+/* nowrap because "31h 42m" is the widest of the three and wrapping it mid-value
+   reads as two numbers. */
+.np-kv .v { display: block; font-size: var(--t-sub); font-weight: var(--w-semi); margin-top: 3px; white-space: nowrap; }
+.np-kv .v small { font-size: var(--t-cap2); color: var(--accent); font-weight: var(--w-semi); margin-left: 3px; }
+
+.ins-arc { display: block; width: 100%; height: auto; margin-top: 12px; }
+
+/* Pace */
+.pace-hero { display: flex; align-items: baseline; gap: 8px; }
+.pace-big { font-size: var(--t-t1); font-weight: var(--w-bold); letter-spacing: var(--t-t1-tr); line-height: 1.05; }
+.pace-sub { font-size: var(--t-foot); color: var(--muted); }
+/* One pip per achievement. A bar would say the same thing, but the pips say how
+   MANY are left, which is the question the card exists to answer. */
+.pips { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 13px; }
+.pip { width: 14px; height: 8px; border-radius: 2px; background: var(--surface-2); flex: none; }
+.pip.on { background: var(--accent); }
+
+/* Coming up / Leaving Game Pass share a row */
+.up-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+.up-row:last-child { border-bottom: none; }
+.up-row.as-btn {
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.up-row.as-btn:active { opacity: 0.72; }
+.up-when { flex: none; width: 52px; text-align: center; }
+.up-n { display: block; font-size: var(--t-body); font-weight: var(--w-bold); line-height: 1; }
+.up-u {
+  display: block;
+  font-size: var(--t-cap2);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 3px;
+}
+.up-row.soon .up-n { color: var(--amber); }
+.up-t {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--t-sub);
+  font-weight: var(--w-semi);
+}
+.up-d { display: block; font-size: var(--t-cap); color: var(--muted); margin-top: 3px; font-weight: var(--w-med); }
+.gp-badge {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-xs);
+  background: var(--xbox);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--t-cap);
+  font-weight: var(--w-bold);
+  color: #fff;
+}
+.leaving { color: var(--amber); font-weight: var(--w-semi); }
+
+/* The funnel's last step is zero games finished, and a zero-width bar reads as a
+   rendering fault. It gets 1% of ink in a colour that is clearly not a fill. */
+.ins-ffill.dead { background: #5c3a2a; }
