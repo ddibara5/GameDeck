@@ -21,13 +21,22 @@ export function overlaysOpen() {
  *   disabled - suppress the gesture while a competing interaction is live (a
  *              drag-reorder, an open nested sheet), so the swipe doesn't back
  *              out from under it.
- *   register - count this overlay in overlaysOpen() while mounted (default true).
- *              Only overlays rendered outside the App shell need this; leave it
- *              on unless you know App already tracks the overlay's open state.
+ *   register - count this overlay in overlaysOpen() (default true). Only
+ *              overlays rendered outside the App shell need it; leave it on
+ *              unless App already tracks the overlay's open state.
+ *
+ *              PASS A FLAG, NOT `true`, IF THE CALLER STAYS MOUNTED WHILE
+ *              CLOSED. The count follows this effect, so a component that its
+ *              parent renders unconditionally and that merely returns null when
+ *              closed will hold the count above zero for the whole session and
+ *              suppress the drawer swipe app-wide. `disabled` does not cover
+ *              this: it suppresses the gesture, not the registration, and the
+ *              two are deliberately separate (a drag-reorder disables the
+ *              gesture while the overlay is very much still up).
  */
 export function useEdgeBack(onBack, { disabled = false, register = true } = {}) {
-  // Register/unregister for the lifetime of the overlay so App can suppress its
-  // own edge-swipe while this overlay is up.
+  // Registered while `register` is true, so App can suppress its own edge-swipe
+  // while this overlay is up.
   useEffect(() => {
     if (!register) return undefined
     openCount += 1

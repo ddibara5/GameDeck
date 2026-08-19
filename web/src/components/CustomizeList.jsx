@@ -141,9 +141,18 @@ export default function CustomizeList({
   }, [dragKey, setConfig])
 
   // Registers with overlaysOpen() while up, so App suppresses its drawer swipe.
+  //
+  // `register: mounted` is load-bearing, not defensive. This component is
+  // rendered by its parent unconditionally and spends nearly all of its life
+  // returning null with open=false, so registering for the component's lifetime
+  // would hold the count above zero from app start and kill the drawer swipe
+  // everywhere, forever. `disabled` alone does not help: it suppresses the
+  // gesture, not the registration.
+  //
   // Disabled mid-drag: the reorder owns the pointer, and backing out from under
-  // it would drop the row somewhere the user did not choose.
-  useEdgeBack(onClose, { disabled: !mounted || Boolean(dragKey) })
+  // it would drop the row somewhere the user did not choose. The registration
+  // stays up through the drag, because the overlay is still up.
+  useEdgeBack(onClose, { register: mounted, disabled: !mounted || Boolean(dragKey) })
 
   if (!mounted) return null
 
