@@ -10,19 +10,19 @@ const EVENT = 'gd-insights-cards-change'
 // group is presentation only: the editor prints one heading per group so the
 // short-term cards do not read as a flat list with lifetime ones mixed in.
 //
-// The tab is a read on the last two weeks. Everything lifetime is still HERE and
-// still works, it just starts hidden, because a number that is the same next
-// Tuesday does not earn a place above the fold. Nothing was deleted for being
-// long term; three charts were deleted for being unreadable or redundant, which
-// is a different judgement and is recorded in the commit that removed them.
+// Everything lifetime is still HERE and still works, it just starts hidden,
+// because a number that is the same next Tuesday does not earn a place above the
+// fold. Nothing was deleted for being long term; three charts were deleted for
+// being unreadable or redundant, which is a different judgement and is recorded
+// in the commit that removed them.
+//
+// Five keys left on 20 Aug 2026 (week_totals, now_playing, pace, coming_up,
+// leaving_gp) for the Home tab's own catalog in homeCards.js. They are MOVED,
+// not copied. A saved layout that still names them drops them silently on the
+// next read, which is what reconcile-on-read is for.
 export const CARD_CATALOG = [
-  { key: 'week_totals', group: 'short', label: 'This week', sub: 'Hours, achievements, days, games' },
   { key: 'week_chart', group: 'short', label: 'Last 7 days', sub: 'Hours per day, and the streak' },
   { key: 'week_games', group: 'short', label: 'What you played this week' },
-  { key: 'now_playing', group: 'short', label: 'Now playing', sub: 'The game in progress and its arc' },
-  { key: 'pace', group: 'short', label: 'Pace', sub: 'Achievements left at your current rate' },
-  { key: 'coming_up', group: 'short', label: 'Coming up', sub: 'Wishlist releases with a date' },
-  { key: 'leaving_gp', group: 'short', label: 'Leaving Game Pass', sub: 'Started games on the way out' },
   { key: 'lifetime', group: 'life', label: 'Lifetime totals', sub: 'Hours, achievements, median, backlog' },
   { key: 'completion', group: 'life', label: 'Completion distribution' },
   { key: 'funnel', group: 'life', label: 'Starter to Finisher' },
@@ -33,7 +33,7 @@ export const CARD_CATALOG = [
 export const CARD_BY_KEY = CARD_CATALOG.reduce((m, c) => ((m[c.key] = c), m), {})
 
 export const GROUP_LABEL = {
-  short: 'Short term',
+  short: 'This week',
   life: 'Lifetime',
 }
 

@@ -5,11 +5,17 @@ import Cover from './Cover.jsx'
 import Hhm from './Hhm.jsx'
 import GameDetail from './GameDetail.jsx'
 import CustomizeCards from './CustomizeCards.jsx'
-import { platformMeta, minutesToHhm, parseDayOrInstant } from '../lib/format.js'
+import { minutesToHhm } from '../lib/format.js'
 import { fetchRecentActivity, fetchActivityStart } from '../lib/recentActivity.js'
-import { weekStats, compactHm, bars, WEEK_SPAN, startOfDay, daysBetween, dayKey, eventDay } from '../lib/playWeek.js'
+import { weekStats, compactHm, bars, WEEK_SPAN } from '../lib/playWeek.js'
 import { useCardsConfig } from '../lib/insightsCards.js'
 import './insights.css'
+
+// Insights is the OVER TIME tab. Now playing, Coming up, Leaving Game Pass and
+// the week totals moved to Home on 20 Aug 2026, along with the arc that only Now
+// playing drew: those answer "right now", which is what a landing screen is for.
+// They were moved, not copied - their keys are gone from insightsCards.js - so
+// nothing renders on both screens.
 
 /* ------------------------------------------------------------------ helpers */
 
@@ -96,31 +102,6 @@ function Boxplot({ d }) {
           <text x={x(d.max)} y="42" fontSize="8" fill="var(--muted)" textAnchor="middle">{Math.round(d.max)}%</text>
         </>
       ) : null}
-    </svg>
-  )
-}
-
-/* ------------------------------------------------------------- progress arc */
-
-// Completion over the recorded window for the game in progress. A plain
-// polyline, not a chart component: one series, no axes, no interaction. The
-// point is the SHAPE of the last two weeks, and anything more would be furniture.
-function Arc({ points }) {
-  const W = 300, PAD = 8
-  const top = 10, base = 48
-  const max = Math.max(5, ...points.map((p) => p.pct))
-  const step = points.length > 1 ? (W - 2 * PAD) / (points.length - 1) : 0
-  const X = (i) => PAD + i * step
-  const Y = (p) => base - (p / max) * (base - top)
-  const d = points.map((p, i) => `${X(i)},${Y(p.pct)}`).join(' ')
-  const last = points[points.length - 1]
-  return (
-    <svg className="ins-arc" viewBox="0 0 300 62" role="img" aria-label="Completion over the recorded window">
-      <line x1={PAD} y1={base} x2={W - PAD} y2={base} stroke="var(--line)" strokeWidth="1" />
-      <polyline fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" points={d} />
-      <circle cx={X(points.length - 1)} cy={Y(last.pct)} r="3" fill="var(--accent)" />
-      <text x={PAD} y="60" fontSize="8" fill="var(--muted)">{points[0].label} · {Math.round(points[0].pct)}%</text>
-      <text x={W - PAD} y="60" fontSize="8" fill="var(--muted)" textAnchor="end">{last.label} · {Math.round(last.pct)}%</text>
     </svg>
   )
 }
@@ -236,10 +217,11 @@ function WeekGames({ week, gamesById, onOpenGame }) {
 // master_id and cover_small are NOT optional extras. gamesById is keyed on
 // master_id, and without it every key was `undefined`: the week's game rows never
 // matched a library row and were rendered flat and untappable, silently, since
-// the column list was trimmed. total_awards and igdb_id are what the pace and
-// Game Pass cards are made of. release_year left with the vintage histogram.
+// the column list was trimmed. total_awards and igdb_id left with the pace and
+// Game Pass cards when those moved to Home; release_year left with the vintage
+// histogram before them.
 const GAME_COLUMNS =
-  'master_id, title, environment, genre, percent, playtime_minutes, earned_awards, total_awards, last_played, igdb_id, cover_small'
+  'master_id, title, environment, genre, percent, playtime_minutes, earned_awards, last_played, cover_small'
 
 // Two windows of activity, so the week block can compare against the one before
 // it, and so the progress arc has something to draw.
@@ -249,8 +231,6 @@ export default function InsightsTab() {
   const [games, setGames] = useState([])
   const [events, setEvents] = useState([])
   const [activityStart, setActivityStart] = useState(null)
-  const [upcoming, setUpcoming] = useState([])
-  const [leavingIds, setLeavingIds] = useState([])
   const [selected, setSelected] = useState(null)
   const [customizeOpen, setCustomizeOpen] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -260,28 +240,15 @@ export default function InsightsTab() {
     let cancelled = false
     async function load() {
       setLoading(true)
-      const soon = Math.floor((Date.now() + 60 * 86400000) / 1000)
-      const [lib, act, start, wish, gp] = await Promise.all([
+      const [lib, act, start] = await Promise.all([
         supabase.from('games').select(GAME_COLUMNS),
         fetchRecentActivity({ days: ACTIVITY_DAYS }),
         fetchActivityStart(),
-        // Only day-precision rows: a quarter or a year resolves to the END of its
-        // window, so "Q4 2027" would arrive as 31 Dec and read as a date it is not.
-        supabase
-          .from('wishlist')
-          .select('igdb_id, title, cover, released, release_label')
-          .eq('date_precision', 'day')
-          .not('released', 'is', null)
-          .lte('released', soon)
-          .order('released', { ascending: true }),
-        supabase.from('gamepass').select('igdb_id').eq('leaving_soon', true),
       ])
       if (cancelled) return
       setGames(lib.data || [])
       setEvents(act.data || [])
       setActivityStart(start)
-      setUpcoming(wish.data || [])
-      setLeavingIds((gp.data || []).map((r) => r.igdb_id).filter((v) => v != null))
       setLoading(false)
     }
     load()
@@ -450,7 +417,7 @@ export default function InsightsTab() {
       <div>
         <div className="page-header">
           <h1 className="page-title">Insights</h1>
-          <p className="page-subtitle">What you are playing, and how it is going.</p>
+          <p className="page-subtitle">How your play has been going over time.</p>
         </div>
         <Skeleton count={4} />
       </div>
@@ -656,7 +623,7 @@ export default function InsightsTab() {
     <div>
       <div className="page-header">
         <h1 className="page-title">Insights</h1>
-        <p className="page-subtitle">What you are playing, and how it is going.</p>
+        <p className="page-subtitle">How your play has been going over time.</p>
       </div>
 
       {rendered.length ? rendered : (
@@ -681,11 +648,3 @@ export default function InsightsTab() {
   )
 }
 
-// "yesterday" reads better than a date on a card about right now, but only for
-// the two days where it is unambiguous.
-function relativeDayLabel(day) {
-  const diff = daysBetween(new Date(), day)
-  if (diff <= 0) return 'played today'
-  if (diff === 1) return 'played yesterday'
-  return `played ${parseDayOrInstant(dayKey(day)).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
-}
