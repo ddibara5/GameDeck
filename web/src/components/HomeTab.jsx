@@ -399,7 +399,20 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
     coming_up: () =>
       comingUp.length ? (
         <div className="chart-card" key="coming_up">
-          <h2 className="chart-title">Coming up</h2>
+          <div className="hm-head">
+            <h2 className="chart-title">Coming up</h2>
+            {/* The card shows the next four with a date. The chevron is the way
+                to the other 59, and it opens the same Wishlist page the drawer
+                does rather than a second, thinner copy of it. */}
+            <button
+              type="button"
+              className="hm-more"
+              aria-label="Open your wishlist"
+              onClick={() => onOpenList && onOpenList('wishlist')}
+            >
+              {CHEV}
+            </button>
+          </div>
           <div className="ins-sub">Wishlisted games with a confirmed date</div>
           {comingUp.map((w) => (
             <button

@@ -177,6 +177,31 @@ const closed = await page.evaluate(() => ({
 }))
 check('the sheet closes back to Home', closed.backdrop === 0 && closed.title === 'Home', JSON.stringify(closed))
 
+// The chevron on the Coming up heading goes to the whole Wishlist, which is the
+// same page the drawer opens rather than a second, thinner copy of it.
+const moreBtn = await page.locator('.hm-more').count()
+check('Coming up has a chevron to the wishlist', moreBtn === 1, String(moreBtn))
+const moreBox = await page.locator('.hm-more').boundingBox()
+check('the chevron is a real tap target', moreBox.width >= 30 && moreBox.height >= 30, `${Math.round(moreBox.width)}x${Math.round(moreBox.height)}`)
+await page.locator('.hm-more').click()
+await page.waitForTimeout(800)
+const wl = await page.evaluate(() => ({
+  title: document.querySelector('.wl-title')?.textContent.trim(),
+  sub: document.querySelector('.wl-sub')?.textContent.trim(),
+}))
+check('the chevron opens the Wishlist page', wl.title === 'Wishlist', `${wl.title} / ${wl.sub}`)
+// Five rows in the fixture, including the two Coming up filters out. The page is
+// the whole list, not the card's four.
+check('the Wishlist page shows every row', /5 games/.test(wl.sub || ''), wl.sub)
+await page.screenshot({ path: 'repro/out/wishlist-from-home.png', fullPage: true })
+await page.locator('.wl-back').first().click()
+await page.waitForTimeout(700)
+const backHome = await page.evaluate(() => ({
+  title: document.querySelector('.page-title')?.textContent.trim(),
+  wl: document.querySelectorAll('.wl-page').length,
+}))
+check('back from the Wishlist returns to Home', backHome.title === 'Home' && backHome.wl === 0, JSON.stringify(backHome))
+
 /* ----------------------------------------------------------------- 2. skip */
 
 const firstPick = home.picks[0]

@@ -144,6 +144,25 @@
   color: var(--accent);
 }
 
+/* The chevron on a card heading that leads somewhere. It is a 34px square so the
+   thumb has something to hit, with the glyph pushed to the card's edge and the
+   padding pulled back out with negative margin, so the target is bigger than the
+   mark without moving it. */
+.hm-more {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 34px;
+  height: 34px;
+  margin: -8px -6px -8px 0;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--muted);
+}
+.hm-more:active { opacity: 0.55; }
+
 .hm-pick {
   display: flex;
   align-items: center;
