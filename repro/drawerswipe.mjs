@@ -63,6 +63,15 @@ const seen = () => page.evaluate(() => ({
   customize: !!document.querySelector('.settings-page:not(.closing)'),
 }))
 
+// Insights is off the bottom bar by default since the Home tab landed, so it is
+// reached the way a user reaches it: through the drawer.
+async function openFromDrawer(name) {
+  await page.locator('.brand-btn, .brand').first().click()
+  await page.waitForTimeout(450)
+  await page.getByRole('button', { name }).first().click()
+  await page.waitForTimeout(500)
+}
+
 await page.goto(BASE, { waitUntil: 'networkidle' })
 await page.waitForSelector('.page-title', { timeout: 10000 })
 await page.waitForTimeout(400)
@@ -72,9 +81,12 @@ await edgeSwipe()
 const cold = await seen()
 await closeDrawer()
 
-// 2. After visiting Insights, which mounts its own Customize page CLOSED.
+// 2. After visiting a tab that mounts its own Customize page CLOSED.
 //    This is the regression: a closed overlay must not count as open.
-await page.getByRole('button', { name: /insights/i }).first().click()
+//    Home does it too now, so the cold app above already exercises it; this
+//    still visits Insights because a SECOND registration was the thing that
+//    made the original bug look like it belonged to Insights.
+await openFromDrawer(/^Insights/)
 await page.waitForTimeout(800)
 await page.getByRole('button', { name: /library/i }).first().click()
 await page.waitForTimeout(600)
@@ -84,7 +96,7 @@ await closeDrawer()
 
 // 3. With a Customize page genuinely OPEN, the swipe must close it and must NOT
 //    open the drawer behind it. This is what the registration is FOR.
-await page.getByRole('button', { name: /insights/i }).first().click()
+await openFromDrawer(/^Insights/)
 await page.waitForTimeout(800)
 await page.getByRole('button', { name: /customize cards/i }).click()
 await page.waitForSelector('.cz-row')

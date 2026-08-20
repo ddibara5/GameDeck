@@ -1,6 +1,12 @@
 /*
  * Drives the BUILT Insights tab against stubbed reads.
  *
+ * Updated 20 Aug 2026: Now playing, Pace, Coming up, Leaving Game Pass and the
+ * week strip MOVED to the Home tab, so the assertions about them moved with them
+ * into repro/home.mjs. What is left here is what Insights still owns (the week
+ * chart, what you played, the lifetime cards), plus the deletion checks, plus the
+ * proof that the moved cards are GONE rather than duplicated.
+ *
  * Fixtures are the real rows, copied out of Supabase, so the assertions are about
  * what the tab renders on Dave's actual data rather than on numbers invented to
  * make them pass. The service worker is blocked: without that, a stubbed request
@@ -76,9 +82,16 @@ await page.route('**/rest/v1/**', (route) => {
 await page.route('**/api/**', (route) => json(route, {}))
 await page.route('**/wsrv.nl/**', (route) => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"/>' }))
 
+// Insights is off the bottom bar by default now, so it is reached the way a user
+// reaches it: through the drawer.
+async function openInsights() {
+  await page.locator('.brand-btn, .brand').first().click()
+  await page.waitForTimeout(450)
+  await page.getByRole('button', { name: /^Insights/ }).first().click()
+}
+
 await page.goto(BASE, { waitUntil: 'networkidle' })
-// Insights is a lazy chunk behind its tab.
-await page.getByRole('button', { name: /insights/i }).first().click()
+await openInsights()
 await page.waitForSelector('.page-title', { timeout: 10000 })
 await page.waitForTimeout(700)
 
@@ -124,7 +137,7 @@ await page.screenshot({ path: 'repro/out/ins-customize.png', fullPage: true })
 
 // Turn a lifetime card on, and a short-term one off.
 await page.getByRole('switch', { name: /show hall of fame/i }).click()
-await page.getByRole('switch', { name: /hide pace/i }).click()
+await page.getByRole('switch', { name: /hide what you played this week/i }).click()
 const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('gamedeck_insights_cards_v1')))
 await page.getByRole('button', { name: 'Back' }).click()
 await page.waitForTimeout(500)
@@ -133,7 +146,8 @@ await page.screenshot({ path: 'repro/out/ins-toggled.png', fullPage: true })
 
 // Reload: the layout must survive, which is the whole point of saving it.
 await page.reload({ waitUntil: 'networkidle' })
-await page.getByRole('button', { name: /insights/i }).first().click()
+await page.waitForTimeout(500)
+await openInsights()
 await page.waitForSelector('.page-title')
 await page.waitForTimeout(700)
 const reloaded = await read()
@@ -153,30 +167,29 @@ console.log('sheet             :', sheet.rows, 'rows,', sheet.on, 'on,', sheet.o
 console.log('after toggle      :', after.titles)
 console.log('after reload      :', reloaded.titles)
 
-want(before.strips === 1, 'expected exactly one stats strip by default, got ' + before.strips)
-want(before.stripValues[0] === '21h', '7d hours should be 21h, got ' + before.stripValues[0])
-want(before.stripValues[1] === '13', '7d achievements should be 13 (the trigger fix), got ' + before.stripValues[1])
-want(before.stripValues[2] === '6/7', 'days should be 6/7, got ' + before.stripValues[2])
-want(before.npTitle === 'Persona 5 Royal', 'now playing should be Persona 5 Royal, got ' + before.npTitle)
-want(/21 of 52 achievements/.test(before.npAch || ''), 'now playing achievements wrong: ' + before.npAch)
-want(before.pips === 52 && before.pipsOn === 21, `pips should be 21/52, got ${before.pipsOn}/${before.pips}`)
-want(before.arcs === 1, 'expected the progress arc')
+// The five moved cards are asserted ABSENT by the selectors only they ever used,
+// not by counting cards: a count passes when the wrong thing is gone. Their
+// content is now proved on Home, in repro/home.mjs.
+want(before.strips === 0, 'the week strip moved to Home, got ' + before.strips + ' still here')
+want(before.npTitle === null, 'Now playing moved to Home, still rendering ' + before.npTitle)
+want(before.arcs === 0, 'the completion arc moved to Home with Now playing')
+want(before.pips === 0, 'Pace moved to Home, ' + before.pips + ' pips still here')
+want(before.upRows.length === 0, 'Coming up / Leaving Game Pass moved to Home, ' + before.upRows.length + ' rows still here')
+want(before.titles.includes('Last 7 days'), 'Insights lost its week chart: ' + before.titles)
 want(before.pending.length === 1, 'week card should hold the comparison, got ' + JSON.stringify(before.pending))
 want(before.deltas.length === 0, 'week card must NOT print a delta over an uncovered window')
-want(before.upRows.some((t) => /Mortal Shell II/.test(t)), 'Mortal Shell II missing from Coming up')
-want(before.upRows.some((t) => /Another Crab/.test(t)), "Another Crab's Treasure missing from Leaving Game Pass")
 want(!before.titles.includes('Hall of fame'), 'lifetime cards should be off by default')
 want(before.donut === 0 && before.legend === 0, 'donut markup still present')
 want(!before.svgLabels.includes('Hours by platform'), 'donut chart still rendered')
 want(!before.svgLabels.some((l) => /scatter/i.test(l || '')), 'genre scatter still rendered')
 want(!before.svgLabels.some((l) => /release year/i.test(l || '')), 'vintage histogram still rendered')
-want(sheet.rows === 12, 'editor should list 12 cards, got ' + sheet.rows)
-want(sheet.on === 7 && sheet.off === 5, `editor should start 7 on / 5 off, got ${sheet.on}/${sheet.off}`)
-want(sheet.headings.join('|') === 'Short term|Lifetime', 'group headings wrong: ' + sheet.headings)
+want(sheet.rows === 7, 'editor should list 7 cards, got ' + sheet.rows)
+want(sheet.on === 2 && sheet.off === 5, `editor should start 2 on / 5 off, got ${sheet.on}/${sheet.off}`)
+want(sheet.headings.join('|') === 'This week|Lifetime', 'group headings wrong: ' + sheet.headings)
 want(after.titles.includes('Hall of fame'), 'toggling Hall of fame on did not render it')
-want(!after.titles.includes('Pace'), 'toggling Pace off did not remove it')
-want(stored && stored.enabled && stored.enabled.hall === true && stored.enabled.pace === false, 'config not persisted: ' + JSON.stringify(stored && stored.enabled))
-want(reloaded.titles.includes('Hall of fame') && !reloaded.titles.includes('Pace'), 'layout did not survive a reload')
+want(!after.titles.includes('What you played this week'), 'toggling What you played off did not remove it')
+want(stored && stored.enabled && stored.enabled.hall === true && stored.enabled.week_games === false, 'config not persisted: ' + JSON.stringify(stored && stored.enabled))
+want(reloaded.titles.includes('Hall of fame') && !reloaded.titles.includes('What you played this week'), 'layout did not survive a reload')
 if (failures.length) bad.push('page failures: ' + failures.slice(0, 4).join(' | '))
 
 if (bad.length) {
