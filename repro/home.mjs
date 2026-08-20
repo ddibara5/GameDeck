@@ -85,6 +85,10 @@ await page.route('**/rest/v1/**', (route) => {
 })
 await page.route('**/api/**', (route) => json(route, {}))
 await page.route('**/wsrv.nl/**', (route) => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"/>' }))
+// Settings asks GitHub for the latest commit to print a version line. It is an
+// external service this harness has no business hitting, and the sandbox blocks
+// it, so it is answered here rather than left to fail and pollute the verdict.
+await page.route('**/api.github.com/**', (route) => json(route, [{ sha: 'stubbed0000000000000000000000000000000', commit: { message: 'stub', author: { date: new Date().toISOString() } } }]))
 await page.route('**/images.igdb.com/**', (route) => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"/>' }))
 
 const results = []
@@ -215,7 +219,7 @@ await page.locator('.brand-btn, .brand').first().click()
 await page.waitForTimeout(450)
 await page.screenshot({ path: 'repro/out/drawer-light.png', fullPage: true })
 
-/* ---------------------------------------------------------------- 6. editor */
+/* -------------------------------------------------------- 6. drawer editor */
 
 await page.locator('.drawer-cz').click()
 await page.waitForTimeout(600)
@@ -225,14 +229,83 @@ const editor = await page.evaluate(() => ({
   toggles: document.querySelectorAll('.cz-row .cz-toggle').length,
   fixed: [...document.querySelectorAll('.cz-fixed')].map((e) => e.textContent.trim()),
   secs: [...document.querySelectorAll('.cz-sec')].map((e) => e.textContent.trim()),
+  prev: document.querySelectorAll('.cz-prev').length,
 }))
-check('editor opens as Customize drawer', editor.title === 'Customize drawer', editor.title)
-check('editor lists the same four groups', editor.secs.join('|') === 'Your games|Explore|Shelves|App', editor.secs.join('|'))
-// 12 destinations + the Show labels row.
-check('editor row count', editor.rows === 13, String(editor.rows))
-check('only tabs get a switch', editor.toggles === 7, String(editor.toggles))
-check('shelves and lists say what they are', editor.fixed.filter(Boolean).length === 5, editor.fixed.join(', '))
-await page.screenshot({ path: 'repro/out/editor-light.png', fullPage: true })
+check('drawer editor is titled Drawer', editor.title === 'Drawer', editor.title)
+check('drawer editor lists the same four groups', editor.secs.join('|') === 'Your games|Explore|Shelves|App', editor.secs.join('|'))
+check('drawer editor row count', editor.rows === 12, String(editor.rows))
+// The whole point of the split: this editor cannot change bar membership, so it
+// has no switches at all. Every row states what it is instead.
+check('drawer editor has no switches', editor.toggles === 0, String(editor.toggles))
+// 11 of 12: Settings is an action rather than a destination with a kind, and it
+// has nothing true to say in that column.
+check('every drawer row states what it is', editor.fixed.filter(Boolean).length === 11, editor.fixed.join(', '))
+check('the bar preview is not here', editor.prev === 0, String(editor.prev))
+check('Insights reads as drawer only', editor.fixed.includes('drawer only'), editor.fixed.join(', '))
+await page.screenshot({ path: 'repro/out/editor-drawer.png', fullPage: true })
+await page.getByRole('button', { name: 'Back', exact: true }).click()
+await page.waitForTimeout(500)
+
+/* ----------------------------------------------------------- 7. bar editor */
+
+// Reached from Settings, which is where a bar setting belongs. The drawer's own
+// button goes to the drawer editor, one tap from the thing it edits.
+await page.locator('.gear-btn').click()
+await page.waitForTimeout(600)
+await page.getByRole('button', { name: /Bottom bar/ }).first().click()
+await page.waitForTimeout(600)
+// Settings is still mounted underneath, so its heading matches the same selector.
+// Read the LAST one, which is the page on top.
+const barEd = await page.evaluate(() => ({
+  title: [...document.querySelectorAll('.settings-hd-title')].pop()?.textContent.trim(),
+  rows: [...document.querySelectorAll('.cz-row .cz-rl b')].map((e) => e.textContent.trim()),
+  toggles: document.querySelectorAll('.cz-row .cz-toggle').length,
+  prevTabs: [...document.querySelectorAll('.cz-prev .tabbar-btn')].map((e) => e.textContent.trim()),
+  prevFixed: document.querySelector('.cz-prev .tabbar')
+    ? getComputedStyle(document.querySelector('.cz-prev .tabbar')).position
+    : null,
+  secs: document.querySelectorAll('.cz-sec').length,
+}))
+check('bar editor is titled Bottom bar', barEd.title === 'Bottom bar', barEd.title)
+// Five bar-eligible destinations, plus the Show labels row in the footer.
+check('bar editor lists five tabs', barEd.rows.length === 6 && barEd.rows[5] === 'Show labels', barEd.rows.join(', '))
+check('Insights is not offered for the bar', !barEd.rows.includes('Insights'), barEd.rows.join(', '))
+check('bar editor has a switch per tab plus labels', barEd.toggles === 6, String(barEd.toggles))
+check('bar editor has no group headings', barEd.secs === 0, String(barEd.secs))
+check('preview shows the five tabs', barEd.prevTabs.join('|') === 'Home|Library|Activity|Discover|News', barEd.prevTabs.join('|'))
+check('preview bar is not fixed to the window', barEd.prevFixed === 'static', barEd.prevFixed)
+await page.screenshot({ path: 'repro/out/editor-bar.png', fullPage: true })
+
+// The two orders are independent: moving a tab on the bar must not move it in
+// the drawer. Drag News (last) above Library (second) and read both surfaces.
+const rowBox = async (i) => (await page.locator('.cz-row').nth(i).boundingBox())
+const newsRow = await rowBox(4)
+const libRow = await rowBox(1)
+await page.mouse.move(newsRow.x + 20, newsRow.y + newsRow.height / 2)
+await page.mouse.down()
+await page.mouse.move(libRow.x + 20, libRow.y + 4, { steps: 12 })
+await page.mouse.up()
+await page.waitForTimeout(500)
+const afterDrag = await page.evaluate(() => ({
+  rows: [...document.querySelectorAll('.cz-row .cz-rl b')].map((e) => e.textContent.trim()),
+  prevTabs: [...document.querySelectorAll('.cz-prev .tabbar-btn')].map((e) => e.textContent.trim()),
+  stored: JSON.parse(localStorage.getItem('gamedeck_nav_v2') || '{}'),
+}))
+check('drag reorders the bar', afterDrag.rows[1] === 'News', afterDrag.rows.join(', '))
+check('the preview follows the drag', afterDrag.prevTabs[1] === 'News', afterDrag.prevTabs.join('|'))
+check('the bar order is stored separately', Array.isArray(afterDrag.stored.bar) && afterDrag.stored.bar[1] === 'news', JSON.stringify(afterDrag.stored.bar))
+check('the DRAWER order is untouched',
+  afterDrag.stored.order.slice(0, 4).join('|') === 'home|library|activity|insights',
+  afterDrag.stored.order.join('|'))
+// Two settings pages are stacked here (Settings, then Bottom bar over it), so
+// the back button has to be addressed by position rather than by name.
+await page.locator('.settings-back').last().click()
+await page.waitForTimeout(500)
+await page.locator('.settings-back').last().click()
+await page.waitForTimeout(500)
+
+const liveBar = await page.evaluate(() => [...document.querySelectorAll('.tabbar-btn')].map((e) => e.textContent.trim()))
+check('the real bar picked up the new order', liveBar[1] === 'News', liveBar.join('|'))
 
 /* ---------------------------------------------------------------- verdict */
 

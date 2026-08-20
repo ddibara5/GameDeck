@@ -11,22 +11,30 @@
  * what the tab renders on Dave's actual data rather than on numbers invented to
  * make them pass. The service worker is blocked: without that, a stubbed request
  * that never reaches the handler is indistinguishable from a broken feature.
+ *
+ * The activity dates are RELATIVE, and that is not a style choice. They were
+ * absolute (2026-08-07 through 08-17) and the week assertions silently depended
+ * on what "today" was when they were written: the run at 23:35 ET on 19 Aug
+ * passed and the run twenty-five minutes later, past midnight, failed on the
+ * comparison guard. A fixture that is only true on the day it was written is a
+ * test that will lie to you eventually.
  */
 import { chromium } from 'playwright'
 
 const BASE = process.env.BASE || 'http://localhost:4173'
 
+const dkey = (daysAgo) => new Date(Date.now() - daysAgo * 86400000).toISOString().slice(0, 10)
+
+// Six consecutive days ending yesterday, so the current window always holds
+// exactly six active days out of seven, and the PREVIOUS window always holds
+// none. 1274 minutes total (21h), 13 achievements.
 const ACTIVITY = [
-  { event_date: '2026-08-17', title: 'Persona 5 Royal', environment: 'xbox', minutes_delta: 98, achievements_delta: 0, percent_after: 31, cover_small: null, master_id: 550043, earned_awards_after: 21, total_awards: 52 },
-  { event_date: '2026-08-16', title: 'Persona 5 Royal', environment: 'xbox', minutes_delta: 377, achievements_delta: 5, percent_after: 31, cover_small: null, master_id: 550043, earned_awards_after: 21, total_awards: 52 },
-  { event_date: '2026-08-15', title: 'Persona 5 Royal', environment: 'xbox', minutes_delta: 220, achievements_delta: 2, percent_after: 24, cover_small: null, master_id: 550043, earned_awards_after: 16, total_awards: 52 },
-  { event_date: '2026-08-14', title: 'Persona 5 Royal', environment: 'xbox', minutes_delta: 145, achievements_delta: 0, percent_after: 21, cover_small: null, master_id: 550043, earned_awards_after: 14, total_awards: 52 },
-  { event_date: '2026-08-13', title: 'Persona 5 Royal', environment: 'xbox', minutes_delta: 74, achievements_delta: 0, percent_after: 21, cover_small: null, master_id: 550043, earned_awards_after: 14, total_awards: 52 },
-  { event_date: '2026-08-12', title: 'Persona 5 Royal', environment: 'xbox', minutes_delta: 360, achievements_delta: 6, percent_after: 21, cover_small: null, master_id: 550043, earned_awards_after: 14, total_awards: 52 },
-  { event_date: '2026-08-10', title: 'Persona 5 Royal', environment: 'xbox', minutes_delta: 162, achievements_delta: 2, percent_after: 12, cover_small: null, master_id: 550043, earned_awards_after: 8, total_awards: 52 },
-  { event_date: '2026-08-09', title: 'Persona 5 Royal', environment: 'xbox', minutes_delta: 300, achievements_delta: 5, percent_after: 9, cover_small: null, master_id: 550043, earned_awards_after: 6, total_awards: 52 },
-  { event_date: '2026-08-07', title: 'Kristala', environment: 'xbox', minutes_delta: 69, achievements_delta: 0, percent_after: 26, cover_small: null, master_id: 961911, earned_awards_after: 19, total_awards: 50 },
-  { event_date: '2026-08-07', title: 'Persona 5 Royal', environment: 'xbox', minutes_delta: 63, achievements_delta: 0, percent_after: 2, cover_small: null, master_id: 550043, earned_awards_after: 1, total_awards: 52 },
+  { event_date: dkey(1), title: 'Persona 5 Royal', environment: 'xbox', minutes_delta: 98, achievements_delta: 0, percent_after: 31, cover_small: null, master_id: 550043, earned_awards_after: 21, total_awards: 52 },
+  { event_date: dkey(2), title: 'Persona 5 Royal', environment: 'xbox', minutes_delta: 377, achievements_delta: 5, percent_after: 31, cover_small: null, master_id: 550043, earned_awards_after: 21, total_awards: 52 },
+  { event_date: dkey(3), title: 'Persona 5 Royal', environment: 'xbox', minutes_delta: 220, achievements_delta: 2, percent_after: 24, cover_small: null, master_id: 550043, earned_awards_after: 16, total_awards: 52 },
+  { event_date: dkey(4), title: 'Persona 5 Royal', environment: 'xbox', minutes_delta: 145, achievements_delta: 0, percent_after: 21, cover_small: null, master_id: 550043, earned_awards_after: 14, total_awards: 52 },
+  { event_date: dkey(5), title: 'Persona 5 Royal', environment: 'xbox', minutes_delta: 74, achievements_delta: 0, percent_after: 21, cover_small: null, master_id: 550043, earned_awards_after: 14, total_awards: 52 },
+  { event_date: dkey(6), title: 'Persona 5 Royal', environment: 'xbox', minutes_delta: 360, achievements_delta: 6, percent_after: 21, cover_small: null, master_id: 550043, earned_awards_after: 14, total_awards: 52 },
 ]
 
 const GAMES = [
@@ -69,7 +77,7 @@ await page.route('**/rest/v1/**', (route) => {
   if (u.includes('/v_recent_activity')) {
     // Two different reads hit the same view. The ascending, limit-1 one is the
     // coverage probe; answering both with the same payload would hide a mix-up.
-    if (u.includes('order=event_date.asc')) return json(route, [{ event_date: '2026-08-07' }])
+    if (u.includes('order=event_date.asc')) return json(route, [{ event_date: dkey(9) }])
     return json(route, ACTIVITY)
   }
   if (u.includes('/games')) return json(route, GAMES)
