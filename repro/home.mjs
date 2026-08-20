@@ -43,10 +43,16 @@ const GAMES = [
   { master_id: 7, title: 'UNO', environment: 'xbox', genre: 'Card & Board Game', percent: 0, playtime_minutes: 0, playtime_label: '0m', earned_awards: 0, total_awards: 12, last_played: null, igdb_id: 5555, igdb_rating: 61, release_year: 2016, length_minutes: 180, cover_small: null, cover_igdb: 'co7', platforms: 'Xbox' },
 ]
 
+// Coming up reads the shared wishlist cache now rather than its own filtered
+// query, so these rows carry what the real table carries: date_precision is what
+// keeps a quarter or a year out of the card, and the far-future row proves the
+// 60-day horizon is still applied client-side.
 const WISHLIST = [
-  { igdb_id: 347633, title: 'Mortal Shell II', cover: null, released: day(2026, 7, 20), release_label: 'Aug 20, 2026' },
-  { igdb_id: 222, title: 'Star Wars Zero Company', cover: null, released: day(2026, 7, 27), release_label: 'Aug 27, 2026' },
-  { igdb_id: 333, title: 'The Blood of Dawnwalker', cover: null, released: day(2026, 8, 3), release_label: 'Sep 03, 2026' },
+  { igdb_id: 347633, title: 'Mortal Shell II', cover: null, year: 2026, note: null, created_at: iso(120), released: day(2026, 7, 20), date_precision: 'day', release_label: 'Aug 20, 2026' },
+  { igdb_id: 222, title: 'Star Wars Zero Company', cover: null, year: 2026, note: null, created_at: iso(90), released: day(2026, 7, 27), date_precision: 'day', release_label: 'Aug 27, 2026' },
+  { igdb_id: 333, title: 'The Blood of Dawnwalker', cover: null, year: 2026, note: null, created_at: iso(60), released: day(2026, 8, 3), date_precision: 'day', release_label: 'Sep 03, 2026' },
+  { igdb_id: 444, title: 'A Quarter-Dated Game', cover: null, year: 2027, note: null, created_at: iso(30), released: day(2027, 11, 31), date_precision: 'quarter', release_label: 'Q4 2027' },
+  { igdb_id: 555, title: 'A Far Future Game', cover: null, year: 2027, note: null, created_at: iso(20), released: day(2027, 5, 1), date_precision: 'day', release_label: 'Jun 01, 2027' },
 ]
 const GAMEPASS_LEAVING = [{ igdb_id: 217590 }]
 
@@ -135,8 +141,41 @@ check('every pick states its reason', home.chips.length === home.picks.length, h
 check('each pick has a skip control', home.skips === home.picks.length, String(home.skips))
 check('Coming up renders dated releases', home.upRows.length >= 2 && home.cardTitles.includes('Coming up'), home.upRows.join(' // '))
 check('out-today row reads "Out today"', home.upRows.some((r) => /Out today|days|day/.test(r)), home.upRows[0])
+// Two rows the card must NOT show: a quarter-precision date resolves to the end
+// of its window and would read as a day it is not, and a release beyond the
+// 60-day horizon is not news yet. Both filters used to be in Home's own query
+// and are client-side now that the rows come from the shared cache.
+check('quarter-precision releases stay out', !home.upRows.some((r) => /Quarter-Dated/.test(r)), home.upRows.join(' // '))
+check('releases past the horizon stay out', !home.upRows.some((r) => /Far Future/.test(r)), home.upRows.join(' // '))
 
 await page.screenshot({ path: 'repro/out/home-dark.png', fullPage: true })
+
+// A Coming up row is a wishlist row, so it opens the wishlist variant of the
+// sheet: the same one the Wishlist page opens, with the same heart on it.
+const upBtns = await page.locator('.up-row.as-btn').count()
+check('Coming up rows are buttons', upBtns >= 3, String(upBtns))
+await page.locator('.up-row.as-btn').first().click()
+await page.waitForTimeout(700)
+const sheet = await page.evaluate(() => {
+  const el = document.querySelector('.sheet, .gs-sheet, [role="dialog"]')
+  return {
+    open: Boolean(el),
+    text: el ? el.textContent.replace(/\s+/g, ' ').trim().slice(0, 160) : null,
+  }
+})
+check('tapping a Coming up row opens a sheet', sheet.open, sheet.text)
+check('the sheet is for the game that was tapped', /Mortal Shell II/.test(sheet.text || ''), sheet.text)
+await page.screenshot({ path: 'repro/out/comingup-sheet.png', fullPage: true })
+// Close by tapping the backdrop, the way a thumb does. Asserting the page title
+// is still readable would pass with the sheet WIDE OPEN, since the page is right
+// underneath it; the assertion has to be that the backdrop is gone.
+await page.locator('.modal-backdrop').click({ position: { x: 8, y: 8 } })
+await page.waitForTimeout(700)
+const closed = await page.evaluate(() => ({
+  backdrop: document.querySelectorAll('.modal-backdrop').length,
+  title: document.querySelector('.page-title')?.textContent.trim(),
+}))
+check('the sheet closes back to Home', closed.backdrop === 0 && closed.title === 'Home', JSON.stringify(closed))
 
 /* ----------------------------------------------------------------- 2. skip */
 

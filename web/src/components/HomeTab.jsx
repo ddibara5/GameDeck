@@ -3,8 +3,10 @@ import { supabase } from '../lib/supabase.js'
 import Cover from './Cover.jsx'
 import Skeleton from './Skeleton.jsx'
 import GameDetail from './GameDetail.jsx'
+import GameSheet from './GameSheet.jsx'
 import CustomizeHome from './CustomizeHome.jsx'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
+import { useWishlist } from '../lib/wishlist.js'
 import { useStatusMap } from '../lib/userStatus.js'
 import { useHomeCards, CARD_BY_KEY } from '../lib/homeCards.js'
 import { backlogGames, pickUpNext, skipGame, pickReason, pickMeta, TIER_SUB } from '../lib/homePicks.js'
@@ -38,6 +40,9 @@ const shortGenre = (g) => SHORT_GENRE[g] || g
 // Two windows of activity: one for the week block, one before it so the arc has
 // something to draw.
 const ACTIVITY_DAYS = WEEK_SPAN * 2
+
+// How far ahead Coming up looks. Beyond this a release is not news yet.
+const COMING_UP_DAYS = 60
 
 /* ------------------------------------------------------------- progress arc */
 
@@ -73,12 +78,16 @@ const CHEV = (
 
 export default function HomeTab({ onOpenTab, onOpenList }) {
   const { games, loading: libLoading } = useLibraryGames()
+  // The same cached rows the Wishlist page and the drawer count read, rather
+  // than a fourth thin copy of the table. They carry everything the wishlist
+  // sheet wants, so a Coming up row can open the sheet the Wishlist page opens.
+  const { items: wishItems } = useWishlist()
   const statusMap = useStatusMap()
   const [events, setEvents] = useState([])
-  const [upcoming, setUpcoming] = useState([])
   const [leavingIds, setLeavingIds] = useState([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
+  const [wishOpen, setWishOpen] = useState(null)
   const [customizeOpen, setCustomizeOpen] = useState(false)
   // Bumped by a skip, so the shortlist recomputes. The skip list lives in
   // localStorage, which React cannot subscribe to on its own.
@@ -88,23 +97,12 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
   useEffect(() => {
     let cancelled = false
     async function load() {
-      const soon = Math.floor((Date.now() + 60 * 86400000) / 1000)
-      const [act, wish, gp] = await Promise.all([
+      const [act, gp] = await Promise.all([
         fetchRecentActivity({ days: ACTIVITY_DAYS }),
-        // Day-precision only: a quarter or a year resolves to the END of its
-        // window, so "Q4 2027" would arrive as 31 Dec and read as a date it is not.
-        supabase
-          .from('wishlist')
-          .select('igdb_id, title, cover, released, release_label')
-          .eq('date_precision', 'day')
-          .not('released', 'is', null)
-          .lte('released', soon)
-          .order('released', { ascending: true }),
         supabase.from('gamepass').select('igdb_id').eq('leaving_soon', true),
       ])
       if (cancelled) return
       setEvents(act.data || [])
-      setUpcoming(wish.data || [])
       setLeavingIds((gp.data || []).map((r) => r.igdb_id).filter((v) => v != null))
       setLoading(false)
     }
@@ -201,7 +199,13 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
 
   const comingUp = useMemo(() => {
     const today = startOfDay(new Date())
-    return upcoming
+    const soon = Math.floor((Date.now() + COMING_UP_DAYS * 86400000) / 1000)
+    return wishItems
+      // Day precision only: a quarter or a year resolves to the END of its
+      // window, so "Q4 2027" would arrive as 31 Dec and read as a date it is not.
+      // This used to be a server-side filter on Home's own query; it is a client
+      // filter now that the rows come from the shared cache.
+      .filter((w) => w.date_precision === 'day' && w.released != null && num(w.released) <= soon)
       .map((w) => {
         // `released` is a calendar day stored as a unix second, so it sits at UTC
         // midnight. Building the local date from its UTC parts keeps a game dated
@@ -211,8 +215,9 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
         return { ...w, day, days: daysBetween(day, today) }
       })
       .filter((w) => w.days >= 0)
+      .sort((a, b) => a.days - b.days)
       .slice(0, 4)
-  }, [upcoming])
+  }, [wishItems])
 
   const leaving = useMemo(() => {
     if (!leavingIds.length) return []
@@ -397,7 +402,12 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
           <h2 className="chart-title">Coming up</h2>
           <div className="ins-sub">Wishlisted games with a confirmed date</div>
           {comingUp.map((w) => (
-            <div className={`up-row${w.days <= 7 ? ' soon' : ''}`} key={w.igdb_id}>
+            <button
+              type="button"
+              className={`up-row as-btn${w.days <= 7 ? ' soon' : ''}`}
+              key={w.igdb_id}
+              onClick={() => setWishOpen(w)}
+            >
               <span className="up-when">
                 <span className="up-n">{w.days === 0 ? 'Out' : w.days}</span>
                 <span className="up-u">{w.days === 0 ? 'today' : w.days === 1 ? 'day' : 'days'}</span>
@@ -406,7 +416,8 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
                 {w.title}
                 <span className="up-d">{w.day.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
               </span>
-            </div>
+              {CHEV}
+            </button>
           ))}
         </div>
       ) : null,
@@ -484,6 +495,10 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
 
       <CustomizeHome open={customizeOpen} onClose={() => setCustomizeOpen(false)} />
       {selected ? <GameDetail game={selected} onClose={() => setSelected(null)} /> : null}
+      {/* A Coming up row is a WISHLIST row, not an owned game, so it opens the
+          wishlist variant of the sheet - the same one the Wishlist page opens,
+          with the same heart and the same remove. */}
+      {wishOpen ? <GameSheet variant="wishlist" game={wishOpen} onClose={() => setWishOpen(null)} /> : null}
     </div>
   )
 }
