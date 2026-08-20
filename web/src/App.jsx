@@ -9,6 +9,7 @@ import { useNavConfig, getNavConfig, visibleKeys, TAB_BY_KEY } from './lib/navCo
 import { overlaysOpen } from './lib/useEdgeBack.js'
 import CustomizeRows from './components/CustomizeRows.jsx'
 import CustomizeNav from './components/CustomizeNav.jsx'
+import CustomizeBar from './components/CustomizeBar.jsx'
 
 // Code-split each tab and the overlay views into their own chunk so the initial
 // bundle only carries the shell + the first (Library) tab. The service worker
@@ -38,6 +39,7 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [customizeOpen, setCustomizeOpen] = useState(false)
   const [customizeNavOpen, setCustomizeNavOpen] = useState(false)
+  const [customizeBarOpen, setCustomizeBarOpen] = useState(false)
   const [shuffleOpen, setShuffleOpen] = useState(false)
   // Live tab bar layout (order + which tabs show + label visibility).
   const nav = useNavConfig()
@@ -117,7 +119,7 @@ export default function App() {
       // Full-screen pages with their own edge-back swipe (Settings / Customize,
       // and any overlay registered via useEdgeBack, e.g. the Discover rail page):
       // don't also open the app drawer behind them on an edge swipe.
-      if (settingsOpen || customizeOpen || customizeNavOpen || shuffleOpen || overlaysOpen()) return
+      if (settingsOpen || customizeOpen || customizeNavOpen || customizeBarOpen || shuffleOpen || overlaysOpen()) return
       const t = e.touches && e.touches[0]
       if (!t) return
       const dx = t.clientX - startX
@@ -153,7 +155,7 @@ export default function App() {
       window.removeEventListener('touchmove', onMove)
       window.removeEventListener('touchend', onEnd)
     }
-  }, [menuOpen, settingsOpen, customizeOpen, customizeNavOpen, shuffleOpen, view, viewClosing])
+  }, [menuOpen, settingsOpen, customizeOpen, customizeNavOpen, customizeBarOpen, shuffleOpen, view, viewClosing])
 
   return (
     <div className="app">
@@ -246,9 +248,15 @@ export default function App() {
       <Suspense fallback={null}>
         {shuffleOpen ? <ShufflePicker open onClose={() => setShuffleOpen(false)} /> : null}
       </Suspense>
-      <SettingsPage open={settingsOpen} onClose={() => setSettingsOpen(false)} onOpenNav={() => setCustomizeNavOpen(true)} />
+      <SettingsPage
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onOpenBar={() => setCustomizeBarOpen(true)}
+        onOpenDrawer={() => setCustomizeNavOpen(true)}
+      />
       <CustomizeRows open={customizeOpen} onClose={() => setCustomizeOpen(false)} />
       <CustomizeNav open={customizeNavOpen} onClose={() => setCustomizeNavOpen(false)} />
+      <CustomizeBar open={customizeBarOpen} onClose={() => setCustomizeBarOpen(false)} />
     </div>
   )
 }

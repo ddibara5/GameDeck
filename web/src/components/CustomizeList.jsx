@@ -26,6 +26,10 @@ import './customizeRows.css'
 //                      so the nav editor can hold its floor of visible tabs
 //   footer             optional node rendered under the list, above Reset
 //   icons              optional { [key]: <svg> }, rendered before the label
+//   renderHeader       optional (order, enabled) => node, rendered above the list.
+//                      It takes the LIVE state rather than a static node because
+//                      the bar editor previews the bar as you drag it, and a
+//                      preview that only updates on drop is worth less than none.
 //
 // An item with a `fixed` string renders that word where its switch would be,
 // instead of a switch. The drawer editor needs it: a shelf or a list can never
@@ -56,6 +60,7 @@ export default function CustomizeList({
   lockOff = null,
   footer = null,
   icons = null,
+  renderHeader = null,
 }) {
   const { mounted, closing } = useMountTransition(open)
   const [order, setOrder] = useState(() => getConfig().order)
@@ -189,6 +194,8 @@ export default function CustomizeList({
 
       <div className="settings-body">
         <div className="cz-note">{note}</div>
+
+        {renderHeader ? renderHeader(order, enabled) : null}
 
         <div className="cz-group">
           {order.map((key) => {

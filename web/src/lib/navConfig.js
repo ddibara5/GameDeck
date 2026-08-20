@@ -1,5 +1,10 @@
-// Navigation: one ordered list of destinations that drives BOTH the drawer and
-// the bottom tab bar.
+// Navigation: TWO orders, one catalog.
+//
+// `order` is the drawer's, grouped. `bar` is the bottom bar's, and holds only the
+// destinations that are eligible for it. They were one array until 20 Aug 2026,
+// which was fewer moving parts and exactly one thing wrong: you could not move
+// Discover left on the bar without also moving it in the drawer. The bar is a
+// shortcut, not a slice of the drawer, and the storage now says so.
 //
 // It used to be a tab-bar-only config, with the drawer holding a hand-written
 // Lists section plus a "More" list of whatever the bar was hiding. That meant the
@@ -21,16 +26,15 @@ const KEY = 'gamedeck_nav_v2'
 const EVENT = 'gd-nav-change'
 
 // At least this many tabs stay on the bar, so it never collapses to a single
-// destination. Five is what fits at 390px without the labels colliding; nothing
-// enforces that ceiling, because silently dropping a tab the user just switched
-// on is worse than a slightly tight bar.
+// destination. There are exactly five bar-eligible destinations and five is what
+// fits at 390px, so the ceiling is the catalog rather than a rule.
 export const MIN_VISIBLE = 2
-export const BAR_COMFORTABLE = 5
 
 // Every destination the drawer can show, in default order.
 //
 // kind decides what the row does and whether it can sit in the bar:
-//   tab     a top-level tab; the editor's switch puts it on the bar
+//   tab     a top-level tab. `bar: false` marks one that is reachable only from
+//           the drawer, so it never appears in the bar editor at all
 //   view    opens a full-page overlay (Wishlist)
 //   list    opens a drawer list view, by viewKey
 //   action  opens a sheet (Settings)
@@ -42,7 +46,11 @@ export const DEST_CATALOG = [
   { key: 'home', label: 'Home', group: 'games', kind: 'tab', sub: 'The landing screen' },
   { key: 'library', label: 'Library', group: 'games', kind: 'tab' },
   { key: 'activity', label: 'Activity', group: 'games', kind: 'tab' },
-  { key: 'insights', label: 'Insights', group: 'games', kind: 'tab', sub: 'How it is going over time' },
+  // Drawer only, deliberately. It is the one tab whose numbers do not change
+  // between two visits on the same day, Home carries the ones that do, and
+  // leaving it out of the bar editor means the five that ARE eligible fill the
+  // five slots exactly. A switch that can only ever be off is not a choice.
+  { key: 'insights', label: 'Insights', group: 'games', kind: 'tab', bar: false, fixed: 'drawer only', sub: 'How it is going over time' },
   { key: 'discover', label: 'Discover', group: 'explore', kind: 'tab' },
   { key: 'news', label: 'News', group: 'explore', kind: 'tab' },
   { key: 'wishlist', label: 'Wishlist', group: 'explore', kind: 'view', fixed: 'list' },
@@ -70,11 +78,20 @@ export function isTab(key) {
   return DEST_BY_KEY[key] ? DEST_BY_KEY[key].kind === 'tab' : false
 }
 
+// Eligible for the bottom bar. Every bar tab is a tab; not every tab is a bar
+// tab. This is the only predicate the bar editor and visibleKeys should use.
+export function isBarTab(key) {
+  const d = DEST_BY_KEY[key]
+  return Boolean(d) && d.kind === 'tab' && d.bar !== false
+}
+
+export const BAR_CATALOG = DEST_CATALOG.filter((d) => isBarTab(d.key))
+export const BAR_BY_KEY = BAR_CATALOG.reduce((m, d) => ((m[d.key] = d), m), {})
+
 const DEFAULT_ORDER = DEST_CATALOG.map((d) => d.key)
-// Insights starts off the bar: it is the one tab whose numbers do not change
-// between two visits on the same day, and Home now carries the ones that do. It
-// is one switch away, and it is in the drawer either way.
-const DEFAULT_ENABLED = { home: true, library: true, activity: true, discover: true, news: true, insights: false }
+const DEFAULT_BAR = BAR_CATALOG.map((d) => d.key)
+// All five, because there are exactly five and five fit.
+const DEFAULT_ENABLED = DEFAULT_BAR.reduce((m, k) => ((m[k] = true), m), {})
 const DEFAULT_LABELS = true
 
 function load() {
@@ -101,27 +118,44 @@ function load() {
     if (!seen.has(k)) order.push(k)
   }
 
-  // Only tabs carry an enabled flag. Everything else is always in the drawer and
-  // can never be on the bar, so it has no state to store or restore.
+  // The bar's own order, reconciled the same way. A stored array from before the
+  // split simply is not there, so this falls back to the catalog order, which is
+  // what the bar was already showing.
+  const savedBar = (stored && Array.isArray(stored.bar) && stored.bar) || DEFAULT_BAR
+  const bar = []
+  const barSeen = new Set()
+  for (const k of savedBar) {
+    if (isBarTab(k) && !barSeen.has(k)) {
+      bar.push(k)
+      barSeen.add(k)
+    }
+  }
+  for (const k of DEFAULT_BAR) {
+    if (!barSeen.has(k)) bar.push(k)
+  }
+
+  // Only bar-eligible destinations carry an enabled flag. Everything else is
+  // always in the drawer and can never be on the bar, so it has no state to
+  // store or restore. A stored flag for a key that is no longer eligible (as
+  // `insights` became on 20 Aug 2026) is ignored rather than migrated.
   const enabled = {}
-  for (const k of order) {
-    if (!isTab(k)) continue
+  for (const k of bar) {
     enabled[k] = k in savedEnabled ? Boolean(savedEnabled[k]) : Boolean(DEFAULT_ENABLED[k])
   }
 
   // Safety floor: never let a saved (or corrupt) config drop below MIN_VISIBLE
-  // tabs on the bar. Re-enable in order until the floor is met.
-  let visibleCount = order.filter((k) => isTab(k) && enabled[k]).length
-  for (const k of order) {
+  // tabs on the bar. Re-enable in bar order until the floor is met.
+  let visibleCount = bar.filter((k) => enabled[k]).length
+  for (const k of bar) {
     if (visibleCount >= MIN_VISIBLE) break
-    if (isTab(k) && !enabled[k]) {
+    if (!enabled[k]) {
       enabled[k] = true
       visibleCount += 1
     }
   }
 
   const labels = stored && typeof stored.labels === 'boolean' ? stored.labels : DEFAULT_LABELS
-  return { order, enabled, labels }
+  return { order, bar, enabled, labels }
 }
 
 export function getNavConfig() {
@@ -130,7 +164,16 @@ export function getNavConfig() {
 
 export function setNavConfig(config) {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ order: config.order, enabled: config.enabled, labels: config.labels }))
+    const cur = load()
+    localStorage.setItem(
+      KEY,
+      JSON.stringify({
+        order: config.order || cur.order,
+        bar: config.bar || cur.bar,
+        enabled: config.enabled || cur.enabled,
+        labels: typeof config.labels === 'boolean' ? config.labels : cur.labels,
+      })
+    )
   } catch {
     /* storage unavailable */
   }
@@ -147,17 +190,22 @@ export function resetNavConfig() {
   return load()
 }
 
-// The tabs on the bar, in drawer order. The leftmost one is also where the app
-// opens, which is why Home sits first in the default order rather than App.jsx
-// naming a landing tab of its own.
+// The tabs on the bar, in BAR order, which is now independent of the drawer's.
+// The leftmost one is also where the app opens, which is why App.jsx needs no
+// landing-tab rule of its own.
 export function visibleKeys(config) {
-  return config.order.filter((k) => isTab(k) && config.enabled[k])
+  return (config.bar || []).filter((k) => config.enabled[k])
 }
 
-// Tabs kept off the bar. They are still in the drawer like everything else; this
-// is only used to mark them in the editor.
+// Bar-eligible tabs the user has switched off. Still in the drawer, like
+// everything else; this only marks them in the editors.
 export function hiddenKeys(config) {
-  return config.order.filter((k) => isTab(k) && !config.enabled[k])
+  return (config.bar || []).filter((k) => !config.enabled[k])
+}
+
+// True when a destination is currently on the bar, for the drawer's readout.
+export function onBar(config, key) {
+  return isBarTab(key) && Boolean(config.enabled[key])
 }
 
 export function useNavConfig() {

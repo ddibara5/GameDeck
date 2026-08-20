@@ -60,7 +60,7 @@ const LIST_SIZE_OPTIONS = [
   { key: 'large', label: 'Large' },
 ]
 
-export default function SettingsPage({ open, onClose, onOpenNav }) {
+export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer }) {
   const { mounted, closing } = useMountTransition(open)
   const [fallbackSync, setFallbackSync] = useState(null)
   const [latestPlay, setLatestPlay] = useState(null)
@@ -365,7 +365,11 @@ export default function SettingsPage({ open, onClose, onOpenNav }) {
         <div className="settings-section">
           <div className="menu-sec-label">Navigation</div>
           <div className="settings-group">
-            <MenuItem glyph={ICONS.nav} label="Drawer and tab bar" sub="Reorder destinations, choose your tabs" onClick={onOpenNav} />
+            {/* Two rows, not one. They edit two independent orders, and a single
+                row leading to a page that edited both is what made the bar and
+                the drawer feel like one thing. */}
+            <MenuItem glyph={ICONS.nav} label="Bottom bar" sub="Which tabs, and in what order" onClick={onOpenBar} />
+            <MenuItem glyph={ICONS.layers} label="Drawer" sub="Group order, and what each group holds" onClick={onOpenDrawer} />
           </div>
         </div>
 

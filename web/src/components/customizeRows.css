@@ -204,3 +204,31 @@
   color: var(--muted);
   opacity: 0.8;
 }
+
+/* The bar editor's live preview. The real TabBar component is rendered in here,
+   so it has to be talked out of being fixed to the bottom of the window; nothing
+   else about it is changed, which is what stops the preview drifting from the
+   thing it previews. */
+.cz-prev {
+  margin: 0 16px 4px;
+  padding: 12px 12px 14px;
+  background: var(--surface-2);
+  border: 1px dashed var(--line);
+  border-radius: var(--r-md);
+}
+
+.cz-prev-l {
+  font-size: var(--t-cap2);
+  font-weight: var(--w-bold);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.cz-prev-bar .tabbar {
+  position: static;
+  transform: none;
+  width: 100%;
+  box-shadow: none;
+}

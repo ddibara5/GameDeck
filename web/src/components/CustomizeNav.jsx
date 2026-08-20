@@ -1,98 +1,68 @@
-import { useEffect, useState } from 'react'
+import { useMemo } from 'react'
 import CustomizeList from './CustomizeList.jsx'
 import { DEST_ICONS } from './destIcons.jsx'
 import {
+  DEST_CATALOG,
   DEST_BY_KEY,
   GROUP_LABEL,
-  MIN_VISIBLE,
-  BAR_COMFORTABLE,
-  isTab,
+  isBarTab,
+  useNavConfig,
   getNavConfig,
   setNavConfig,
   resetNavConfig,
 } from '../lib/navConfig.js'
 
-// The drawer's editor, opened from the button at the bottom of the drawer.
+// The drawer's editor: group order and row order, and nothing else.
 //
-// This was 271 lines of its own drag maths, pointer handling and scroll lock,
-// all of which CustomizeList already had. It is now a wrapper: one order drives
-// the drawer and the bar, so reordering here does both, and the switch means one
-// thing only, "put this on the bottom bar".
+// It used to own bar membership too, which is what made the two surfaces one
+// order and meant you could not move a tab left on the bar without also moving
+// it in the drawer. Bar membership now lives in CustomizeBar, and every row here
+// renders a word instead of a switch, because two controls for one fact is how
+// the bar and the drawer end up describing different worlds.
 //
-// Rows that can never sit in the bar (Wishlist, the shelves, Settings) carry a
-// `fixed` label in the catalog and render that word instead of a switch.
-
-// Labels live outside the order/enabled pair CustomizeList owns, so they are
-// read and written around it rather than through it.
-function readLabels() {
-  return getNavConfig().labels
+// Group headings are printed as the list is walked, so a row dragged elsewhere
+// takes its heading with it. The drawer renders by the same rule, so the editor
+// and the thing it edits can never disagree about what the order is.
+const getDrawerConfig = () => {
+  const c = getNavConfig()
+  // `enabled` is passed through untouched: it belongs to the bar, and this
+  // editor has no control that can change it.
+  return { order: c.order, enabled: c.enabled }
+}
+const setDrawerConfig = (c) => setNavConfig({ order: c.order })
+const resetDrawerConfig = () => {
+  const c = resetNavConfig()
+  return { order: c.order, enabled: c.enabled }
 }
 
 export default function CustomizeNav({ open, onClose }) {
-  const [labels, setLabels] = useState(readLabels)
+  const nav = useNavConfig()
 
-  useEffect(() => {
-    if (open) setLabels(readLabels())
-  }, [open])
-
-  // CustomizeList hands back { order, enabled }; labels are merged back in so a
-  // reorder cannot silently reset them.
-  const setConfig = (c) => setNavConfig({ order: c.order, enabled: c.enabled, labels: readLabels() })
-
-  const resetConfig = () => {
-    const c = resetNavConfig()
-    setLabels(c.labels)
-    return c
-  }
-
-  const toggleLabels = () => {
-    const next = !labels
-    setLabels(next)
-    const c = getNavConfig()
-    setNavConfig({ order: c.order, enabled: c.enabled, labels: next })
-  }
-
-  // The floor is real: two tabs is the fewest a bar can carry and still be a bar.
-  // There is no ceiling, because dropping a tab the user just switched on would
-  // be worse than a tight bar; the note says what fits instead.
-  const lockOff = (key, enabled) => {
-    const on = Object.keys(enabled).filter((k) => isTab(k) && enabled[k]).length
-    return on <= MIN_VISIBLE
-  }
+  // The right-hand word is a READOUT, so it has to be computed from live state
+  // rather than baked into the catalog: "on bar" is true only while the bar
+  // editor says it is.
+  const byKey = useMemo(() => {
+    const out = {}
+    for (const d of DEST_CATALOG) {
+      let fixed = d.fixed || ''
+      if (isBarTab(d.key)) fixed = nav.enabled[d.key] ? 'on bar' : 'off bar'
+      out[d.key] = { ...DEST_BY_KEY[d.key], fixed }
+    }
+    return out
+  }, [nav.enabled])
 
   return (
     <CustomizeList
       open={open}
       onClose={onClose}
-      title="Customize drawer"
-      note={`Drag the handle to reorder. The switch puts a destination on the bottom bar, where ${BAR_COMFORTABLE} fit comfortably. The leftmost one is where the app opens.`}
-      byKey={DEST_BY_KEY}
+      title="Drawer"
+      note="Drag the handle to reorder groups and rows. This does not touch the bottom bar."
+      byKey={byKey}
       groupLabel={GROUP_LABEL}
       icons={DEST_ICONS}
-      getConfig={getNavConfig}
-      setConfig={setConfig}
-      resetConfig={resetConfig}
-      lockOff={lockOff}
-      footer={
-        <div className="cz-group">
-          <div className="cz-row">
-            <span className="cz-rl">
-              <b>Show labels</b>
-              <small>Text under each icon in the bar</small>
-            </span>
-            <button
-              type="button"
-              className={`cz-toggle${labels ? ' on' : ''}`}
-              role="switch"
-              aria-checked={labels}
-              aria-label="Show tab labels"
-              onClick={toggleLabels}
-            >
-              <i />
-            </button>
-          </div>
-        </div>
-      }
+      getConfig={getDrawerConfig}
+      setConfig={setDrawerConfig}
+      resetConfig={resetDrawerConfig}
     />
   )
 }
