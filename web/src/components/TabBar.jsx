@@ -4,6 +4,12 @@ import { TAB_BY_KEY } from '../lib/navConfig.js'
 // drawer's "More" list share one source of truth; the drawer also renders these
 // same icons for any hidden tab.
 export const TAB_ICONS = {
+  home: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M3 10.6L12 3.5l9 7.1" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M5.7 9.6V20h12.6V9.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
   library: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
       <rect x="3.5" y="4" width="7" height="16" rx="1.5" />

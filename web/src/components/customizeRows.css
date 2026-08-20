@@ -192,3 +192,15 @@
 .cz-sec:first-child {
   padding-top: 11px;
 }
+
+/* A destination that can never sit in the bottom bar (a shelf, a list, Settings)
+   says what it is where its switch would be. A disabled switch would read as
+   "not yet" where the truth is "never". */
+.cz-fixed {
+  flex: none;
+  font-size: var(--t-cap2);
+  font-weight: var(--w-semi);
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  opacity: 0.8;
+}

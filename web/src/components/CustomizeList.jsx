@@ -22,6 +22,15 @@ import './customizeRows.css'
 //   byKey              { [key]: { label, sub, group } }
 //   groupLabel         optional { [group]: 'Heading' }; omit for a flat list
 //   getConfig / setConfig / resetConfig   the storage module's API
+//   lockOff            optional (key, enabled) => true to refuse a toggle-OFF,
+//                      so the nav editor can hold its floor of visible tabs
+//   footer             optional node rendered under the list, above Reset
+//   icons              optional { [key]: <svg> }, rendered before the label
+//
+// An item with a `fixed` string renders that word where its switch would be,
+// instead of a switch. The drawer editor needs it: a shelf or a list can never
+// sit in the bottom bar, and a disabled switch would say "not yet" where the
+// truth is "never".
 
 const GRIP = (
   <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -44,6 +53,9 @@ export default function CustomizeList({
   getConfig,
   setConfig,
   resetConfig,
+  lockOff = null,
+  footer = null,
+  icons = null,
 }) {
   const { mounted, closing } = useMountTransition(open)
   const [order, setOrder] = useState(() => getConfig().order)
@@ -69,7 +81,9 @@ export default function CustomizeList({
   }
 
   function toggle(key) {
-    commit(order, { ...enabled, [key]: !enabled[key] })
+    const next = !enabled[key]
+    if (!next && lockOff && lockOff(key, enabled)) return
+    commit(order, { ...enabled, [key]: next })
   }
 
   function doReset() {
@@ -180,7 +194,7 @@ export default function CustomizeList({
           {order.map((key) => {
             const item = byKey[key]
             if (!item) return null
-            const on = Boolean(enabled[key])
+            const on = item.fixed != null ? true : Boolean(enabled[key])
             const heading = groupLabel && item.group && item.group !== lastGroup ? groupLabel[item.group] : null
             if (item.group) lastGroup = item.group
             return (
@@ -203,25 +217,34 @@ export default function CustomizeList({
                   >
                     {GRIP}
                   </span>
+                  {icons && icons[key] ? (
+                    <span className="cz-tab-icon">{icons[key]}</span>
+                  ) : null}
                   <span className="cz-rl">
                     <b>{item.label}</b>
                     {item.sub ? <small>{item.sub}</small> : null}
                   </span>
-                  <button
-                    type="button"
-                    className={`cz-toggle${on ? ' on' : ''}`}
-                    role="switch"
-                    aria-checked={on}
-                    aria-label={`${on ? 'Hide' : 'Show'} ${item.label}`}
-                    onClick={() => toggle(key)}
-                  >
-                    <i />
-                  </button>
+                  {item.fixed != null ? (
+                    <span className="cz-fixed">{item.fixed.trim()}</span>
+                  ) : (
+                    <button
+                      type="button"
+                      className={`cz-toggle${on ? ' on' : ''}`}
+                      role="switch"
+                      aria-checked={on}
+                      aria-label={`${on ? 'Hide' : 'Show'} ${item.label}`}
+                      onClick={() => toggle(key)}
+                    >
+                      <i />
+                    </button>
+                  )}
                 </div>
               </Fragment>
             )
           })}
         </div>
+
+        {footer}
 
         <button type="button" className="cz-reset" onClick={doReset}>
           Reset to default

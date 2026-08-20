@@ -482,6 +482,16 @@
   padding: 14px 8px 4px;
 }
 
+/* The drawer lists every destination now, so it scrolls. The bottom padding is
+   what keeps the last row clear of the Customize button. */
+.drawer-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px 8px 4px;
+}
+
 .menu-sec-label {
   font-size: var(--t-cap2);
   font-weight: var(--w-bold);
@@ -489,6 +499,63 @@
   text-transform: uppercase;
   color: #8a8073;
   padding: 0 12px 6px;
+}
+
+/* A heading that follows the first row of its group needs its own top gap; the
+   first one in the drawer does not. */
+.drawer-body > div + div .menu-sec-label {
+  padding-top: 14px;
+}
+
+/* Where you are. A tint rather than a bolder label, because the drawer is read
+   at a glance and weight alone is not enough at 15px. */
+.menu-item.here {
+  background: rgba(200, 169, 126, 0.14);
+  font-weight: var(--w-semi);
+}
+[data-theme="light"] .menu-item.here {
+  background: rgba(156, 116, 73, 0.12);
+}
+
+/* The bar is a shortcut into the drawer, not a separate list. This is what makes
+   that relationship legible instead of something to remember. */
+.menu-bar-tag {
+  flex: none;
+  font-size: 9.5px;
+  font-weight: var(--w-bold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  padding: 2px 6px;
+}
+
+/* Same shape as Discover's "Customize rows" and Insights' "Customize cards",
+   because it is the same control: it edits the surface it sits at the bottom of. */
+.drawer-cz {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: calc(100% - 16px);
+  margin: 14px 8px 8px;
+  padding: 12px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  background: none;
+  color: var(--accent);
+  font-size: var(--t-sub);
+  font-weight: var(--w-semi);
+}
+
+.drawer-cz:active {
+  background: var(--surface-2);
+}
+
+.drawer-cz svg {
+  width: 18px;
+  height: 18px;
 }
 
 .menu-item {
