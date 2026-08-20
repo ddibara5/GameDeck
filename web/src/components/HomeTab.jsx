@@ -429,7 +429,6 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
                 {w.title}
                 <span className="up-d">{w.day.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
               </span>
-              {CHEV}
             </button>
           ))}
         </div>

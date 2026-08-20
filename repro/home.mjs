@@ -154,6 +154,11 @@ await page.screenshot({ path: 'repro/out/home-dark.png', fullPage: true })
 // sheet: the same one the Wishlist page opens, with the same heart on it.
 const upBtns = await page.locator('.up-row.as-btn').count()
 check('Coming up rows are buttons', upBtns >= 3, String(upBtns))
+// A chevron marks a CARD that leads somewhere, never a row inside one. The rows
+// are tappable like every other row in the app and say so by behaving, not by
+// carrying a mark each.
+const rowChevs = await page.locator('.up-row .hm-chev').count()
+check('the rows carry no chevron of their own', rowChevs === 0, String(rowChevs))
 await page.locator('.up-row.as-btn').first().click()
 await page.waitForTimeout(700)
 const sheet = await page.evaluate(() => {
