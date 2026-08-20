@@ -365,7 +365,7 @@ export default function SettingsPage({ open, onClose, onOpenNav }) {
         <div className="settings-section">
           <div className="menu-sec-label">Navigation</div>
           <div className="settings-group">
-            <MenuItem glyph={ICONS.nav} label="Tab bar" sub="Reorder, hide, and label your tabs" onClick={onOpenNav} />
+            <MenuItem glyph={ICONS.nav} label="Drawer and tab bar" sub="Reorder destinations, choose your tabs" onClick={onOpenNav} />
           </div>
         </div>
 

@@ -8,6 +8,14 @@ import './wishlist.css'
 
 // Drawer-opened status lists. `filter` runs against a game with the live status map.
 export const LIST_DEFS = {
+  // Derived, not stored: `backlog` is what effectiveStatus returns when nothing
+  // has been decided and nothing has been played, so this list and the Home tile
+  // are reading the same rule and cannot disagree.
+  'status:backlog': {
+    title: 'Backlog',
+    filter: (g, m) => effectiveStatus(g, m) === 'backlog',
+    empty: 'Games you own and have not really started will show up here.',
+  },
   'status:playing': {
     title: 'Playing',
     filter: (g, m) => effectiveStatus(g, m) === 'playing',

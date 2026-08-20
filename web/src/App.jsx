@@ -5,7 +5,7 @@ import Menu from './components/Menu.jsx'
 import SettingsPage from './components/SettingsPage.jsx'
 import TabBar from './components/TabBar.jsx'
 import { useNewsUnread } from './lib/news.js'
-import { useNavConfig, getNavConfig, visibleKeys, hiddenKeys, TAB_BY_KEY } from './lib/navConfig.js'
+import { useNavConfig, getNavConfig, visibleKeys, TAB_BY_KEY } from './lib/navConfig.js'
 import { overlaysOpen } from './lib/useEdgeBack.js'
 import CustomizeRows from './components/CustomizeRows.jsx'
 import CustomizeNav from './components/CustomizeNav.jsx'
@@ -13,6 +13,7 @@ import CustomizeNav from './components/CustomizeNav.jsx'
 // Code-split each tab and the overlay views into their own chunk so the initial
 // bundle only carries the shell + the first (Library) tab. The service worker
 // cache-firsts the hashed chunks, so after the first visit each one loads instantly.
+const HomeTab = lazy(() => import('./components/HomeTab.jsx'))
 const LibraryTab = lazy(() => import('./components/LibraryTab.jsx'))
 const ActivityTab = lazy(() => import('./components/ActivityTab.jsx'))
 const InsightsTab = lazy(() => import('./components/InsightsTab.jsx'))
@@ -41,7 +42,6 @@ export default function App() {
   // Live tab bar layout (order + which tabs show + label visibility).
   const nav = useNavConfig()
   const visibleTabs = visibleKeys(nav)
-  const hiddenTabs = hiddenKeys(nav)
   // A drawer-opened overlay view (Wishlist / status lists) shown over the active tab.
   const [view, setView] = useState(null)
   const [viewClosing, setViewClosing] = useState(false)
@@ -193,6 +193,15 @@ export default function App() {
       </header>
       <main className="app-main">
         <Suspense fallback={null}>
+          {activeTab === 'home' && (
+            <HomeTab
+              onOpenTab={(t) => {
+                closeView()
+                setActiveTab(t)
+              }}
+              onOpenList={openView}
+            />
+          )}
           {activeTab === 'library' && <LibraryTab />}
           {activeTab === 'activity' && <ActivityTab />}
           {activeTab === 'insights' && <InsightsTab />}
@@ -224,8 +233,11 @@ export default function App() {
       <Menu
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
+        activeTab={view ? null : activeTab}
         onOpenWishlist={() => openView('wishlist')}
         onOpenList={(key) => openView(key)}
+        onOpenSettings={() => setSettingsOpen(true)}
+        onCustomize={() => setCustomizeNavOpen(true)}
         onOpenTab={(t) => {
           closeView()
           setActiveTab(t)
