@@ -413,7 +413,7 @@ check('unfolding clears the stored key', JSON.stringify(unfolded.stored) === '{}
 await page.getByRole('button', { name: /^Insights/ }).first().click()
 await page.waitForTimeout(900)
 const insights = await page.evaluate(() => ({
-  title: document.querySelector('.page-title')?.textContent.trim(),
+  title: document.querySelector('.app-header-title')?.textContent.trim(),
   cardTitles: [...document.querySelectorAll('.chart-title')].map((e) => e.textContent.trim()),
   np: document.querySelectorAll('.np').length,
   arcs: document.querySelectorAll('.ins-arc').length,

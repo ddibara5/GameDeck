@@ -212,6 +212,10 @@
 .app-header-title {
   flex: 1;
   min-width: 0;
+  /* This is an h1 now, and the UA default is 0.67em top and bottom. The header
+     is a fixed-height flex row so symmetric margins do not move it visually,
+     which is exactly why this is easy to miss: it only shows up as a clipped
+     descender once the type grows. */
   margin: 0;
   font-size: var(--t-t3);
   font-weight: var(--w-bold);
