@@ -13,23 +13,25 @@ import { useEffect, useState } from 'react'
 const KEY = 'gamedeck_home_cards_v1'
 const EVENT = 'gd-home-cards-change'
 
+// Backlog, Pick up next and Pace were removed on 21 Aug 2026, not switched off:
+// they were never used, and a catalog entry is a promise that the card exists.
+// Their renderers, memos, state and `lib/homePicks.js` went with them, the same
+// way the five cards that left Insights took theirs. A saved layout that still
+// names them drops them on the next read, which is what reconcile-on-read is for.
 export const CARD_CATALOG = [
   { key: 'now_playing', form: 'full', label: 'Now playing', sub: 'The game in progress, with its arc' },
   { key: 'week', form: 'tile', label: 'This week', sub: 'Hours, days played, achievements' },
-  { key: 'backlog', form: 'tile', label: 'Backlog', sub: 'How many are waiting' },
   { key: 'leaving_gp', form: 'full', label: 'Leaving Game Pass', sub: 'Started games on the way out' },
-  { key: 'pick_up_next', form: 'full', label: 'Pick up next', sub: 'Three from the backlog, with the reason' },
   { key: 'coming_up', form: 'full', label: 'Coming up', sub: 'Wishlist releases with a date' },
   { key: 'recently_released', form: 'full', label: 'Recently released', sub: 'Wishlist games that are out and unowned' },
-  { key: 'pace', form: 'full', label: 'Pace', sub: 'Achievements left at your current rate' },
 ]
 
 export const CARD_BY_KEY = CARD_CATALOG.reduce((m, c) => ((m[c.key] = c), m), {})
 
-// Pace is the one card that is off by default. It is a real number, but it is a
-// projection rather than a fact, and Home is the screen for facts.
+// Every card in the catalog is on by default now. Pace used to be the exception,
+// as a projection rather than a fact; it is gone rather than defaulted off.
 const DEFAULT_ORDER = CARD_CATALOG.map((c) => c.key)
-const DEFAULT_ENABLED = CARD_CATALOG.reduce((m, c) => ((m[c.key] = c.key !== 'pace'), m), {})
+const DEFAULT_ENABLED = CARD_CATALOG.reduce((m, c) => ((m[c.key] = true), m), {})
 
 function load() {
   let stored = null

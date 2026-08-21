@@ -101,6 +101,11 @@ const DEFAULT_LABELS = true
 // the landing tab. This is a visibility flag over an untouched config.
 const DEFAULT_BAR_SHOWN = true
 
+// Which drawer GROUPS are folded shut, keyed by group rather than by row, so a
+// group split across the order by dragging folds as one thing. Empty means every
+// group is open, which is the default and the only state that existed before.
+const DEFAULT_COLLAPSED = {}
+
 function load() {
   let stored = null
   try {
@@ -163,7 +168,18 @@ function load() {
 
   const labels = stored && typeof stored.labels === 'boolean' ? stored.labels : DEFAULT_LABELS
   const barShown = stored && typeof stored.barShown === 'boolean' ? stored.barShown : DEFAULT_BAR_SHOWN
-  return { order, bar, enabled, labels, barShown }
+
+  // Reconciled against GROUP_LABEL the same way the orders are reconciled against
+  // the catalog: a group that no longer exists drops out rather than sitting in
+  // storage forever, and only `true` is kept, so the object holds folded groups
+  // rather than an entry per group.
+  const savedCollapsed = (stored && stored.collapsed) || DEFAULT_COLLAPSED
+  const collapsed = {}
+  for (const g of Object.keys(GROUP_LABEL)) {
+    if (savedCollapsed[g]) collapsed[g] = true
+  }
+
+  return { order, bar, enabled, labels, barShown, collapsed }
 }
 
 export function getNavConfig() {
@@ -181,6 +197,7 @@ export function setNavConfig(config) {
         enabled: config.enabled || cur.enabled,
         labels: typeof config.labels === 'boolean' ? config.labels : cur.labels,
         barShown: typeof config.barShown === 'boolean' ? config.barShown : cur.barShown,
+        collapsed: config.collapsed || cur.collapsed,
       })
     )
   } catch {
@@ -217,6 +234,20 @@ export function hiddenKeys(config) {
 // nothing, so this is false for everything while it is off, and the readouts go
 // quiet instead of pointing at a strip that is not on screen. Membership itself
 // is untouched and comes back exactly as it was.
+// Folded groups hide their rows in the drawer and nowhere else. The EDITOR keeps
+// showing everything: you cannot drag a row you cannot see, and a fold is a
+// reading preference rather than a change to the order.
+export function isFolded(config, group) {
+  return Boolean(config.collapsed && config.collapsed[group])
+}
+
+export function toggleGroup(config, group) {
+  const next = { ...(config.collapsed || {}) }
+  if (next[group]) delete next[group]
+  else next[group] = true
+  setNavConfig({ collapsed: next })
+}
+
 export function onBar(config, key) {
   return isBarTab(key) && Boolean(config.enabled[key]) && config.barShown !== false
 }

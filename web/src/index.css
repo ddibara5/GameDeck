@@ -507,6 +507,53 @@
   padding-top: 14px;
 }
 
+/* The drawer's headings are buttons that fold their group. Only the drawer's:
+   the same class on Settings and in the editors stays a plain label, which is
+   why the button bits live here rather than on .menu-sec-label.
+
+   A <button> does not inherit font-family, and .menu-sec-label sets everything
+   about the type EXCEPT that, so leaving it off is how a heading quietly renders
+   in the UA button face. */
+.menu-sec {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  font-family: inherit;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.menu-sec:active { opacity: 0.6; }
+.menu-sec-t { flex: 1; min-width: 0; }
+
+/* Only while folded. Open, the rows below are the count. */
+.menu-sec-n {
+  flex: none;
+  font-size: 10px;
+  font-weight: var(--w-bold);
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  background: var(--surface-2);
+  border-radius: var(--r-pill);
+  padding: 1px 7px;
+}
+
+.menu-sec-chev {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  transition: transform var(--d-fast) ease;
+}
+/* Pointing at the rows when open, at the heading when shut. */
+.menu-sec.folded .menu-sec-chev { transform: rotate(-90deg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-sec-chev { transition: none; }
+}
+
 /* Where you are. A tint rather than a bolder label, because the drawer is read
    at a glance and weight alone is not enough at 15px. */
 .menu-item.here {

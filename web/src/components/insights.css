@@ -298,9 +298,6 @@
 .ins-arc { display: block; width: 100%; height: auto; margin-top: 12px; }
 
 /* Pace */
-.pace-hero { display: flex; align-items: baseline; gap: 8px; }
-.pace-big { font-size: var(--t-t1); font-weight: var(--w-bold); letter-spacing: var(--t-t1-tr); line-height: 1.05; }
-.pace-sub { font-size: var(--t-foot); color: var(--muted); }
 /* One pip per achievement. A bar would say the same thing, but the pips say how
    MANY are left, which is the question the card exists to answer. */
 .pips { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 13px; }

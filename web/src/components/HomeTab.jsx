@@ -7,9 +7,7 @@ import GameSheet from './GameSheet.jsx'
 import CustomizeHome from './CustomizeHome.jsx'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
 import { useWishlist } from '../lib/wishlist.js'
-import { useStatusMap } from '../lib/userStatus.js'
 import { useHomeCards, CARD_BY_KEY } from '../lib/homeCards.js'
-import { backlogGames, pickUpNext, skipGame, pickReason, pickMeta, TIER_SUB } from '../lib/homePicks.js'
 import { platformMeta, minutesToHhm, parseDayOrInstant } from '../lib/format.js'
 import { fetchRecentActivity } from '../lib/recentActivity.js'
 import { weekStats, WEEK_SPAN, startOfDay, daysBetween, dayKey, eventDay } from '../lib/playWeek.js'
@@ -94,7 +92,6 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
   // than a fourth thin copy of the table. They carry everything the wishlist
   // sheet wants, so a Coming up row can open the sheet the Wishlist page opens.
   const { items: wishItems } = useWishlist()
-  const statusMap = useStatusMap()
   const [events, setEvents] = useState([])
   const [leavingIds, setLeavingIds] = useState([])
   const [loading, setLoading] = useState(true)
@@ -105,9 +102,6 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
   // gesture, not a layout preference, and Customize cards is where layout lives.
   const [expanded, setExpanded] = useState({})
   const [customizeOpen, setCustomizeOpen] = useState(false)
-  // Bumped by a skip, so the shortlist recomputes. The skip list lives in
-  // localStorage, which React cannot subscribe to on its own.
-  const [skipTick, setSkipTick] = useState(0)
   const cards = useHomeCards()
 
   useEffect(() => {
@@ -126,12 +120,6 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
     return () => {
       cancelled = true
     }
-  }, [])
-
-  useEffect(() => {
-    const bump = () => setSkipTick((t) => t + 1)
-    window.addEventListener('gd-home-skip', bump)
-    return () => window.removeEventListener('gd-home-skip', bump)
   }, [])
 
   const week = useMemo(() => weekStats(events, new Date(), WEEK_SPAN), [events])
@@ -204,15 +192,6 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
     }
   }, [events, gamesById, week])
 
-  const pace = useMemo(() => {
-    if (!nowPlaying) return null
-    const { earned, total, achWindow, windowDays } = nowPlaying
-    const left = total - earned
-    if (!total || left <= 0 || achWindow <= 0 || windowDays <= 0) return null
-    const perDay = achWindow / windowDays
-    return { left, total, earned, perDay, days: Math.ceil(left / perDay), achWindow, windowDays }
-  }, [nowPlaying])
-
   const comingUp = useMemo(() => {
     const today = startOfDay(new Date())
     const soon = Math.floor((Date.now() + COMING_UP_DAYS * 86400000) / 1000)
@@ -262,17 +241,6 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
       .filter((g) => g.igdb_id != null && set.has(g.igdb_id) && num(g.playtime_minutes) > 0)
       .sort((a, b) => num(b.playtime_minutes) - num(a.playtime_minutes))
   }, [games, leavingIds])
-
-  const backlog = useMemo(() => backlogGames(games, statusMap), [games, statusMap])
-  const neverOpened = useMemo(
-    () => backlog.filter((g) => num(g.playtime_minutes) === 0 && !g.last_played).length,
-    [backlog]
-  )
-  const picks = useMemo(
-    () => pickUpNext(games, statusMap, 3),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [games, statusMap, skipTick]
-  )
 
   if (loading || libLoading) {
     return (
@@ -412,14 +380,6 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
       </button>
     ),
 
-    backlog: () => (
-      <button type="button" className="hm-tile" key="backlog" onClick={() => onOpenList && onOpenList('status:backlog')}>
-        <span className="hm-th"><span className="hm-tk">Backlog</span>{CHEV}</span>
-        <span className="hm-tv">{backlog.length}</span>
-        <span className="hm-ts">{neverOpened} never opened</span>
-      </button>
-    ),
-
     // No leave DATE anywhere: the Game Pass catalog carries `leaving_soon` and
     // nothing else, so this says "soon" rather than inventing a countdown.
     leaving_gp: () =>
@@ -456,44 +416,6 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
         )
       ) : null,
 
-    pick_up_next: () =>
-      picks.picks.length ? (
-        <div className="chart-card" key="pick_up_next">
-          <div className="hm-head">
-            <h2 className="chart-title">Pick up next</h2>
-            <button type="button" className="hm-link" onClick={() => onOpenList && onOpenList('status:backlog')}>
-              Backlog · {backlog.length}
-            </button>
-          </div>
-          <div className="ins-sub">{TIER_SUB[picks.tier]}</div>
-          {picks.picks.map((g) => (
-            <div className="hm-pick" key={g.master_id}>
-              <button type="button" className="hm-pb" onClick={() => openGame(g)}>
-                <Cover src={g.cover_small} title={g.title} size="sm" className="hm-pcov" />
-                <span className="hm-pt">
-                  <span className="hm-pn">{g.title}</span>
-                  <span className="hm-pm">
-                    <i className="hm-chip">{pickReason(g)}</i>
-                    {pickMeta(g)}
-                  </span>
-                </span>
-              </button>
-              <button
-                type="button"
-                className="hm-skip"
-                aria-label={`Not now: ${g.title}`}
-                title="Not now"
-                onClick={() => skipGame(g.master_id)}
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                  <path d="M6 6l12 12M18 6L6 18" />
-                </svg>
-              </button>
-            </div>
-          ))}
-        </div>
-      ) : null,
-
     coming_up: () =>
       comingUp.length
         ? releaseCard({
@@ -521,33 +443,25 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
             hot: (w) => w.days <= 7,
           })
         : null,
-
-    pace: () =>
-      pace ? (
-        <div className="chart-card" key="pace">
-          <h2 className="chart-title">Pace</h2>
-          <div className="ins-sub">
-            {pace.achWindow} {pace.achWindow === 1 ? 'achievement' : 'achievements'} in the last {pace.windowDays} days
-          </div>
-          <div className="pace-hero">
-            <span className="pace-big">~{pace.days} {pace.days === 1 ? 'day' : 'days'}</span>
-            <span className="pace-sub">to all {pace.total}, at this rate</span>
-          </div>
-          <div className="ins-take">A straight line through a list that is never straight, so read it as a floor rather than a date.</div>
-        </div>
-      ) : null,
   }
 
   // Consecutive tiles pair up into a row; everything else takes the full width.
   // Grouping happens here rather than in the catalog so turning a tile off can
   // never leave a half-empty grid behind.
+  //
+  // A run of ONE is not a pair, and `solo` gives it the whole width rather than
+  // leaving it sitting in the left half of a two-column grid with nothing beside
+  // it. It keeps the tile's height, so it reads as a bar rather than a card. This
+  // is the rule that mattered the moment Backlog was removed and This week became
+  // the only tile, and it is a rule rather than a special case: put a second tile
+  // back in the catalog and the two pair up again with nothing else to change.
   const visible = cards.order.filter((k) => cards.enabled[k] && CARDS[k])
   const blocks = []
   let run = []
   const flush = () => {
     if (!run.length) return
     blocks.push(
-      <div className="hm-grid" key={`grid-${blocks.length}`}>
+      <div className={`hm-grid${run.length === 1 ? ' solo' : ''}`} key={`grid-${blocks.length}`}>
         {run}
       </div>
     )

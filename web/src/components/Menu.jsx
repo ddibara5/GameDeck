@@ -4,7 +4,7 @@ import { useMountTransition } from '../lib/useMountTransition.js'
 import { lockScroll } from '../lib/scrollLock.js'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
 import { useStatusMap, effectiveStatus, includeInLists } from '../lib/userStatus.js'
-import { useNavConfig, DEST_BY_KEY, GROUP_LABEL, onBar } from '../lib/navConfig.js'
+import { useNavConfig, DEST_BY_KEY, GROUP_LABEL, onBar, isFolded, toggleGroup } from '../lib/navConfig.js'
 import { DEST_ICONS } from './destIcons.jsx'
 
 // The left drawer: the whole map of the app, grouped, with the bottom bar marked
@@ -25,6 +25,18 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpen
   const statusMap = useStatusMap()
   const nav = useNavConfig()
   const { mounted, closing } = useMountTransition(open)
+
+  // How many rows each group holds, over the user's own order. A group split in
+  // two by dragging counts as one, which is also how it folds: the fold is a
+  // property of the GROUP, not of a run of adjacent rows.
+  const groupSize = useMemo(() => {
+    const c = {}
+    for (const key of nav.order) {
+      const dest = DEST_BY_KEY[key]
+      if (dest) c[dest.group] = (c[dest.group] || 0) + 1
+    }
+    return c
+  }, [nav.order])
 
   // Live counts from the (session-cached) library and the status map, so a badge
   // and the list it opens can never disagree.
@@ -98,6 +110,7 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpen
             if (!dest) return null
             const heading = dest.group !== lastGroup ? GROUP_LABEL[dest.group] : null
             lastGroup = dest.group
+            const folded = isFolded(nav, dest.group)
             const count = counts[key]
             // Through the helper rather than reading `enabled` directly, so the
             // pill goes quiet when the bar is switched off instead of pointing
@@ -106,7 +119,24 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpen
             const here = dest.kind === 'tab' && key === activeTab
             return (
               <div key={key}>
-                {heading ? <div className="menu-sec-label">{heading}</div> : null}
+                {/* The heading is the control. Folding is stored per group in
+                    gamedeck_nav_v2, so it survives closing the drawer, and the
+                    count only appears while folded: open, the rows say it. */}
+                {heading ? (
+                  <button
+                    type="button"
+                    className={`menu-sec-label menu-sec${folded ? ' folded' : ''}`}
+                    aria-expanded={!folded}
+                    onClick={() => toggleGroup(nav, dest.group)}
+                  >
+                    <span className="menu-sec-t">{heading}</span>
+                    {folded ? <span className="menu-sec-n">{groupSize[dest.group]}</span> : null}
+                    <svg className="menu-sec-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M6 9l6 6 6-6" />
+                    </svg>
+                  </button>
+                ) : null}
+                {folded ? null : (
                 <button type="button" className={`menu-item${here ? ' here' : ''}`} onClick={() => activate(dest)}>
                   {cloneElement(DEST_ICONS[key] || DEST_ICONS.home, { className: 'menu-icon' })}
                   <span className="menu-label">{dest.label}</span>
@@ -115,6 +145,7 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpen
                   ) : null}
                   {isOnBar ? <span className="menu-bar-tag">on bar</span> : null}
                 </button>
+                )}
               </div>
             )
           })}
