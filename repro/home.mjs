@@ -547,7 +547,10 @@ check('wishlist sits under Explore', drawer.rows.some((r) => r.startsWith('Wishl
 // Shuffle: four ways to find the next thing.
 check('Shuffle sits under Explore', drawer.rows.some((r) => r.startsWith('Shuffle')), drawer.rows.join(' // '))
 check('Settings is not a row any more', !drawer.rows.some((r) => r.startsWith('Settings')), drawer.rows.join(' // '))
-check('five tabs carry an on-bar pill', drawer.pills === 5, String(drawer.pills))
+// The pill came off on 21 Aug. Asserted as ZERO rather than deleted, because
+// "we took it out" is a decision and a deleted assertion defends nothing: the
+// selector it queries is the one the markup used, so a revert fails here.
+check('no on-bar pill anywhere in the drawer', drawer.pills === 0, String(drawer.pills))
 check('current tab is marked', /^Home/.test(drawer.here || ''), drawer.here)
 // The point of the pin: both sit BELOW the scrolling body, so no amount of list
 // growth can push them off. Asserted as geometry rather than as "the element

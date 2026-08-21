@@ -4,7 +4,7 @@ import { useMountTransition } from '../lib/useMountTransition.js'
 import { lockScroll } from '../lib/scrollLock.js'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
 import { useStatusMap, effectiveStatus, includeInLists } from '../lib/userStatus.js'
-import { useNavConfig, DEST_BY_KEY, GROUP_LABEL, onBar, isFolded, toggleGroup } from '../lib/navConfig.js'
+import { useNavConfig, DEST_BY_KEY, GROUP_LABEL, isFolded, toggleGroup } from '../lib/navConfig.js'
 import { DEST_ICONS } from './destIcons.jsx'
 
 // The left drawer: the whole map of the app, grouped, with the bottom bar marked
@@ -13,8 +13,13 @@ import { DEST_ICONS } from './destIcons.jsx'
 // It used to list a hand-written Lists section plus a "More" section holding
 // whichever tabs the bar was hiding, which meant the drawer's shape depended on
 // a setting made weeks ago and Insights only appeared if it had been switched
-// off. Now every destination in the nav catalog is here, in the user's own order,
-// and an "on bar" pill says which ones are also a tab.
+// off. Now every destination in the nav catalog is here, in the user's own order.
+//
+// There was an "on bar" pill on each row that is also a tab. It came off on
+// 21 Aug: the bar it referred to is on screen at the same time as the drawer, so
+// the pill labelled something the eye can already see, on five of twelve rows.
+// Which tabs are on the bar is a question the bar editor answers, and that is
+// where the "on bar" / "off bar" column still lives.
 //
 // Group headings are printed as the list is walked, not by grouping it first,
 // because the order belongs to the user: drag a row somewhere else and its
@@ -117,7 +122,6 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpen
             // Through the helper rather than reading `enabled` directly, so the
             // pill goes quiet when the bar is switched off instead of pointing
             // at a strip that is not on screen.
-            const isOnBar = onBar(nav, key)
             const here = dest.kind === 'tab' && key === activeTab
             return (
               <div key={key}>
@@ -145,7 +149,6 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpen
                   {count != null ? (
                     <span className={`menu-value${key === 'wishlist' ? ' accent' : ''}`}>{count}</span>
                   ) : null}
-                  {isOnBar ? <span className="menu-bar-tag">on bar</span> : null}
                 </button>
                 )}
               </div>

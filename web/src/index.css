@@ -454,20 +454,6 @@
   background: rgba(156, 116, 73, 0.12);
 }
 
-/* The bar is a shortcut into the drawer, not a separate list. This is what makes
-   that relationship legible instead of something to remember. */
-.menu-bar-tag {
-  flex: none;
-  font-size: 9.5px;
-  font-weight: var(--w-bold);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--muted);
-  border: 1px solid var(--line);
-  border-radius: var(--r-pill);
-  padding: 2px 6px;
-}
-
 /* Same shape as Discover's "Customize rows" and Insights' "Customize cards",
    because it is the same control: it edits the surface it sits at the bottom of. */
 .drawer-cz {
