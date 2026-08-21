@@ -89,16 +89,6 @@
 }
 .hm-bar.today em { color: var(--accent); }
 
-/* A row for a Game Pass title that is not in the library. It is not a button in
-   any useful sense, so it must not pretend: no press state, and the cursor stays
-   an arrow. Full opacity though, because the row is not unavailable, it just has
-   nowhere to go. */
-.up-row.as-btn:disabled {
-  cursor: default;
-  opacity: 1;
-}
-.up-row.as-btn:disabled:active { opacity: 1; }
-
 /* ------------------------------------------------------------------- tiles */
 
 .hm-tile {

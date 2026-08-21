@@ -51,6 +51,18 @@ const GAMES = [
   { master_id: 3, title: 'Resident Evil 2', environment: 'xbox', genre: 'Shooter', percent: 3, playtime_minutes: 21, playtime_label: '21m', earned_awards: 1, total_awards: 42, last_played: iso(1600), igdb_id: 19686, igdb_rating: 90, release_year: 2019, length_minutes: 775, cover_small: null, cover_igdb: 'co3', platforms: 'Xbox' },
   { master_id: 4, title: 'Outer Wilds', environment: 'xbox', genre: 'Puzzle', percent: 4, playtime_minutes: 51, playtime_label: '51m', earned_awards: 2, total_awards: 30, last_played: iso(1500), igdb_id: 26856, igdb_rating: 87, release_year: 2019, length_minutes: 1224, cover_small: null, cover_igdb: 'co4', platforms: 'Xbox' },
   { master_id: 5, title: 'A Plague Tale: Requiem', environment: 'xbox', genre: 'Adventure', percent: 1, playtime_minutes: 8, playtime_label: '8m', earned_awards: 1, total_awards: 50, last_played: iso(900), igdb_id: 152271, igdb_rating: 85, release_year: 2022, length_minutes: 1090, cover_small: null, cover_igdb: 'co5', platforms: 'Xbox' },
+  // The edition mismatch, copied from production. IGDB gives an edition its own
+  // id, so the Game Pass row is 119402 while BOTH library rows carry 1942: an
+  // id-only join calls this "not yours". Two rows on purpose, the same way the
+  // real library carries it, so the most-played one has to win: the PSN copy has
+  // the 1249 minutes and the Xbox copy has none. (The real PSN title spells the
+  // separator with an en dash; normTitle strips every non-alphanumeric, so a
+  // hyphen keys identically and is what the fixture uses.)
+  { master_id: 8, title: 'The Witcher 3: Wild Hunt - Complete Edition', environment: 'psn', genre: 'Role-playing (RPG)', percent: 10, playtime_minutes: 1249, playtime_label: '20h 49m', earned_awards: 9, total_awards: 78, last_played: iso(300), igdb_id: 1942, igdb_rating: 92, release_year: 2015, length_minutes: 3000, cover_small: null, cover_igdb: 'co8', platforms: 'PlayStation' },
+  { master_id: 9, title: 'The Witcher 3: Wild Hunt', environment: 'xbox', genre: 'Role-playing (RPG)', percent: 13, playtime_minutes: 0, playtime_label: '0m', earned_awards: 0, total_awards: 78, last_played: null, igdb_id: 1942, igdb_rating: 92, release_year: 2015, length_minutes: 3000, cover_small: null, cover_igdb: 'co9', platforms: 'Xbox' },
+  // On Game Pass, in the library, never opened. Only reachable through the
+  // title fallback below, and the row this card exists to print.
+  { master_id: 10, title: 'A Game You Never Started', environment: 'xbox', genre: 'Adventure', percent: 0, playtime_minutes: 0, playtime_label: '0m', earned_awards: 0, total_awards: 20, last_played: null, igdb_id: 7001, igdb_rating: 80, release_year: 2022, length_minutes: 600, cover_small: null, cover_igdb: 'co10', platforms: 'Xbox' },
   // Junk the gates must keep out: old, low rated, never opened.
   { master_id: 6, title: 'FIFA 14', environment: 'xbox', genre: 'Sport', percent: 0, playtime_minutes: 0, playtime_label: '0m', earned_awards: 0, total_awards: 43, last_played: null, igdb_id: 2920, igdb_rating: 78, release_year: 2013, length_minutes: 82, cover_small: null, cover_igdb: 'co6', platforms: 'Xbox' },
   { master_id: 7, title: 'UNO', environment: 'xbox', genre: 'Card & Board Game', percent: 0, playtime_minutes: 0, playtime_label: '0m', earned_awards: 0, total_awards: 12, last_played: null, igdb_id: 5555, igdb_rating: 61, release_year: 2016, length_minutes: 180, cover_small: null, cover_igdb: 'co7', platforms: 'Xbox' },
@@ -83,18 +95,36 @@ const WISHLIST = [
   { igdb_id: 444, title: 'A Quarter-Dated Game', cover: null, year: 2027, note: null, created_at: iso(30), released: day(2027, 11, 31), date_precision: 'quarter', release_label: 'Q4 2027' },
   { igdb_id: 555, title: 'A Far Future Game', cover: null, year: 2027, note: null, created_at: iso(20), released: relDay(400), date_precision: 'day', release_label: 'next year' },
 ]
-// Four rows so the card has something to expand into, and so both halves of the
-// rule are exercised: 217590 is Another Crab's Treasure in GAMES with playtime,
-// so it is YOURS; the other three are catalogue-only. 6001 sits at 88 and must
-// appear, 6002 at 71 clears the floor of 70 by one, and 6003 at 58 must NOT
-// appear at any expansion. Without that last row the gate is untested code.
+// Four rows, sized so the RATING GATE is what excludes the 58 rather than the
+// four-row cap. That distinction is the whole point and the previous fixture got
+// it wrong: with five candidates the 58 sorts last among the catalogue rows and
+// `slice(0, RELEASE_MAX)` drops it whether or not GP_MIN_RATING exists, so the
+// assertion passed against a deleted gate. Here the ungated pool is exactly four
+// and every one of them would be on screen, so the 58's absence has one cause.
+//
+// The other two halves of the rule: 217590 is Another Crab's Treasure, matched
+// to the library by id, and 119402 is the Witcher edition mismatch, matched only
+// by title. 6002 at 71 clears the floor of 70 by one and is the catalogue row
+// the sheet assertions tap.
 const GAMEPASS_LEAVING = [
   { igdb_id: 217590, name: "Another Crab's Treasure", cover: null, year: 2024, rating: 82 },
-  { igdb_id: 6001, name: 'A Well Rated Exit', cover: null, year: 2023, rating: 88 },
+  { igdb_id: 119402, name: 'The Witcher 3: Wild Hunt - Complete Edition', cover: null, year: 2016, rating: 92 },
+  // The base game AND its edition, both leaving, which the catalog sync says can
+  // happen and which now both resolve to the same library row. Costs nothing in
+  // the arithmetic above because it is dropped before bucketing.
+  { igdb_id: 1942, name: 'The Witcher 3: Wild Hunt', cover: null, year: 2015, rating: 92 },
   { igdb_id: 6002, name: 'A Just Good Enough Exit', cover: null, year: 2021, rating: 71 },
-  { igdb_id: 6004, name: 'A Fourth Decent Exit', cover: null, year: 2022, rating: 76 },
   { igdb_id: 6003, name: 'A Poorly Rated Exit', cover: null, year: 2019, rating: 58 },
 ]
+// The second window, loaded later in this run. One title you own and never
+// opened, one the gate must reject, and nothing else: the ungated pool is two,
+// so this is a SECOND state in which the gate is the only thing that can be
+// keeping the 58 off the page.
+const GAMEPASS_NEVER_STARTED = [
+  { igdb_id: 7001, name: 'A Game You Never Started', cover: null, year: 2022, rating: 80 },
+  { igdb_id: 6003, name: 'A Poorly Rated Exit', cover: null, year: 2019, rating: 58 },
+]
+let gpRoute = GAMEPASS_LEAVING
 
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROME || undefined })
 const ctx = await browser.newContext({
@@ -123,7 +153,7 @@ await page.route('**/rest/v1/**', (route) => {
   }
   if (u.includes('/games')) return json(route, GAMES)
   if (u.includes('/wishlist')) return json(route, WISHLIST)
-  if (u.includes('/gamepass')) return json(route, GAMEPASS_LEAVING)
+  if (u.includes('/gamepass')) return json(route, gpRoute)
   if (u.includes('/game_status')) return json(route, [])
   if (u.includes('/sync_runs')) return json(route, [])
   if (u.includes('/news')) return json(route, [])
@@ -246,31 +276,94 @@ check('the chart lives inside the tile button', bars.inTile === 1, String(bars.i
 // The card is the whole leaving window now, not just games you have started, so
 // the single-title banner is gone with the reason it existed.
 check('the single-title banner is retired', home.banners === 0, String(home.banners))
-check('two rows previewed of four', home.gpRows.length === 2 && /Show 2 more/.test(home.gpExpand || ''), `${home.gpRows.length} // ${home.gpExpand}`)
-// Yours pins to the top whatever it is rated: 82 here, below the 88 beneath it.
-check('your started game is first', /Another Crab/.test(home.gpRows[0] || ''), home.gpRows[0])
-check('your row says how far in you are', /15h 39m in/.test(home.gpRows[0] || ''), home.gpRows[0])
-// A catalogue row has no sheet to open, so it must not present as a button.
-check('your row opens, a catalogue row does not', home.gpDisabled[0] === false && home.gpDisabled[1] === true, JSON.stringify(home.gpDisabled))
-check('a catalogue row states year and rating', /2023 · 88 rated/.test(home.gpRows[1] || ''), home.gpRows[1])
+check('two rows previewed of three', home.gpRows.length === 2 && /Show 1 more/.test(home.gpExpand || ''), `${home.gpRows.length} // ${home.gpExpand}`)
+// THE EDITION MISMATCH. The Game Pass row is igdb 119402 and the library rows
+// are 1942, so an id-only join renders this as a catalogue row reading
+// "2016 · 92 rated" and offers to wishlist a game with 20 hours on it. Asserting
+// the playtime rather than just the title is what makes this a real check: the
+// title alone would appear either way.
+check('an edition mismatch still counts as yours', /Witcher/.test(home.gpRows[0] || '') && /20h 49m in/.test(home.gpRows[0] || ''), home.gpRows[0])
+// And the most-played copy won. Both library rows are 1942; the Xbox one has no
+// playtime, so a first-wins map would print "0m in" here.
+check('the copy with the hours is the one shown', !/0m in/.test(home.gpRows[0] || ''), home.gpRows[0])
+check('the id match is still yours too', /Another Crab/.test(home.gpRows[1] || '') && /15h 39m in/.test(home.gpRows[1] || ''), home.gpRows[1])
+// Every row opens something now: yours the owned detail, a catalogue row the
+// discover sheet. Nothing on this card is inert.
+check('no row is inert any more', home.gpDisabled.length === 2 && home.gpDisabled.every((d) => d === false), JSON.stringify(home.gpDisabled))
 check('no row repeats "Leaving soon"', !home.gpRows.some((r) => /Leaving soon/.test(r)), home.gpRows.join(' // '))
 check('Game Pass exits invent no countdown', !home.gpRows.some((r) => /\d+ days/.test(r)), home.gpRows.join(' // '))
 
-// The gate, which is the whole reason the fixture carries a 58. It only shows at
-// full expansion, so the preview above cannot test it: two rows would pass this
-// with the gate deleted. Toggled back afterwards so the later sweep of the two
-// release cards starts from the same page this one did.
+// The gate, which is the whole reason the fixture carries a 58, and it only
+// shows at full expansion. The ungated pool here is exactly four and the cap is
+// four, so nothing but GP_MIN_RATING can be keeping this row off the page.
 const GP_EXPAND = '[data-card="leaving_gp"] .hm-expand'
 await page.click(GP_EXPAND)
 const gpOpen = await page.evaluate(() => ({
   rows: [...document.querySelectorAll('[data-card="leaving_gp"] .up-row')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
   label: document.querySelector('[data-card="leaving_gp"] .hm-expand')?.textContent.replace(/\s+/g, ' ').trim() || null,
 }))
-check('expanding Leaving Game Pass shows four', gpOpen.rows.length === 4, String(gpOpen.rows.length))
+check('expanding Leaving Game Pass shows all three', gpOpen.rows.length === 3, String(gpOpen.rows.length))
 check('the 58 never appears, at any expansion', !gpOpen.rows.some((r) => /Poorly Rated/.test(r)), gpOpen.rows.join(' // '))
-check('the last row is the 71, one over the floor', /Just Good Enough/.test(gpOpen.rows[3] || ''), gpOpen.rows[3])
+check('the last row is the 71, one over the floor', /Just Good Enough/.test(gpOpen.rows[2] || ''), gpOpen.rows[2])
+// Two catalogue entries (base 1942 and edition 119402), one library row, and so
+// exactly one row here. Asserted with the card OPEN, where a duplicate would
+// have somewhere to go.
+check('a base game and its edition do not both print', gpOpen.rows.filter((r) => /Witcher/.test(r)).length === 1, gpOpen.rows.join(' // '))
+check('a catalogue row states year and rating', /2021 · 71 rated/.test(gpOpen.rows[2] || ''), gpOpen.rows[2])
 check('its expand turns into Show less too', /Show less/.test(gpOpen.label || ''), gpOpen.label)
+await page.locator('[data-card="leaving_gp"]').screenshot({ path: 'repro/out/leaving-gp-open.png' })
+
+// Tapping the catalogue row. It is not in the library, so the surface is the
+// DISCOVER sheet, the same one News and Discover open for an IGDB game, and the
+// assertion is about which sheet arrived rather than just that one did: a
+// wishlist heart and no status picker.
+await page.locator('[data-card="leaving_gp"] .up-row').nth(2).click()
+await page.waitForTimeout(700)
+const gpSheet = await page.evaluate(() => {
+  const el = document.querySelector('.modal-sheet')
+  return {
+    open: Boolean(el),
+    text: el ? el.textContent.replace(/\s+/g, ' ').trim().slice(0, 120) : null,
+    wish: document.querySelectorAll('.modal-sheet .wish-action').length,
+    status: document.querySelectorAll('.modal-sheet .status-hint').length,
+    // Ask AI and More like this navigate within Discover, and Home cannot route
+    // there, so the heart should be the only control in the row.
+    actions: document.querySelectorAll('.modal-sheet .discover-action').length,
+  }
+})
+check('a catalogue row opens a sheet', gpSheet.open, gpSheet.text)
+check('the sheet is for the row that was tapped', /Just Good Enough/.test(gpSheet.text || ''), gpSheet.text)
+check('it is the discover sheet, not the owned one', gpSheet.wish === 1 && gpSheet.status === 0, `wish=${gpSheet.wish} status=${gpSheet.status}`)
+check('the heart is its only control', gpSheet.actions === 1, String(gpSheet.actions))
+await page.screenshot({ path: 'repro/out/leaving-gp-sheet.png' })
+await page.locator('.modal-backdrop').click({ position: { x: 8, y: 8 } })
+await page.waitForTimeout(700)
+check('the Game Pass sheet closes back to Home', (await page.locator('.modal-backdrop').count()) === 0, 'backdrop')
 await page.click(GP_EXPAND)
+
+// A SECOND leaving window, because one fixture cannot hold both of the rules
+// this card now runs. Here the only title you own is one you never opened, and
+// the ungated pool is two rows against a cap of four, so the 58's absence is
+// again attributable to the gate and nothing else.
+//
+// "0m in · 0% done" is what the row would say without its own branch, which is a
+// worse sentence than the one fact worth printing: it is already yours, you
+// never started it, and it goes this week. Under the OLD rule it printed nothing
+// at all, because a game you own with no playtime fell through both buckets.
+gpRoute = GAMEPASS_NEVER_STARTED
+await page.reload({ waitUntil: 'networkidle' })
+await page.waitForTimeout(400)
+const gpNever = await page.evaluate(() => ({
+  rows: [...document.querySelectorAll('[data-card="leaving_gp"] .up-row')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
+  expand: document.querySelectorAll('[data-card="leaving_gp"] .hm-expand').length,
+}))
+check('a game you own and never opened is still yours', gpNever.rows.length === 1 && /Never Started/.test(gpNever.rows[0] || ''), gpNever.rows.join(' // '))
+check('it says so instead of "0m in"', /never started/i.test(gpNever.rows[0] || '') && !/0m in/.test(gpNever.rows[0] || ''), gpNever.rows[0])
+check('the 58 is gated out of this window too', !gpNever.rows.some((r) => /Poorly Rated/.test(r)), gpNever.rows.join(' // '))
+check('one row needs no expand', gpNever.expand === 0, String(gpNever.expand))
+gpRoute = GAMEPASS_LEAVING
+await page.reload({ waitUntil: 'networkidle' })
+await page.waitForTimeout(400)
 // Backlog, Pick up next and Pace were REMOVED on 21 Aug, not switched off. Both
 // halves matter: gone from the page, and gone from the editor that offers cards,
 // because a catalog entry is a promise that the card exists.

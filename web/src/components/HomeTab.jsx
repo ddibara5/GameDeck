@@ -4,9 +4,11 @@ import Cover from './Cover.jsx'
 import Skeleton from './Skeleton.jsx'
 import GameDetail from './GameDetail.jsx'
 import GameSheet from './GameSheet.jsx'
+import DiscoverDetail from './DiscoverDetail.jsx'
 import CustomizeHome from './CustomizeHome.jsx'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
 import { useWishlist } from '../lib/wishlist.js'
+import { normTitle } from '../lib/discover.js'
 import { useHomeCards, CARD_BY_KEY } from '../lib/homeCards.js'
 import { platformMeta, minutesToHhm, parseDayOrInstant } from '../lib/format.js'
 import { fetchRecentActivity } from '../lib/recentActivity.js'
@@ -105,6 +107,7 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
   const [wishOpen, setWishOpen] = useState(null)
+  const [gpOpen, setGpOpen] = useState(null)
   // Which release cards are showing all four rather than the first two. Kept in
   // component state and not in localStorage on purpose: it is a look-at-it-now
   // gesture, not a layout preference, and Customize cards is where layout lives.
@@ -249,19 +252,53 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
   // one of them is in the library, so under that rule it is a one-row card most
   // months. "Leaving soon" is a clock, and a clock is worth reading whether or
   // not you already own the thing, so the pool is the whole leaving window with
-  // your started games pinned to the top.
+  // your own games pinned to the top.
   //
-  // `mine` is what every consumer below branches on: it decides the subtitle, and
-  // it decides whether the row opens anything at all.
+  // `mine` is what every consumer below branches on: it decides the subtitle and
+  // it decides which sheet the row opens.
+  //
+  // Ownership is matched by igdb_id FIRST and by normalised title second,
+  // because IGDB gives an edition its own id: the Game Pass row for The Witcher
+  // 3 is 119402 (Complete Edition) while both library rows carry 1942, so an
+  // id-only join calls a game with 20h on it "not yours" and offers to wishlist
+  // it. Seven of the 499 catalogue rows are in that position today (Silksong,
+  // Mirror's Edge, Resident Evil 2, UNO, Mass Effect, Gears of War and the
+  // Witcher), and all seven were checked by hand: seven real matches, zero
+  // false ones.
+  //
+  // byId-then-byTitle, resolving duplicates to the most-played row, is the shape
+  // `buildLibraryIndex` in lib/news.js already uses, and `normTitle` is the same
+  // one Discover badges "In library" with. One definition of "the same game".
   const leaving = useMemo(() => {
     if (!leavingRows.length) return []
-    const owned = new Map(games.filter((g) => g.igdb_id != null).map((g) => [g.igdb_id, g]))
+    const byId = new Map()
+    const byTitle = new Map()
+    // A game owned on two platforms has a row each, and the one worth showing is
+    // the one carrying the time: the Witcher on PSN (1249m) not on Xbox (0m).
+    const better = (a, b) => num(a && a.playtime_minutes) > num(b && b.playtime_minutes)
+    for (const g of games) {
+      if (g.igdb_id != null && (!byId.has(g.igdb_id) || better(g, byId.get(g.igdb_id)))) byId.set(g.igdb_id, g)
+      const k = normTitle(g.title)
+      if (k && (!byTitle.has(k) || better(g, byTitle.get(k)))) byTitle.set(k, g)
+    }
     const mine = []
     const theirs = []
+    // Two storefront entries can resolve to one IGDB game (a base game and its
+    // edition), which the catalog sync already knows and ORs the flag over. Both
+    // can therefore be in this window and both can now land on the same library
+    // row, so the row is claimed once: without this the card prints the same
+    // game twice, under one React key.
+    const claimed = new Set()
     for (const r of leavingRows) {
-      const g = owned.get(r.igdb_id)
-      if (g && num(g.playtime_minutes) > 0) mine.push({ ...g, mine: true })
-      else if (!g && num(r.rating) >= GP_MIN_RATING) theirs.push({ ...r, title: r.name, mine: false })
+      const g = byId.get(r.igdb_id) || byTitle.get(normTitle(r.name)) || null
+      if (g && claimed.has(g.master_id)) continue
+      if (g) claimed.add(g.master_id)
+      // Owned counts whether or not you have started it. Started is the better
+      // row and sorts above, but "it is in your library, you never opened it,
+      // and it goes this week" is the single most actionable line this card can
+      // print, and the old rule dropped it from BOTH buckets.
+      if (g) mine.push({ ...g, mine: true })
+      else if (num(r.rating) >= GP_MIN_RATING) theirs.push({ ...r, title: r.name, mine: false })
     }
     mine.sort((a, b) => num(b.playtime_minutes) - num(a.playtime_minutes))
     theirs.sort((a, b) => num(b.rating) - num(a.rating))
@@ -298,6 +335,20 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
     d.minutes > 0 ? { height: `${Math.max(8, Math.round((d.minutes / weekPeak) * 100))}%` } : undefined
 
   const openGame = (g) => g && setSelected(g)
+
+  // Every row on this card opens something now. A game you own opens the owned
+  // detail; a catalogue row opens the DISCOVER sheet, which is the surface the
+  // app already has for an IGDB game you do not own, and the one News uses for
+  // exactly this case.
+  //
+  // The seed is sparse on purpose. GameSheet's discover variant already handles
+  // an entry that carries only id/name/cover/year: it paints a skeleton the
+  // right height and fetches the rest by id. Awaiting the fetch first, the way
+  // News does, would mean a tap that does nothing for as long as IGDB takes.
+  const openLeaving = (g) =>
+    g.mine
+      ? openGame(g)
+      : setGpOpen({ id: g.igdb_id, name: g.title, cover: g.cover, year: g.year, rating: g.rating })
 
   // Preview two, open to four. Extracted the moment a THIRD card wanted it:
   // Leaving Game Pass cannot reuse releaseCard, because its rows are a badge and
@@ -471,21 +522,21 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
               type="button"
               className="up-row as-btn"
               key={g.igdb_id}
-              onClick={g.mine ? () => openGame(g) : undefined}
-              // Nothing to open for a game that is not in the library: there is
-              // no sheet for it and no store link anywhere in this app. Inert
-              // rather than a button that shrugs.
-              disabled={!g.mine}
+              onClick={() => openLeaving(g)}
             >
               <span className="gp-badge">GP</span>
               <span className="up-t">
                 {g.title}
                 <span className="up-d">
                   {g.mine ? (
-                    <>
-                      <span className="leaving">{minutesToHhm(num(g.playtime_minutes))} in</span>
-                      {` · ${Math.round(num(g.percent))}% done`}
-                    </>
+                    num(g.playtime_minutes) > 0 ? (
+                      <>
+                        <span className="leaving">{minutesToHhm(num(g.playtime_minutes))} in</span>
+                        {` · ${Math.round(num(g.percent))}% done`}
+                      </>
+                    ) : (
+                      <span className="leaving">In your library, never started</span>
+                    )
                   ) : (
                     [g.year, g.rating ? `${Math.round(num(g.rating))} rated` : null].filter(Boolean).join(' · ')
                   )}
@@ -593,6 +644,12 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
           wishlist variant of the sheet - the same one the Wishlist page opens,
           with the same heart and the same remove. */}
       {wishOpen ? <GameSheet variant="wishlist" game={wishOpen} onClose={() => setWishOpen(null)} /> : null}
+      {/* A Game Pass row you do not own is an IGDB game, so it opens the sheet
+          Discover and News open, with the same wishlist heart. No Ask AI and no
+          More like this: both are Discover callbacks that navigate WITHIN
+          Discover, and Home has no route there, so the props are left off and
+          GameSheet hides the buttons. */}
+      {gpOpen ? <DiscoverDetail game={gpOpen} onClose={() => setGpOpen(null)} /> : null}
     </div>
   )
 }
