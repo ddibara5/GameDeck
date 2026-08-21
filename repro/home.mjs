@@ -83,7 +83,18 @@ const WISHLIST = [
   { igdb_id: 444, title: 'A Quarter-Dated Game', cover: null, year: 2027, note: null, created_at: iso(30), released: day(2027, 11, 31), date_precision: 'quarter', release_label: 'Q4 2027' },
   { igdb_id: 555, title: 'A Far Future Game', cover: null, year: 2027, note: null, created_at: iso(20), released: relDay(400), date_precision: 'day', release_label: 'next year' },
 ]
-const GAMEPASS_LEAVING = [{ igdb_id: 217590 }]
+// Four rows so the card has something to expand into, and so both halves of the
+// rule are exercised: 217590 is Another Crab's Treasure in GAMES with playtime,
+// so it is YOURS; the other three are catalogue-only. 6001 sits at 88 and must
+// appear, 6002 at 71 clears the floor of 70 by one, and 6003 at 58 must NOT
+// appear at any expansion. Without that last row the gate is untested code.
+const GAMEPASS_LEAVING = [
+  { igdb_id: 217590, name: "Another Crab's Treasure", cover: null, year: 2024, rating: 82 },
+  { igdb_id: 6001, name: 'A Well Rated Exit', cover: null, year: 2023, rating: 88 },
+  { igdb_id: 6002, name: 'A Just Good Enough Exit', cover: null, year: 2021, rating: 71 },
+  { igdb_id: 6004, name: 'A Fourth Decent Exit', cover: null, year: 2022, rating: 76 },
+  { igdb_id: 6003, name: 'A Poorly Rated Exit', cover: null, year: 2019, rating: 58 },
+]
 
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROME || undefined })
 const ctx = await browser.newContext({
@@ -157,10 +168,16 @@ const home = await page.evaluate(() => ({
   tiles: [...document.querySelectorAll('.hm-tile')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
   banner: document.querySelector('.hm-banner')?.textContent.replace(/\s+/g, ' ').trim() || null,
   arcs: document.querySelectorAll('.ins-arc').length,
-  upRows: [...document.querySelectorAll('.up-row')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
+  // Scoped to the two release cards. Leaving Game Pass uses .up-row too since
+  // 21 Aug, so an unscoped count silently became a sum of three cards.
+  upRows: [...document.querySelectorAll('[data-card="coming_up"] .up-row, [data-card="recently_released"] .up-row')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
   cuRows: [...document.querySelectorAll('[data-card="coming_up"] .up-row')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
   rrRows: [...document.querySelectorAll('[data-card="recently_released"] .up-row')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
-  expands: [...document.querySelectorAll('.hm-expand')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
+  expands: [...document.querySelectorAll('[data-card="coming_up"] .hm-expand, [data-card="recently_released"] .hm-expand')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
+  gpRows: [...document.querySelectorAll('[data-card="leaving_gp"] .up-row')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
+  gpDisabled: [...document.querySelectorAll('[data-card="leaving_gp"] .up-row')].map((e) => e.disabled),
+  gpExpand: document.querySelector('[data-card="leaving_gp"] .hm-expand')?.textContent.replace(/\s+/g, ' ').trim() || null,
+  banners: document.querySelectorAll('.hm-banner').length,
   soloGrids: document.querySelectorAll('.hm-grid.solo').length,
   gridCols: (() => {
     const g = document.querySelector('.hm-grid')
@@ -225,8 +242,20 @@ check('a past day with nothing is a stub', bars.zeros === 2, String(bars.zeros))
 check('today with nothing is not a stub', bars.todayEmpty === 1 && bars.lastIsToday, `todayEmpty=${bars.todayEmpty} last=${bars.lastIsToday}`)
 check('the chart is hidden from the a11y tree', bars.hidden === 'true', String(bars.hidden))
 check('the chart lives inside the tile button', bars.inTile === 1, String(bars.inTile))
-check('one Game Pass exit renders as a banner', Boolean(home.banner) && /Leaving Game Pass soon/.test(home.banner), home.banner)
-check('banner does not invent a countdown', !/\d+ days/.test(home.banner || ''), home.banner)
+/* ------------------------------------------------- Leaving Game Pass */
+
+// The card is the whole leaving window now, not just games you have started, so
+// the single-title banner is gone with the reason it existed.
+check('the single-title banner is retired', home.banners === 0, String(home.banners))
+check('two rows previewed of four', home.gpRows.length === 2 && /Show 2 more/.test(home.gpExpand || ''), `${home.gpRows.length} // ${home.gpExpand}`)
+// Yours pins to the top whatever it is rated: 82 here, below the 88 beneath it.
+check('your started game is first', /Another Crab/.test(home.gpRows[0] || ''), home.gpRows[0])
+check('your row says how far in you are', /15h 39m in/.test(home.gpRows[0] || ''), home.gpRows[0])
+// A catalogue row has no sheet to open, so it must not present as a button.
+check('your row opens, a catalogue row does not', home.gpDisabled[0] === false && home.gpDisabled[1] === true, JSON.stringify(home.gpDisabled))
+check('a catalogue row states year and rating', /2023 · 88 rated/.test(home.gpRows[1] || ''), home.gpRows[1])
+check('no row repeats "Leaving soon"', !home.gpRows.some((r) => /Leaving soon/.test(r)), home.gpRows.join(' // '))
+check('Game Pass exits invent no countdown', !home.gpRows.some((r) => /\d+ days/.test(r)), home.gpRows.join(' // '))
 // Backlog, Pick up next and Pace were REMOVED on 21 Aug, not switched off. Both
 // halves matter: gone from the page, and gone from the editor that offers cards,
 // because a catalog entry is a promise that the card exists.
@@ -265,21 +294,25 @@ check('releases past the 60-day window stay out', !home.upRows.some((r) => /Long
 check('both release cards preview two rows', home.upRows.length === 4, String(home.upRows.length))
 check('both offer the same expand', home.expands.length === 2 && home.expands.every((t) => /Show 2 more/.test(t)), home.expands.join(' | '))
 
+// The two release cards only. Leaving Game Pass has its own expand and its own
+// assertions; sweeping every .hm-expand on the page would toggle all three and
+// make the row counts below meaningless.
+const RELEASE_EXPANDS = '[data-card="coming_up"] .hm-expand, [data-card="recently_released"] .hm-expand'
 const expandAll = async () => {
-  const n = await page.locator('.hm-expand').count()
-  for (let i = 0; i < n; i++) await page.locator('.hm-expand').nth(i).click()
+  const n = await page.locator(RELEASE_EXPANDS).count()
+  for (let i = 0; i < n; i++) await page.locator(RELEASE_EXPANDS).nth(i).click()
   await page.waitForTimeout(350)
 }
 await expandAll()
 const opened = await page.evaluate(() => ({
   cu: document.querySelectorAll('[data-card="coming_up"] .up-row').length,
   rr: document.querySelectorAll('[data-card="recently_released"] .up-row').length,
-  labels: [...document.querySelectorAll('.hm-expand')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
+  labels: [...document.querySelectorAll('[data-card="coming_up"] .hm-expand, [data-card="recently_released"] .hm-expand')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
 }))
 check('expanding shows all four in each', opened.cu === 4 && opened.rr === 4, `cu=${opened.cu} rr=${opened.rr}`)
 check('the expand turns into Show less', opened.labels.every((t) => /Show less/.test(t)), opened.labels.join(' | '))
 await expandAll()
-const reclosed = await page.evaluate(() => document.querySelectorAll('.up-row').length)
+const reclosed = await page.evaluate(() => document.querySelectorAll('[data-card="coming_up"] .up-row, [data-card="recently_released"] .up-row').length)
 check('it collapses back to two each', reclosed === 4, String(reclosed))
 
 await page.screenshot({ path: 'repro/out/home-dark.png', fullPage: true })

@@ -51,8 +51,16 @@ const RECENT_DAYS = 60
 // both release cards on the same screen as the rest of Home; four is as many as
 // either has ever had inside its window, so "show more" never leads to a fifth
 // that is quietly dropped.
+// Three cards use these now, not two: Coming up, Recently released and Leaving
+// Game Pass all preview two and open to four.
 const RELEASE_PREVIEW = 2
 const RELEASE_MAX = 4
+
+// The floor for a Game Pass title you do NOT own. Ungated, the leaving window
+// offers a 58 next to The Witcher 3's 92, and a card pointing at your last week
+// on Game Pass cannot also do that. Same reasoning as the shortlist gate that
+// came off Home with Pick up next; the number is a judgement, not a measurement.
+const GP_MIN_RATING = 70
 
 /* ------------------------------------------------------------- progress arc */
 
@@ -93,7 +101,7 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
   // sheet wants, so a Coming up row can open the sheet the Wishlist page opens.
   const { items: wishItems } = useWishlist()
   const [events, setEvents] = useState([])
-  const [leavingIds, setLeavingIds] = useState([])
+  const [leavingRows, setLeavingRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
   const [wishOpen, setWishOpen] = useState(null)
@@ -109,11 +117,11 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
     async function load() {
       const [act, gp] = await Promise.all([
         fetchRecentActivity({ days: ACTIVITY_DAYS }),
-        supabase.from('gamepass').select('igdb_id').eq('leaving_soon', true),
+        supabase.from('gamepass').select('igdb_id, name, cover, year, rating').eq('leaving_soon', true),
       ])
       if (cancelled) return
       setEvents(act.data || [])
-      setLeavingIds((gp.data || []).map((r) => r.igdb_id).filter((v) => v != null))
+      setLeavingRows((gp.data || []).filter((r) => r.igdb_id != null))
       setLoading(false)
     }
     load()
@@ -234,13 +242,31 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
       .slice(0, RELEASE_MAX)
   }, [wishItems, games])
 
+  // Yours first, then the rest of what is going.
+  //
+  // This card used to be only about games you had started, which was right when
+  // the question was "use it or lose it". It reads five titles today and exactly
+  // one of them is in the library, so under that rule it is a one-row card most
+  // months. "Leaving soon" is a clock, and a clock is worth reading whether or
+  // not you already own the thing, so the pool is the whole leaving window with
+  // your started games pinned to the top.
+  //
+  // `mine` is what every consumer below branches on: it decides the subtitle, and
+  // it decides whether the row opens anything at all.
   const leaving = useMemo(() => {
-    if (!leavingIds.length) return []
-    const set = new Set(leavingIds)
-    return games
-      .filter((g) => g.igdb_id != null && set.has(g.igdb_id) && num(g.playtime_minutes) > 0)
-      .sort((a, b) => num(b.playtime_minutes) - num(a.playtime_minutes))
-  }, [games, leavingIds])
+    if (!leavingRows.length) return []
+    const owned = new Map(games.filter((g) => g.igdb_id != null).map((g) => [g.igdb_id, g]))
+    const mine = []
+    const theirs = []
+    for (const r of leavingRows) {
+      const g = owned.get(r.igdb_id)
+      if (g && num(g.playtime_minutes) > 0) mine.push({ ...g, mine: true })
+      else if (!g && num(r.rating) >= GP_MIN_RATING) theirs.push({ ...r, title: r.name, mine: false })
+    }
+    mine.sort((a, b) => num(b.playtime_minutes) - num(a.playtime_minutes))
+    theirs.sort((a, b) => num(b.rating) - num(a.rating))
+    return [...mine, ...theirs].slice(0, RELEASE_MAX)
+  }, [games, leavingRows])
 
   if (loading || libLoading) {
     return (
@@ -273,13 +299,37 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
 
   const openGame = (g) => g && setSelected(g)
 
+  // Preview two, open to four. Extracted the moment a THIRD card wanted it:
+  // Leaving Game Pass cannot reuse releaseCard, because its rows are a badge and
+  // a subtitle rather than a day column, but the control underneath them is the
+  // same control and should not be a third copy of the same fourteen lines.
+  //
+  // Renders nothing when there is nothing behind it. A control that expands
+  // nothing is worse than no control.
+  const moreToggle = (key, total) => {
+    const open = expanded[key]
+    const rest = total - RELEASE_PREVIEW
+    if (rest <= 0) return null
+    return (
+      <button
+        type="button"
+        className={`hm-expand${open ? ' open' : ''}`}
+        aria-expanded={open}
+        onClick={() => setExpanded((e) => ({ ...e, [key]: !open }))}
+      >
+        {open ? 'Show less' : `Show ${rest} more`}
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+    )
+  }
+
   // Coming up and Recently released are one card with the clock pointing either
   // way: same rows, same chevron to the wishlist, same expand. Written once,
   // because this codebase has already paid twice for a second copy that drifts.
   const releaseCard = ({ key, title, sub, rows, unit, hot }) => {
-    const open = expanded[key]
-    const shown = open ? rows : rows.slice(0, RELEASE_PREVIEW)
-    const rest = rows.length - RELEASE_PREVIEW
+    const shown = expanded[key] ? rows : rows.slice(0, RELEASE_PREVIEW)
     // data-card so the harness can address one release card rather than counting
     // .up-row across both and hoping the sum means something.
     return (
@@ -316,21 +366,7 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
             </span>
           </button>
         ))}
-        {/* Only when there is something behind it. A control that expands
-            nothing is worse than no control. */}
-        {rest > 0 ? (
-          <button
-            type="button"
-            className={`hm-expand${open ? ' open' : ''}`}
-            aria-expanded={open}
-            onClick={() => setExpanded((e) => ({ ...e, [key]: !open }))}
-          >
-            {open ? 'Show less' : `Show ${rest} more`}
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M6 9l6 6 6-6" />
-            </svg>
-          </button>
-        ) : null}
+        {moreToggle(key, rows.length)}
       </div>
     )
   }
@@ -416,38 +452,49 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
 
     // No leave DATE anywhere: the Game Pass catalog carries `leaving_soon` and
     // nothing else, so this says "soon" rather than inventing a countdown.
+    // The single-title BANNER is gone. It existed because a heading over one line
+    // was more chrome than content, which was true while one line was all this
+    // could hold; the pool is four now and the card form is the right one.
+    //
+    // No row repeats "Leaving soon" any more either. The heading says it once,
+    // and the line under each title is better spent on why THIS one is worth the
+    // last week: how far in you already are, or how well it reviewed.
     leaving_gp: () =>
       leaving.length ? (
-        leaving.length === 1 ? (
-          <button type="button" className="hm-banner" key="leaving_gp" onClick={() => openGame(leaving[0])}>
-            <Cover src={leaving[0].cover_small} title={leaving[0].title} size="sm" className="hm-bcov" />
-            <span className="hm-bb">
-              <span className="hm-bk">Leaving Game Pass soon</span>
-              <span className="hm-bt">{leaving[0].title}</span>
-              <span className="hm-bs">
-                {minutesToHhm(num(leaving[0].playtime_minutes))} in, {Math.round(num(leaving[0].percent))}% done
-              </span>
-            </span>
-            {CHEV}
-          </button>
-        ) : (
-          <div className="chart-card" key="leaving_gp">
+        <div className="chart-card" data-card="leaving_gp" key="leaving_gp">
+          <div className="hm-head">
             <h2 className="chart-title">Leaving Game Pass</h2>
-            <div className="ins-sub">Games you have started that are on the way out</div>
-            {leaving.map((g) => (
-              <button type="button" className="up-row as-btn" key={g.master_id} onClick={() => openGame(g)}>
-                <span className="gp-badge">GP</span>
-                <span className="up-t">
-                  {g.title}
-                  <span className="up-d">
-                    <span className="leaving">Leaving soon</span>
-                    {` · ${minutesToHhm(num(g.playtime_minutes))} in, ${Math.round(num(g.percent))}% done`}
-                  </span>
-                </span>
-              </button>
-            ))}
           </div>
-        )
+          <div className="ins-sub">Yours first, then what else is going</div>
+          {(expanded.leaving_gp ? leaving : leaving.slice(0, RELEASE_PREVIEW)).map((g) => (
+            <button
+              type="button"
+              className="up-row as-btn"
+              key={g.igdb_id}
+              onClick={g.mine ? () => openGame(g) : undefined}
+              // Nothing to open for a game that is not in the library: there is
+              // no sheet for it and no store link anywhere in this app. Inert
+              // rather than a button that shrugs.
+              disabled={!g.mine}
+            >
+              <span className="gp-badge">GP</span>
+              <span className="up-t">
+                {g.title}
+                <span className="up-d">
+                  {g.mine ? (
+                    <>
+                      <span className="leaving">{minutesToHhm(num(g.playtime_minutes))} in</span>
+                      {` · ${Math.round(num(g.percent))}% done`}
+                    </>
+                  ) : (
+                    [g.year, g.rating ? `${Math.round(num(g.rating))} rated` : null].filter(Boolean).join(' · ')
+                  )}
+                </span>
+              </span>
+            </button>
+          ))}
+          {moreToggle('leaving_gp', leaving.length)}
+        </div>
       ) : null,
 
     coming_up: () =>
