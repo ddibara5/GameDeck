@@ -563,3 +563,136 @@ button.shelf-head:active {
   margin-top: -2px;
   margin-bottom: 6px;
 }
+
+/* ---------- For you: the taste feed ----------
+   One column, one game per row, a reason on every row. The layout answers the
+   complaint the rails could not: a rail shows three cards and hides its own
+   ranking, so a rail whose front is wrong costs the whole rail. Six rows fit on
+   one screen and none of them is behind a swipe. */
+.discover-foryou {
+  padding-bottom: 8px;
+}
+
+.lane-chips {
+  display: flex;
+  gap: 6px;
+  padding: 8px 16px 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.lane-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.lane-chip {
+  flex: 0 0 auto;
+  font-size: var(--t-foot);
+  font-weight: var(--w-med);
+  color: var(--muted);
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  padding: 6px 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.lane-chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+  font-weight: var(--w-semi);
+}
+
+.fy-row-wrap {
+  position: relative;
+}
+
+.fy-row-wrap + .fy-row-wrap {
+  border-top: 1px solid var(--line);
+}
+
+/* The heart is a SIBLING of the row button, never inside it: a button inside a
+   button is invalid markup and costs the row its own activation. Same shape as
+   DiscoverCard. */
+.fy-row {
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+  width: 100%;
+  padding: 10px 46px 10px 16px;
+  background: none;
+  border: none;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.cover.fy-cov {
+  width: 58px;
+  height: 77px;
+  min-width: 58px;
+  border-radius: var(--r-sm);
+  margin: 0;
+}
+
+.fy-body {
+  flex: 1;
+  min-width: 0;
+  display: block;
+}
+
+/* Every line clamps. A feed is scanned down the left edge, and one three-line
+   title puts the row below it out of rhythm. */
+.fy-name,
+.fy-meta,
+.fy-why {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fy-name {
+  font-size: var(--t-sub);
+  font-weight: var(--w-semi);
+}
+
+.fy-meta {
+  font-size: var(--t-cap);
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.fy-rating {
+  color: var(--amber);
+  font-weight: var(--w-semi);
+}
+
+/* The reason, and the whole argument for this layout. It is an inline-flex
+   rather than a block so the pill is the width of its words. */
+.fy-why {
+  display: inline-block;
+  max-width: 100%;
+  margin-top: 6px;
+  font-size: var(--t-cap2);
+  color: var(--accent);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  padding: 3px 9px;
+}
+
+.fy-why.wished {
+  color: var(--amber);
+}
+
+.fy-row-wrap .wish-heart {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+}

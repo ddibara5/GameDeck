@@ -70,8 +70,14 @@ const stub = (route) => route.fulfill({ status: 200, contentType: 'image/svg+xml
 await page.route('**/wsrv.nl/**', stub)
 await page.route('**/images.igdb.com/**', stub)
 
+// Discover lands on the For you feed now, and everything in this file is about
+// Browse, so every visit here goes through the segment. Deliberately not
+// changed to assert on whichever segment happens to be first: the two surfaces
+// answer different questions and this one is Browse's.
 const openDiscover = async () => {
   await page.getByRole('button', { name: /^Discover/ }).first().click()
+  await page.waitForTimeout(400)
+  await page.getByRole('tab', { name: 'Browse', exact: true }).click()
   await page.waitForTimeout(1500)
 }
 const homeCalls = () => asked.filter((u) => u.includes('home='))

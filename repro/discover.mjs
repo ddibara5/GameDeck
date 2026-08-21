@@ -71,6 +71,10 @@ await page.route('**/images.igdb.com/**', stub)
 await page.goto(BASE, { waitUntil: 'networkidle' })
 await page.waitForTimeout(400)
 await page.getByRole('button', { name: /^Discover/ }).first().click()
+await page.waitForTimeout(400)
+// Discover lands on the For you feed now; the rails this file measures live on
+// the Browse segment.
+await page.getByRole('tab', { name: 'Browse', exact: true }).click()
 await page.waitForTimeout(1800)
 
 const m = await page.evaluate(() => {

@@ -93,6 +93,36 @@ export async function fetchDiscoverHome(keys, limit = 20, { onFresh, filters } =
   return value
 }
 
+// Batched taste lanes for the For You feed. Same shape and the same reason as
+// fetchDiscoverHome: one round trip, the lanes run in parallel server-side.
+// Returns { laneKey: games[] }.
+const LANE_TTL = 30 * 60 * 1000
+
+async function fetchLanesNetwork(list, limit, platform) {
+  const qs = new URLSearchParams({ lanes: list.join(','), limit: String(limit) })
+  if (platform && platform !== 'all') qs.set('platform', platform)
+  const res = await fetch(`/api/discover?${qs.toString()}`)
+  if (!res.ok) throw new Error(`Discover lanes failed (${res.status})`)
+  const data = await res.json()
+  return data && data.lanes && typeof data.lanes === 'object' ? data.lanes : {}
+}
+
+export async function fetchDiscoverLanes(keys, limit = 8, { onFresh, platform } = {}) {
+  const list = (keys || []).filter(Boolean)
+  if (!list.length) return {}
+  // The platform set is part of this payload's identity, exactly as the filter
+  // selection is for the home rails: without it, turning a platform chip on
+  // would be answered off disk with the narrower set.
+  const cacheKey = `${list.join(',')}|${limit}|${platform || 'all'}`
+  const { value } = await swr(`discover:lanes:${cacheKey}`, () => fetchLanesNetwork(list, limit, platform), {
+    maxAge: LANE_TTL,
+    onFresh: (lanes) => {
+      if (onFresh) onFresh(lanes)
+    },
+  })
+  return value
+}
+
 // Fetch a single IGDB game by its id (normalized shape), for the game sheet to
 // enrich owned / wishlisted games with a summary + screenshots.
 //

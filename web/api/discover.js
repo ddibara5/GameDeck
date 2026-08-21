@@ -76,6 +76,7 @@ const PRESETS = {
   metroidvania: 'keywords = (477)',
   jrpg: 'keywords = (521)',
   arpg: 'genres = (12)',
+  survival: 'themes = (21)',
   fromsoft: 'involved_companies.company = (1012)',
   rockstar: 'involved_companies.company = (29)',
 };
@@ -491,6 +492,70 @@ export default async function handler(req, res) {
       pairs.forEach(([k, v]) => (rails[k] = v));
       res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=1800');
       res.status(200).json({ rails });
+      return;
+    }
+
+    // Batched TASTE LANES for the For You feed. Same shape and the same reason
+    // as `?home=` above: the feed is one IGDB query per lane and there are about
+    // five lanes, so they run in parallel on one warm function rather than as
+    // five serverless invocations from the client.
+    //
+    //   /api/discover?lanes=soulslike,openworld,new&platform=xbox,psn&limit=8
+    //
+    // Every lane key is a PRESET key, except the reserved key `new`, which is
+    // the `recent` rail: "out lately on your platforms", which is about your
+    // hardware rather than about your taste and so cannot be a preset.
+    //
+    // **No rating or vote floor here, deliberately.** The measurement that
+    // produced this feed found the opposite of the obvious: the small studio is
+    // not the problem. Kristala (15h played, one solo studio, zero IGDB
+    // ratings) and Dinoblade (24h, one vote) would both be cut by any vote
+    // floor, while "Vacation Cafe Simulator" clears one comfortably. The
+    // keyword and the platform are doing the filtering, and measured live they
+    // do it well: soulslike + Xbox returns Mistfall Hunter, Kristala, Death
+    // Howl and Wuchang, where soulslike alone returns ten PC-only micro-indies.
+    const lanes = String(q.lanes || '');
+    if (lanes) {
+      const keys = lanes
+        .split(',')
+        .map((s2) => s2.trim())
+        .filter(Boolean)
+        .slice(0, 8);
+      const laneExtra = filterClauses({ platform: q.platform }, nowTs);
+      const laneLimit = Math.min(20, parseInt(q.limit, 10) || 8);
+      // Three years. Long enough that a lane is never empty, short enough that
+      // "what is new in the things I play" does not become a back catalog.
+      const since = nowTs - 1095 * 86400;
+      const pairs = await Promise.all(
+        keys.map(async (k) => {
+          const where =
+            k === 'new'
+              ? ['cover != null', ...railClauses('recent', nowTs).where, ...laneExtra]
+              : PRESETS[k]
+                ? [
+                    'cover != null',
+                    PRESETS[k],
+                    `first_release_date <= ${nowTs}`,
+                    `first_release_date > ${since}`,
+                    NO_ALT_EDITIONS,
+                    NO_ADDONS,
+                    ...laneExtra,
+                  ]
+                : null;
+          if (!where) return [k, []];
+          const body = `${GAME_FIELDS}; where ${where.join(' & ')}; sort first_release_date desc; limit ${laneLimit}; offset 0;`;
+          try {
+            const rows = await igdb('games', body);
+            return [k, (rows || []).map(normalize)];
+          } catch {
+            return [k, []];
+          }
+        })
+      );
+      const out = {};
+      pairs.forEach(([k, v]) => (out[k] = v));
+      res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=1800');
+      res.status(200).json({ lanes: out });
       return;
     }
 
