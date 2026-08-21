@@ -253,6 +253,24 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
     )
   }
 
+  // Bar heights are relative to the busiest day in the window rather than to a
+  // fixed ceiling, so a quiet week still shows its own shape instead of a row of
+  // stubs. A day that was played never drops below 8% or it reads as a zero next
+  // to a big one.
+  //
+  // The four states are the Insights chart's, not new ones: fill, peak, a stub
+  // for a day with nothing on it, and a dashed rule for TODAY with nothing yet.
+  // That last distinction is the one worth carrying down to this size, because
+  // "did not play" and "not over yet" are different claims about the same
+  // zero-height bar.
+  const weekPeak = Math.max(1, ...week.days.map((d) => d.minutes))
+  const barClass = (d) => {
+    if (d.minutes > 0) return d.minutes === weekPeak ? ' peak' : ''
+    return d.isToday ? ' today-empty' : ' zero'
+  }
+  const barStyle = (d) =>
+    d.minutes > 0 ? { height: `${Math.max(8, Math.round((d.minutes / weekPeak) * 100))}%` } : undefined
+
   const openGame = (g) => g && setSelected(g)
 
   // Coming up and Recently released are one card with the clock pointing either
@@ -371,10 +389,27 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
     week: () => (
       <button type="button" className="hm-tile" key="week" onClick={() => onOpenTab && onOpenTab('insights')}>
         <span className="hm-th"><span className="hm-tk">This week</span>{CHEV}</span>
-        <span className="hm-tv">{minutesToHhm(week.minutes)}</span>
-        <span className="hm-ts">
-          {week.activeDays} of {week.span} days
-          {week.achievements > 0 ? ` · +${week.achievements} ach` : ''}
+        <span className="hm-wrow">
+          <span className="hm-wl">
+            <span className="hm-tv">{minutesToHhm(week.minutes)}</span>
+            <span className="hm-ts">
+              {week.activeDays} of {week.span} days
+              {week.achievements > 0 ? ` · +${week.achievements} ach` : ''}
+            </span>
+          </span>
+          {/* aria-hidden: the tile's own text already says the total and the day
+              count, and seven unlabelled bars read out one letter at a time is
+              noise rather than information. */}
+          <span className="hm-bars" aria-hidden="true">
+            {week.days.map((d) => (
+              <span key={d.key} className={`hm-bar${d.isToday ? ' today' : ''}`}>
+                <span className="hm-btrack">
+                  <span className={`hm-bfill${barClass(d)}`} style={barStyle(d)} />
+                </span>
+                <em>{d.label}</em>
+              </span>
+            ))}
+          </span>
         </span>
       </button>
     ),

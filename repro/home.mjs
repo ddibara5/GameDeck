@@ -196,6 +196,35 @@ check('Now playing renders with its arc', home.cardTitles.includes('Now playing'
 // same on a narrow phone, and the rule is about the grid, not the pixels.
 check('This week is the only tile', home.tiles.length === 1 && /This week/.test(home.tiles[0]), home.tiles.join(' // '))
 check('a solo tile takes the full width', home.soloGrids === 1 && home.gridCols === 1, `solo=${home.soloGrids} cols=${home.gridCols}`)
+
+/* --------------------------------------------- the week tile's seven bars */
+
+// The fixture logs 1, 2, 4 and 6 days ago, so today is empty, and days 3 and 5
+// are empty but PAST. That is the distinction worth asserting: a zero-height bar
+// means two different things depending on whether the day is over, and the two
+// collapsing into each other is the failure nobody would notice by eye.
+const bars = await page.evaluate(() => {
+  const peak = Math.max(...[...document.querySelectorAll('.hm-bfill')].map((e) => parseFloat(e.style.height) || 0))
+  return {
+    n: document.querySelectorAll('.hm-bar').length,
+    peaks: document.querySelectorAll('.hm-bfill.peak').length,
+    peakIsTallest: [...document.querySelectorAll('.hm-bfill.peak')].every((e) => (parseFloat(e.style.height) || 0) === peak),
+    zeros: document.querySelectorAll('.hm-bfill.zero').length,
+    todayEmpty: document.querySelectorAll('.hm-bfill.today-empty').length,
+    // The last bar is today, and it must be the one carrying today-empty.
+    lastIsToday: document.querySelector('.hm-bar:last-child')?.classList.contains('today'),
+    hidden: document.querySelector('.hm-bars')?.getAttribute('aria-hidden'),
+    // Bars sit inside the tile's own button; the whole tile is the tap target.
+    inTile: document.querySelectorAll('.hm-tile .hm-bars').length,
+  }
+})
+check('seven bars, one per day', bars.n === 7, String(bars.n))
+check('exactly one peak, and it is the tallest', bars.peaks === 1 && bars.peakIsTallest, `${bars.peaks} peak(s)`)
+// Two past days with nothing on them. If today ever got counted here, this reads 3.
+check('a past day with nothing is a stub', bars.zeros === 2, String(bars.zeros))
+check('today with nothing is not a stub', bars.todayEmpty === 1 && bars.lastIsToday, `todayEmpty=${bars.todayEmpty} last=${bars.lastIsToday}`)
+check('the chart is hidden from the a11y tree', bars.hidden === 'true', String(bars.hidden))
+check('the chart lives inside the tile button', bars.inTile === 1, String(bars.inTile))
 check('one Game Pass exit renders as a banner', Boolean(home.banner) && /Leaving Game Pass soon/.test(home.banner), home.banner)
 check('banner does not invent a countdown', !/\d+ days/.test(home.banner || ''), home.banner)
 // Backlog, Pick up next and Pace were REMOVED on 21 Aug, not switched off. Both

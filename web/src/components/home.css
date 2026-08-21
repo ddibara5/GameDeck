@@ -18,6 +18,77 @@
   grid-template-columns: 1fr;
 }
 
+/* The week tile's two halves, and which one gets the slack.
+
+   The left column is deliberately `flex: none`. As `flex: 1` it ate every spare
+   pixel and pushed the bars hard against the right edge, which is what left a
+   band of nothing between the subtitle and the chart. The bars take the slack
+   instead and grow into it, capped so a wide screen does not turn seven bars
+   into seven posts. */
+.hm-wrow {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  margin-top: auto;
+}
+.hm-wl {
+  flex: none;
+  max-width: 52%;
+  display: flex;
+  flex-direction: column;
+}
+.hm-wl .hm-tv { margin-top: 0; }
+
+/* The same bar vocabulary as the Last 7 days chart on Insights, deliberately:
+   --walnut-light fill, --accent on the peak, a 2px --line stub for a day with
+   nothing on it, and a dashed accent rule for today with nothing logged yet.
+   This tile opens that chart, so the two should read as one chart at two sizes
+   rather than as two charts that happen to share a query. */
+.hm-bars {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.hm-bar {
+  flex: 1;
+  min-width: 0;
+  max-width: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+.hm-btrack {
+  height: 46px;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+.hm-bfill {
+  width: 100%;
+  background: var(--walnut-light);
+  border-radius: 3px 3px 0 0;
+}
+.hm-bfill.peak { background: var(--accent); }
+.hm-bfill.zero { height: 2px; background: var(--line); border-radius: 1px; }
+.hm-bfill.today-empty {
+  height: 0;
+  border-top: 2px dashed var(--accent);
+  border-radius: 0;
+  opacity: 0.55;
+}
+.hm-bar em {
+  font-style: normal;
+  font-size: var(--t-cap2);
+  font-weight: var(--w-bold);
+  color: var(--muted);
+  line-height: 1;
+}
+.hm-bar.today em { color: var(--accent); }
+
 /* ------------------------------------------------------------------- tiles */
 
 .hm-tile {
