@@ -221,6 +221,26 @@ const home = await page.evaluate(() => ({
 
 check('lands on Home', home.title === 'Home', home.title)
 check('bar is home/library/activity/discover/news', home.tabs.join('|') === 'Home|Library|Activity|Discover|News', home.tabs.join('|'))
+// The Home mark is HomeDeck's, path for path. Asserted as the exact strings
+// rather than "has three paths", because the decision here is not "a house with
+// a door", it is "the same house the other app opens on". A redraw that still
+// has three paths is exactly the drift this is here to catch.
+const HD_HOUSE = [
+  'M3.4 10.4 12 3.6l8.6 6.8',
+  'M5.4 9.4v9.2a1.8 1.8 0 0 0 1.8 1.8h9.6a1.8 1.8 0 0 0 1.8-1.8V9.4',
+  'M9.8 20.4v-5.2h4.4v5.2',
+]
+const house = await page.evaluate(() => {
+  const svg = document.querySelector('.tabbar-btn .tabbar-icon svg')
+  return {
+    ds: [...svg.querySelectorAll('path')].map((e) => e.getAttribute('d')),
+    // The drawer and the customize editor clone the same element, so if they
+    // ever stop doing that this count moves and the two surfaces have drifted.
+    stroke: svg.getAttribute('stroke-width') || svg.getAttribute('strokeWidth'),
+  }
+})
+check('the Home mark is HomeDeck\'s, path for path', house.ds.join(' | ') === HD_HOUSE.join(' | '), house.ds.join(' | '))
+check('it is drawn at the same 1.8 weight', house.stroke === '1.8', String(house.stroke))
 check('Home is the active tab', home.active === 'Home', home.active)
 
 /* ------------------------------------------------- the header carries it */
@@ -623,6 +643,28 @@ await page.getByRole('button', { name: /^Home/ }).first().click()
 await page.waitForTimeout(700)
 const lightTitle = await page.evaluate(() => document.querySelector('.app-header-title')?.textContent.trim())
 check('light shot is of Home', lightTitle === 'Home', lightTitle)
+// The bar's inactive label in LIGHT was the one thing on this screen below its
+// own dark-mode legibility: 5.01:1 measured off the rendered pixels against
+// 6.6:1 for the same label in dark. This computes against --bg rather than the
+// composited backdrop, which the bar frosts and cannot be read from script, so
+// it reads LOW against the real number (7.22 here, 7.62 off the pixels), which
+// is the right direction for a floor to be wrong in. And it is a THRESHOLD: it
+// survives a palette tweak, where an equality would just have to be edited.
+const barInk = await page.evaluate(() => {
+  const btn = [...document.querySelectorAll('.tabbar-btn')].find((e) => !e.classList.contains('active'))
+  const rgb = (v) => v.match(/\d+/g).map(Number)
+  const lum = (c) =>
+    0.2126 * ch(c[0]) + 0.7152 * ch(c[1]) + 0.0722 * ch(c[2])
+  function ch(v) {
+    v /= 255
+    return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)
+  }
+  const a = lum(rgb(getComputedStyle(btn).color))
+  const b = lum(rgb(getComputedStyle(document.body).backgroundColor))
+  const [hi, lo] = a > b ? [a, b] : [b, a]
+  return Math.round(((hi + 0.05) / (lo + 0.05)) * 100) / 100
+})
+check('the light bar label clears 7:1', barInk >= 7, String(barInk))
 await page.screenshot({ path: 'repro/out/home-light.png', fullPage: true })
 await page.locator('.brand-btn, .brand').first().click()
 await page.waitForTimeout(450)

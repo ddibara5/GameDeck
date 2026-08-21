@@ -2033,7 +2033,13 @@ textarea {
   border-color: rgba(40, 38, 36, 0.12);
   box-shadow: 0 12px 30px rgba(40, 40, 45, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.75), inset 0 -10px 16px rgba(40, 40, 45, 0.05);
 }
-[data-theme="light"] .tabbar-btn { color: #6a655d; }
+/* Measured, not guessed: #6a655d rendered at 5.01:1 against the bar's actual
+   backdrop, where the same label in dark mode reads 6.6:1. Light was the
+   outlier, and at 11px that gap is the difference between reading a label and
+   working it out. #4f4a42 measures 7.62:1, which puts the two themes on the
+   same footing without closing on the active tab (13.9:1 on its pill). The
+   icons take it too, since they stroke with currentColor. */
+[data-theme="light"] .tabbar-btn { color: #4f4a42; }
 [data-theme="light"] .tabbar-btn.active { color: #232020; }
 [data-theme="light"] .tabbar-btn.active::before {
   background: rgba(255, 255, 255, 0.55);

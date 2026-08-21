@@ -4,10 +4,18 @@ import { TAB_BY_KEY } from '../lib/navConfig.js'
 // drawer's "More" list share one source of truth; the drawer also renders these
 // same icons for any hidden tab.
 export const TAB_ICONS = {
+  // HomeDeck's house, copied path for path from its `Qt.home` so the two apps
+  // open on the same mark. Ours was a roofline over an open-bottomed box: no
+  // floor, no door, and the walls ran to the edge of the viewBox. Theirs closes
+  // the walls with rounded corners and puts a door in, which is the thing that
+  // reads as a HOUSE rather than as an arrow over a bracket at 22px.
+  // linecap/linejoin sit on the svg here, as they do there, because all three
+  // paths want the same treatment.
   home: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M3 10.6L12 3.5l9 7.1" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M5.7 9.6V20h12.6V9.6" strokeLinecap="round" strokeLinejoin="round" />
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3.4 10.4 12 3.6l8.6 6.8" />
+      <path d="M5.4 9.4v9.2a1.8 1.8 0 0 0 1.8 1.8h9.6a1.8 1.8 0 0 0 1.8-1.8V9.4" />
+      <path d="M9.8 20.4v-5.2h4.4v5.2" />
     </svg>
   ),
   library: (
