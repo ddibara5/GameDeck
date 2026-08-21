@@ -3,18 +3,18 @@
  * against stubbed reads.
  *
  * Fixtures are shaped like the real rows (a game in progress, one Game Pass exit,
- * four dated wishlist releases, a backlog with ratings and years) so the
- * assertions are about what the app renders on data of this shape rather than on
- * numbers invented to make them pass.
+ * wishlist releases either side of today, a library with ratings and years) so
+ * the assertions are about what the app renders on data of this shape rather than
+ * on numbers invented to make them pass.
  *
  * Three things this does that a lighter harness would not:
  *   - blocks the service worker, so a stubbed request that never reaches the
  *     handler cannot look like a working feature;
- *   - asserts the MOVED cards are absent from Insights by the selectors only they
- *     ever used (.np, .ins-arc, .up-row), not by counting cards, because a count
- *     passes when the wrong thing is gone;
- *   - reloads after a skip, because a shortlist that forgets is worse than one
- *     that never offered the control.
+ *   - asserts REMOVED cards absent by the selectors only they ever used, never by
+ *     counting cards, because a count passes when the wrong thing is gone. That
+ *     covers the five that left Insights and now the three that left Home;
+ *   - reloads after folding a drawer group, because a fold that forgets is worse
+ *     than one that was never offered.
  */
 import { chromium } from 'playwright'
 
@@ -145,32 +145,40 @@ const home = await page.evaluate(() => ({
   cardTitles: [...document.querySelectorAll('.chart-title')].map((e) => e.textContent.trim()),
   tiles: [...document.querySelectorAll('.hm-tile')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
   banner: document.querySelector('.hm-banner')?.textContent.replace(/\s+/g, ' ').trim() || null,
-  picks: [...document.querySelectorAll('.hm-pn')].map((e) => e.textContent.trim()),
-  chips: [...document.querySelectorAll('.hm-chip')].map((e) => e.textContent.trim()),
   arcs: document.querySelectorAll('.ins-arc').length,
   upRows: [...document.querySelectorAll('.up-row')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
   cuRows: [...document.querySelectorAll('[data-card="coming_up"] .up-row')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
   rrRows: [...document.querySelectorAll('[data-card="recently_released"] .up-row')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
   expands: [...document.querySelectorAll('.hm-expand')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
-  skips: document.querySelectorAll('.hm-skip').length,
+  soloGrids: document.querySelectorAll('.hm-grid.solo').length,
+  gridCols: (() => {
+    const g = document.querySelector('.hm-grid')
+    return g ? getComputedStyle(g).gridTemplateColumns.split(' ').length : 0
+  })(),
+  // The selectors the three removed cards were the ONLY users of. A card count
+  // would pass with the wrong card gone; these cannot.
+  gone: ['hm-pick', 'hm-pb', 'hm-pn', 'hm-chip', 'hm-skip', 'hm-link', 'pace-hero', 'pace-big']
+    .map((c) => `${c}:${document.querySelectorAll('.' + c).length}`)
+    .join(' '),
 }))
 
 check('lands on Home', home.title === 'Home', home.title)
 check('bar is home/library/activity/discover/news', home.tabs.join('|') === 'Home|Library|Activity|Discover|News', home.tabs.join('|'))
 check('Home is the active tab', home.active === 'Home', home.active)
 check('Now playing renders with its arc', home.cardTitles.includes('Now playing') && home.arcs === 1, `arcs=${home.arcs}`)
-check('week + backlog tiles', home.tiles.length === 2 && /This week/.test(home.tiles[0]) && /Backlog/.test(home.tiles[1]), home.tiles.join(' // '))
-// 4 backlog games in the fixture: RE2, Outer Wilds, Requiem, FIFA, UNO = 5, minus
-// nothing skipped yet. Persona (played yesterday) and Another Crab's (40d, but
-// over 2h and unfinished) derive as playing / backlog respectively.
-check('backlog tile counts something', /Backlog\s*\d+/.test(home.tiles[1]) && /never opened/.test(home.tiles[1]), home.tiles[1])
+// One tile left in the catalog, so the run is a run of one and takes the whole
+// width. Asserted as a COLUMN COUNT rather than a pixel width: a half-width tile
+// in a two-column grid and a full-width one in a one-column grid can measure the
+// same on a narrow phone, and the rule is about the grid, not the pixels.
+check('This week is the only tile', home.tiles.length === 1 && /This week/.test(home.tiles[0]), home.tiles.join(' // '))
+check('a solo tile takes the full width', home.soloGrids === 1 && home.gridCols === 1, `solo=${home.soloGrids} cols=${home.gridCols}`)
 check('one Game Pass exit renders as a banner', Boolean(home.banner) && /Leaving Game Pass soon/.test(home.banner), home.banner)
 check('banner does not invent a countdown', !/\d+ days/.test(home.banner || ''), home.banner)
-check('picks are the rated ones, junk excluded',
-  home.picks.length === 3 && !home.picks.includes('FIFA 14') && !home.picks.includes('UNO'),
-  home.picks.join(', '))
-check('every pick states its reason', home.chips.length === home.picks.length, home.chips.join(' | '))
-check('each pick has a skip control', home.skips === home.picks.length, String(home.skips))
+// Backlog, Pick up next and Pace were REMOVED on 21 Aug, not switched off. Both
+// halves matter: gone from the page, and gone from the editor that offers cards,
+// because a catalog entry is a promise that the card exists.
+check('the removed cards left no markup behind', home.gone === 'hm-pick:0 hm-pb:0 hm-pn:0 hm-chip:0 hm-skip:0 hm-link:0 pace-hero:0 pace-big:0', home.gone)
+check('no Pick up next or Pace card', !home.cardTitles.some((t) => /Pick up next|Pace/.test(t)), home.cardTitles.join(', '))
 check('Coming up renders dated releases', home.cuRows.length === 2 && home.cardTitles.includes('Coming up'), home.cuRows.join(' // '))
 check('out-today row reads "Out today"', /Out\s*today/.test(home.cuRows[0] || ''), home.cuRows[0])
 // Two rows the card must NOT show: a quarter-precision date resolves to the end
@@ -286,18 +294,17 @@ const backHome = await page.evaluate(() => ({
 }))
 check('back from the Wishlist returns to Home', backHome.title === 'Home' && backHome.wl === 0, JSON.stringify(backHome))
 
-/* ----------------------------------------------------------------- 2. skip */
+/* -------------------------------------------------- 2. the cards editor */
 
-const firstPick = home.picks[0]
-await page.locator('.hm-skip').first().click()
-await page.waitForTimeout(400)
-const afterSkip = await page.evaluate(() => [...document.querySelectorAll('.hm-pn')].map((e) => e.textContent.trim()))
-check('skip removes the row', !afterSkip.includes(firstPick), `${firstPick} -> ${afterSkip.join(', ')}`)
-
-await page.reload({ waitUntil: 'networkidle' })
-await page.waitForTimeout(900)
-const afterReload = await page.evaluate(() => [...document.querySelectorAll('.hm-pn')].map((e) => e.textContent.trim()))
-check('skip survives a reload', !afterReload.includes(firstPick), afterReload.join(', '))
+// The other half of "removed, not switched off": Customize cards must not offer
+// them either.
+await page.locator('.customize-btn').click()
+await page.waitForTimeout(600)
+const czCards = await page.evaluate(() => [...document.querySelectorAll('.cz-rl b')].map((e) => e.textContent.trim()))
+check('the editor offers five cards', czCards.length === 5, String(czCards.length))
+check('the editor offers the right five', czCards.join('|') === 'Now playing|This week|Leaving Game Pass|Coming up|Recently released', czCards.join('|'))
+await page.locator('.settings-back').first().click()
+await page.waitForTimeout(600)
 
 /* -------------------------------------------------------------- 3. insights */
 
@@ -310,6 +317,8 @@ const drawer = await page.evaluate(() => ({
   pills: [...document.querySelectorAll('.drawer .menu-bar-tag')].length,
   here: document.querySelector('.drawer .menu-item.here')?.textContent.replace(/\s+/g, ' ').trim() || null,
   cz: Boolean(document.querySelector('.drawer-cz')),
+  folds: document.querySelectorAll('.drawer .menu-sec').length,
+  open: [...document.querySelectorAll('.drawer .menu-sec')].map((e) => e.getAttribute('aria-expanded')),
 }))
 check('drawer groups in order', drawer.groups.join('|') === 'Your games|Explore|Shelves|App', drawer.groups.join('|'))
 check('drawer lists every destination', drawer.rows.length === 12, String(drawer.rows.length))
@@ -317,7 +326,51 @@ check('wishlist sits under Explore', drawer.rows.some((r) => r.startsWith('Wishl
 check('five tabs carry an on-bar pill', drawer.pills === 5, String(drawer.pills))
 check('current tab is marked', /^Home/.test(drawer.here || ''), drawer.here)
 check('Customize drawer button present', drawer.cz, '')
+check('every group heading folds', drawer.folds === 4 && drawer.open.join('') === 'truetruetruetrue', `${drawer.folds} / ${drawer.open.join(',')}`)
 await page.screenshot({ path: 'repro/out/drawer-dark.png', fullPage: true })
+
+/* ------------------------------------------------ folding a drawer group */
+
+// Shelves holds four rows. Folding it has to take exactly those four out, keep
+// every other row, say how many it is holding, and still be folded after a
+// reload. The count is asserted because a folded heading with no count is a dead
+// end: the rows are what say how many, and they are gone.
+await page.locator('.drawer .menu-sec', { hasText: 'Shelves' }).click()
+await page.waitForTimeout(350)
+const folded = await page.evaluate(() => ({
+  rows: [...document.querySelectorAll('.drawer .menu-item')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
+  groups: [...document.querySelectorAll('.drawer .menu-sec-label')].map((e) => e.textContent.trim()),
+  n: document.querySelector('.drawer .menu-sec.folded .menu-sec-n')?.textContent.trim(),
+  open: [...document.querySelectorAll('.drawer .menu-sec')].map((e) => e.getAttribute('aria-expanded')),
+  stored: JSON.parse(localStorage.getItem('gamedeck_nav_v2') || '{}').collapsed,
+}))
+check('folding hides that group only', folded.rows.length === 8 && !folded.rows.some((r) => /^Backlog|^Playing|^Finished|^Abandoned/.test(r)), String(folded.rows.length))
+check('the other groups are untouched', folded.rows.some((r) => /^Home/.test(r)) && folded.rows.some((r) => /^Wishlist/.test(r)) && folded.rows.some((r) => /^Settings/.test(r)), '')
+check('a folded heading says how many', folded.n === '4', folded.n)
+check('only that heading reports folded', folded.open.join(',') === 'true,true,false,true', folded.open.join(','))
+check('the fold is stored, not just drawn', JSON.stringify(folded.stored) === '{"shelves":true}', JSON.stringify(folded.stored))
+// The headings still print in the same order with a group shut, because the fold
+// hides rows and never touches the order.
+check('the order survives the fold', folded.groups.join('|') === 'Your games|Explore|Shelves4|App', folded.groups.join('|'))
+await page.screenshot({ path: 'repro/out/drawer-folded.png', fullPage: true })
+
+await page.reload({ waitUntil: 'networkidle' })
+await page.waitForTimeout(900)
+await page.locator('.brand-btn, .brand').first().click()
+await page.waitForTimeout(500)
+const afterFoldReload = await page.evaluate(() => document.querySelectorAll('.drawer .menu-item').length)
+check('the fold survives a reload', afterFoldReload === 8, String(afterFoldReload))
+
+// And back, because a fold you cannot undo is a deletion.
+await page.locator('.drawer .menu-sec', { hasText: 'Shelves' }).click()
+await page.waitForTimeout(350)
+const unfolded = await page.evaluate(() => ({
+  rows: document.querySelectorAll('.drawer .menu-item').length,
+  stored: JSON.parse(localStorage.getItem('gamedeck_nav_v2') || '{}').collapsed,
+}))
+check('unfolding brings the rows back', unfolded.rows === 12, String(unfolded.rows))
+// Emptied rather than left holding `false`, so storage lists folded groups only.
+check('unfolding clears the stored key', JSON.stringify(unfolded.stored) === '{}', JSON.stringify(unfolded.stored))
 
 await page.getByRole('button', { name: /^Insights/ }).first().click()
 await page.waitForTimeout(900)
