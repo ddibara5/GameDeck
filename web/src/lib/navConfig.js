@@ -93,6 +93,13 @@ const DEFAULT_BAR = BAR_CATALOG.map((d) => d.key)
 // All five, because there are exactly five and five fit.
 const DEFAULT_ENABLED = DEFAULT_BAR.reduce((m, k) => ((m[k] = true), m), {})
 const DEFAULT_LABELS = true
+// The bar is a shortcut, and a shortcut you can put away. Off hides the strip
+// and gives the page back its full height; every destination the bar carried is
+// still in the drawer, where all of them already were. Deliberately NOT modelled
+// as "enabled: {} for every tab", because that would empty the bar's membership
+// and lose the arrangement, trip the MIN_VISIBLE floor on the way back, and move
+// the landing tab. This is a visibility flag over an untouched config.
+const DEFAULT_BAR_SHOWN = true
 
 function load() {
   let stored = null
@@ -155,7 +162,8 @@ function load() {
   }
 
   const labels = stored && typeof stored.labels === 'boolean' ? stored.labels : DEFAULT_LABELS
-  return { order, bar, enabled, labels }
+  const barShown = stored && typeof stored.barShown === 'boolean' ? stored.barShown : DEFAULT_BAR_SHOWN
+  return { order, bar, enabled, labels, barShown }
 }
 
 export function getNavConfig() {
@@ -172,6 +180,7 @@ export function setNavConfig(config) {
         bar: config.bar || cur.bar,
         enabled: config.enabled || cur.enabled,
         labels: typeof config.labels === 'boolean' ? config.labels : cur.labels,
+        barShown: typeof config.barShown === 'boolean' ? config.barShown : cur.barShown,
       })
     )
   } catch {
@@ -203,9 +212,13 @@ export function hiddenKeys(config) {
   return (config.bar || []).filter((k) => !config.enabled[k])
 }
 
-// True when a destination is currently on the bar, for the drawer's readout.
+// True when a destination is currently reachable FROM the bar, which is what
+// every "on bar" readout in the app actually claims. A hidden bar carries
+// nothing, so this is false for everything while it is off, and the readouts go
+// quiet instead of pointing at a strip that is not on screen. Membership itself
+// is untouched and comes back exactly as it was.
 export function onBar(config, key) {
-  return isBarTab(key) && Boolean(config.enabled[key])
+  return isBarTab(key) && Boolean(config.enabled[key]) && config.barShown !== false
 }
 
 export function useNavConfig() {

@@ -831,6 +831,15 @@ textarea {
   min-height: 0;
 }
 
+/* Bottom bar switched off in Settings. One variable, set on the app root, so
+   every rule already written against --tabbar-height reclaims the space on its
+   own: .app-main's bottom padding, and the Discover chat page's height calc.
+   The bar's own preview inside its editor re-declares position:static, so it
+   still renders there while the real one is gone. */
+.app.bar-off {
+  --tabbar-height: 0px;
+}
+
 /* ---------- Tab bar ---------- */
 
 /* Floating "liquid glass" bar: frosted, detached, safe-area aware. The blur

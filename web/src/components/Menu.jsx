@@ -4,7 +4,7 @@ import { useMountTransition } from '../lib/useMountTransition.js'
 import { lockScroll } from '../lib/scrollLock.js'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
 import { useStatusMap, effectiveStatus, includeInLists } from '../lib/userStatus.js'
-import { useNavConfig, DEST_BY_KEY, GROUP_LABEL } from '../lib/navConfig.js'
+import { useNavConfig, DEST_BY_KEY, GROUP_LABEL, onBar } from '../lib/navConfig.js'
 import { DEST_ICONS } from './destIcons.jsx'
 
 // The left drawer: the whole map of the app, grouped, with the bottom bar marked
@@ -99,7 +99,10 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpen
             const heading = dest.group !== lastGroup ? GROUP_LABEL[dest.group] : null
             lastGroup = dest.group
             const count = counts[key]
-            const onBar = dest.kind === 'tab' && Boolean(nav.enabled[key])
+            // Through the helper rather than reading `enabled` directly, so the
+            // pill goes quiet when the bar is switched off instead of pointing
+            // at a strip that is not on screen.
+            const isOnBar = onBar(nav, key)
             const here = dest.kind === 'tab' && key === activeTab
             return (
               <div key={key}>
@@ -110,7 +113,7 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpen
                   {count != null ? (
                     <span className={`menu-value${key === 'wishlist' ? ' accent' : ''}`}>{count}</span>
                   ) : null}
-                  {onBar ? <span className="menu-bar-tag">on bar</span> : null}
+                  {isOnBar ? <span className="menu-bar-tag">on bar</span> : null}
                 </button>
               </div>
             )

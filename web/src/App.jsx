@@ -158,7 +158,10 @@ export default function App() {
   }, [menuOpen, settingsOpen, customizeOpen, customizeNavOpen, customizeBarOpen, shuffleOpen, view, viewClosing])
 
   return (
-    <div className="app">
+    // `bar-off` collapses --tabbar-height to zero for everything inside, which
+    // is how .app-main's bottom padding and the Discover chat page's height
+    // calc reclaim the space without either of them learning about the setting.
+    <div className={`app${nav.barShown ? '' : ' bar-off'}`}>
       <header className={`app-header${scrolled ? ' scrolled' : ''}`}>
         <Brand onOpen={() => setMenuOpen(true)} />
         {/* Each tab prints its own 34px large title, which scrolls away. This is
@@ -222,16 +225,22 @@ export default function App() {
           </Suspense>
         </div>
       ) : null}
-      <TabBar
-        active={view ? null : activeTab}
-        onChange={(t) => {
-          closeView()
-          setActiveTab(t)
-        }}
-        tabs={visibleTabs}
-        showLabels={nav.labels}
-        badges={{ news: newsUnread }}
-      />
+      {/* Unmounted rather than hidden when the bar is off: a display:none bar
+          still answers to the a11y tree in some readers, and there is nothing
+          here worth keeping mounted. The drawer holds every destination it
+          carried, so nothing becomes unreachable. */}
+      {nav.barShown ? (
+        <TabBar
+          active={view ? null : activeTab}
+          onChange={(t) => {
+            closeView()
+            setActiveTab(t)
+          }}
+          tabs={visibleTabs}
+          showLabels={nav.labels}
+          badges={{ news: newsUnread }}
+        />
+      ) : null}
       <Menu
         open={menuOpen}
         onClose={() => setMenuOpen(false)}

@@ -5,6 +5,7 @@ import { getTheme, setTheme, getAccent, setAccent, getShelfSize, setShelfSize, g
 import { useMountTransition } from '../lib/useMountTransition.js'
 import { lockScroll } from '../lib/scrollLock.js'
 import { MenuItem, ICONS, relTime } from './menuUI.jsx'
+import { useNavConfig, setNavConfig } from '../lib/navConfig.js'
 
 const REPO = 'ddibara5/GameDeck'
 const SOURCE_URL = 'https://github.com/ddibara5/GameDeck'
@@ -62,6 +63,7 @@ const LIST_SIZE_OPTIONS = [
 
 export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer }) {
   const { mounted, closing } = useMountTransition(open)
+  const nav = useNavConfig()
   const [fallbackSync, setFallbackSync] = useState(null)
   const [latestPlay, setLatestPlay] = useState(null)
   const [sourceSync, setSourceSync] = useState({})
@@ -368,6 +370,16 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
             {/* Two rows, not one. They edit two independent orders, and a single
                 row leading to a page that edited both is what made the bar and
                 the drawer feel like one thing. */}
+            {/* The switch sits above the editor it governs, and says where the
+                tabs go rather than what the switch does, because the strip
+                vanishing already says that. */}
+            <MenuItem
+              glyph={ICONS.eye}
+              label="Show bottom bar"
+              sub="Everything stays in the drawer"
+              toggle={nav.barShown}
+              onClick={() => setNavConfig({ barShown: !nav.barShown })}
+            />
             <MenuItem glyph={ICONS.nav} label="Bottom bar" sub="Which tabs, and in what order" onClick={onOpenBar} />
             <MenuItem glyph={ICONS.layers} label="Drawer" sub="Group order, and what each group holds" onClick={onOpenDrawer} />
           </div>

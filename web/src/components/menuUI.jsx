@@ -42,6 +42,12 @@ export const ICONS = {
   check: icon(<><circle cx="12" cy="12" r="9" /><path d="m8.5 12 2.5 2.5 4.5-5" /></>),
   xcircle: icon(<><circle cx="12" cy="12" r="9" /><path d="m15 9-6 6M9 9l6 6" /></>),
   star: icon(<path d="m12 3 2.6 5.5 6 .8-4.4 4.2 1.1 6L12 16.9 6.7 19.5l1.1-6L3.4 9.3l6-.8z" />),
+  eye: icon(
+    <>
+      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" />
+      <circle cx="12" cy="12" r="3" />
+    </>
+  ),
   nav: icon(
     <>
       <rect x="3" y="7" width="18" height="10" rx="3" />
@@ -52,7 +58,14 @@ export const ICONS = {
   ),
 }
 
-export function MenuItem({ glyph, label, sub, value, valueAccent, href, onClick, disabled, chevron = true }) {
+// `toggle` turns the row itself into the switch: role and aria-checked go on the
+// row's own button and the pill is a plain <span>, because a <button> inside a
+// <button> is invalid markup and would leave the row around it dead to a tap.
+// The pill reuses .cz-toggle from the customize editors rather than growing a
+// second switch that looks almost the same; that stylesheet is imported by
+// CustomizeList, which App loads eagerly, so it is already on the page.
+export function MenuItem({ glyph, label, sub, value, valueAccent, href, onClick, disabled, chevron = true, toggle }) {
+  const isSwitch = typeof toggle === 'boolean'
   const body = (
     <>
       {glyph}
@@ -61,7 +74,12 @@ export function MenuItem({ glyph, label, sub, value, valueAccent, href, onClick,
         {sub ? <span className="menu-sub">{sub}</span> : null}
       </span>
       {value ? <span className={`menu-value${valueAccent ? ' accent' : ''}`}>{value}</span> : null}
-      {chevron && !disabled ? chev : null}
+      {isSwitch ? (
+        <span className={`cz-toggle${toggle ? ' on' : ''}`} aria-hidden="true">
+          <i />
+        </span>
+      ) : null}
+      {chevron && !disabled && !isSwitch ? chev : null}
     </>
   )
   if (href) {
@@ -72,7 +90,14 @@ export function MenuItem({ glyph, label, sub, value, valueAccent, href, onClick,
     )
   }
   return (
-    <button type="button" className="menu-item" onClick={onClick} disabled={disabled}>
+    <button
+      type="button"
+      className="menu-item"
+      onClick={onClick}
+      disabled={disabled}
+      role={isSwitch ? 'switch' : undefined}
+      aria-checked={isSwitch ? toggle : undefined}
+    >
       {body}
     </button>
   )

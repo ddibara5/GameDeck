@@ -6,6 +6,7 @@ import {
   DEST_BY_KEY,
   GROUP_LABEL,
   isBarTab,
+  onBar,
   useNavConfig,
   getNavConfig,
   setNavConfig,
@@ -40,16 +41,18 @@ export default function CustomizeNav({ open, onClose }) {
 
   // The right-hand word is a READOUT, so it has to be computed from live state
   // rather than baked into the catalog: "on bar" is true only while the bar
-  // editor says it is.
+  // editor says it is. With the bar switched off there is no bar to be on or
+  // off of, so the word goes away entirely rather than reporting a membership
+  // that currently reaches nothing.
   const byKey = useMemo(() => {
     const out = {}
     for (const d of DEST_CATALOG) {
       let fixed = d.fixed || ''
-      if (isBarTab(d.key)) fixed = nav.enabled[d.key] ? 'on bar' : 'off bar'
+      if (isBarTab(d.key)) fixed = nav.barShown ? (onBar(nav, d.key) ? 'on bar' : 'off bar') : ''
       out[d.key] = { ...DEST_BY_KEY[d.key], fixed }
     }
     return out
-  }, [nav.enabled])
+  }, [nav])
 
   return (
     <CustomizeList
