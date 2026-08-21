@@ -105,7 +105,6 @@ export default function ActivityTab() {
   return (
     <div>
       <div className="page-header">
-        <h1 className="page-title">Activity</h1>
         <p className="page-subtitle">Recent play sessions and achievement unlocks.</p>
       </div>
 

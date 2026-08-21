@@ -133,13 +133,24 @@ const check = (name, pass, detail) => {
 }
 
 await page.goto(BASE, { waitUntil: 'networkidle' })
-await page.waitForSelector('.page-title', { timeout: 10000 })
+await page.waitForSelector('.app-header-title', { timeout: 10000 })
 await page.waitForTimeout(900)
 
 /* ---------------------------------------------------------------- 1. lands */
 
 const home = await page.evaluate(() => ({
-  title: document.querySelector('.page-title')?.textContent.trim(),
+  title: document.querySelector('.app-header-title')?.textContent.trim(),
+  // The title moved into the header on 21 Aug and became the heading with it.
+  // Both halves are asserted: one h1, and it is the header's.
+  h1s: [...document.querySelectorAll('h1')].map((e) => e.textContent.trim()),
+  h1InHeader: document.querySelector('.app-header h1.app-header-title') !== null,
+  oldTitles: document.querySelectorAll('.page-title').length,
+  subtitle: document.querySelector('.page-subtitle')?.textContent.trim(),
+  headerH: Math.round(document.querySelector('.app-header').getBoundingClientRect().height),
+  firstCardTop: (() => {
+    const e = document.querySelector('.app-main .chart-card, .app-main .hm-grid')
+    return e ? Math.round(e.getBoundingClientRect().top + window.scrollY) : null
+  })(),
   tabs: [...document.querySelectorAll('.tabbar-btn')].map((b) => b.textContent.trim()),
   active: document.querySelector('.tabbar-btn.active')?.textContent.trim(),
   cardTitles: [...document.querySelectorAll('.chart-title')].map((e) => e.textContent.trim()),
@@ -165,6 +176,19 @@ const home = await page.evaluate(() => ({
 check('lands on Home', home.title === 'Home', home.title)
 check('bar is home/library/activity/discover/news', home.tabs.join('|') === 'Home|Library|Activity|Discover|News', home.tabs.join('|'))
 check('Home is the active tab', home.active === 'Home', home.active)
+
+/* ------------------------------------------------- the header carries it */
+
+// A heading that is never painted is still in the accessibility tree, so the
+// 34px copies were deleted from the tabs rather than hidden. Exactly one h1, in
+// the header, saying the tab's name.
+check('exactly one heading, in the header', home.h1s.length === 1 && home.h1InHeader, home.h1s.join('|'))
+check('the heading is the tab name', home.h1s[0] === 'Home', home.h1s[0])
+check('no 34px copy is left anywhere', home.oldTitles === 0, String(home.oldTitles))
+// The one part the header cannot carry. On Home it is the date.
+check('the subtitle survives', /^[A-Z][a-z]+day, /.test(home.subtitle || ''), home.subtitle)
+// The point of the change. 218 before the chips came off, 210 after, 166 now.
+check('the first card clears the old title block', home.firstCardTop !== null && home.firstCardTop < 190, String(home.firstCardTop))
 check('Now playing renders with its arc', home.cardTitles.includes('Now playing') && home.arcs === 1, `arcs=${home.arcs}`)
 // One tile left in the catalog, so the run is a run of one and takes the whole
 // width. Asserted as a COLUMN COUNT rather than a pixel width: a half-width tile
@@ -259,7 +283,7 @@ await page.locator('.modal-backdrop').click({ position: { x: 8, y: 8 } })
 await page.waitForTimeout(700)
 const closed = await page.evaluate(() => ({
   backdrop: document.querySelectorAll('.modal-backdrop').length,
-  title: document.querySelector('.page-title')?.textContent.trim(),
+  title: document.querySelector('.app-header-title')?.textContent.trim(),
 }))
 check('the sheet closes back to Home', closed.backdrop === 0 && closed.title === 'Home', JSON.stringify(closed))
 
@@ -289,7 +313,7 @@ await page.screenshot({ path: 'repro/out/wishlist-from-home.png', fullPage: true
 await page.locator('.wl-back').first().click()
 await page.waitForTimeout(700)
 const backHome = await page.evaluate(() => ({
-  title: document.querySelector('.page-title')?.textContent.trim(),
+  title: document.querySelector('.app-header-title')?.textContent.trim(),
   wl: document.querySelectorAll('.wl-page').length,
 }))
 check('back from the Wishlist returns to Home', backHome.title === 'Home' && backHome.wl === 0, JSON.stringify(backHome))
@@ -427,7 +451,7 @@ await page.waitForTimeout(500)
 // wrong page and would have quietly proved nothing.
 await page.getByRole('button', { name: /^Home/ }).first().click()
 await page.waitForTimeout(700)
-const lightTitle = await page.evaluate(() => document.querySelector('.page-title')?.textContent.trim())
+const lightTitle = await page.evaluate(() => document.querySelector('.app-header-title')?.textContent.trim())
 check('light shot is of Home', lightTitle === 'Home', lightTitle)
 await page.screenshot({ path: 'repro/out/home-light.png', fullPage: true })
 await page.locator('.brand-btn, .brand').first().click()

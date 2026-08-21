@@ -58,7 +58,10 @@ export default function ListView({ viewKey, onClose }) {
           </svg>
         </button>
         <div>
-          <div className="wl-title">{def.title}</div>
+          {/* An h1 since 21 Aug. The tabs no longer carry one and the header
+              blanks its own while this overlay is up, so without this the screen
+              would have no heading at all. */}
+          <h1 className="wl-title">{def.title}</h1>
           <div className="wl-sub">{loading ? 'Loading…' : sub}</div>
         </div>
       </div>

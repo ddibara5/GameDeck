@@ -128,7 +128,7 @@
   height: calc(var(--app-header-h) + var(--top-inset));
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 10px;
   padding: var(--top-inset) 16px 0;
   background: var(--bg);
   border-bottom: 1px solid transparent;
@@ -210,36 +210,17 @@
    it is centred on the header rather than on the space left between the brand
    and the actions, and so adding it cannot shift either of them. */
 .app-header-title {
-  position: absolute;
-  left: 50%;
-  top: var(--top-inset);
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  transform: translateX(-50%) translateY(6px);
-  font-size: var(--t-body);
-  font-weight: var(--w-semi);
-  letter-spacing: var(--t-body-tr);
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--t-t3);
+  font-weight: var(--w-bold);
+  letter-spacing: var(--t-large-tr);
   color: var(--text);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   pointer-events: none;
-  opacity: 0;
-  transition: opacity var(--d-base) var(--ease-out), transform var(--d-base) var(--ease-out);
-}
-
-.app-header.scrolled .app-header-title {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .app-header-title {
-    transition: opacity var(--d-fast) linear;
-    transform: translateX(-50%);
-  }
-  .app-header.scrolled .app-header-title {
-    transform: translateX(-50%);
-  }
 }
 
 .brand-btn {
@@ -945,20 +926,21 @@ textarea {
   padding: 16px 16px 8px;
 }
 
-/* Large title. Every tab states where you are at 34px, then scrolls away and
-   hands the job to a 17px inline copy in the sticky header (.app-header-title).
-   Before this, every screen opened with the same brand bar, so Library, Activity
-   and News all read as the same page with different content in it. */
-.page-header {
-  padding: 4px 16px 10px;
-}
+/* What is left of the large title block: the line under it.
 
-.page-title {
-  font-size: var(--t-large);
-  font-weight: var(--w-bold);
-  margin: 0 0 3px;
-  line-height: 1.08;
-  letter-spacing: var(--t-large-tr);
+   Every tab used to state where you are at 34px here, then scroll it away and
+   hand the job to a 17px copy in the sticky header. That existed because the
+   header was already full: a wordmark on the left and two chips on the right
+   left nowhere for a title to live. Both are gone, so the header carries the
+   title at every scroll position and the 34px copy would only be saying the same
+   word twice, 44px further down.
+
+   The subtitle stays because it is the one part the header cannot carry. On Home
+   it is the date and on Library the collection summary, both facts; the four
+   descriptive ones are taglines and could go, but that is an editing decision
+   rather than a layout one. */
+.page-header {
+  padding: 0 16px 10px;
 }
 
 .page-subtitle {

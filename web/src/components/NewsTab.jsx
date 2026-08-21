@@ -135,7 +135,6 @@ export default function NewsTab() {
       </div>
 
       <div className="page-header">
-        <h1 className="page-title">News</h1>
         <p className="page-subtitle">This week in gaming, for your library.</p>
         {!loading && rows.length > 0 ? (
           <button type="button" className="news-refresh-note" onClick={pull.refreshNow} disabled={pull.busy}>

@@ -311,7 +311,6 @@ export default function InsightsTab() {
     return (
       <div>
         <div className="page-header">
-          <h1 className="page-title">Insights</h1>
           <p className="page-subtitle">How your play has been going over time.</p>
         </div>
         <Skeleton count={4} />
@@ -404,7 +403,6 @@ export default function InsightsTab() {
   return (
     <div>
       <div className="page-header">
-        <h1 className="page-title">Insights</h1>
         <p className="page-subtitle">How your play has been going over time.</p>
       </div>
 

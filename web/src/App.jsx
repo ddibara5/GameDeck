@@ -52,6 +52,9 @@ export default function App() {
   const [scrolled, setScrolled] = useState(false)
   // Unread dot on the News tab when a newer weekly drop is available.
   const newsUnread = useNewsUnread()
+  // Blank while a drawer-opened overlay is up: Wishlist and the status lists
+  // print their own heading, and two would disagree about where you are.
+  const headerTitle = view ? '' : TAB_BY_KEY[activeTab]?.label || ''
 
   const openView = (v) => {
     if (viewTimer.current) {
@@ -164,14 +167,17 @@ export default function App() {
     <div className={`app${nav.barShown ? '' : ' bar-off'}`}>
       <header className={`app-header${scrolled ? ' scrolled' : ''}`}>
         <Brand onOpen={() => setMenuOpen(true)} />
-        {/* Each tab prints its own 34px large title, which scrolls away. This is
-            the inline stand-in that fades in to replace it, so the header always
-            answers "where am I?" without costing the screen a permanent 34px.
-            Hidden from the a11y tree while invisible: the tab's own <h1> is the
-            real heading, and two live copies would be read out twice. */}
-        <span className="app-header-title" aria-hidden={!scrolled}>
-          {view ? '' : TAB_BY_KEY[activeTab]?.label || ''}
-        </span>
+        {/* The screen title, permanently, next to the mark. It used to be a
+            stand-in that faded in once the tab's own 34px title had scrolled
+            away, and it was aria-hidden because that <h1> was the real heading.
+            With the wordmark gone there is room for it at every scroll position,
+            so the 34px copy is what goes instead and this becomes the heading:
+            one <h1> per screen, in the one place that always says where you are.
+
+            Rendered only when there is something to say. A drawer-opened overlay
+            carries its own title and blanks this one, and an empty <h1> is worse
+            than no <h1>. */}
+        {headerTitle ? <h1 className="app-header-title">{headerTitle}</h1> : null}
       </header>
       <main className="app-main">
         <Suspense fallback={null}>

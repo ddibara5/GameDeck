@@ -152,7 +152,6 @@ export default function LibraryTab() {
   return (
     <div>
       <div className="page-header">
-        <h1 className="page-title">Library</h1>
         <p className="page-subtitle">{librarySummary(games)}</p>
       </div>
       <div className="library-sticky">

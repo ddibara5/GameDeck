@@ -59,6 +59,9 @@
 }
 
 .wl-title {
+  /* margin: 0 because this is an h1 now and the UA default is 0.67em top and
+     bottom, which would push the whole overlay header down. */
+  margin: 0;
   font-size: var(--t-t2);
   font-weight: var(--w-semi);
   letter-spacing: var(--t-t2-tr);

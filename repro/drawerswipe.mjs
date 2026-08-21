@@ -73,7 +73,7 @@ async function openFromDrawer(name) {
 }
 
 await page.goto(BASE, { waitUntil: 'networkidle' })
-await page.waitForSelector('.page-title', { timeout: 10000 })
+await page.waitForSelector('.app-header-title', { timeout: 10000 })
 await page.waitForTimeout(400)
 
 // 1. Cold app, nothing open: the swipe must open the drawer.

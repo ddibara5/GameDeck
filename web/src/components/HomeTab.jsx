@@ -246,7 +246,6 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
     return (
       <div>
         <div className="page-header">
-          <h1 className="page-title">Home</h1>
           <p className="page-subtitle">{todayLabel()}</p>
         </div>
         <Skeleton count={3} />
@@ -481,7 +480,6 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
   return (
     <div>
       <div className="page-header">
-        <h1 className="page-title">Home</h1>
         <p className="page-subtitle">{todayLabel()}</p>
       </div>
 

@@ -23,7 +23,6 @@ export default function DiscoverTab({ onCustomize }) {
     <div className="discover-page">
       <div className="discover-topbar">
         <div className="page-header">
-          <h1 className="page-title">Discover</h1>
           <p className="page-subtitle">New releases, and games picked against your library.</p>
         </div>
         <div className="seg discover-seg" role="tablist" aria-label="Discover mode">

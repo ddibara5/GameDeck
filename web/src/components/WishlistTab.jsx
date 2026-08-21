@@ -304,7 +304,8 @@ export default function WishlistTab({ onClose }) {
       <div className="wl-head">
         {back}
         <div>
-          <div className="wl-title">Wishlist</div>
+          {/* See ListView: this is the screen's only heading while it is up. */}
+          <h1 className="wl-title">Wishlist</h1>
           <div className="wl-sub">{loading ? 'Loading…' : `${items.length} ${items.length === 1 ? 'game' : 'games'} you're tracking`}</div>
         </div>
       </div>
