@@ -424,12 +424,21 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
             key={w.igdb_id}
             onClick={() => setWishOpen(w)}
           >
+            {/* Art first, which is where every other row in this app puts it:
+                Now playing on this same screen, the Wishlist rows, the Library.
+                Beside the countdown it would have been the only one that is not,
+                and it costs the same 39px of title column either way. */}
+            <Cover src={w.cover} title={w.title} size="sm" className="up-cov" />
             <span className="up-when">
               <span className="up-n">{w.days === 0 ? 'Out' : w.days}</span>
               <span className="up-u">{unit(w)}</span>
             </span>
             <span className="up-t">
-              {w.title}
+              {/* The title is its own span so it can be ellipsised. .up-t holds
+                  the date as a block child, and text-overflow does not apply to
+                  a box with mixed inline and block content. Same shape as
+                  .np-t / .np-s. */}
+              <span className="up-tt">{w.title}</span>
               <span className="up-d">{w.day.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
             </span>
           </button>

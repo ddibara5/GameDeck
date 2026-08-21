@@ -177,6 +177,36 @@
   .hm-expand svg { transition: none; }
 }
 
+/* ------------------------------------------------------- release row art */
+
+/* Half of Now playing's 56x74, one radius step down, on the two release cards.
+   Cover measures its own slot before the first paint, so a 28px box asks the
+   CDN for 96px rather than the 224 the `sm` default would have taken.
+
+   `.cover.up-cov` rather than `.up-cov`, because .cover-sm is 52x52 at the same
+   specificity and lives in index.css: the override would then depend on import
+   order rather than on the selector, which is not a thing to leave to luck. */
+.cover.up-cov {
+  width: 28px;
+  height: 37px;
+  border-radius: var(--r-xs);
+  font-size: var(--t-cap);
+  letter-spacing: 0;
+}
+
+/* One line each, so every row is the same height and the card is SHORTER than
+   it was before the covers arrived. Three of the four Coming up rows were
+   already 54px and one was 72px, so the raggedness predates this change; the
+   cover just made it worth fixing. The full title is one tap away in the sheet
+   and the date underneath disambiguates two releases on the same day. */
+.up-tt,
+.up-d {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.up-tt { display: block; }
+
 /* --------------------------------------------------------- card headings */
 
 .hm-head {

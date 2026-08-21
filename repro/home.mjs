@@ -83,9 +83,13 @@ const WISHLIST = [
   { igdb_id: 666, title: 'Onimusha: Way of the Sword', cover: null, year: 2026, note: null, created_at: iso(50), released: relDay(25), date_precision: 'day', release_label: 'in 25 days' },
   // Recently released, in order.
   { igdb_id: 347633, title: 'Mortal Shell II', cover: null, year: 2026, note: null, created_at: iso(120), released: relDay(-1), date_precision: 'day', release_label: 'yesterday' },
-  { igdb_id: 777, title: 'Duskfade', cover: null, year: 2026, note: null, created_at: iso(110), released: relDay(-8), date_precision: 'day', release_label: '8 days ago' },
+  // A LONG one, in the collapsed preview rather than behind the expand, because
+  // the row clamps titles to one line now and a fixture of short names would
+  // pass that assertion with text-overflow deleted. Its real full name, which is
+  // what makes it long enough to overflow 225px of title column.
+  { igdb_id: 777, title: "Assassin's Creed Black Flag Resynced", cover: null, year: 2026, note: null, created_at: iso(110), released: relDay(-8), date_precision: 'day', release_label: '8 days ago' },
   { igdb_id: 888, title: 'The Relic: First Guardian', cover: null, year: 2026, note: null, created_at: iso(105), released: relDay(-21), date_precision: 'day', release_label: '21 days ago' },
-  { igdb_id: 999, title: 'Black Flag Resynced', cover: null, year: 2026, note: null, created_at: iso(102), released: relDay(-43), date_precision: 'day', release_label: '43 days ago' },
+  { igdb_id: 999, title: 'Duskfade', cover: null, year: 2026, note: null, created_at: iso(102), released: relDay(-43), date_precision: 'day', release_label: '43 days ago' },
   // Four rows each card must REJECT, and each rejects for a different reason.
   // A wishlist row you have since bought is not news: this one's igdb_id is the
   // one on Another Crab's Treasure in GAMES, so only the ownership filter keeps
@@ -206,6 +210,32 @@ const home = await page.evaluate(() => ({
   upRows: [...document.querySelectorAll('[data-card="coming_up"] .up-row, [data-card="recently_released"] .up-row')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
   cuRows: [...document.querySelectorAll('[data-card="coming_up"] .up-row')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
   rrRows: [...document.querySelectorAll('[data-card="recently_released"] .up-row')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
+  // Read STRUCTURALLY, from the element that holds the number, rather than by
+  // regex off the row's text. The covers put a placeholder letter at the front
+  // of that text on a row with no art, which broke a /^(\d+)ago/ anchored to it.
+  rrDays: [...document.querySelectorAll('[data-card="recently_released"] .up-row')].map((e) => ({
+    n: e.querySelector('.up-n')?.textContent.trim(),
+    title: e.querySelector('.up-tt')?.textContent.trim(),
+  })),
+  // Art first on both release cards, at the size Now playing's is halved to.
+  art: ['coming_up', 'recently_released'].map((k) => {
+    const rows = [...document.querySelectorAll(`[data-card="${k}"] .up-row`)]
+    const first = rows[0] && rows[0].firstElementChild
+    const box = rows[0] && rows[0].querySelector('.up-cov')?.getBoundingClientRect()
+    return {
+      card: k,
+      rows: rows.length,
+      covers: rows.filter((r) => r.querySelector('.up-cov')).length,
+      firstIsCover: Boolean(first && first.classList.contains('up-cov')),
+      size: box ? `${Math.round(box.width)}x${Math.round(box.height)}` : null,
+      heights: rows.map((r) => Math.round(r.getBoundingClientRect().height)),
+      // A clamped title overflows its own box rather than wrapping the row.
+      clamped: rows.some((r) => {
+        const t = r.querySelector('.up-tt')
+        return t && t.scrollWidth > t.clientWidth
+      }),
+    }
+  }),
   expands: [...document.querySelectorAll('[data-card="coming_up"] .hm-expand, [data-card="recently_released"] .hm-expand')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
   soloGrids: document.querySelectorAll('.hm-grid.solo').length,
   gridCols: (() => {
@@ -439,6 +469,25 @@ const opened = await page.evaluate(() => ({
 }))
 check('expanding shows all four in each', opened.cu === 4 && opened.rr === 4, `cu=${opened.cu} rr=${opened.rr}`)
 check('the expand turns into Show less', opened.labels.every((t) => /Show less/.test(t)), opened.labels.join(' | '))
+
+/* ------------------------------------------------------- the row covers */
+
+// Art on every row of both release cards, and FIRST on the row, which is where
+// Now playing, the Wishlist rows and the Library all put theirs. A cover beside
+// the countdown instead would cost the same 39px of title column and be the only
+// row in the app whose art is not first.
+for (const a of home.art) {
+  check(`${a.card}: every row carries art`, a.covers === a.rows && a.rows > 0, `${a.covers} of ${a.rows}`)
+  check(`${a.card}: the art is first on the row`, a.firstIsCover, a.firstIsCover ? 'first' : 'not first')
+  check(`${a.card}: 28x37, half of Now playing`, a.size === '28x37', String(a.size))
+  // The whole point of clamping: one height for every row. Asserted as a SET of
+  // one rather than a number, so it survives a type change that moves the row.
+  check(`${a.card}: every row is the same height`, new Set(a.heights).size === 1, a.heights.join(' / '))
+}
+// And the clamp is really clamping: at 225px of title column, at least one of
+// the fixture titles must be overflowing its own box rather than wrapping the
+// row. Without text-overflow this reads false and the heights above go ragged.
+check('a long title is ellipsised, not wrapped', home.art.some((a) => a.clamped), JSON.stringify(home.art.map((a) => a.clamped)))
 await expandAll()
 const reclosed = await page.evaluate(() => document.querySelectorAll('[data-card="coming_up"] .up-row, [data-card="recently_released"] .up-row').length)
 check('it collapses back to two each', reclosed === 4, String(reclosed))
@@ -570,9 +619,9 @@ check('the chips carry recency instead', /Today|day ago|days ago/.test(out.chips
 // released this morning is 0.8 of a day old, so one surface rounds it to 1 and
 // the other floors it to 0. Both go through daysBetween now, and this is the
 // assertion that keeps them there.
-const cardDays = (home.rrRows.find((r) => /Mortal Shell II/.test(r)) || '').match(/^(\d+)ago/)
+const cardDays = (home.rrDays.find((r) => /Mortal Shell II/.test(r.title)) || {}).n
 const pageDays = (out.chips[out.rows.findIndex((r) => /Mortal Shell II/.test(r))] || '').match(/^(\d+) day/)
-check('the card and the page count the same days', cardDays && pageDays && cardDays[1] === pageDays[1], `card=${cardDays && cardDays[1]} page=${pageDays && pageDays[1]}`)
+check('the card and the page count the same days', cardDays && pageDays && cardDays === pageDays[1], `card=${cardDays} page=${pageDays && pageDays[1]}`)
 // Day 0 is Coming up's, which renders it as "Out today", so the CARD starts at
 // one day ago. The page does not: a game that came out this morning is out now.
 // One deliberate row of difference between a card and its own destination.
