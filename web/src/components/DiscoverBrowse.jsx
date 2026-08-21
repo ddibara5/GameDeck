@@ -11,6 +11,13 @@ import TimingOverlay from './TimingOverlay.jsx'
 import { useWishlist } from '../lib/wishlist.js'
 import { useRowsConfig, ROW_BY_KEY, getFilledRows, setFilledRows } from '../lib/discoverRows.js'
 import { VIBES } from '../lib/vibes.js'
+import {
+  useDiscoverPrefs,
+  setDiscoverPrefs,
+  platformParam,
+  platformLabel,
+  PLATFORM_CHOICES,
+} from '../lib/discoverPrefs.js'
 
 const CURRENT_YEAR = new Date().getFullYear()
 
@@ -56,14 +63,6 @@ const GENRES = [
   { key: 'racing', label: 'Racing' },
 ]
 
-const PLATFORMS = [
-  { key: 'all', label: 'All platforms' },
-  { key: 'xbox', label: 'Xbox' },
-  { key: 'psn', label: 'PlayStation' },
-  { key: 'switch', label: 'Switch' },
-  { key: 'steam', label: 'PC' },
-]
-
 const SORTS = [
   { key: 'popularity', label: 'Most popular' },
   { key: 'anticipated', label: 'Most anticipated' },
@@ -87,11 +86,16 @@ const RAILS = [
 
 const YEARS = ['all', 2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2016, 2014, 2011]
 const PAGE_SIZE = 30
+// Stable identity for "every platform", so the memo below does not recompute on
+// every render while the session override is on.
+const ALL_PLATFORMS = []
 // Cards shown per rail on the home. The full list lives behind each rail's
 // "see all" page, so a small inline preview keeps the home light (fewer mounted
 // Cover components + image requests) without losing anything.
 const RAIL_PREVIEW = 12
-const DEFAULT_FILTERS = { genre: 'all', platform: 'all', year: 'all', status: 'all', sort: 'popularity' }
+// `platform` is deliberately absent: it lives in discoverPrefs, because it is a
+// standing preference rather than something you set for one look around.
+const DEFAULT_FILTERS = { genre: 'all', year: 'all', status: 'all', sort: 'popularity' }
 
 // In-place placeholder for a rail whose batched data hasn't landed yet. Reserves
 // the shelf's height (heading + a row of poster-shaped shimmers) so the home
@@ -136,7 +140,15 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
   const [openRail, setOpenRail] = useState(null)
   const [libTitles, setLibTitles] = useState(null)
   const [gamePass, setGamePass] = useState(null)
-  const [hideOwned, setHideOwned] = useState(false)
+
+  // The standing preferences, and the one-tap escape from them. `wideOpen` is
+  // session-only on purpose: "show me everything, just this once" must not
+  // quietly become the new default the next time Discover opens.
+  const prefs = useDiscoverPrefs()
+  const [wideOpen, setWideOpen] = useState(false)
+  const activePlatforms = wideOpen ? ALL_PLATFORMS : prefs.platforms
+  const hideOwned = wideOpen ? false : prefs.hideOwned
+  const standing = !wideOpen && (prefs.hideOwned || prefs.platforms.length > 0)
 
   const debounceRef = useRef(null)
   const reqRef = useRef(0)
@@ -144,7 +156,6 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
 
   const filtersActive =
     filters.genre !== 'all' ||
-    filters.platform !== 'all' ||
     filters.year !== 'all' ||
     filters.status !== 'all' ||
     filters.sort !== 'popularity'
@@ -312,9 +323,10 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
     return {
       preset: preset || undefined,
       ...rest,
+      platform: platformParam(activePlatforms),
       sort: sort !== DEFAULT_FILTERS.sort ? sort : undefined,
     }
-  }, [preset, filters])
+  }, [preset, filters, activePlatforms])
   const railFilterSig = JSON.stringify(railFilters)
 
   // Fetch every enabled rail in ONE batched request instead of one call per rail.
@@ -370,7 +382,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
     debounceRef.current = setTimeout(() => runSearch(0, false), query ? 280 : 0)
     return () => debounceRef.current && clearTimeout(debounceRef.current)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, preset, filters, searchMode])
+  }, [query, preset, filters, searchMode, railFilterSig])
 
   async function runSearch(nextPage, append) {
     const reqId = ++reqRef.current
@@ -381,7 +393,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
         q: query.trim() || undefined,
         preset: preset || undefined,
         genre: filters.genre,
-        platform: filters.platform,
+        platform: platformParam(activePlatforms),
         year: filters.year,
         status: filters.status,
         sort: filters.sort,
@@ -458,7 +470,10 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
         <button
           type="button"
           className={`filter-btn${hideOwned ? ' active' : ''}`}
-          onClick={() => setHideOwned((v) => !v)}
+          onClick={() => {
+            setWideOpen(false)
+            setDiscoverPrefs({ ...prefs, hideOwned: !hideOwned })
+          }}
           aria-pressed={hideOwned}
           aria-label={hideOwned ? 'Show games in your library' : 'Hide games in your library'}
           title={hideOwned ? 'In-library hidden' : 'Hide in-library'}
@@ -478,6 +493,23 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
           </svg>
         </button>
       </div>
+
+      {standing || wideOpen ? (
+        <div className="showing-strip">
+          <span className="showing-label">Showing</span>
+          {activePlatforms.length ? <span className="showing-chip">{platformLabel(activePlatforms)}</span> : null}
+          {hideOwned ? <span className="showing-chip">Not in library</span> : null}
+          {wideOpen ? <span className="showing-chip">Everything</span> : null}
+          <button
+            type="button"
+            className="showing-clear"
+            onClick={() => setWideOpen((v) => !v)}
+            aria-pressed={wideOpen}
+          >
+            {wideOpen ? 'Use my defaults' : 'Everything'}
+          </button>
+        </div>
+      ) : null}
 
       {!searchMode && narrowed ? (
         <div className="results-head">
@@ -680,19 +712,43 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
               </div>
             </div>
 
+            {/* Multi-select, and it PERSISTS. Every other group in this sheet is a
+                one-off narrowing cleared by Reset; this one is the standing
+                preference, which is why Reset below leaves it alone. */}
             <div className="filter-group">
-              <span className="filter-label">Platform</span>
+              <span className="filter-label">Platforms</span>
+              <span className="filter-note">Remembered between visits</span>
               <div className="filter-options">
-                {PLATFORMS.map((o) => (
-                  <button
-                    key={o.key}
-                    type="button"
-                    className={`filter-opt${filters.platform === o.key ? ' active' : ''}`}
-                    onClick={() => setFilters((f) => ({ ...f, platform: o.key }))}
-                  >
-                    {o.label}
-                  </button>
-                ))}
+                <button
+                  type="button"
+                  className={`filter-opt${prefs.platforms.length === 0 ? ' active' : ''}`}
+                  onClick={() => {
+                    setWideOpen(false)
+                    setDiscoverPrefs({ ...prefs, platforms: [] })
+                  }}
+                >
+                  All platforms
+                </button>
+                {PLATFORM_CHOICES.map((o) => {
+                  const on = prefs.platforms.includes(o.key)
+                  return (
+                    <button
+                      key={o.key}
+                      type="button"
+                      aria-pressed={on}
+                      className={`filter-opt${on ? ' active' : ''}`}
+                      onClick={() => {
+                        setWideOpen(false)
+                        setDiscoverPrefs({
+                          ...prefs,
+                          platforms: on ? prefs.platforms.filter((k) => k !== o.key) : [...prefs.platforms, o.key],
+                        })
+                      }}
+                    >
+                      {o.label}
+                    </button>
+                  )
+                })}
               </div>
             </div>
 

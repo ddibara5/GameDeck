@@ -205,7 +205,15 @@ function filterClauses(q, nowTs) {
   const where = [];
   if (q.preset && PRESETS[q.preset]) where.push(PRESETS[q.preset]);
   if (q.genre) where.push(`genres.slug = "${String(q.genre).replace(/"/g, '')}"`);
-  if (q.platform && PLATFORMS[q.platform]) where.push(`platforms = (${PLATFORMS[q.platform].join(',')})`);
+  // Accepts a comma-separated list, because the standing platform filter is a
+  // SET ("Xbox and PS5") rather than a single choice. A bare slug still works,
+  // and an unknown slug contributes nothing instead of failing the whole query.
+  if (q.platform) {
+    const ids = String(q.platform)
+      .split(',')
+      .flatMap((s) => PLATFORMS[s.trim()] || []);
+    if (ids.length) where.push(`platforms = (${[...new Set(ids)].join(',')})`);
+  }
   if (q.year) {
     const y = parseInt(q.year, 10);
     if (y) {
@@ -501,7 +509,18 @@ export default async function handler(req, res) {
       where.push(...rc.where, ...filterClauses(q, nowTs));
       sort = rc.sort;
     } else {
+      // The same hygiene every rail applies, which this path had never had.
+      // Without it the filter/preset browse returns alternate editions and
+      // add-ons as though they were games: on 21 Aug 2026 a soulslike preset
+      // query came back with "Lies of P: Overture Bundle" (game_type 3) and
+      // "Elden Ring Nightreign - The Forsaken Hollows" (game_type 1, a DLC)
+      // sitting between the real releases.
+      //
+      // Deliberately NOT applied when searching. Someone typing a name is
+      // looking for that exact thing, and a bundle or a season is a legitimate
+      // answer to a search in a way it never is to a browse.
       where.push(...filterClauses(q, nowTs));
+      if (!search) where.push(NO_ALT_EDITIONS, NO_ADDONS);
     }
 
     // A rail defines the result SET via its `where` filters; when the caller
