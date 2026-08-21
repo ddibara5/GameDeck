@@ -149,6 +149,30 @@
   contain-intrinsic-size: auto 280px;
 }
 
+/* Tighter than the Library's single shelf, because Discover STACKS these: five
+   by default, and the padding is the only part of a rail that is negotiable.
+   A rail is 289px, of which the poster is 195 (67%), the two-line title and the
+   rating line are 44 (15%), and every margin and padding together is 28 (10%).
+   So this buys 8px a rail, 40px down the tab, and that is the honest ceiling on
+   the idea: if Discover should be materially denser the lever is the Shelf size
+   setting, not these numbers.
+
+   Scoped to .discover-browse rather than changed on .shelf, because the
+   Library's "Continue playing" is one shelf with nothing under it to crowd, and
+   the argument here is entirely about stacking.
+
+   The RATIO is the part worth keeping. The gap between two rails stays about
+   twice the gap under a label, so a heading still visibly belongs to the posters
+   beneath it rather than floating between two rows. Halving both to 8 and 4,
+   which was the tighter option reviewed alongside this, breaks that. */
+.discover-browse .shelf-head {
+  padding: 6px 16px;
+}
+
+.discover-browse .shelf-row {
+  padding-bottom: 4px;
+}
+
 .discover-browse .shelf-card,
 .discover-browse .shelf-poster {
   width: var(--shelf-pw);
