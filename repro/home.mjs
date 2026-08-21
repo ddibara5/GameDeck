@@ -166,7 +166,10 @@ const home = await page.evaluate(() => ({
   active: document.querySelector('.tabbar-btn.active')?.textContent.trim(),
   cardTitles: [...document.querySelectorAll('.chart-title')].map((e) => e.textContent.trim()),
   tiles: [...document.querySelectorAll('.hm-tile')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
-  banner: document.querySelector('.hm-banner')?.textContent.replace(/\s+/g, ' ').trim() || null,
+  gpRows: [...document.querySelectorAll('[data-card="leaving_gp"] .up-row')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
+  gpDisabled: [...document.querySelectorAll('[data-card="leaving_gp"] .up-row')].map((e) => e.disabled),
+  gpExpand: document.querySelector('[data-card="leaving_gp"] .hm-expand')?.textContent.replace(/\s+/g, ' ').trim() || null,
+  banners: document.querySelectorAll('.hm-banner').length,
   arcs: document.querySelectorAll('.ins-arc').length,
   // Scoped to the two release cards. Leaving Game Pass uses .up-row too since
   // 21 Aug, so an unscoped count silently became a sum of three cards.
@@ -174,10 +177,6 @@ const home = await page.evaluate(() => ({
   cuRows: [...document.querySelectorAll('[data-card="coming_up"] .up-row')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
   rrRows: [...document.querySelectorAll('[data-card="recently_released"] .up-row')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
   expands: [...document.querySelectorAll('[data-card="coming_up"] .hm-expand, [data-card="recently_released"] .hm-expand')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
-  gpRows: [...document.querySelectorAll('[data-card="leaving_gp"] .up-row')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
-  gpDisabled: [...document.querySelectorAll('[data-card="leaving_gp"] .up-row')].map((e) => e.disabled),
-  gpExpand: document.querySelector('[data-card="leaving_gp"] .hm-expand')?.textContent.replace(/\s+/g, ' ').trim() || null,
-  banners: document.querySelectorAll('.hm-banner').length,
   soloGrids: document.querySelectorAll('.hm-grid.solo').length,
   gridCols: (() => {
     const g = document.querySelector('.hm-grid')
@@ -256,6 +255,22 @@ check('your row opens, a catalogue row does not', home.gpDisabled[0] === false &
 check('a catalogue row states year and rating', /2023 · 88 rated/.test(home.gpRows[1] || ''), home.gpRows[1])
 check('no row repeats "Leaving soon"', !home.gpRows.some((r) => /Leaving soon/.test(r)), home.gpRows.join(' // '))
 check('Game Pass exits invent no countdown', !home.gpRows.some((r) => /\d+ days/.test(r)), home.gpRows.join(' // '))
+
+// The gate, which is the whole reason the fixture carries a 58. It only shows at
+// full expansion, so the preview above cannot test it: two rows would pass this
+// with the gate deleted. Toggled back afterwards so the later sweep of the two
+// release cards starts from the same page this one did.
+const GP_EXPAND = '[data-card="leaving_gp"] .hm-expand'
+await page.click(GP_EXPAND)
+const gpOpen = await page.evaluate(() => ({
+  rows: [...document.querySelectorAll('[data-card="leaving_gp"] .up-row')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
+  label: document.querySelector('[data-card="leaving_gp"] .hm-expand')?.textContent.replace(/\s+/g, ' ').trim() || null,
+}))
+check('expanding Leaving Game Pass shows four', gpOpen.rows.length === 4, String(gpOpen.rows.length))
+check('the 58 never appears, at any expansion', !gpOpen.rows.some((r) => /Poorly Rated/.test(r)), gpOpen.rows.join(' // '))
+check('the last row is the 71, one over the floor', /Just Good Enough/.test(gpOpen.rows[3] || ''), gpOpen.rows[3])
+check('its expand turns into Show less too', /Show less/.test(gpOpen.label || ''), gpOpen.label)
+await page.click(GP_EXPAND)
 // Backlog, Pick up next and Pace were REMOVED on 21 Aug, not switched off. Both
 // halves matter: gone from the page, and gone from the editor that offers cards,
 // because a catalog entry is a promise that the card exists.
