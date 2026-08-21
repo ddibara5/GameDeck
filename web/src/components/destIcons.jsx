@@ -40,6 +40,16 @@ export const DEST_ICONS = {
       <path d="m15 9-6 6M9 9l6 6" />
     </>
   ),
+  shuffle: icon(
+    <>
+      <rect x="3" y="3" width="18" height="18" rx="4" />
+      <circle cx="8.4" cy="8.4" r="1.05" fill="currentColor" stroke="none" />
+      <circle cx="15.6" cy="15.6" r="1.05" fill="currentColor" stroke="none" />
+      <circle cx="8.4" cy="15.6" r="1.05" fill="currentColor" stroke="none" />
+      <circle cx="15.6" cy="8.4" r="1.05" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1.05" fill="currentColor" stroke="none" />
+    </>
+  ),
   settings: icon(
     <>
       <circle cx="12" cy="12" r="3" />

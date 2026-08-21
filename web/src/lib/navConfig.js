@@ -54,12 +54,21 @@ export const DEST_CATALOG = [
   { key: 'discover', label: 'Discover', group: 'explore', kind: 'tab' },
   { key: 'news', label: 'News', group: 'explore', kind: 'tab' },
   { key: 'wishlist', label: 'Wishlist', group: 'explore', kind: 'view', fixed: 'list' },
+  // The shuffler, off the header and into the list. It reads from BOTH pools
+  // (Play draws on the library, Buy on the wishlist), so it is not strictly a
+  // do-not-own destination, but Explore is the group for ways to find your next
+  // thing and Discover sits right above it doing the same job less randomly.
+  { key: 'shuffle', label: 'Shuffle', group: 'explore', kind: 'action', action: 'shuffle', fixed: ' ' },
   { key: 'backlog', label: 'Backlog', group: 'shelves', kind: 'list', viewKey: 'status:backlog', fixed: 'shelf' },
   { key: 'playing', label: 'Playing', group: 'shelves', kind: 'list', viewKey: 'status:playing', fixed: 'shelf' },
   { key: 'finished', label: 'Finished', group: 'shelves', kind: 'list', viewKey: 'status:finished', fixed: 'shelf' },
   { key: 'abandoned', label: 'Abandoned', group: 'shelves', kind: 'list', viewKey: 'status:abandoned', fixed: 'shelf' },
-  { key: 'settings', label: 'Settings', group: 'app', kind: 'action', fixed: ' ' },
 ]
+
+// Settings is deliberately NOT in the catalog. It used to be the whole `app`
+// group, last in the order, which put it 113px below the fold of a drawer that
+// already overflowed: reaching it meant open, scroll, tap. It is pinned in the
+// drawer's footer now, with Customize, which was stranded down there too.
 
 export const DEST_BY_KEY = DEST_CATALOG.reduce((m, d) => ((m[d.key] = d), m), {})
 
@@ -67,7 +76,6 @@ export const GROUP_LABEL = {
   games: 'Your games',
   explore: 'Explore',
   shelves: 'Shelves',
-  app: 'App',
 }
 
 // Tabs only, for the tab bar and its icons.

@@ -172,29 +172,6 @@ export default function App() {
         <span className="app-header-title" aria-hidden={!scrolled}>
           {view ? '' : TAB_BY_KEY[activeTab]?.label || ''}
         </span>
-        <div className="header-actions">
-          <button type="button" className="dice-btn" onClick={() => setShuffleOpen(true)} aria-label="Shuffle a game" aria-haspopup="dialog">
-            <span className="gear-chip">
-              <svg className="dice-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <rect x="3" y="3" width="18" height="18" rx="4" />
-                <circle cx="8.4" cy="7.6" r="1.05" fill="currentColor" stroke="none" />
-                <circle cx="8.4" cy="12" r="1.05" fill="currentColor" stroke="none" />
-                <circle cx="8.4" cy="16.4" r="1.05" fill="currentColor" stroke="none" />
-                <circle cx="15.6" cy="7.6" r="1.05" fill="currentColor" stroke="none" />
-                <circle cx="15.6" cy="12" r="1.05" fill="currentColor" stroke="none" />
-                <circle cx="15.6" cy="16.4" r="1.05" fill="currentColor" stroke="none" />
-              </svg>
-            </span>
-          </button>
-          <button type="button" className="gear-btn" onClick={() => setSettingsOpen(true)} aria-label="Settings" aria-haspopup="dialog">
-            <span className="gear-chip">
-              <svg className="gear-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="3" />
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-              </svg>
-            </span>
-          </button>
-        </div>
       </header>
       <main className="app-main">
         <Suspense fallback={null}>
@@ -248,6 +225,7 @@ export default function App() {
         onOpenWishlist={() => openView('wishlist')}
         onOpenList={(key) => openView(key)}
         onOpenSettings={() => setSettingsOpen(true)}
+        onShuffle={() => setShuffleOpen(true)}
         onCustomize={() => setCustomizeNavOpen(true)}
         onOpenTab={(t) => {
           closeView()

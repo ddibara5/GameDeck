@@ -19,7 +19,7 @@ import { DEST_ICONS } from './destIcons.jsx'
 // Group headings are printed as the list is walked, not by grouping it first,
 // because the order belongs to the user: drag a row somewhere else and its
 // heading follows it there. Same rule as the editor, so the two always agree.
-export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpenTab, onOpenSettings, onCustomize, activeTab }) {
+export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpenTab, onOpenSettings, onShuffle, onCustomize, activeTab }) {
   const { items: wishItems } = useWishlist()
   const { games } = useLibraryGames()
   const statusMap = useStatusMap()
@@ -77,7 +77,9 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpen
     if (dest.kind === 'tab') return go(() => onOpenTab && onOpenTab(dest.key))
     if (dest.kind === 'view') return go(onOpenWishlist)
     if (dest.kind === 'list') return go(() => onOpenList && onOpenList(dest.viewKey))
-    if (dest.kind === 'action') return go(onOpenSettings)
+    // Two actions in the catalog now, so the row says which one rather than
+    // `action` meaning Settings by position.
+    if (dest.kind === 'action') return go(dest.action === 'shuffle' ? onShuffle : onOpenSettings)
     return undefined
   }
 
@@ -150,17 +152,30 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpen
             )
           })}
 
-          <button type="button" className="drawer-cz" onClick={() => go(onCustomize)}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-              <path d="M4 7h10M18 7h2M4 17h6M14 17h6" />
-              <circle cx="16" cy="7" r="2" />
-              <circle cx="12" cy="17" r="2" />
-            </svg>
-            Customize drawer
-          </button>
         </div>
 
-        <div className="menu-foot">GameDeck · {counts.library} games</div>
+        {/* Pinned, outside the scrolling body. Both of these used to sit at the
+            end of the list, which on a drawer that overflows by 113px meant the
+            two things you reach for deliberately were the two you had to scroll
+            to find. Neither is a destination in the list sense, so neither is
+            reorderable and neither belongs in the catalog. */}
+        <div className="menu-foot">
+          <div className="menu-foot-acts">
+            <button type="button" className="menu-fb" onClick={() => go(onOpenSettings)}>
+              {cloneElement(DEST_ICONS.settings, { className: 'menu-fb-i' })}
+              Settings
+            </button>
+            <button type="button" className="menu-fb" onClick={() => go(onCustomize)}>
+              <svg className="menu-fb-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                <path d="M4 7h10M18 7h2M4 17h6M14 17h6" />
+                <circle cx="16" cy="7" r="2" />
+                <circle cx="12" cy="17" r="2" />
+              </svg>
+              Customize
+            </button>
+          </div>
+          <div className="menu-foot-n">GameDeck · {counts.library} games</div>
+        </div>
       </aside>
     </>
   )

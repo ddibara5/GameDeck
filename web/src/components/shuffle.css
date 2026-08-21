@@ -334,11 +334,6 @@
   .shuffle-stage { transition: none; }
 }
 
-/* The header die (.header-actions / .dice-btn / .dice-glyph) is styled in
-   index.css on purpose. This stylesheet ships with the lazy ShufflePicker chunk,
-   so anything here is absent until the picker is first opened - fine for the
-   picker itself, wrong for chrome that renders on first paint. */
-
 /* The empty state can now offer the way out rather than only describing it. */
 .shuffle-empty .discover-action {
   margin-top: 12px;

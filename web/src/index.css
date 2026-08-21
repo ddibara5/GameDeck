@@ -80,7 +80,7 @@
   --shadow: var(--e1);
 
   --tabbar-height: 90px;
-  --app-header-h: 52px;
+  --app-header-h: 44px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
 
@@ -291,100 +291,6 @@
 .gd-logo .l6 { fill: var(--logo-6); }
 .gd-logo .l7 { fill: var(--logo-7); }
 
-/* Settings gear: defined frosted-glass chip in the header.
-   24px glyph in a 40px chip inside a 44px tap target. */
-.gear-btn {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  margin-right: -8px;
-  padding: 0;
-  border: none;
-  background: none;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.gear-chip {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  color: var(--text);
-  background: rgba(255, 255, 255, 0.09);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 5px 14px rgba(0, 0, 0, 0.3);
-  /* NO backdrop-filter. It used to carry blur(20px) saturate(180%), and both
-     the gear and the dice button use this chip, so two of them ran on every
-     screen at every scroll position. .app-header already drops its own blur
-     when unscrolled for exactly this reason (see the comment above it), but
-     these chips live INSIDE the header and kept it composited anyway, which is
-     why the wordmark still rasterised soft at the top of the page. The same
-     removal in HomeDeck changed zero pixels, measured over the chip's own rect
-     in both themes. Unscrolled the header background is opaque, so there is
-     nothing behind the chip to blur in the first place. */
-  transition: transform var(--d-base) var(--ease-spring), background var(--d-base) ease;
-}
-
-.gear-btn:active .gear-chip {
-  transform: scale(0.9);
-}
-
-/* Shuffler die, sitting left of the gear and sharing its chip.
-   These rules MUST live here, not in components/shuffle.css. That stylesheet is
-   imported by ShufflePicker, which is lazy-loaded, so its chunk does not arrive
-   until the die is first tapped. Styling the header from there left the wrapper
-   as an unstyled block on first paint and the two chips stacked vertically. */
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.dice-btn {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  border: none;
-  background: none;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.dice-btn:active .gear-chip {
-  transform: scale(0.9);
-}
-.dice-glyph {
-  width: 24px;
-  height: 24px;
-}
-
-.gear-glyph {
-  width: 24px;
-  height: 24px;
-}
-
-[data-theme="light"] .gear-chip {
-  background: rgba(255, 255, 255, 0.55);
-  border-color: rgba(40, 38, 36, 0.16);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 4px 12px rgba(40, 40, 45, 0.14);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .gear-chip {
-    transition: background var(--d-base) ease;
-  }
-  .gear-btn:active .gear-chip {
-    transform: none;
-  }
-}
 
 .brand-caret {
   width: 15px;
@@ -675,8 +581,43 @@
 
 .menu-foot {
   margin-top: auto;
-  padding: 14px 20px calc(18px + var(--safe-bottom));
+  padding: 10px 12px calc(14px + var(--safe-bottom));
   border-top: 1px solid var(--line);
+}
+
+/* Two equal halves rather than a row that reflows: the labels are short and
+   fixed, and a 50/50 split keeps both tap targets the same size. */
+.menu-foot-acts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.menu-fb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 11px 8px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  background: none;
+  color: var(--text);
+  font-size: var(--t-cap);
+  font-weight: var(--w-semi);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.menu-fb:active { background: var(--surface-2); }
+.menu-fb-i {
+  width: 17px;
+  height: 17px;
+  flex: none;
+  color: var(--accent);
+}
+
+.menu-foot-n {
+  padding: 9px 8px 0;
   color: #6f665a;
   font-size: var(--t-cap);
 }
@@ -2091,7 +2032,7 @@ textarea {
 [data-theme="light"] .menu-sec-label { color: #9a8f7e; }
 [data-theme="light"] .menu-item:active { background: rgba(60, 45, 30, 0.05); }
 [data-theme="light"] .menu-item .menu-chev { color: #b3a898; }
-[data-theme="light"] .menu-foot { color: #9a8f7e; }
+[data-theme="light"] .menu-foot-n { color: #9a8f7e; }
 [data-theme="light"] .chat-bubble.error { border-color: #d8a3a3; color: #b04a4a; }
 
 /* Tab bar + header glass, light mode: neutral near-white frosted (matches the

@@ -158,8 +158,18 @@ async function probe(name, rootSel, open) {
 
 await probe('appheader', '.app-header')
 await probe('drawer', '.drawer', () => page.click('.brand-btn'))
-await probe('settings', '.settings-page, .settings-hd', () => page.click('.gear-btn'))
-await probe('shuffle', '.shuffle-page', () => page.click('.dice-btn'))
+// Both of these left the header on 21 Aug. Settings is the drawer's pinned
+// footer button, Shuffle is a row in Explore, so each takes the drawer first.
+await probe('settings', '.settings-page, .settings-hd', async () => {
+  await page.click('.brand-btn')
+  await page.waitForTimeout(400)
+  await page.locator('.menu-fb', { hasText: 'Settings' }).click()
+})
+await probe('shuffle', '.shuffle-page', async () => {
+  await page.click('.brand-btn')
+  await page.waitForTimeout(400)
+  await page.getByRole('button', { name: /^Shuffle/ }).first().click()
+})
 await probe('viewpage', '.view-page', async () => {
   await page.click('.brand-btn')
   await page.waitForTimeout(400)

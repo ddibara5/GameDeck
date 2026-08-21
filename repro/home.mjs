@@ -316,17 +316,31 @@ const drawer = await page.evaluate(() => ({
   rows: [...document.querySelectorAll('.drawer .menu-item')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
   pills: [...document.querySelectorAll('.drawer .menu-bar-tag')].length,
   here: document.querySelector('.drawer .menu-item.here')?.textContent.replace(/\s+/g, ' ').trim() || null,
-  cz: Boolean(document.querySelector('.drawer-cz')),
+  foot: [...document.querySelectorAll('.menu-fb')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
+  footVisible: (() => {
+    const body = document.querySelector('.drawer-body')
+    return [...document.querySelectorAll('.menu-fb')].every((e) => e.getBoundingClientRect().top >= body.getBoundingClientRect().bottom - 1)
+  })(),
   folds: document.querySelectorAll('.drawer .menu-sec').length,
   open: [...document.querySelectorAll('.drawer .menu-sec')].map((e) => e.getAttribute('aria-expanded')),
 }))
-check('drawer groups in order', drawer.groups.join('|') === 'Your games|Explore|Shelves|App', drawer.groups.join('|'))
+// Three groups, not four. Settings was the whole App group and is pinned in the
+// footer now, out of the ordered list entirely.
+check('drawer groups in order', drawer.groups.join('|') === 'Your games|Explore|Shelves', drawer.groups.join('|'))
 check('drawer lists every destination', drawer.rows.length === 12, String(drawer.rows.length))
 check('wishlist sits under Explore', drawer.rows.some((r) => r.startsWith('Wishlist')), '')
+// The die left the header for the list. Explore is Discover, News, Wishlist,
+// Shuffle: four ways to find the next thing.
+check('Shuffle sits under Explore', drawer.rows.some((r) => r.startsWith('Shuffle')), drawer.rows.join(' // '))
+check('Settings is not a row any more', !drawer.rows.some((r) => r.startsWith('Settings')), drawer.rows.join(' // '))
 check('five tabs carry an on-bar pill', drawer.pills === 5, String(drawer.pills))
 check('current tab is marked', /^Home/.test(drawer.here || ''), drawer.here)
-check('Customize drawer button present', drawer.cz, '')
-check('every group heading folds', drawer.folds === 4 && drawer.open.join('') === 'truetruetruetrue', `${drawer.folds} / ${drawer.open.join(',')}`)
+// The point of the pin: both sit BELOW the scrolling body, so no amount of list
+// growth can push them off. Asserted as geometry rather than as "the element
+// exists", because it existed before too, 113px below the fold.
+check('Settings and Customize are pinned', drawer.foot.join('|') === 'Settings|Customize', drawer.foot.join('|'))
+check('the pinned pair sits outside the scroll', drawer.footVisible, JSON.stringify(drawer.foot))
+check('every group heading folds', drawer.folds === 3 && drawer.open.join('') === 'truetruetrue', `${drawer.folds} / ${drawer.open.join(',')}`)
 await page.screenshot({ path: 'repro/out/drawer-dark.png', fullPage: true })
 
 /* ------------------------------------------------ folding a drawer group */
@@ -345,13 +359,13 @@ const folded = await page.evaluate(() => ({
   stored: JSON.parse(localStorage.getItem('gamedeck_nav_v2') || '{}').collapsed,
 }))
 check('folding hides that group only', folded.rows.length === 8 && !folded.rows.some((r) => /^Backlog|^Playing|^Finished|^Abandoned/.test(r)), String(folded.rows.length))
-check('the other groups are untouched', folded.rows.some((r) => /^Home/.test(r)) && folded.rows.some((r) => /^Wishlist/.test(r)) && folded.rows.some((r) => /^Settings/.test(r)), '')
+check('the other groups are untouched', folded.rows.some((r) => /^Home/.test(r)) && folded.rows.some((r) => /^Wishlist/.test(r)) && folded.rows.some((r) => /^Shuffle/.test(r)), '')
 check('a folded heading says how many', folded.n === '4', folded.n)
-check('only that heading reports folded', folded.open.join(',') === 'true,true,false,true', folded.open.join(','))
+check('only that heading reports folded', folded.open.join(',') === 'true,true,false', folded.open.join(','))
 check('the fold is stored, not just drawn', JSON.stringify(folded.stored) === '{"shelves":true}', JSON.stringify(folded.stored))
 // The headings still print in the same order with a group shut, because the fold
 // hides rows and never touches the order.
-check('the order survives the fold', folded.groups.join('|') === 'Your games|Explore|Shelves4|App', folded.groups.join('|'))
+check('the order survives the fold', folded.groups.join('|') === 'Your games|Explore|Shelves4', folded.groups.join('|'))
 await page.screenshot({ path: 'repro/out/drawer-folded.png', fullPage: true })
 
 await page.reload({ waitUntil: 'networkidle' })
@@ -422,7 +436,7 @@ await page.screenshot({ path: 'repro/out/drawer-light.png', fullPage: true })
 
 /* -------------------------------------------------------- 6. drawer editor */
 
-await page.locator('.drawer-cz').click()
+await page.locator('.menu-fb', { hasText: 'Customize' }).click()
 await page.waitForTimeout(600)
 const editor = await page.evaluate(() => ({
   title: document.querySelector('.settings-hd-title')?.textContent.trim(),
@@ -433,7 +447,7 @@ const editor = await page.evaluate(() => ({
   prev: document.querySelectorAll('.cz-prev').length,
 }))
 check('drawer editor is titled Drawer', editor.title === 'Drawer', editor.title)
-check('drawer editor lists the same four groups', editor.secs.join('|') === 'Your games|Explore|Shelves|App', editor.secs.join('|'))
+check('drawer editor lists the same three groups', editor.secs.join('|') === 'Your games|Explore|Shelves', editor.secs.join('|'))
 check('drawer editor row count', editor.rows === 12, String(editor.rows))
 // The whole point of the split: this editor cannot change bar membership, so it
 // has no switches at all. Every row states what it is instead.
@@ -451,7 +465,12 @@ await page.waitForTimeout(500)
 
 // Reached from Settings, which is where a bar setting belongs. The drawer's own
 // button goes to the drawer editor, one tap from the thing it edits.
-await page.locator('.gear-btn').click()
+//
+// Settings is opened from the drawer's pinned footer now rather than a header
+// gear. Two taps, and neither of them a scroll.
+await page.locator('.brand-btn, .brand').first().click()
+await page.waitForTimeout(450)
+await page.locator('.menu-fb', { hasText: 'Settings' }).click()
 await page.waitForTimeout(600)
 await page.getByRole('button', { name: /Bottom bar/ }).first().click()
 await page.waitForTimeout(600)
