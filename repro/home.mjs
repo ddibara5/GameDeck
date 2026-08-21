@@ -482,9 +482,34 @@ check('the sheet closes back to Home', closed.backdrop === 0 && closed.title ===
 // One per release card now, not one on the page. Both go to the same Wishlist.
 const moreBtn = await page.locator('.hm-more').count()
 check('each release card has a chevron to the wishlist', moreBtn === 2, String(moreBtn))
-const moreBox = await page.locator('.hm-more').first().boundingBox()
-check('the chevron is a real tap target', moreBox.width >= 30 && moreBox.height >= 30, `${Math.round(moreBox.width)}x${Math.round(moreBox.height)}`)
-await page.locator('.hm-more').first().click()
+// The WHOLE heading is the target now, not the 34px square at the end of it, so
+// the measurement is the row against the card rather than the mark against a
+// thumb. The chevron is a span inside it: two buttons in one heading would be
+// two tab stops to the same place.
+const head = await page.evaluate(() => {
+  const card = document.querySelector('[data-card="coming_up"]')
+  const btn = card.querySelector('.hm-head-btn')
+  const cs = getComputedStyle(card)
+  const inner =
+    card.getBoundingClientRect().width -
+    parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) -
+    parseFloat(cs.borderLeftWidth) - parseFloat(cs.borderRightWidth)
+  const b = btn.getBoundingClientRect()
+  return { inner: Math.round(inner), w: Math.round(b.width), h: Math.round(b.height) }
+})
+// Measured against the card's own content box rather than a number, so it
+// survives a padding change instead of having to be edited by one.
+check('the heading spans the whole card', head.w === head.inner, `${head.w} of ${head.inner}`)
+check('and it is a real tap target', head.h >= 30, `${head.h}px tall`)
+check('the chevron is not a second button', (await page.locator('[data-card="coming_up"] .hm-head button').count()) === 1, 'buttons in the heading')
+// Voice control says what it sees. An aria-label of "open your wishlist" over a
+// heading that reads "Coming up" is a control you cannot ask for by name.
+const headName = await page.locator('[data-card="coming_up"] .hm-head-btn').getAttribute('aria-label')
+check('the accessible name contains the visible heading', /^Coming up,/.test(headName || ''), headName)
+// Clicked in the MIDDLE of the bar, which is the part that used to do nothing:
+// Playwright targets the element centre, and the centre of this row is the gap
+// between the heading text and the chevron.
+await page.locator('[data-card="coming_up"] .hm-head-btn').click()
 await page.waitForTimeout(800)
 const wl = await page.evaluate(() => ({
   title: document.querySelector('.wl-title')?.textContent.trim(),
@@ -511,7 +536,7 @@ check('back from the Wishlist returns to Home', backHome.title === 'Home' && bac
 // The SECOND chevron, on Recently released, and the whole reason this page
 // exists. It used to open the same Wishlist as the one above, where its rows sit
 // in the Out now section, which sorts BELOW every future month, quarter and year.
-await page.locator('.hm-more').nth(1).click()
+await page.locator('[data-card="recently_released"] .hm-head-btn').click()
 await page.waitForTimeout(800)
 const out = await page.evaluate(() => ({
   title: document.querySelector('.wl-title')?.textContent.trim(),

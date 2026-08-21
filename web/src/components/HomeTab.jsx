@@ -386,23 +386,35 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
     return (
       <div className="chart-card" data-card={key} key={key}>
         <div className="hm-head">
-          <h2 className="chart-title">{title}</h2>
-          {/* The card shows a couple; the chevron is the way to the rest. Each
-              card names its own destination, because the two are not the same
-              list read twice. Coming up leads to the wishlist, which opens on
-              This month and runs forward. Recently released led there too, and
-              that was wrong: its rows land in the Out now SECTION, which sorts
-              below every future month, quarter and year, so the card sent you to
-              a page whose last row was the thing you tapped for. It leads to the
-              Out now page now. */}
-          <button
-            type="button"
-            className="hm-more"
-            aria-label={toLabel}
-            onClick={() => onOpenList && onOpenList(to)}
-          >
-            {CHEV}
-          </button>
+          {/* The whole heading is the target, not the mark at the end of it. A
+              34px chevron was a fine thing to look at and a poor thing to hit
+              next to 200px of heading that did the same job and did nothing.
+              The button is INSIDE the h2 rather than around it: a button may
+              contain phrasing content, and an h2 is not phrasing content, so
+              the other nesting is invalid and costs the card its heading.
+
+              Each card names its own destination, because the two are not the
+              same list read twice. Coming up leads to the wishlist, which opens
+              on This month and runs forward. Recently released led there too,
+              and that was wrong: its rows land in the Out now SECTION, which
+              sorts below every future month, quarter and year, so the card sent
+              you to a page whose last row was the thing you tapped for. */}
+          <h2 className="chart-title">
+            <button
+              type="button"
+              className="hm-head-btn"
+              // The visible text has to be IN the accessible name, or a voice
+              // control user saying "tap Coming up" hits nothing. So the label
+              // is the heading plus where it goes, not just where it goes.
+              aria-label={`${title}, ${toLabel}`}
+              onClick={() => onOpenList && onOpenList(to)}
+            >
+              {title}
+              <span className="hm-more" aria-hidden="true">
+                {CHEV}
+              </span>
+            </button>
+          </h2>
         </div>
         <div className="ins-sub">{sub}</div>
         {shown.map((w) => (
@@ -563,7 +575,7 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
             unit: (w) => (w.days === 0 ? 'today' : w.days === 1 ? 'day' : 'days'),
             hot: (w) => w.days <= 7,
             to: 'wishlist',
-            toLabel: 'Open your wishlist',
+            toLabel: 'open your wishlist',
           })
         : null,
 
@@ -581,7 +593,7 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
             // thing you might actually do something about tonight.
             hot: (w) => w.days <= 7,
             to: 'released',
-            toLabel: 'Open the Out now list',
+            toLabel: 'open the Out now list',
           })
         : null,
   }

@@ -185,7 +185,40 @@
   justify-content: space-between;
   gap: 10px;
 }
-.hm-head .chart-title { margin: 0; }
+.hm-head .chart-title { margin: 0; flex: 1; min-width: 0; }
+
+/* The heading of a card that leads somewhere is one button across the full width
+   of the card, so the tap target is the row rather than the 34px square at the
+   end of it.
+
+   inherit on font, letter-spacing and text-transform because this button lives
+   inside the h2 and has to keep wearing .chart-title. `font: inherit` alone is
+   not enough: the shorthand carries family, size and weight and leaves the other
+   two to the UA sheet, which is exactly the trap .menu-sec hit. */
+.hm-head-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  /* The heading text is an 18px line box, which is a poor thing to hit. Grown to
+     34px and pulled back out with negative margin, so the target is nearly twice
+     the size and nothing on the card moves: the same trick the chevron used to
+     do on its own, applied to the row that now carries it. */
+  min-height: 34px;
+  margin: -8px 0;
+}
+.hm-head-btn:active { opacity: 0.55; }
 
 /* The chevron on a card heading that leads somewhere. It is a 34px square so the
    thumb has something to hit, with the glyph pushed to the card's edge and the
