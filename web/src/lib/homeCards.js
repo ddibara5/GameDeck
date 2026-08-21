@@ -20,6 +20,7 @@ export const CARD_CATALOG = [
   { key: 'leaving_gp', form: 'full', label: 'Leaving Game Pass', sub: 'Started games on the way out' },
   { key: 'pick_up_next', form: 'full', label: 'Pick up next', sub: 'Three from the backlog, with the reason' },
   { key: 'coming_up', form: 'full', label: 'Coming up', sub: 'Wishlist releases with a date' },
+  { key: 'recently_released', form: 'full', label: 'Recently released', sub: 'Wishlist games that are out and unowned' },
   { key: 'pace', form: 'full', label: 'Pace', sub: 'Achievements left at your current rate' },
 ]
 

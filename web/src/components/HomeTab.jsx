@@ -44,6 +44,18 @@ const ACTIVITY_DAYS = WEEK_SPAN * 2
 // How far ahead Coming up looks. Beyond this a release is not news yet.
 const COMING_UP_DAYS = 60
 
+// And how far back Recently released looks. The same number pointing the other
+// way, so the two cards cover one continuous window either side of today rather
+// than two windows chosen separately.
+const RECENT_DAYS = 60
+
+// Rows shown before the card is expanded, and the ceiling once it is. Two keeps
+// both release cards on the same screen as the rest of Home; four is as many as
+// either has ever had inside its window, so "show more" never leads to a fifth
+// that is quietly dropped.
+const RELEASE_PREVIEW = 2
+const RELEASE_MAX = 4
+
 /* ------------------------------------------------------------- progress arc */
 
 // Completion over the recorded window for the game in progress. A plain
@@ -88,6 +100,10 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
   const [wishOpen, setWishOpen] = useState(null)
+  // Which release cards are showing all four rather than the first two. Kept in
+  // component state and not in localStorage on purpose: it is a look-at-it-now
+  // gesture, not a layout preference, and Customize cards is where layout lives.
+  const [expanded, setExpanded] = useState({})
   const [customizeOpen, setCustomizeOpen] = useState(false)
   // Bumped by a skip, so the shortlist recomputes. The skip list lives in
   // localStorage, which React cannot subscribe to on its own.
@@ -216,8 +232,28 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
       })
       .filter((w) => w.days >= 0)
       .sort((a, b) => a.days - b.days)
-      .slice(0, 4)
+      .slice(0, RELEASE_MAX)
   }, [wishItems])
+
+  // The same wishlist rows, the other side of today. Day 0 belongs to Coming up,
+  // which renders it as "Out today", so this starts at one day ago and the two
+  // cards can never show the same game.
+  const recentlyReleased = useMemo(() => {
+    const today = startOfDay(new Date())
+    // A wishlist game you have since bought is not news. `games` is already
+    // loaded for every other card on this page, so this costs no read.
+    const owned = new Set(games.filter((g) => g.igdb_id != null).map((g) => g.igdb_id))
+    return wishItems
+      .filter((w) => w.date_precision === 'day' && w.released != null && !owned.has(w.igdb_id))
+      .map((w) => {
+        const utc = new Date(num(w.released) * 1000)
+        const day = new Date(utc.getUTCFullYear(), utc.getUTCMonth(), utc.getUTCDate())
+        return { ...w, day, days: daysBetween(today, day) }
+      })
+      .filter((w) => w.days >= 1 && w.days <= RECENT_DAYS)
+      .sort((a, b) => a.days - b.days)
+      .slice(0, RELEASE_MAX)
+  }, [wishItems, games])
 
   const leaving = useMemo(() => {
     if (!leavingIds.length) return []
@@ -251,6 +287,68 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
   }
 
   const openGame = (g) => g && setSelected(g)
+
+  // Coming up and Recently released are one card with the clock pointing either
+  // way: same rows, same chevron to the wishlist, same expand. Written once,
+  // because this codebase has already paid twice for a second copy that drifts.
+  const releaseCard = ({ key, title, sub, rows, unit, hot }) => {
+    const open = expanded[key]
+    const shown = open ? rows : rows.slice(0, RELEASE_PREVIEW)
+    const rest = rows.length - RELEASE_PREVIEW
+    // data-card so the harness can address one release card rather than counting
+    // .up-row across both and hoping the sum means something.
+    return (
+      <div className="chart-card" data-card={key} key={key}>
+        <div className="hm-head">
+          <h2 className="chart-title">{title}</h2>
+          {/* The card shows a couple. The chevron is the way to the whole
+              wishlist, and it opens the same page the drawer does rather than a
+              second, thinner copy of it. */}
+          <button
+            type="button"
+            className="hm-more"
+            aria-label="Open your wishlist"
+            onClick={() => onOpenList && onOpenList('wishlist')}
+          >
+            {CHEV}
+          </button>
+        </div>
+        <div className="ins-sub">{sub}</div>
+        {shown.map((w) => (
+          <button
+            type="button"
+            className={`up-row as-btn${hot(w) ? ' soon' : ''}`}
+            key={w.igdb_id}
+            onClick={() => setWishOpen(w)}
+          >
+            <span className="up-when">
+              <span className="up-n">{w.days === 0 ? 'Out' : w.days}</span>
+              <span className="up-u">{unit(w)}</span>
+            </span>
+            <span className="up-t">
+              {w.title}
+              <span className="up-d">{w.day.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+            </span>
+          </button>
+        ))}
+        {/* Only when there is something behind it. A control that expands
+            nothing is worse than no control. */}
+        {rest > 0 ? (
+          <button
+            type="button"
+            className={`hm-expand${open ? ' open' : ''}`}
+            aria-expanded={open}
+            onClick={() => setExpanded((e) => ({ ...e, [key]: !open }))}
+          >
+            {open ? 'Show less' : `Show ${rest} more`}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+        ) : null}
+      </div>
+    )
+  }
 
   /* ---- card renderers, keyed to the catalog ---- */
 
@@ -397,42 +495,32 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
       ) : null,
 
     coming_up: () =>
-      comingUp.length ? (
-        <div className="chart-card" key="coming_up">
-          <div className="hm-head">
-            <h2 className="chart-title">Coming up</h2>
-            {/* The card shows the next four with a date. The chevron is the way
-                to the other 59, and it opens the same Wishlist page the drawer
-                does rather than a second, thinner copy of it. */}
-            <button
-              type="button"
-              className="hm-more"
-              aria-label="Open your wishlist"
-              onClick={() => onOpenList && onOpenList('wishlist')}
-            >
-              {CHEV}
-            </button>
-          </div>
-          <div className="ins-sub">Wishlisted games with a confirmed date</div>
-          {comingUp.map((w) => (
-            <button
-              type="button"
-              className={`up-row as-btn${w.days <= 7 ? ' soon' : ''}`}
-              key={w.igdb_id}
-              onClick={() => setWishOpen(w)}
-            >
-              <span className="up-when">
-                <span className="up-n">{w.days === 0 ? 'Out' : w.days}</span>
-                <span className="up-u">{w.days === 0 ? 'today' : w.days === 1 ? 'day' : 'days'}</span>
-              </span>
-              <span className="up-t">
-                {w.title}
-                <span className="up-d">{w.day.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-              </span>
-            </button>
-          ))}
-        </div>
-      ) : null,
+      comingUp.length
+        ? releaseCard({
+            key: 'coming_up',
+            title: 'Coming up',
+            sub: 'Wishlisted games with a confirmed date',
+            rows: comingUp,
+            unit: (w) => (w.days === 0 ? 'today' : w.days === 1 ? 'day' : 'days'),
+            hot: (w) => w.days <= 7,
+          })
+        : null,
+
+    recently_released: () =>
+      recentlyReleased.length
+        ? releaseCard({
+            key: 'recently_released',
+            title: 'Recently released',
+            sub: 'Out now, and still not in your library',
+            rows: recentlyReleased,
+            // "ago" rather than "days ago": the column is 52px and the date sits
+            // on the line below, so the unit only has to point backwards.
+            unit: () => 'ago',
+            // The mirror of Coming up's amber: out inside the last week is the
+            // thing you might actually do something about tonight.
+            hot: (w) => w.days <= 7,
+          })
+        : null,
 
     pace: () =>
       pace ? (

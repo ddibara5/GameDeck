@@ -125,6 +125,38 @@
 [data-theme="light"] .hm-bk { color: #0d6b0d; }
 [data-theme="light"] .hm-banner { border-left-color: #0d6b0d; }
 
+/* The expand under a release card. It sits where a fifth row would, and reads as
+   a row rather than a button on top of the card: no fill, no border, the same
+   left edge as the titles above it, so the card still ends on one clean line.
+   The chevron is the only thing that moves. */
+.hm-expand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  padding: 11px 0 3px;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--line);
+  color: var(--accent);
+  font-size: var(--t-cap);
+  font-weight: var(--w-semi);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.hm-expand svg {
+  width: 14px;
+  height: 14px;
+  transition: transform var(--d-fast) ease;
+}
+.hm-expand.open svg { transform: rotate(180deg); }
+.hm-expand:active { opacity: 0.55; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hm-expand svg { transition: none; }
+}
+
 /* -------------------------------------------------------------- shortlist */
 
 .hm-head {

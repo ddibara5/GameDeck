@@ -20,6 +20,19 @@ import { chromium } from 'playwright'
 
 const BASE = process.env.BASE || 'http://localhost:4173'
 const day = (y, m, d) => Math.floor(Date.UTC(y, m, d) / 1000)
+// Wishlist dates RELATIVE to today, for the same reason insights.mjs stopped
+// using absolute ones: this fixture was written with literal August dates and
+// rotted the moment one of them passed, which is what turned "the sheet is for
+// the game that was tapped" red without a line of app code changing.
+//
+// `released` is a calendar day stored at UTC midnight, and Home rebuilds the
+// local date from its UTC parts, so the fixture has to be UTC midnight of a
+// LOCAL calendar day or the row lands a day off in ET.
+const relDay = (n) => {
+  const t = new Date()
+  const d = new Date(t.getFullYear(), t.getMonth(), t.getDate() + n)
+  return Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 1000)
+}
 const iso = (daysAgo) => new Date(Date.now() - daysAgo * 86400000).toISOString()
 const dkey = (daysAgo) => new Date(Date.now() - daysAgo * 86400000).toISOString().slice(0, 10)
 
@@ -47,12 +60,28 @@ const GAMES = [
 // query, so these rows carry what the real table carries: date_precision is what
 // keeps a quarter or a year out of the card, and the far-future row proves the
 // 60-day horizon is still applied client-side.
+// Nine rows, arranged around today so BOTH release cards have four candidates
+// and every gate has something it must reject. Coming up looks 60 days forward,
+// Recently released 60 days back, and day 0 belongs to Coming up alone.
 const WISHLIST = [
-  { igdb_id: 347633, title: 'Mortal Shell II', cover: null, year: 2026, note: null, created_at: iso(120), released: day(2026, 7, 20), date_precision: 'day', release_label: 'Aug 20, 2026' },
-  { igdb_id: 222, title: 'Star Wars Zero Company', cover: null, year: 2026, note: null, created_at: iso(90), released: day(2026, 7, 27), date_precision: 'day', release_label: 'Aug 27, 2026' },
-  { igdb_id: 333, title: 'The Blood of Dawnwalker', cover: null, year: 2026, note: null, created_at: iso(60), released: day(2026, 8, 3), date_precision: 'day', release_label: 'Sep 03, 2026' },
+  // Coming up, in order. Day 0 first, then three inside the horizon.
+  { igdb_id: 111, title: 'A Game Out Today', cover: null, year: 2026, note: null, created_at: iso(100), released: relDay(0), date_precision: 'day', release_label: 'today' },
+  { igdb_id: 222, title: 'Star Wars Zero Company', cover: null, year: 2026, note: null, created_at: iso(90), released: relDay(6), date_precision: 'day', release_label: 'in 6 days' },
+  { igdb_id: 333, title: 'The Blood of Dawnwalker', cover: null, year: 2026, note: null, created_at: iso(60), released: relDay(13), date_precision: 'day', release_label: 'in 13 days' },
+  { igdb_id: 666, title: 'Onimusha: Way of the Sword', cover: null, year: 2026, note: null, created_at: iso(50), released: relDay(25), date_precision: 'day', release_label: 'in 25 days' },
+  // Recently released, in order.
+  { igdb_id: 347633, title: 'Mortal Shell II', cover: null, year: 2026, note: null, created_at: iso(120), released: relDay(-1), date_precision: 'day', release_label: 'yesterday' },
+  { igdb_id: 777, title: 'Duskfade', cover: null, year: 2026, note: null, created_at: iso(110), released: relDay(-8), date_precision: 'day', release_label: '8 days ago' },
+  { igdb_id: 888, title: 'The Relic: First Guardian', cover: null, year: 2026, note: null, created_at: iso(105), released: relDay(-21), date_precision: 'day', release_label: '21 days ago' },
+  { igdb_id: 999, title: 'Black Flag Resynced', cover: null, year: 2026, note: null, created_at: iso(102), released: relDay(-43), date_precision: 'day', release_label: '43 days ago' },
+  // Four rows each card must REJECT, and each rejects for a different reason.
+  // A wishlist row you have since bought is not news: this one's igdb_id is the
+  // one on Another Crab's Treasure in GAMES, so only the ownership filter keeps
+  // it out of Recently released.
+  { igdb_id: 217590, title: "Another Crab's Treasure", cover: null, year: 2024, note: null, created_at: iso(200), released: relDay(-5), date_precision: 'day', release_label: '5 days ago' },
+  { igdb_id: 1212, title: 'A Long Gone Game', cover: null, year: 2025, note: null, created_at: iso(300), released: relDay(-200), date_precision: 'day', release_label: 'last year' },
   { igdb_id: 444, title: 'A Quarter-Dated Game', cover: null, year: 2027, note: null, created_at: iso(30), released: day(2027, 11, 31), date_precision: 'quarter', release_label: 'Q4 2027' },
-  { igdb_id: 555, title: 'A Far Future Game', cover: null, year: 2027, note: null, created_at: iso(20), released: day(2027, 5, 1), date_precision: 'day', release_label: 'Jun 01, 2027' },
+  { igdb_id: 555, title: 'A Far Future Game', cover: null, year: 2027, note: null, created_at: iso(20), released: relDay(400), date_precision: 'day', release_label: 'next year' },
 ]
 const GAMEPASS_LEAVING = [{ igdb_id: 217590 }]
 
@@ -120,6 +149,9 @@ const home = await page.evaluate(() => ({
   chips: [...document.querySelectorAll('.hm-chip')].map((e) => e.textContent.trim()),
   arcs: document.querySelectorAll('.ins-arc').length,
   upRows: [...document.querySelectorAll('.up-row')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
+  cuRows: [...document.querySelectorAll('[data-card="coming_up"] .up-row')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
+  rrRows: [...document.querySelectorAll('[data-card="recently_released"] .up-row')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
+  expands: [...document.querySelectorAll('.hm-expand')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
   skips: document.querySelectorAll('.hm-skip').length,
 }))
 
@@ -139,8 +171,8 @@ check('picks are the rated ones, junk excluded',
   home.picks.join(', '))
 check('every pick states its reason', home.chips.length === home.picks.length, home.chips.join(' | '))
 check('each pick has a skip control', home.skips === home.picks.length, String(home.skips))
-check('Coming up renders dated releases', home.upRows.length >= 2 && home.cardTitles.includes('Coming up'), home.upRows.join(' // '))
-check('out-today row reads "Out today"', home.upRows.some((r) => /Out today|days|day/.test(r)), home.upRows[0])
+check('Coming up renders dated releases', home.cuRows.length === 2 && home.cardTitles.includes('Coming up'), home.cuRows.join(' // '))
+check('out-today row reads "Out today"', /Out\s*today/.test(home.cuRows[0] || ''), home.cuRows[0])
 // Two rows the card must NOT show: a quarter-precision date resolves to the end
 // of its window and would read as a day it is not, and a release beyond the
 // 60-day horizon is not news yet. Both filters used to be in Home's own query
@@ -148,18 +180,59 @@ check('out-today row reads "Out today"', home.upRows.some((r) => /Out today|days
 check('quarter-precision releases stay out', !home.upRows.some((r) => /Quarter-Dated/.test(r)), home.upRows.join(' // '))
 check('releases past the horizon stay out', !home.upRows.some((r) => /Far Future/.test(r)), home.upRows.join(' // '))
 
+/* ------------------------------------------------ Recently released */
+
+// The mirror of Coming up across today. Everything below is about the BOUNDARY
+// between the two cards and the four rows this one has to reject, because a card
+// that renders is not the same as a card that renders the right rows.
+check('Recently released renders past releases', home.cardTitles.includes('Recently released') && home.rrRows.length === 2, home.rrRows.join(' // '))
+check('the newest past release is first', /Mortal Shell II/.test(home.rrRows[0] || ''), home.rrRows[0])
+check('a past row counts backwards', /1\s*ago/i.test(home.rrRows[0] || ''), home.rrRows[0])
+// Day 0 is Coming up's, rendered as "Out today". If Recently released ever
+// claimed it too, the same game would sit in both cards on the same screen.
+check('day zero belongs to Coming up alone', !home.rrRows.some((r) => /Out Today/i.test(r)), home.rrRows.join(' // '))
+check('the two cards share no game', !home.cuRows.some((c) => home.rrRows.some((r) => r.slice(6) === c.slice(6))), `${home.cuRows.length} // ${home.rrRows.length}`)
+// Released five days ago and sitting in GAMES, so ONLY the ownership filter
+// keeps it out. Without that filter it would be the second row.
+check('a wishlist game you now own stays out', !home.rrRows.some((r) => /Another Crab/.test(r)), home.rrRows.join(' // '))
+check('releases past the 60-day window stay out', !home.upRows.some((r) => /Long Gone/.test(r)), home.upRows.join(' // '))
+
+/* ------------------------------------------------------ the expand */
+
+// Two rows each is what keeps the pair inside one screenful. The control only
+// appears when there is something behind it, and it has to come back.
+check('both release cards preview two rows', home.upRows.length === 4, String(home.upRows.length))
+check('both offer the same expand', home.expands.length === 2 && home.expands.every((t) => /Show 2 more/.test(t)), home.expands.join(' | '))
+
+const expandAll = async () => {
+  const n = await page.locator('.hm-expand').count()
+  for (let i = 0; i < n; i++) await page.locator('.hm-expand').nth(i).click()
+  await page.waitForTimeout(350)
+}
+await expandAll()
+const opened = await page.evaluate(() => ({
+  cu: document.querySelectorAll('[data-card="coming_up"] .up-row').length,
+  rr: document.querySelectorAll('[data-card="recently_released"] .up-row').length,
+  labels: [...document.querySelectorAll('.hm-expand')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
+}))
+check('expanding shows all four in each', opened.cu === 4 && opened.rr === 4, `cu=${opened.cu} rr=${opened.rr}`)
+check('the expand turns into Show less', opened.labels.every((t) => /Show less/.test(t)), opened.labels.join(' | '))
+await expandAll()
+const reclosed = await page.evaluate(() => document.querySelectorAll('.up-row').length)
+check('it collapses back to two each', reclosed === 4, String(reclosed))
+
 await page.screenshot({ path: 'repro/out/home-dark.png', fullPage: true })
 
 // A Coming up row is a wishlist row, so it opens the wishlist variant of the
 // sheet: the same one the Wishlist page opens, with the same heart on it.
-const upBtns = await page.locator('.up-row.as-btn').count()
-check('Coming up rows are buttons', upBtns >= 3, String(upBtns))
+const upBtns = await page.locator('[data-card="coming_up"] .up-row.as-btn').count()
+check('Coming up rows are buttons', upBtns === 2, String(upBtns))
 // A chevron marks a CARD that leads somewhere, never a row inside one. The rows
 // are tappable like every other row in the app and say so by behaving, not by
 // carrying a mark each.
 const rowChevs = await page.locator('.up-row .hm-chev').count()
 check('the rows carry no chevron of their own', rowChevs === 0, String(rowChevs))
-await page.locator('.up-row.as-btn').first().click()
+await page.locator('[data-card="coming_up"] .up-row.as-btn').first().click()
 await page.waitForTimeout(700)
 const sheet = await page.evaluate(() => {
   const el = document.querySelector('.sheet, .gs-sheet, [role="dialog"]')
@@ -169,7 +242,7 @@ const sheet = await page.evaluate(() => {
   }
 })
 check('tapping a Coming up row opens a sheet', sheet.open, sheet.text)
-check('the sheet is for the game that was tapped', /Mortal Shell II/.test(sheet.text || ''), sheet.text)
+check('the sheet is for the game that was tapped', /A Game Out Today/.test(sheet.text || ''), sheet.text)
 await page.screenshot({ path: 'repro/out/comingup-sheet.png', fullPage: true })
 // Close by tapping the backdrop, the way a thumb does. Asserting the page title
 // is still readable would pass with the sheet WIDE OPEN, since the page is right
@@ -184,11 +257,12 @@ check('the sheet closes back to Home', closed.backdrop === 0 && closed.title ===
 
 // The chevron on the Coming up heading goes to the whole Wishlist, which is the
 // same page the drawer opens rather than a second, thinner copy of it.
+// One per release card now, not one on the page. Both go to the same Wishlist.
 const moreBtn = await page.locator('.hm-more').count()
-check('Coming up has a chevron to the wishlist', moreBtn === 1, String(moreBtn))
-const moreBox = await page.locator('.hm-more').boundingBox()
+check('each release card has a chevron to the wishlist', moreBtn === 2, String(moreBtn))
+const moreBox = await page.locator('.hm-more').first().boundingBox()
 check('the chevron is a real tap target', moreBox.width >= 30 && moreBox.height >= 30, `${Math.round(moreBox.width)}x${Math.round(moreBox.height)}`)
-await page.locator('.hm-more').click()
+await page.locator('.hm-more').first().click()
 await page.waitForTimeout(800)
 const wl = await page.evaluate(() => ({
   title: document.querySelector('.wl-title')?.textContent.trim(),
@@ -197,7 +271,12 @@ const wl = await page.evaluate(() => ({
 check('the chevron opens the Wishlist page', wl.title === 'Wishlist', `${wl.title} / ${wl.sub}`)
 // Five rows in the fixture, including the two Coming up filters out. The page is
 // the whole list, not the card's four.
-check('the Wishlist page shows every row', /5 games/.test(wl.sub || ''), wl.sub)
+// Twelve rows in the fixture, eleven on the page: the Wishlist already drops
+// anything that has since landed in the synced library, which is Another Crab's
+// Treasure. So Recently released is not inventing an ownership rule, it is
+// applying the one this app already had, and this number is what proves the two
+// surfaces agree.
+check('the Wishlist page shows every row it keeps', /11 games/.test(wl.sub || ''), wl.sub)
 await page.screenshot({ path: 'repro/out/wishlist-from-home.png', fullPage: true })
 await page.locator('.wl-back').first().click()
 await page.waitForTimeout(700)
