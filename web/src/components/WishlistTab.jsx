@@ -4,7 +4,7 @@ import GameSheet from './GameSheet.jsx'
 import { useWishlist, removeFromWishlist, restoreToWishlist, reconcileWishlist } from '../lib/wishlist.js'
 import { loadLibraryTitles } from '../lib/discover.js'
 import NextUp from './NextUp.jsx'
-import { relOf, effTs, isOut, byTitle, groupByRelease, shortOf, MON, DAY } from '../lib/wishlistRelease.js'
+import { relOf, effTs, isOut, byTitle, groupByRelease, groupByReleased, outChipOf, shortOf, MON, DAY } from '../lib/wishlistRelease.js'
 import './wishlist.css'
 
 const SORT_KEY = 'gamedeck_wishlist_sort'
@@ -26,8 +26,16 @@ function fmtQuarter(ts) {
 }
 
 // Full chip for list rows: proximity-colored countdown / date / status.
-function chipOf(rel) {
+//
+// The out scope asks a different question of the same row. On the wishlist,
+// "Out now" is news, because everything around it is still coming. On the Out
+// now page every row is out, so that chip would repeat the section heading on
+// every line, which is the fault the Leaving Game Pass rows had when all of
+// them said "Leaving soon". There the chip carries recency and the line under
+// the title carries the date.
+function chipOf(rel, scope) {
   if (rel.k === 'tba') return { cls: 'tba', txt: rel.label || 'TBA' }
+  if (scope === 'out' && isOut(rel)) return outChipOf(rel)
   if (isOut(rel)) return { cls: 'out', txt: 'Out now' }
   const days = Math.round((effTs(rel) - Date.now()) / DAY)
   if (rel.k === 'day') {
@@ -42,22 +50,22 @@ function chipOf(rel) {
 
 // Group + order the wishlist. "release" builds smart date sections; the other sorts
 // are one flat list.
-function buildSections(items, sort) {
+function buildSections(items, sort, scope) {
   if (sort === 'az') return [{ id: 'az', rows: [...items].sort(byTitle) }]
   if (sort === 'added') {
     return [{ id: 'added', rows: [...items].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)) }]
   }
-  return groupByRelease(items)
+  return scope === 'out' ? groupByReleased(items) : groupByRelease(items)
 }
 
-function Chip({ rel }) {
-  const c = chipOf(rel)
+function Chip({ rel, scope }) {
+  const c = chipOf(rel, scope)
   return <span className={`wl-chip ${c.cls}`}>{c.txt}</span>
 }
 
 // One wishlist row with iOS-style swipe-left-to-delete. Short swipe reveals the trash
 // action; long swipe deletes outright. Tapping opens the sheet.
-function SwipeRow({ r, onOpen, onRemove }) {
+function SwipeRow({ r, onOpen, onRemove, scope }) {
   const rootRef = useRef(null)
   const faceRef = useRef(null)
   const g = useRef({ base: 0, pos: 0, sx: 0, sy: 0, axis: null, moved: false, suppress: false })
@@ -69,7 +77,7 @@ function SwipeRow({ r, onOpen, onRemove }) {
   const MAX = 220
 
   const rel = relOf(r)
-  const chip = chipOf(rel)
+  const chip = chipOf(rel, scope)
   const sub = rel.label && rel.label !== chip.txt ? rel.label : ''
 
   apiRef.current.collapseAndRemove = () => {
@@ -200,16 +208,16 @@ function SwipeRow({ r, onOpen, onRemove }) {
           <div className="wl-rt">{r.title}</div>
           {sub ? <div className="wl-rm">{sub}</div> : null}
         </div>
-        <Chip rel={rel} />
+        <Chip rel={rel} scope={scope} />
       </div>
     </div>
   )
 }
 
-function GridCard({ r, onOpen }) {
+function GridCard({ r, onOpen, scope }) {
   const rel = relOf(r)
   const short = shortOf(rel)
-  const cls = chipOf(rel).cls
+  const cls = chipOf(rel, scope).cls
   return (
     <button type="button" className="wl-gc" onClick={() => onOpen(r)}>
       <div className="wl-gcov">
@@ -221,8 +229,35 @@ function GridCard({ r, onOpen }) {
   )
 }
 
-export default function WishlistTab({ onClose }) {
-  const { items, loading } = useWishlist()
+// One page, two scopes.
+//
+// `all` is the wishlist: everything you are tracking, soonest first, opened from
+// the drawer and from Coming up's chevron. `out` is the Out now page: the same
+// rows filtered to what has already released, newest first, opened from Recently
+// released' chevron.
+//
+// A scope rather than a second component, deliberately. Everything below the
+// header is identical work: swipe to remove, the undo toast, the list and grid
+// density, the sheet, the reconcile notice. A copy would have drifted the first
+// time one of them changed, and this codebase has already paid for that twice
+// (three copies of the platform labels, two Library column lists).
+//
+// Recently released' chevron used to open `all`, which was the bug: released
+// rows DO live on that page, in the Out now section, but sectionOf gives that
+// section order 9e15, so it sorts below every future month, every quarter, every
+// year and To be announced. The card sent you to a page whose last row was the
+// thing you tapped for.
+export default function WishlistTab({ onClose, scope = 'all' }) {
+  const { items: allItems, loading } = useWishlist()
+  const isOutScope = scope === 'out'
+  // The window is EVERYTHING released, not the card's 60 days. Only 4 wishlist
+  // games came out in that window and the card already shows up to four, so a
+  // page scoped to it would show exactly what the card shows and the chevron
+  // would lead nowhere. 35 rows go back to 2020; the card is the tip of this.
+  const items = useMemo(
+    () => (isOutScope ? allItems.filter((r) => isOut(relOf(r))) : allItems),
+    [allItems, isOutScope]
+  )
   const [reconciled, setReconciled] = useState([])
   const [noteDismissed, setNoteDismissed] = useState(false)
   const [selected, setSelected] = useState(null)
@@ -274,7 +309,7 @@ export default function WishlistTab({ onClose }) {
 
   useEffect(() => () => clearTimeout(undoTimer.current), [])
 
-  const sections = useMemo(() => buildSections(items, sort), [items, sort])
+  const sections = useMemo(() => buildSections(items, sort, scope), [items, sort, scope])
 
   function handleRemove(row) {
     removeFromWishlist(row.igdb_id)
@@ -305,8 +340,14 @@ export default function WishlistTab({ onClose }) {
         {back}
         <div>
           {/* See ListView: this is the screen's only heading while it is up. */}
-          <h1 className="wl-title">Wishlist</h1>
-          <div className="wl-sub">{loading ? 'Loading…' : `${items.length} ${items.length === 1 ? 'game' : 'games'} you're tracking`}</div>
+          <h1 className="wl-title">{isOutScope ? 'Out now' : 'Wishlist'}</h1>
+          <div className="wl-sub">
+            {loading
+              ? 'Loading…'
+              : isOutScope
+                ? `${items.length} wishlisted ${items.length === 1 ? 'game' : 'games'} you don't own yet`
+                : `${items.length} ${items.length === 1 ? 'game' : 'games'} you're tracking`}
+          </div>
         </div>
       </div>
 
@@ -328,8 +369,12 @@ export default function WishlistTab({ onClose }) {
 
       {!loading && items.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-state-title">Your wishlist is empty</div>
-          <div>Tap the heart on any game in Discover to start tracking it.</div>
+          <div className="empty-state-title">{isOutScope ? 'Nothing has landed yet' : 'Your wishlist is empty'}</div>
+          <div>
+            {isOutScope
+              ? 'Games you are tracking show up here once they release, and leave again if you buy them.'
+              : 'Tap the heart on any game in Discover to start tracking it.'}
+          </div>
         </div>
       ) : null}
 
@@ -345,7 +390,7 @@ export default function WishlistTab({ onClose }) {
                 className={`wl-sort-b${sort === s.k ? ' on' : ''}`}
                 onClick={() => setSort(s.k)}
               >
-                {s.label}
+                {isOutScope && s.k === 'release' ? 'Released' : s.label}
               </button>
             ))}
           </div>
@@ -360,7 +405,11 @@ export default function WishlistTab({ onClose }) {
         </div>
       ) : null}
 
-      {sort === 'release' && !loading ? <NextUp items={items} onOpen={setSelected} /> : null}
+      {/* Countdown cards over a list where every row has already released would
+          be empty by construction: NextUp filters !isOut, so it would return
+          null anyway. Gated on the scope as well, so the reason is stated rather
+          than left to a coincidence in another file. */}
+      {sort === 'release' && !isOutScope && !loading ? <NextUp items={items} onOpen={setSelected} /> : null}
 
       {sections.map((sec) => (
         <div key={sec.id}>
@@ -373,12 +422,12 @@ export default function WishlistTab({ onClose }) {
           {isGrid ? (
             <div className="wl-grid">
               {sec.rows.map((r) => (
-                <GridCard key={r.igdb_id} r={r} onOpen={setSelected} />
+                <GridCard key={r.igdb_id} r={r} onOpen={setSelected} scope={scope} />
               ))}
             </div>
           ) : (
             sec.rows.map((r) => (
-              <SwipeRow key={r.igdb_id} r={r} onOpen={setSelected} onRemove={handleRemove} />
+              <SwipeRow key={r.igdb_id} r={r} onOpen={setSelected} onRemove={handleRemove} scope={scope} />
             ))
           )}
         </div>

@@ -379,7 +379,7 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
   // Coming up and Recently released are one card with the clock pointing either
   // way: same rows, same chevron to the wishlist, same expand. Written once,
   // because this codebase has already paid twice for a second copy that drifts.
-  const releaseCard = ({ key, title, sub, rows, unit, hot }) => {
+  const releaseCard = ({ key, title, sub, rows, unit, hot, to, toLabel }) => {
     const shown = expanded[key] ? rows : rows.slice(0, RELEASE_PREVIEW)
     // data-card so the harness can address one release card rather than counting
     // .up-row across both and hoping the sum means something.
@@ -387,14 +387,19 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
       <div className="chart-card" data-card={key} key={key}>
         <div className="hm-head">
           <h2 className="chart-title">{title}</h2>
-          {/* The card shows a couple. The chevron is the way to the whole
-              wishlist, and it opens the same page the drawer does rather than a
-              second, thinner copy of it. */}
+          {/* The card shows a couple; the chevron is the way to the rest. Each
+              card names its own destination, because the two are not the same
+              list read twice. Coming up leads to the wishlist, which opens on
+              This month and runs forward. Recently released led there too, and
+              that was wrong: its rows land in the Out now SECTION, which sorts
+              below every future month, quarter and year, so the card sent you to
+              a page whose last row was the thing you tapped for. It leads to the
+              Out now page now. */}
           <button
             type="button"
             className="hm-more"
-            aria-label="Open your wishlist"
-            onClick={() => onOpenList && onOpenList('wishlist')}
+            aria-label={toLabel}
+            onClick={() => onOpenList && onOpenList(to)}
           >
             {CHEV}
           </button>
@@ -557,6 +562,8 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
             rows: comingUp,
             unit: (w) => (w.days === 0 ? 'today' : w.days === 1 ? 'day' : 'days'),
             hot: (w) => w.days <= 7,
+            to: 'wishlist',
+            toLabel: 'Open your wishlist',
           })
         : null,
 
@@ -573,6 +580,8 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
             // The mirror of Coming up's amber: out inside the last week is the
             // thing you might actually do something about tonight.
             hot: (w) => w.days <= 7,
+            to: 'released',
+            toLabel: 'Open the Out now list',
           })
         : null,
   }

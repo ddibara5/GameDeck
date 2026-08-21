@@ -200,8 +200,11 @@ export default function App() {
       {view ? (
         <div className={`view-page${viewClosing ? ' closing' : ''}`}>
           <Suspense fallback={null}>
-            {view === 'wishlist' ? (
-              <WishlistTab onClose={closeView} />
+            {/* Two views, one component. 'released' is the wishlist filtered to
+                what has already come out, which is where Recently released
+                points; see the scope note in WishlistTab. */}
+            {view === 'wishlist' || view === 'released' ? (
+              <WishlistTab onClose={closeView} scope={view === 'released' ? 'out' : 'all'} />
             ) : (
               <ListView viewKey={view} onClose={closeView} />
             )}

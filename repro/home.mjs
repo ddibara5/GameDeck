@@ -508,6 +508,73 @@ const backHome = await page.evaluate(() => ({
 }))
 check('back from the Wishlist returns to Home', backHome.title === 'Home' && backHome.wl === 0, JSON.stringify(backHome))
 
+// The SECOND chevron, on Recently released, and the whole reason this page
+// exists. It used to open the same Wishlist as the one above, where its rows sit
+// in the Out now section, which sorts BELOW every future month, quarter and year.
+await page.locator('.hm-more').nth(1).click()
+await page.waitForTimeout(800)
+const out = await page.evaluate(() => ({
+  title: document.querySelector('.wl-title')?.textContent.trim(),
+  sub: document.querySelector('.wl-sub')?.textContent.trim(),
+  rows: [...document.querySelectorAll('.wl-rt')].map((e) => e.textContent.trim()),
+  chips: [...document.querySelectorAll('.wl-chip')].map((e) => e.textContent.trim()),
+  bands: [...document.querySelectorAll('.wl-sech-l')].map((e) => e.textContent.trim()),
+  counts: [...document.querySelectorAll('.wl-sech-c')].map((e) => Number(e.textContent.trim())),
+  // Countdown cards over a list where nothing is upcoming.
+  nextUp: document.querySelectorAll('.wl-next').length,
+  sortLabels: [...document.querySelectorAll('.wl-sort-b')].map((e) => e.textContent.trim()),
+}))
+check('the second chevron opens Out now, not the Wishlist', out.title === 'Out now', `${out.title} / ${out.sub}`)
+// Six of the twelve fixture rows have released: the day-0 game, three inside the
+// last month, one at 43 days and one at 200. The four future rows and the owned
+// one are absent, and the owned one is absent for the reason the Wishlist page
+// already drops it rather than a rule invented here.
+check('it lists every released row and nothing else', out.rows.length === 6, `${out.rows.length}: ${out.rows.join(' // ')}`)
+check('the subtitle counts them and says what they are', /6 wishlisted games you don't own yet/.test(out.sub || ''), out.sub)
+check('an upcoming row is not here', !out.rows.some((r) => /Star Wars Zero Company|Far Future|Quarter-Dated/.test(r)), out.rows.join(' // '))
+check('the game you already own is not here either', !out.rows.some((r) => /Another Crab/.test(r)), out.rows.join(' // '))
+// Newest first, which is the opposite of the wishlist and the reason this is its
+// own section builder rather than a reverse() of the other one.
+check('newest first', /Out Today/.test(out.rows[0] || '') && /Long Gone/.test(out.rows[out.rows.length - 1] || ''), `${out.rows[0]} ... ${out.rows[out.rows.length - 1]}`)
+// The fault this page would have shipped with: every row is released, so the
+// wishlist's "Out now" chip would repeat the section heading on all six lines.
+check('no chip repeats the heading', !out.chips.some((c) => /^Out now$/.test(c)), out.chips.join(' // '))
+check('the chips carry recency instead', /Today|day ago|days ago/.test(out.chips[0] || ''), out.chips.join(' // '))
+// The card and the page it opens must not disagree about the same game. They
+// would if either counted elapsed milliseconds instead of calendar days: a game
+// released this morning is 0.8 of a day old, so one surface rounds it to 1 and
+// the other floors it to 0. Both go through daysBetween now, and this is the
+// assertion that keeps them there.
+const cardDays = (home.rrRows.find((r) => /Mortal Shell II/.test(r)) || '').match(/^(\d+)ago/)
+const pageDays = (out.chips[out.rows.findIndex((r) => /Mortal Shell II/.test(r))] || '').match(/^(\d+) day/)
+check('the card and the page count the same days', cardDays && pageDays && cardDays[1] === pageDays[1], `card=${cardDays && cardDays[1]} page=${pageDays && pageDays[1]}`)
+// Day 0 is Coming up's, which renders it as "Out today", so the CARD starts at
+// one day ago. The page does not: a game that came out this morning is out now.
+// One deliberate row of difference between a card and its own destination.
+check('the page carries the day-0 game the card does not', out.rows.some((r) => /Out Today/.test(r)) && !home.rrRows.some((r) => /Out Today/.test(r)), out.rows[0])
+// Bands, not one section per month: the label is asserted for the current month
+// only, because every other band depends on the day the harness runs.
+check('the first band is This month', out.bands[0] === 'This month', out.bands.join(' | '))
+check('the bands account for every row', out.counts.reduce((a, b) => a + b, 0) === 6, out.counts.join('+'))
+check('no countdown strip over a released list', out.nextUp === 0, String(out.nextUp))
+check('the first sort reads Released here', out.sortLabels[0] === 'Released', out.sortLabels.join(' | '))
+await page.screenshot({ path: 'repro/out/outnow-from-home.png', fullPage: true })
+// The grid badge used to read "Owned" on a released row, which is the one thing
+// a row that survived reconciliation cannot be.
+await page.locator('.wl-dbtn').nth(1).click()
+await page.waitForTimeout(400)
+const badges = await page.evaluate(() => [...document.querySelectorAll('.wl-gbadge')].map((e) => e.textContent.trim()))
+check('no grid badge claims a wishlisted game is Owned', badges.length === 6 && !badges.some((b) => /Owned/.test(b)), badges.join(' // '))
+await page.locator('.wl-dbtn').first().click()
+await page.waitForTimeout(300)
+await page.locator('.wl-back').first().click()
+await page.waitForTimeout(700)
+const backHome2 = await page.evaluate(() => ({
+  title: document.querySelector('.app-header-title')?.textContent.trim(),
+  wl: document.querySelectorAll('.wl-page').length,
+}))
+check('back from Out now returns to Home', backHome2.title === 'Home' && backHome2.wl === 0, JSON.stringify(backHome2))
+
 /* -------------------------------------------------- 2. the cards editor */
 
 // The other half of "removed, not switched off": Customize cards must not offer

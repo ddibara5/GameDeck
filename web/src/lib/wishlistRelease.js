@@ -6,6 +6,8 @@
 // in the Discover chunk, and the two would have drifted the first time a precision
 // rule changed - which is exactly how the Library ended up with two column lists.
 
+import { startOfDay, daysBetween } from './playWeek.js'
+
 export const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 export const DAY = 86400000
 
@@ -95,6 +97,70 @@ export function groupByRelease(items) {
   return secs
 }
 
+// The mirror of groupByRelease, for the Out now page: released rows, newest
+// first, in four bands rather than one section per month.
+//
+// Twelve months of sections is right when you are looking FORWARD, because the
+// months ahead are few and each one is a plan. Looking back they are not: today
+// this list spans 2020 to yesterday, and month sections would give it twelve
+// headings, seven of them holding one row. The bands collapse the tail without
+// collapsing the part you actually came for.
+export function groupByReleased(items) {
+  const now = new Date()
+  const Y = now.getUTCFullYear()
+  const M = now.getUTCMonth()
+  const band = (rel) => {
+    const d = new Date(effTs(rel))
+    const y = d.getUTCFullYear()
+    if (y === Y && d.getUTCMonth() === M) return { order: 0, id: 'thismonth', label: 'This month', amber: true }
+    if (y === Y) return { order: 1, id: `y${Y}`, label: `Earlier in ${Y}`, amber: false }
+    if (y === Y - 1) return { order: 2, id: `y${Y - 1}`, label: String(Y - 1), amber: false }
+    return { order: 3, id: 'older', label: `${Y - 2} and older`, amber: false }
+  }
+  const groups = new Map()
+  for (const r of items) {
+    const b = band(relOf(r))
+    if (!groups.has(b.id)) groups.set(b.id, { ...b, rows: [] })
+    groups.get(b.id).rows.push(r)
+  }
+  const secs = [...groups.values()].sort((a, b) => a.order - b.order)
+  // Newest first everywhere here, which is the opposite of the upcoming page and
+  // the whole reason this is a separate builder rather than a reverse() of it.
+  for (const g of secs) g.rows.sort((a, b) => effTs(relOf(b)) - effTs(relOf(a)) || byTitle(a, b))
+  return secs
+}
+
+// The chip for a released row, on the Out now page.
+//
+// Two jobs, and they change hands at 30 days. Up close, recency is the whole
+// point: "8 days ago" is why the row is near the top. Past a month it stops
+// being: "7 months ago" is no more useful than "Feb '26" and is twice as wide,
+// and the width is not free, because .wl-rt truncates and a wider chip eats the
+// title beside it. That handover is the same one the upcoming chip already
+// makes, countdown near and date far, so the two pages read alike.
+//
+// It exists at all because the wishlist's own chip says "Out now" for anything
+// released, which on a page where every row is released would repeat the section
+// heading on every line. Same fault the Leaving Game Pass rows had.
+export function outChipOf(rel) {
+  // CALENDAR days, using the same helper the Recently released card uses, not a
+  // division of elapsed milliseconds. The card and the page its chevron opens
+  // cannot be allowed to disagree about whether a game came out 8 days ago or 9,
+  // and they would: a game released this morning is 0.8 of a day old, which
+  // rounds to "1 day ago" and floors to "Today" depending on the hour the page
+  // is opened. A release date is a day, so the arithmetic is in days.
+  const utc = new Date(effTs(rel))
+  const day = new Date(utc.getUTCFullYear(), utc.getUTCMonth(), utc.getUTCDate())
+  const days = Math.max(0, daysBetween(startOfDay(new Date()), day))
+  if (days === 0) return { cls: 'soon', txt: 'Today' }
+  if (days === 1) return { cls: 'soon', txt: '1 day ago' }
+  if (days < 30) return { cls: 'soon', txt: `${days} days ago` }
+  const sameYear = utc.getUTCFullYear() === new Date().getUTCFullYear()
+  return sameYear
+    ? { cls: 'near', txt: fmtDayShort(effTs(rel)) }
+    : { cls: 'far', txt: fmtMonthShort(effTs(rel)) }
+}
+
 export function fmtDayShort(ts) {
   const d = new Date(ts)
   return `${MON[d.getUTCMonth()]} ${d.getUTCDate()}`
@@ -108,7 +174,15 @@ export function fmtMonthShort(ts) {
 // Compact badge: the shortest honest rendering of a release window.
 export function shortOf(rel) {
   if (rel.k === 'tba') return 'TBA'
-  if (isOut(rel)) return 'Owned'
+  // A released row used to badge "Owned", which is exactly backwards. The
+  // wishlist reconciles anything that turns up in the synced library OUT of
+  // itself on every open, so a released row that is still here is precisely the
+  // one thing it cannot be. It carries its date instead: the day if it landed
+  // this year, the year if it did not.
+  if (isOut(rel)) {
+    const d = new Date(effTs(rel))
+    return d.getUTCFullYear() === new Date().getUTCFullYear() ? fmtDayShort(effTs(rel)) : String(d.getUTCFullYear())
+  }
   const days = Math.round((effTs(rel) - Date.now()) / DAY)
   if (rel.k === 'day') return days <= 30 ? `${Math.max(days, 0)}d` : fmtDayShort(rel.ts)
   if (rel.k === 'month') return fmtMonthShort(rel.ts)
