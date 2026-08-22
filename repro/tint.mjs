@@ -239,6 +239,33 @@ for (const theme of ['dark', 'light']) {
       `top ${geo.top}  bottom ${bottom}`
     )
 
+    // The tan strip. `.modal-sheet` carries a 1px border-top in --line, a warm
+    // brown picked as a divider against the old fixed --surface; against a
+    // coloured card it reads as a tan line across the top. Asserted as PIXELS,
+    // because the fix is a colour and the symptom is a colour: the card's very
+    // first painted row has to be the card, not a token.
+    const topRow = await page.evaluate(async () => {
+      const s = document.querySelector('.modal-sheet')
+      const r = s.getBoundingClientRect()
+      return { x: Math.round(r.left + r.width / 2) - 30, y: Math.round(r.top), bg: getComputedStyle(s).backgroundColor }
+    })
+    const rowShot = await page.screenshot({ clip: { x: topRow.x, y: topRow.y, width: 60, height: 2 } })
+    const rowRgb = await page.evaluate(async (b64) => {
+      const i = new Image(); i.src = 'data:image/png;base64,' + b64; await i.decode()
+      const c = document.createElement('canvas'); c.width = i.width; c.height = i.height
+      c.getContext('2d').drawImage(i, 0, 0)
+      const d = c.getContext('2d').getImageData(0, 0, i.width, i.height).data
+      const k = (i.width >> 1) * 4
+      return [d[k], d[k + 1], d[k + 2]]
+    }, rowShot.toString('base64'))
+    const cardRgb = (topRow.bg.match(/\d+/g) || []).slice(0, 3).map(Number)
+    const rowGap = Math.round(Math.sqrt(rowRgb.reduce((t, v, i) => t + (v - cardRgb[i]) ** 2, 0)))
+    check(
+      `${tag}: no foreign line across the top of the card`,
+      rowGap <= 12,
+      `top row rgb(${rowRgb.join(',')}) against the card's rgb(${cardRgb.join(',')}): distance ${rowGap}`
+    )
+
     // Effect, not presence. A tint equal to --surface is a tint that does nothing.
     const surf = theme === 'light' ? [246, 241, 233] : [35, 33, 32]
     const rgb = (bottom.match(/\d+/g) || []).slice(0, 3).map(Number)

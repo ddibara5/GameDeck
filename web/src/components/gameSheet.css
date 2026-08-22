@@ -139,6 +139,21 @@
   --gs-hairline: rgba(255, 255, 255, 0.14);
 }
 
+/* The thin tan strip across the top of the card. `.modal-sheet` carries
+   `border-top: 1px solid var(--line)`, and --line is #38332e, a warm brown
+   picked to read as a divider against the fixed --surface. Against a teal or
+   navy card it is a tan line instead. Measured at DPR 3: three device rows of
+   rgb(56,51,46) between the backdrop and the tint.
+
+   The COLOUR goes, not the border. Keeping the 1px means --gs-bleed-y stays 17
+   (border 1 + padding 16) and the hero's bleed still lands exactly on the edge
+   it was measured against. A transparent border shows the element's own
+   background through it, so that row becomes the card's colour rather than a
+   gap. */
+.modal-sheet:not(.filter-sheet) {
+  border-top-color: transparent;
+}
+
 [data-theme="light"] .modal-sheet:not(.filter-sheet) {
   --gs-raise: rgba(0, 0, 0, 0.05);
   --gs-hairline: rgba(0, 0, 0, 0.12);
