@@ -348,12 +348,22 @@
   height: 128%;
   object-fit: cover;
   object-position: center 30%;
-  /* 14, not 34. 34 was the number a 90px cover needed: stretched 5.7x across
-     this band, anything less revealed the enlargement rather than the picture.
-     Key art is 569px into a ~503px box, so the only scaling left is the 1.7x
-     the band's portrait shape forces, and the blur can go back to being a
-     choice about how much of the art you want to read. */
-  filter: blur(14px) saturate(1.25);
+  /* 8, down from 14, so the art either side of the cover reads as a picture
+     rather than a wash. Dave asked for the top of the band specifically and
+     said the fade below it was already right, which the mask makes free: the
+     backdrop is gone by 336px and the title starts at 352, so nothing about
+     turning the blur down moves a single word.
+
+     The floor is set by resolution, and it was measured rather than guessed.
+     The band renders 503x538 CSS, which is 1509 device px at DPR 3, against a
+     555px source: a 2.7x enlargement. At blur 8 the radius is 24 device px and
+     covers it completely. Compared against t_screenshot_big (940px, 66KB vs
+     27KB) at 14/10/8/6 on the real key art: at 8 the two are indistinguishable,
+     and only at 6 does the bigger source start to look crisper. So the extra
+     39KB buys nothing here and is not spent. Go below 6 and it would be.
+
+     34 was the number the OLD backdrop needed - a 90px cover stretched 5.7x. */
+  filter: blur(8px) saturate(1.25);
   opacity: 0;
   animation: gs-hero-in 240ms ease forwards;
 }
