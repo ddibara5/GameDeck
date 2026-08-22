@@ -18,7 +18,22 @@ const DB_VERSION = 1
 
 // Baked into every key. Bump it to invalidate all persisted payloads at once,
 // e.g. after changing the shape of something we cache.
-const SCHEMA = 'v1'
+//
+// v2, 22 Aug: 1c1b809 added backdropId/backdropKind/artworks to the normalized
+// game record, and did not bump this. `swr` returns a hit WITHOUT revalidating
+// for the whole of maxAge, and discover:game:<id> has a 7-day maxAge, so every
+// game a device had opened in the previous week kept being served a record with
+// no backdropId - and a sheet with no backdropId paints a colour and no key art
+// at all. Which is exactly what shipped to Dave's phone and nothing else.
+//
+// This is the ONLY safe fix, because the stale records are on devices, not on a
+// server: no deploy can reach into them, and nothing in the payload says which
+// version wrote it. Changing the key is what makes them unreachable.
+//
+// The cost is one cold fetch per source on the next open. The alternative -
+// deleting just the discover:game:* keys - is more code guarding a narrower
+// case, and would need writing again for the next shape change.
+const SCHEMA = 'v2'
 
 let _dbPromise = null
 
