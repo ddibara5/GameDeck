@@ -159,7 +159,12 @@ export async function swr(key, fetcher, { maxAge = 0, onFresh } = {}) {
       })
 
   if (hit) {
-    if (Date.now() - hit.ts > maxAge) {
+    // maxAge <= 0 means "always revalidate", said outright rather than left to
+    // arithmetic. `Date.now() - hit.ts > 0` looks equivalent and is not: under a
+    // pinned clock the two are equal and the refresh never fires. repro/home.mjs
+    // pins time to 19 Aug, which is exactly how this was found - the Game Pass
+    // card kept serving the previous catalog with no request ever going out.
+    if (maxAge <= 0 || Date.now() - hit.ts > maxAge) {
       revalidate()
         .then((fresh) => {
           if (onFresh && fresh !== undefined && fresh !== null) onFresh(fresh)

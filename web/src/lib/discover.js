@@ -236,6 +236,32 @@ export function loadGamePass() {
   return _gpPromise
 }
 
+// The leaving-soon subset, for the Home card.
+//
+// Deliberately NOT loadGamePass() filtered, even though that payload carries
+// `leaving_soon` and is already cached. That cache has a 12 hour TTL, which is
+// right for a Discover rail and wrong here: this card was a live query on every
+// launch, and folding it into the catalog would have let it sit up to half a day
+// behind. Same module as fetchGamePass so the two column lists cannot drift.
+//
+// maxAge 0: the rows are served off disk on the first frame AND refreshed every
+// launch, so the card keeps the freshness it had and stops blocking the screen.
+export async function loadLeavingSoon(onFresh) {
+  const { value } = await swr(
+    'gamepass:leaving',
+    async () => {
+      const { data, error } = await supabase
+        .from('gamepass')
+        .select('igdb_id, name, cover, year, rating')
+        .eq('leaving_soon', true)
+      if (error) throw new Error(error.message || 'Game Pass request failed')
+      return (data || []).filter((r) => r && r.igdb_id != null)
+    },
+    { maxAge: 0, onFresh },
+  ).catch(() => ({ value: [] }))
+  return value || []
+}
+
 let _libPromise = null
 
 // Stored as a plain array (not a Set) so the persisted record stays simple and

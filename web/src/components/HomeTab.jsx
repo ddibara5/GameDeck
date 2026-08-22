@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { supabase } from '../lib/supabase.js'
 import Cover from './Cover.jsx'
 import Skeleton from './Skeleton.jsx'
 import GameDetail from './GameDetail.jsx'
@@ -7,11 +6,12 @@ import GameSheet from './GameSheet.jsx'
 import DiscoverDetail from './DiscoverDetail.jsx'
 import CustomizeHome from './CustomizeHome.jsx'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
+import { loadLeavingSoon } from '../lib/discover.js'
 import { useWishlist } from '../lib/wishlist.js'
 import { normTitle } from '../lib/discover.js'
 import { useHomeCards, CARD_BY_KEY } from '../lib/homeCards.js'
 import { platformMeta, minutesToHhm, parseDayOrInstant } from '../lib/format.js'
-import { fetchRecentActivity } from '../lib/recentActivity.js'
+import { loadRecentActivity } from '../lib/recentActivity.js'
 import { weekStats, WEEK_SPAN, startOfDay, daysBetween, dayKey, eventDay } from '../lib/playWeek.js'
 import './insights.css'
 import './home.css'
@@ -117,14 +117,34 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
 
   useEffect(() => {
     let cancelled = false
+    // Both of these read from disk first and refresh behind, so this screen no
+    // longer waits on the network to draw. It used to await two live queries
+    // before clearing `loading`, which on Dave's machine is ~420ms of skeleton.
+    //
+    // Each resolves with the DISK copy and calls back with the network one, and
+    // the callback can win the race: with a fast connection the fresh
+    // rows arrive before the await below continues, and assigning the resolved
+    // value then would overwrite them with the stale copy. repro/home.mjs
+    // caught exactly that - the Game Pass card kept showing the previous
+    // window's rows. So the callback is authoritative once it has fired.
+    let freshEvents = false
+    let freshLeaving = false
     async function load() {
       const [act, gp] = await Promise.all([
-        fetchRecentActivity({ days: ACTIVITY_DAYS }),
-        supabase.from('gamepass').select('igdb_id, name, cover, year, rating').eq('leaving_soon', true),
+        loadRecentActivity({ days: ACTIVITY_DAYS }, (rows) => {
+          if (cancelled) return
+          freshEvents = true
+          setEvents(rows)
+        }),
+        loadLeavingSoon((rows) => {
+          if (cancelled) return
+          freshLeaving = true
+          setLeavingRows(rows)
+        }),
       ])
       if (cancelled) return
-      setEvents(act.data || [])
-      setLeavingRows((gp.data || []).filter((r) => r.igdb_id != null))
+      if (!freshEvents) setEvents(act)
+      if (!freshLeaving) setLeavingRows(gp)
       setLoading(false)
     }
     load()
