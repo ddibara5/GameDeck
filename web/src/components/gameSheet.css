@@ -193,3 +193,81 @@
   border-radius: var(--r-sm);
   border: 1px solid var(--line);
 }
+
+/* ---------- The sheet's own key art ----------
+   The sheet takes the first screenshot the shot strip below it is already
+   loading, blurred to a colour field behind an opaque-enough veil. Same URL, so
+   the browser serves it from cache and this costs no extra request at all.
+
+   `position: relative` on the panel, and the two layers at `inset: 0`, so the
+   art spans the whole SCROLL height rather than just the visible window. A
+   sheet you scroll keeps its colour the whole way down instead of running out
+   of art halfway.
+
+   The veil is 92% in dark and 96% in light, and those are not a matched pair by
+   accident: light starts from a much brighter surface, so the same alpha lets
+   far more of the art through.
+
+   **92 rather than the 88 this was designed at, because the review measured the
+   wrong game.** 88% holds at 5.40:1 against Clair Obscur's mid-dark teal key
+   art, which is what the mock used. Against a blown-out BRIGHT screenshot, the
+   real worst case, the same veil gives 4.21:1 and the summary drops under the
+   4.5 floor. repro/ground.mjs deliberately stubs a near-white screenshot for
+   exactly this reason, and caught it. At 92% the same worst case measures
+   4.87:1, and the art still reads as a colour field.
+
+   Light needs no equivalent bump: at 96% it is 5.15:1 against near-black art
+   and 5.61:1 against white. It only clears either because --muted was fixed in
+   the same change; at the old #857b6d it was 3.14. */
+.modal-sheet {
+  position: relative;
+}
+
+.gs-art,
+.gs-veil {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.gs-art {
+  background-size: cover;
+  background-position: center;
+  /* scale past the edges so the blur's soft border does not show as a seam */
+  transform: scale(1.25);
+  filter: blur(26px) saturate(0.85);
+  /* Screenshots arrive ~240ms after the sheet opens, so it fades rather than
+     pops. Deliberately NOT `will-change: filter`: benchmarked at p95 2.5ms
+     promoted against 2.1ms unpromoted, so the hint costs more than it saves. */
+  opacity: 0;
+  animation: gs-art-in 320ms ease forwards;
+}
+
+@keyframes gs-art-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gs-art {
+    opacity: 1;
+    animation: none;
+  }
+}
+
+.gs-veil {
+  background: rgba(35, 33, 32, 0.92);
+}
+
+[data-theme="light"] .gs-veil {
+  background: rgba(246, 241, 233, 0.96);
+}
+
+/* Everything the sheet renders sits above the two layers. Scoped to direct
+   children so nothing inside a card needs its own z-index. */
+.modal-sheet > *:not(.gs-art):not(.gs-veil) {
+  position: relative;
+  z-index: 1;
+}

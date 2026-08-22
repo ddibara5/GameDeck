@@ -157,6 +157,7 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   const companies = (media && media.companies) || game.companies || []
   const summary = (media && media.summary) || game.summary || null
   const screenshots = (media && media.screenshots) || game.screenshots || []
+  const artUrl = screenshots.length ? screenshots[0] : null
   const url = (media && media.url) || game.url || null
   const year = game.release_year || game.year || (media && media.year) || null
   // Exact release date, as precise as IGDB actually is about it (a full day for
@@ -206,6 +207,18 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
           transition: dragging ? 'none' : 'transform 0.2s ease',
         }}
       >
+        {/* The sheet's own key art. `screenshots[0]` is the exact URL the shot
+            strip further down is already loading, so this is a cache hit and
+            not a second request. Absent for a game IGDB has no screenshots for,
+            which is a real case, and then the sheet is the flat surface it has
+            always been. */}
+        {artUrl ? (
+          <>
+            <div className="gs-art" style={{ backgroundImage: `url(${artUrl})` }} aria-hidden="true" />
+            <div className="gs-veil" aria-hidden="true" />
+          </>
+        ) : null}
+
         <div className="sheet-drag-zone" {...dragHandlers}>
           <div className="modal-handle" />
           <Cover src={coverSrc} title={title} size="lg" />
