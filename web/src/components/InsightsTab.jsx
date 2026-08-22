@@ -5,7 +5,7 @@ import Cover from './Cover.jsx'
 import Hhm from './Hhm.jsx'
 import GameDetail from './GameDetail.jsx'
 import CustomizeCards from './CustomizeCards.jsx'
-import { minutesToHhm } from '../lib/format.js'
+import { minutesToHhm, libraryCover } from '../lib/format.js'
 import { fetchRecentActivity, fetchActivityStart } from '../lib/recentActivity.js'
 import { weekStats, compactHm, bars, WEEK_SPAN } from '../lib/playWeek.js'
 import { useCardsConfig } from '../lib/insightsCards.js'
@@ -184,7 +184,7 @@ function WeekGames({ week, gamesById, onOpenGame }) {
       <div className="wk-games">
         {week.byGame.map((g) => {
           const game = gamesById.get(g.master_id) || null
-          const cover = game ? game.cover_small || g.cover : g.cover
+          const cover = libraryCover(game, g.cover)
           return (
             <button
               type="button"
@@ -221,7 +221,7 @@ function WeekGames({ week, gamesById, onOpenGame }) {
 // Game Pass cards when those moved to Home; release_year left with the vintage
 // histogram before them.
 const GAME_COLUMNS =
-  'master_id, title, environment, genre, percent, playtime_minutes, earned_awards, last_played, cover_small'
+  'master_id, title, environment, genre, percent, playtime_minutes, earned_awards, last_played, cover_small, cover_igdb'
 
 // Two windows of activity, so the week block can compare against the one before
 // it, and so the progress arc has something to draw.

@@ -338,6 +338,29 @@ export function optImg(url, targetW = 240) {
   return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${w}&output=webp&q=82`
 }
 
+/**
+ * The best cover for an owned game row: IGDB art, falling back to whatever the
+ * platform sync stored.
+ *
+ * The fallback is a LAST resort, not a peer, and that is the whole point of this
+ * function existing. `cover_small` is an Exophase URL and every one of them is
+ * **109x60 - a landscape banner, not a poster**. Dropped into a 3:4 slot with
+ * object-fit: cover it is cropped to roughly 45x60 and then scaled up by the
+ * browser: 3.1x in an Activity row, 3.7x on Home's Now playing card, 3.3x in the
+ * Insights week block. All three reached for cover_small first, and all three
+ * had an IGDB id sitting right next to it (479 of 513 rows have one).
+ *
+ * It also cannot be fixed downstream. optImg routes IGDB art through wsrv.nl and
+ * refuses to enlarge past the source bucket, which is exactly why IGDB covers
+ * are sharp; non-IGDB URLs pass through untouched, so an Exophase banner is
+ * upscaled by the browser with nothing in the way.
+ */
+export function libraryCover(game, fallback = null) {
+  if (game && game.cover_igdb) return igdbCover(game.cover_igdb, 't_cover_big')
+  if (game && game.cover_small) return game.cover_small
+  return fallback
+}
+
 // Labels name the PLATFORM YOU PLAYED ON, not the storefront the row was synced
 // from. `steam` reads "PC" for that reason: the environment key stays `steam`
 // because that is where the data comes from, but nobody thinks of it as a console

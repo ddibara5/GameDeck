@@ -10,7 +10,7 @@ import { loadLeavingSoon } from '../lib/discover.js'
 import { useWishlist } from '../lib/wishlist.js'
 import { normTitle } from '../lib/discover.js'
 import { useHomeCards, CARD_BY_KEY } from '../lib/homeCards.js'
-import { platformMeta, minutesToHhm, parseDayOrInstant } from '../lib/format.js'
+import { platformMeta, minutesToHhm, parseDayOrInstant, libraryCover } from '../lib/format.js'
 import { loadRecentActivity } from '../lib/recentActivity.js'
 import { weekStats, WEEK_SPAN, startOfDay, daysBetween, dayKey, eventDay } from '../lib/playWeek.js'
 import './insights.css'
@@ -207,7 +207,7 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
       master_id: latest.master_id,
       title: latest.title,
       environment: latest.environment,
-      cover: (game && game.cover_small) || latest.cover_small || null,
+      cover: libraryCover(game, latest.cover_small || null),
       genre: game ? shortGenre(game.genre) : null,
       game,
       lastDay: eventDay(latest),

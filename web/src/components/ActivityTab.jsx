@@ -6,7 +6,7 @@ import Skeleton from './Skeleton.jsx'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
 import { fetchRecentActivity } from '../lib/recentActivity.js'
 import { eventDay, daysBetween } from '../lib/playWeek.js'
-import { formatRelativeDay, platformMeta } from '../lib/format.js'
+import { formatRelativeDay, platformMeta, libraryCover } from '../lib/format.js'
 import './activity.css'
 
 // How far back the feed reads. Deep enough to scroll for a while, still one small
@@ -154,9 +154,10 @@ function ActivityRow({ row, game, onOpen }) {
   const ach = Number(row.achievements_delta) || 0
   const mins = Number(row.minutes_delta) || 0
 
-  const cover = game
-    ? game.cover_small || row.cover_small
-    : row.cover_small
+  // v_recent_activity carries no cover_igdb, so a row whose game has left the
+  // library still falls back to the platform art. Everything still in the
+  // library now gets the IGDB poster.
+  const cover = libraryCover(game, row.cover_small)
 
   return (
     <button

@@ -1,6 +1,6 @@
 import Cover from './Cover.jsx'
 import CompletionBar from './CompletionBar.jsx'
-import { platformMeta, igdbCover } from '../lib/format.js'
+import { platformMeta, libraryCover } from '../lib/format.js'
 import { effectiveStatus, STATUS_LABELS } from '../lib/userStatus.js'
 
 export default function GameCard({ game, onSelect, statusMap }) {
@@ -16,7 +16,7 @@ export default function GameCard({ game, onSelect, statusMap }) {
   return (
     <button type="button" className="game-card" onClick={() => onSelect(game)}>
       <Cover
-        src={game.cover_igdb ? igdbCover(game.cover_igdb, 't_cover_big') : game.cover_small}
+        src={libraryCover(game)}
         title={game.title}
         size="sm"
       />
