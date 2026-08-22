@@ -67,13 +67,16 @@ export default function DiscoverTab({ onCustomize }) {
 
       {/* All three stay mounted so chat history / scroll survive tab flips; only
           one shows. */}
-      <div style={{ display: subTab === 'foryou' ? 'block' : 'none' }}>
+      <div className={`discover-view${subTab === 'foryou' ? '' : ' off'}`}>
         <DiscoverForYou onAsk={askAbout} />
       </div>
-      <div style={{ display: subTab === 'browse' ? 'block' : 'none' }}>
+      <div className={`discover-view${subTab === 'browse' ? '' : ' off'}`}>
         <DiscoverBrowse onAsk={askAbout} onCustomize={onCustomize} />
       </div>
-      <div style={{ display: subTab === 'ask' ? 'block' : 'none' }}>
+      {/* `fill` on this one only: the Ask view is a fixed-height column with its
+          composer pinned to the bottom, and it now takes that height from the
+          flex column rather than from a subtraction. */}
+      <div className={`discover-view fill${subTab === 'ask' ? '' : ' off'}`}>
         <DiscoverAsk seedPrompt={seedPrompt} onSeedConsumed={() => setSeedPrompt(null)} />
       </div>
     </div>

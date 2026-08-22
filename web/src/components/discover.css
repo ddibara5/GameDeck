@@ -18,6 +18,26 @@
 .discover-page {
   --disc-topbar-h: 88px;
   position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* One of the three sub-views, all mounted so chat history and scroll survive a
+   flip. Only the Ask view fills: For you and Browse are taller than the viewport
+   and must size to their content, so giving all three `flex: 1` would let the
+   two scrolling ones be squeezed instead. */
+.discover-view.fill {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Last, so it beats .fill's display at equal specificity. */
+.discover-view.off {
+  display: none;
 }
 
 /* Transparent, not --bg: this bar is in flow, so nothing passes behind it, and
@@ -40,13 +60,8 @@
   margin: 0 16px;
 }
 
-/* Ask view keeps the chat's fixed-height, input-pinned layout, minus the
-   Discover top bar we now render above it. */
-.discover-page .chat-page {
-  height: calc(
-    100vh - var(--tabbar-height) - var(--safe-bottom) - var(--app-header-h) - var(--top-inset) - var(--disc-topbar-h)
-  );
-}
+/* The Ask view's height is whatever is left in the column now, so the top bar's
+   own height no longer has to be subtracted here as well as reserved above. */
 
 .chat-actions-row {
   display: flex;

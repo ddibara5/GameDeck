@@ -823,10 +823,19 @@ textarea {
   position: relative;
 }
 
+/* A flex column, so a page that has to fill the viewport can say `flex: 1`
+   instead of subtracting a list of everything above it. That list is what broke
+   the Ask view: .chat-page named the header, the top inset and the Discover top
+   bar, and then 982721f moved the large page title into App.jsx above every tab
+   without adding it. The chat pane was 48px too tall from that day, which put
+   the composer 36px behind the floating tab bar with the page overflowing by 60.
+   Enumerating what sits above you cannot survive something new being put there. */
 .app-main {
   flex: 1;
-  padding-bottom: calc(var(--tabbar-height) + var(--safe-bottom) + 12px);
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: calc(var(--tabbar-height) + var(--safe-bottom) + 12px);
 }
 
 /* Bottom bar switched off in Settings. One variable, set on the app root, so
@@ -1477,7 +1486,8 @@ textarea {
 .chat-page {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - var(--tabbar-height) - var(--safe-bottom) - var(--app-header-h) - var(--top-inset));
+  flex: 1;
+  min-height: 0;
 }
 
 .chat-topbar {
