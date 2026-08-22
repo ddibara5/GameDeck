@@ -518,7 +518,11 @@ button.shelf-head:active {
   align-items: baseline;
   gap: 8px;
   padding: 14px 16px 8px;
-  background: var(--bg);
+  background: var(--glass);
+  /* The one bar that has something moving behind it today: it is sticky, and the
+     rail's own grid scrolls under it. */
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
 }
 .rail-sech-l {
   font-size: var(--t-sub);
@@ -556,14 +560,30 @@ button.shelf-head:active {
   color: var(--muted);
 }
 
+/* Filled, not outlined. These two say what is narrowing the page and they were
+   the only controls in the app with no background at all: an outline and some
+   letters, sitting on whatever the page happens to be. The fill is the same
+   material as the bars, without the blur - a 22px chip has almost nothing behind
+   it to frost, and ten of them would be ten compositing layers holding the
+   smallest type in the app. */
 .showing-chip {
   font-size: var(--t-cap);
   font-weight: var(--w-semi);
   color: var(--accent);
-  border: 1px solid var(--line);
+  background: var(--glass-chip);
+  border: 1px solid var(--glass-line);
   border-radius: var(--r-pill);
   padding: 3px 9px;
   white-space: nowrap;
+}
+
+/* Measured, the same way the light tab-bar label was: --accent in light mode is
+   #9c7449 and reads 3.45:1 on the page, which it did before this chip had any
+   background at all. --walnut is the theme's own dark mid-tone and every accent
+   defines one, so this follows Slate, Sage, Plum and Graphite without five more
+   lines. Walnut measures 6.09:1. */
+[data-theme="light"] .showing-chip {
+  color: var(--walnut);
 }
 
 .showing-clear {
@@ -613,8 +633,8 @@ button.shelf-head:active {
   font-size: var(--t-foot);
   font-weight: var(--w-med);
   color: var(--muted);
-  background: none;
-  border: 1px solid var(--line);
+  background: var(--glass-chip);
+  border: 1px solid var(--glass-line);
   border-radius: var(--r-pill);
   padding: 6px 12px;
   white-space: nowrap;

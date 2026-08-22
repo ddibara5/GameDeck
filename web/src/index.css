@@ -24,6 +24,28 @@
   --psn: #0f3fa8;
   --steam: #66c0f4;
 
+  /* ---------- Glass ----------
+     The material the floating tab bar is made of, named so the other bars and
+     the unfilled chips can be made of the same thing instead of --bg. Every one
+     of them was an opaque band or no background at all, which is a flat slab cut
+     out of whatever ends up behind the page.
+
+     It is a fixed grey rather than a token-derived one, exactly as the tab bar
+     has always been: the point of glass is that it does not belong to the page's
+     palette, it sits on top of it.
+
+     --glass-blur is deliberately NOT applied to everything that takes --glass.
+     An element carrying backdrop-filter is promoted to its own compositing layer
+     and iOS rasterises its text softer, which is the measured reason the app
+     header drops the filter when it is not scrolled. A bar with nothing passing
+     behind it pays that cost for no picture, so only the ones that something
+     actually moves behind carry it: the header, the tab bar, and .rail-sech.
+     The rest take it when there is a ground for it to frost. */
+  --glass: rgba(38, 38, 42, 0.34);
+  --glass-chip: rgba(30, 30, 34, 0.58);
+  --glass-line: rgba(255, 255, 255, 0.14);
+  --glass-blur: blur(28px) saturate(180%);
+
   /* ---------- Type scale ----------
      Nine steps plus one display size, matching the sizes the system font is
      actually cut for (iOS caption2 / caption1 / footnote / subheadline / body /
@@ -191,11 +213,11 @@
 }
 
 .app-header.scrolled {
-  background: rgba(38, 38, 42, 0.34);
-  border-bottom-color: rgba(255, 255, 255, 0.14);
+  background: var(--glass);
+  border-bottom-color: var(--glass-line);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
 }
 
 /* Two things cannot both own the top-left. Once the inline title appears, the
@@ -669,8 +691,8 @@
   align-items: center;
   gap: 10px;
   padding: calc(var(--top-inset) + 12px) 16px 14px;
-  border-bottom: 1px solid var(--line);
-  background: var(--bg);
+  border-bottom: 1px solid var(--glass-line);
+  background: var(--glass);
 }
 
 .settings-back {
@@ -861,11 +883,11 @@ textarea {
   gap: 2px;
   padding: 4px;
   border-radius: var(--r-pill);
-  background: rgba(38, 38, 42, 0.34);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: var(--glass);
+  border: 1px solid var(--glass-line);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 -10px 16px rgba(0, 0, 0, 0.16);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   z-index: 50;
 }
 
@@ -999,9 +1021,9 @@ textarea {
 /* Library search + filters scroll away with the list; only the app header stays
    fixed. This block is IN FLOW despite the name, so nothing passes behind it. */
 .library-sticky {
-  background: var(--bg);
+  background: var(--glass);
   padding: 12px 16px 10px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--glass-line);
 }
 
 .search-input {
@@ -1490,23 +1512,6 @@ textarea {
   min-height: 0;
 }
 
-.chat-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px 16px 12px;
-  border-bottom: 1px solid var(--line);
-  background: var(--bg);
-}
-
-.chat-topbar-title {
-  font-size: var(--t-t2);
-  font-weight: var(--w-semi);
-  letter-spacing: var(--t-t2-tr);
-  margin: 0;
-}
-
 .chat-newchat-btn {
   display: inline-flex;
   align-items: center;
@@ -1736,8 +1741,8 @@ textarea {
   display: flex;
   gap: 8px;
   padding: 10px 16px calc(10px + var(--safe-bottom));
-  border-top: 1px solid var(--line);
-  background: var(--bg);
+  border-top: 1px solid var(--glass-line);
+  background: var(--glass);
 }
 
 .chat-input {
@@ -2081,14 +2086,18 @@ textarea {
 /* Tab bar + header glass, light mode: neutral near-white frosted (matches the
    neutral dark treatment), a translucent raised active chip that lets content
    show through (see-through like dark), with near-black ink. */
+/* One redefinition of the material instead of one per element. These two values
+   were already here for the header and the bar; the other six bars and the chips
+   inherit them now rather than each needing a light-mode line of its own. */
+:root[data-theme="light"] {
+  --glass: rgba(245, 245, 248, 0.42);
+  --glass-chip: rgba(250, 250, 252, 0.62);
+  --glass-line: rgba(40, 38, 36, 0.12);
+}
 [data-theme="light"] .app-header.scrolled {
-  background: rgba(245, 245, 248, 0.42);
-  border-bottom-color: rgba(40, 38, 36, 0.12);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 [data-theme="light"] .tabbar {
-  background: rgba(245, 245, 248, 0.42);
-  border-color: rgba(40, 38, 36, 0.12);
   box-shadow: 0 12px 30px rgba(40, 40, 45, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.75), inset 0 -10px 16px rgba(40, 40, 45, 0.05);
 }
 /* Measured, not guessed: #6a655d rendered at 5.01:1 against the bar's actual
@@ -2201,8 +2210,8 @@ textarea {
 .seg {
   display: flex;
   gap: 4px;
-  background: var(--bg);
-  border: 1px solid var(--line);
+  background: var(--glass);
+  border: 1px solid var(--glass-line);
   border-radius: var(--r-sm);
   padding: 4px;
 }
