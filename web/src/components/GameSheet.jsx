@@ -16,7 +16,7 @@ import {
 } from '../lib/userStatus.js'
 import { useWishlist, toggleWishlist } from '../lib/wishlist.js'
 import { fetchGameById } from '../lib/discover.js'
-import { tintFor } from '../lib/tint.js'
+import { coverLook } from '../lib/tint.js'
 import { resolveTheme } from '../lib/theme.js'
 import Lightbox from './Lightbox.jsx'
 import './gameSheet.css'
@@ -158,18 +158,22 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   // IGDB nor wsrv.nl documents that it does, and a missing header fails silently
   // as "no tint". The API route serves the same bytes from this origin, so the
   // question does not arise. See web/api/tint.js.
-  const [tint, setTint] = useState(null)
+  // ONE read of one image gives both the card's colour and its backdrop. They
+  // cannot share a fetch any other way: the sampler needs crossOrigin, a CSS
+  // background never has it, and the two cache partitions do not meet.
+  const [look, setLook] = useState({ color: null, backdrop: null })
+  const tintId = game ? coverImageId(game) : null
+  const tintSrc = tintId ? `/api/tint?id=${encodeURIComponent(tintId)}` : null
   useEffect(() => {
-    if (!game) return undefined
-    const imageId = coverImageId(game)
-    if (!imageId) { setTint(null); return undefined }
+    if (!tintSrc) { setLook({ color: null, backdrop: null }); return undefined }
     let alive = true
-    setTint(null)
-    tintFor(`/api/tint?id=${encodeURIComponent(imageId)}`, resolveTheme()).then((t) => {
-      if (alive) setTint(t)
+    setLook({ color: null, backdrop: null })
+    coverLook(tintSrc, resolveTheme()).then((l) => {
+      if (alive) setLook(l)
     })
     return () => { alive = false }
-  }, [game, owned])
+  }, [tintSrc])
+  const tint = look.color
 
   if (!game) return null
 
@@ -237,6 +241,19 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
           ...(tint ? { '--gs-tint': tint } : null),
         }}
       >
+        {/* The cover again, blurred and full bleed, masked out before any text
+            starts. One 90px request pays for both the card's colour and its
+            backdrop: this is a data url re-encoded from the image the sampler
+            already decoded, so it costs no request of its own and appears on
+            the same frame as the colour. Deliberately NOT the cover element's
+            own url, which goes through the CDN at the slot's width (~480px) and
+            would be a second fetch of a picture about to be blurred anyway. */}
+        {look.backdrop ? (
+          <div className="gs-hero" aria-hidden="true">
+            <div className="gs-hero-img" style={{ backgroundImage: `url(${look.backdrop})` }} />
+          </div>
+        ) : null}
+
         <div className="sheet-drag-zone" {...dragHandlers}>
           <div className="modal-handle" />
           <Cover src={coverSrc} title={title} size="lg" />

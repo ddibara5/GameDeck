@@ -103,6 +103,19 @@ export function clampTint(rgb, theme = 'dark') {
   return hslToRgb(h, clamp(s, SAT_RANGE[0], SAT_RANGE[1]), ll)
 }
 
+// The backdrop is drawn from the SAME decoded image as the colour, handed back
+// as a data url. It cannot share a cache entry with a CSS background-image no
+// matter how identical the address is: this one is fetched with
+// `crossOrigin = 'anonymous'` and a CSS background never is, so the two live in
+// different cache partitions and the browser fetches twice. Measured, before
+// this: two requests for /api/tint?id=co1 on every sheet open.
+//
+// 90px wide is the source's own width, so nothing is upscaled, and the result
+// is blurred past 34px on screen anyway. WebP at 0.72 keeps the string small.
+const BACKDROP_W = 90
+const BACKDROP_TYPE = 'image/webp'
+const BACKDROP_Q = 0.72
+
 /**
  * Average colour of an image, or null if it cannot be read.
  *
@@ -132,7 +145,23 @@ export function sampleImage(url) {
           if (d[i + 3] < MIN_ALPHA) continue
           r += d[i]; g += d[i + 1]; b += d[i + 2]; n++
         }
-        done(n ? [Math.round(r / n), Math.round(g / n), Math.round(b / n)] : null)
+        if (!n) return done(null)
+        // Re-draw at backdrop size from the image already in hand. Wrapped
+        // separately so a browser that will not encode webp costs the backdrop
+        // and not the colour.
+        let backdrop = null
+        try {
+          const bc = document.createElement('canvas')
+          const ratio = img.naturalHeight / img.naturalWidth || 1
+          bc.width = BACKDROP_W
+          bc.height = Math.max(1, Math.round(BACKDROP_W * ratio))
+          bc.getContext('2d').drawImage(img, 0, 0, bc.width, bc.height)
+          const url = bc.toDataURL(BACKDROP_TYPE, BACKDROP_Q)
+          if (url && url.startsWith('data:image/')) backdrop = url
+        } catch {
+          backdrop = null
+        }
+        done({ rgb: [Math.round(r / n), Math.round(g / n), Math.round(b / n)], backdrop })
       } catch {
         done(null) // tainted canvas
       }
@@ -144,9 +173,16 @@ export function sampleImage(url) {
   })
 }
 
-/** Sample and clamp in one call. Resolves to a css rgb() string, or null. */
-export async function tintFor(url, theme = 'dark') {
-  const raw = await sampleImage(url)
-  const t = clampTint(raw, theme)
-  return t ? `rgb(${t[0]}, ${t[1]}, ${t[2]})` : null
+/**
+ * One read of one image, both things the card needs from it.
+ * Resolves to `{ color, backdrop }`, either of which may be null.
+ */
+export async function coverLook(url, theme = 'dark') {
+  const got = await sampleImage(url)
+  if (!got) return { color: null, backdrop: null }
+  const t = clampTint(got.rgb, theme)
+  return {
+    color: t ? `rgb(${t[0]}, ${t[1]}, ${t[2]})` : null,
+    backdrop: got.backdrop,
+  }
 }

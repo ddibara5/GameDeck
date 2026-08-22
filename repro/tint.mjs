@@ -241,8 +241,60 @@ for (const theme of ['dark', 'light']) {
       `${bottom} against surface rgb(${surf.join(',')}): distance ${dist}`
     )
 
+    // The hero backdrop's whole safety argument is GEOMETRIC: the art is masked
+    // out before the first word, so no contrast measurement has to hold against
+    // an arbitrary image. Assert the geometry directly, because the contrast
+    // check below would still pass if the art merely happened to be dark.
     await page.evaluate(() => { document.querySelector('.modal-sheet').scrollTop = 0 })
-    await page.waitForTimeout(150)
+    await page.waitForTimeout(200)
+    const hero = await page.evaluate(() => {
+      const s = document.querySelector('.modal-sheet')
+      const t = document.querySelector('.detail-title')
+      const h = document.querySelector('.gs-hero')
+      if (!s || !t) return null
+      const sr = s.getBoundingClientRect()
+      return {
+        present: Boolean(h),
+        titleTop: Math.round(t.getBoundingClientRect().top - sr.top),
+        box: { x: Math.round(sr.left), y: Math.round(sr.top), w: Math.round(sr.width) },
+      }
+    })
+    if (hero && hero.present) {
+      const hide = await page.addStyleTag({
+        content: '.modal-sheet > *:not(.gs-hero){visibility:hidden !important}',
+      })
+      await page.waitForTimeout(180)
+      const strip = await page.screenshot({
+        clip: { x: hero.box.x, y: hero.box.y, width: hero.box.w, height: Math.min(520, hero.titleTop + 120) },
+      })
+      await hide.evaluate((el) => el.remove())
+      const lastRow = await page.evaluate(async (b64) => {
+        const i = new Image(); i.src = 'data:image/png;base64,' + b64; await i.decode()
+        const c = document.createElement('canvas'); c.width = i.width; c.height = i.height
+        c.getContext('2d').drawImage(i, 0, 0)
+        const d = c.getContext('2d').getImageData(0, 0, i.width, i.height).data
+        // The flat tint is whatever the bottom row of this strip reads, which is
+        // past the mask by construction.
+        const y0 = i.height - 2
+        const k0 = (y0 * i.width + (i.width >> 1)) * 4
+        const base = [d[k0], d[k0 + 1], d[k0 + 2]]
+        let last = -1
+        for (let y = 0; y < i.height; y++) {
+          for (let x = 0; x < i.width; x += 3) {
+            const k = (y * i.width + x) * 4
+            const dd = Math.abs(d[k] - base[0]) + Math.abs(d[k + 1] - base[1]) + Math.abs(d[k + 2] - base[2])
+            if (dd > 8) { last = y; break }
+          }
+        }
+        return last
+      }, strip.toString('base64'))
+      check(
+        `${tag}: the backdrop is gone before the first word`,
+        lastRow > 0 && lastRow < hero.titleTop,
+        `art stops at ${lastRow}px, title starts at ${hero.titleTop}px`
+      )
+    }
+
     const wTop = await worstContrast(page)
     await page.evaluate(() => { document.querySelector('.modal-sheet').scrollTop = 99999 })
     await page.waitForTimeout(250)

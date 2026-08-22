@@ -237,6 +237,76 @@
    background-color, not a gradient: it covers the sheet's whole scroll area
    natively, which is what "the whole card" means. An absolutely positioned
    layer only ever covered the padding box, and that was defect one. */
+/* ---------- The hero backdrop ----------
+   The cover again, blurred to a colour field, filling the top of the card and
+   DISSOLVING into the tint rather than sitting behind a veil.
+
+   The mask is the whole idea, and it is what three previous attempts at this
+   were missing. A veil has to be opaque enough to protect the worst text
+   against the worst art, everywhere, all at once. A mask does not protect
+   anything: it removes the art entirely before the text starts. So no word on
+   this card is ever over an image, which is not a contrast argument that has to
+   be re-measured per game - it is a geometric one, and it is asserted as
+   geometry rather than as a ratio.
+
+   The offsets are load-bearing and were measured, not guessed: the art is gone
+   by 336px and the title starts at 352 at its highest. If the sheet's head ever
+   grows or shrinks, move the mask's last stop with it.
+
+   Painted from a data url re-encoded from the very image the tint sampler
+   decoded, so it costs NO request of its own and lands on the same frame as the
+   colour. It fades in over the tint, which is already there by then, so there
+   is no flash of anything. */
+.gs-hero {
+  position: relative;
+  /* The sheet's border-top (1) plus padding-top (16), and its side padding.
+     Keep in step with .modal-sheet's padding in index.css. */
+  --gs-bleed-y: 17px;
+  --gs-bleed-x: 20px;
+  height: 420px;
+  margin: calc(-1 * var(--gs-bleed-y)) calc(-1 * var(--gs-bleed-x)) -420px;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: inherit;
+  /* 80%, not 86%. At 86% the mask reaches zero at 361px and the title starts at
+     352, so the last few percent of art landed under the first word - and the
+     first fixture tried here HID that, because its tint and its art were close
+     enough in colour that the difference fell under the detection threshold and
+     read as "art stops at 323". The assertion in repro/tint.mjs runs three
+     covers chosen for contrast against the tint for exactly this reason.
+     80% of 420 is 336, which clears 352 by 16px. */
+  -webkit-mask-image: linear-gradient(180deg, #000 0, #000 38%, transparent 80%);
+  mask-image: linear-gradient(180deg, #000 0, #000 38%, transparent 80%);
+}
+
+/* Inset NEGATIVE so the blur's soft rim falls outside the band and .gs-hero
+   clips it. The rim is why an unclipped blurred layer shows a seam, and it is
+   the same trap as the scale overhang that shipped as a visible band in
+   567a27d. No transform here: a transform would scale the mask with the
+   element and move its last stop off the offsets it was measured against. */
+.gs-hero-img {
+  position: absolute;
+  inset: -14%;
+  background-size: cover;
+  background-position: center 30%;
+  filter: blur(34px) saturate(1.25);
+  opacity: 0;
+  animation: gs-hero-in 240ms ease forwards;
+}
+
+@keyframes gs-hero-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gs-hero-img {
+    opacity: 1;
+    animation: none;
+  }
+}
+
 .modal-sheet {
   background-color: var(--gs-tint, var(--surface));
   transition: background-color 260ms ease;
