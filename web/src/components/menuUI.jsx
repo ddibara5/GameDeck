@@ -40,6 +40,11 @@ export const ICONS = {
   layers: icon(<><path d="M12 2 2 7l10 5 10-5-10-5z" /><path d="m2 17 10 5 10-5" /><path d="m2 12 10 5 10-5" /></>),
   play: icon(<><circle cx="12" cy="12" r="9" /><path d="M10 8.5v7l6-3.5z" fill="currentColor" stroke="none" /></>),
   check: icon(<><circle cx="12" cy="12" r="9" /><path d="m8.5 12 2.5 2.5 4.5-5" /></>),
+  // The unchecked half of a pick-one list. Same circle as `check` with nothing in
+  // it, so the two rows are the same shape and only the mark differs; a distinct
+  // glyph for "not chosen" makes the list look like five unrelated settings.
+  dot: icon(<circle cx="12" cy="12" r="9" opacity="0.4" />),
+  image: icon(<><rect x="3" y="4" width="18" height="16" rx="2.5" /><circle cx="8.75" cy="9.5" r="1.6" /><path d="m4 17 4.5-4.5 3 3 3.5-3.5L20 16" /></>),
   xcircle: icon(<><circle cx="12" cy="12" r="9" /><path d="m15 9-6 6M9 9l6 6" /></>),
   star: icon(<path d="m12 3 2.6 5.5 6 .8-4.4 4.2 1.1 6L12 16.9 6.7 19.5l1.1-6L3.4 9.3l6-.8z" />),
   eye: icon(

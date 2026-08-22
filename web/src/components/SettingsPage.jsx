@@ -11,6 +11,7 @@ import {
   getListSize,
   setListSize,
 } from '../lib/theme.js'
+import { getGround, setGround, GROUND_OPTIONS } from '../lib/ground.js'
 import { useMountTransition } from '../lib/useMountTransition.js'
 import { lockScroll } from '../lib/scrollLock.js'
 import { MenuItem, ICONS, relTime } from './menuUI.jsx'
@@ -82,6 +83,11 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
   const [accent, setAccentState] = useState(() => getAccent())
   const [shelfSize, setShelfSizeState] = useState(() => getShelfSize())
   const [listSize, setListSizeState] = useState(() => getListSize())
+  const [ground, setGroundState] = useState(() => getGround())
+  // Which sub-page is open: null is the root list. One piece of state rather than
+  // three booleans, because they are mutually exclusive by construction and the
+  // back button has exactly one thing to clear.
+  const [sub, setSub] = useState(null)
   const [chatsCleared, setChatsCleared] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [syncNote, setSyncNote] = useState('')
@@ -97,11 +103,16 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
   useEffect(() => {
     if (!mounted) return undefined
     const onKey = (e) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key !== 'Escape') return
+      // Back one level, not out. Escape on a sub-page returning you all the way
+      // to the app is the thing that makes a two-level settings screen feel like
+      // a trap door.
+      if (sub) setSub(null)
+      else onClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [mounted, onClose])
+  }, [mounted, onClose, sub])
 
   // Lock background scroll while the page is open, so the page behind it can't
   // scroll and its scrollbar doesn't show through.
@@ -138,7 +149,8 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
       // Only act on a clearly horizontal gesture, so vertical scrolling is untouched.
       if (Math.abs(dx) <= Math.abs(dy)) return
       if (fromEdge && dx > BACK_DX) {
-        onClose()
+        if (sub) setSub(null)
+        else onClose()
         tracking = false
       }
     }
@@ -154,7 +166,7 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
       window.removeEventListener('touchmove', onMove)
       window.removeEventListener('touchend', onEnd)
     }
-  }, [mounted, onClose])
+  }, [mounted, onClose, sub])
 
   // Load freshness data + version once when the page opens.
   useEffect(() => {
@@ -247,6 +259,13 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
     setChatsCleared(true)
   }
 
+  // Reopening Settings should land on the root list. Without this the page
+  // remembers the sub-page you were on when you dismissed it, and the gear button
+  // appears to open a random screen.
+  useEffect(() => {
+    if (!open) setSub(null)
+  }, [open])
+
   function changeTheme(pref) {
     setThemeState(setTheme(pref))
   }
@@ -261,6 +280,10 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
 
   function changeListSize(key) {
     setListSizeState(setListSize(key))
+  }
+
+  function changeGround(key) {
+    setGroundState(setGround(key))
   }
 
   function toggleKey() {
@@ -279,6 +302,15 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
   const locked = Date.now() < lockUntil
   const versionValue = version ? `${version.sha} · ${relTime(version.date) || ''}`.trim().replace(/·\s*$/, '').trim() : '-'
 
+  const labelOf = (opts, key) => (opts.find((o) => o.key === key) || {}).label || '-'
+  // Each Appearance row carries the setting it leads to, so the root list answers
+  // "what is my theme" without opening anything. That is the whole reason these
+  // three moved behind rows instead of staying a wall of controls: a sub-page you
+  // have to open to read is worse than the wall it replaced.
+  const themeValue = `${labelOf(THEME_OPTIONS, theme)} · ${labelOf(ACCENT_OPTIONS, accent)}`
+  const cardsValue = `${labelOf(SHELF_SIZE_OPTIONS, shelfSize)} · ${labelOf(LIST_SIZE_OPTIONS, listSize)}`
+  const groundValue = labelOf(GROUND_OPTIONS, ground)
+
   return (
     <div className={`settings-page${closing ? ' closing' : ''}`} role="dialog" aria-label="Settings">
       <div className="settings-hd">
@@ -291,85 +323,12 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
       </div>
 
       <div className="settings-body">
-        <div className="menu-appearance">
-          <div className="menu-appearance-head">
-            {ICONS.appear}
-            <span className="menu-label">Appearance</span>
-          </div>
-          <div className="seg" role="group" aria-label="Appearance">
-            {THEME_OPTIONS.map((opt) => (
-              <button
-                key={opt.key}
-                type="button"
-                className={`seg-btn${theme === opt.key ? ' active' : ''}`}
-                onClick={() => changeTheme(opt.key)}
-                aria-pressed={theme === opt.key}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-          <div className="menu-accent">
-            <div className="menu-accent-label">Theme</div>
-            <div className="accent-row" role="group" aria-label="Color theme">
-              {ACCENT_OPTIONS.map((opt) => (
-                <button
-                  key={opt.key}
-                  type="button"
-                  className={`accent-opt${accent === opt.key ? ' on' : ''}`}
-                  onClick={() => changeAccent(opt.key)}
-                  aria-pressed={accent === opt.key}
-                  title={opt.label}
-                >
-                  <span
-                    className="accent-dot"
-                    style={{
-                      '--sw-ring': opt.ring,
-                      '--sw-dot': opt.dot,
-                      '--sw-ring-l': opt.ringLight,
-                      '--sw-dot-l': opt.dotLight,
-                    }}
-                  >
-                    <i />
-                  </span>
-                  <span className="accent-name">{opt.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="menu-accent">
-            <div className="menu-accent-label">Shelf size</div>
-            <div className="seg" role="group" aria-label="Shelf size">
-              {SHELF_SIZE_OPTIONS.map((opt) => (
-                <button
-                  key={opt.key}
-                  type="button"
-                  className={`seg-btn${shelfSize === opt.key ? ' active' : ''}`}
-                  onClick={() => changeShelfSize(opt.key)}
-                  aria-pressed={shelfSize === opt.key}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="menu-accent">
-            <div className="menu-accent-label">List size</div>
-            <div className="seg" role="group" aria-label="List size">
-              {LIST_SIZE_OPTIONS.map((opt) => (
-                <button
-                  key={opt.key}
-                  type="button"
-                  className={`seg-btn${listSize === opt.key ? ' active' : ''}`}
-                  onClick={() => changeListSize(opt.key)}
-                  aria-pressed={listSize === opt.key}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
+        <div className="settings-section">
+          <div className="menu-sec-label">Appearance</div>
+          <div className="settings-group">
+            <MenuItem glyph={ICONS.appear} label="Theme" sub="Light or dark, and the color" value={themeValue} onClick={() => setSub('theme')} />
+            <MenuItem glyph={ICONS.image} label="Background" sub="What sits behind every tab" value={groundValue} onClick={() => setSub('background')} />
+            <MenuItem glyph={ICONS.layers} label="Card sizing" sub="Posters and list rows" value={cardsValue} onClick={() => setSub('cards')} />
           </div>
         </div>
 
@@ -483,6 +442,126 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
           </div>
         </div>
       </div>
+
+      <SubPage open={sub === 'theme'} title="Theme" onBack={() => setSub(null)}>
+        <Field label="Appearance">
+          <Seg options={THEME_OPTIONS} value={theme} onPick={changeTheme} name="Appearance" />
+        </Field>
+        <Field label="Color">
+          <div className="accent-row" role="group" aria-label="Color theme">
+            {ACCENT_OPTIONS.map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                className={`accent-opt${accent === opt.key ? ' on' : ''}`}
+                onClick={() => changeAccent(opt.key)}
+                aria-pressed={accent === opt.key}
+                title={opt.label}
+              >
+                <span
+                  className="accent-dot"
+                  style={{
+                    '--sw-ring': opt.ring,
+                    '--sw-dot': opt.dot,
+                    '--sw-ring-l': opt.ringLight,
+                    '--sw-dot-l': opt.dotLight,
+                  }}
+                >
+                  <i />
+                </span>
+                <span className="accent-name">{opt.label}</span>
+              </button>
+            ))}
+          </div>
+        </Field>
+      </SubPage>
+
+      {/* No preview swatch on these rows, because the page IS the preview: the
+          settings overlay paints the ground itself (see index.css), so tapping a
+          source changes the screen you are standing on. A 40px thumbnail of the
+          same thing would be a worse copy of what is already behind it. */}
+      <SubPage open={sub === 'background'} title="Background" onBack={() => setSub(null)}>
+        <div className="settings-group">
+          {GROUND_OPTIONS.map((opt) => (
+            <MenuItem
+              key={opt.key}
+              glyph={ground === opt.key ? ICONS.check : ICONS.dot}
+              label={opt.label}
+              sub={opt.sub}
+              onClick={() => changeGround(opt.key)}
+              chevron={false}
+            />
+          ))}
+        </div>
+        <p className="settings-note">
+          Over key art the background darkens itself until the smallest text on screen still
+          clears the contrast bar, so how much of the picture shows depends on the picture.
+        </p>
+      </SubPage>
+
+      <SubPage open={sub === 'cards'} title="Card sizing" onBack={() => setSub(null)}>
+        <Field label="Shelf posters" hint="Continue playing, Discover rails, wishlist">
+          <Seg options={SHELF_SIZE_OPTIONS} value={shelfSize} onPick={changeShelfSize} name="Shelf size" />
+        </Field>
+        <Field label="List rows" hint="Library and Discover lists">
+          <Seg options={LIST_SIZE_OPTIONS} value={listSize} onPick={changeListSize} name="List size" />
+        </Field>
+      </SubPage>
+    </div>
+  )
+}
+
+/* ---------- the second level ----------
+
+   A sub-page is the same shell as the page it sits on, one z-index up, so the
+   slide-in, the header and the scroll behaviour are the settings page's and not a
+   second implementation of them. It is mounted inside <SettingsPage> but position:
+   fixed, so nesting costs nothing in layout and buys the shared state. */
+
+function SubPage({ open, title, onBack, children }) {
+  const { mounted, closing } = useMountTransition(open)
+  if (!mounted) return null
+  return (
+    <div className={`settings-page settings-sub${closing ? ' closing' : ''}`} role="dialog" aria-label={title}>
+      <div className="settings-hd">
+        <button type="button" className="settings-back" onClick={onBack} aria-label="Back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M15 6l-6 6 6 6" />
+          </svg>
+        </button>
+        <h2 className="settings-hd-title">{title}</h2>
+      </div>
+      <div className="settings-body">{children}</div>
+    </div>
+  )
+}
+
+// A labelled control, in the same margin as a settings card so a sub-page of
+// segmented controls lines up with a sub-page of rows.
+function Field({ label, hint, children }) {
+  return (
+    <div className="settings-field">
+      <div className="menu-accent-label">{label}</div>
+      {children}
+      {hint ? <div className="settings-field-hint">{hint}</div> : null}
+    </div>
+  )
+}
+
+function Seg({ options, value, onPick, name }) {
+  return (
+    <div className="seg" role="group" aria-label={name}>
+      {options.map((opt) => (
+        <button
+          key={opt.key}
+          type="button"
+          className={`seg-btn${value === opt.key ? ' active' : ''}`}
+          onClick={() => onPick(opt.key)}
+          aria-pressed={value === opt.key}
+        >
+          {opt.label}
+        </button>
+      ))}
     </div>
   )
 }

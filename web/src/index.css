@@ -763,6 +763,42 @@
   border-top: 1px solid var(--line);
 }
 
+/* ---------- Settings sub-pages ----------
+
+   A sub-page is the settings shell again, one z-index up, sliding in over the
+   root list from the same keyframes. Nothing here re-describes the page: this
+   block is only the stacking and the two layouts the root list does not have. */
+.settings-sub {
+  z-index: 211;
+}
+
+/* A card in the body with no section header above it - the Background list. */
+.settings-body > .settings-group {
+  margin-top: 8px;
+}
+
+/* A labelled control rather than a row. Same 12px gutter as a card, so a
+   sub-page of segmented controls and a sub-page of rows share one left edge. */
+.settings-field {
+  margin: 0 12px;
+  padding: 14px 0 2px;
+}
+
+.settings-field-hint {
+  font-size: var(--t-cap);
+  color: var(--muted);
+  padding: 8px 2px 0;
+}
+
+/* One paragraph under a list, explaining a behaviour the rows cannot show. Not a
+   disabled MenuItem: a row that is not a control should not look like one. */
+.settings-note {
+  margin: 12px 14px 0;
+  font-size: var(--t-cap);
+  line-height: 1.5;
+  color: var(--muted);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .settings-page,
   .settings-page.closing,
@@ -835,10 +871,11 @@ textarea {
   max-width: 640px;
   margin: 0 auto;
   min-height: 100vh;
-  /* Two properties, not the `background` shorthand: --bg stays the flat colour
-     the chips and knockouts are painted in, and --ground is the image on top of
-     it. Setting them separately is what lets the ground be a setting without
-     touching a single one of the 20 other rules that read --bg. */
+  /* The flat colour, and only the flat colour. --bg is what the chips and the
+     knockouts are painted in, so the ground is a separate layer on top of this
+     one (see "The ground" below) rather than a value swapped in here - which is
+     what lets it be a setting without touching one of the 20 other rules that
+     read --bg. */
   background: var(--bg);
   display: flex;
   flex-direction: column;
@@ -858,6 +895,92 @@ textarea {
   display: flex;
   flex-direction: column;
   padding-bottom: calc(var(--tabbar-height) + var(--safe-bottom) + 12px);
+}
+
+/* ---------- The ground ----------
+   What sits behind every tab. --bg stays the flat colour the chips and knockouts
+   are painted in; the ground is a layer ON TOP of it and BELOW everything else,
+   which is what lets it be a setting without touching one of the 20 other rules
+   that read --bg.
+
+   Fixed rather than absolute: it is a backdrop, not part of the scrolling page,
+   and a 640px-wide .app on a desktop window still wants it edge to edge.
+
+   The veil's strength is set by lib/ground.js, per image, so that the brightest
+   part of the picture still clears 4.5:1 against --muted. It is not a taste
+   control and is not exposed: a heading over a photograph cannot be rescued by
+   choosing a text colour, so this is the only lever there is. The wash keeps a
+   fixed low value because a flat gradient has no bright part to measure. */
+:root {
+  --ground-veil-rgb: 18, 16, 14;
+  --ground-veil-a: 0.6;
+}
+:root[data-theme='light'] {
+  --ground-veil-rgb: 244, 240, 233;
+}
+
+/* Full-screen overlays carry their own copy of the ground rather than letting
+   the app's show through, and their own background stays OPAQUE while doing it.
+   Making the overlay transparent instead is the version that looks right in one
+   screenshot and is wrong: with a sub-page open it was three translucent sheets
+   stacked, and the Home title read straight through the Background list. */
+
+/* BELOW the content, not above it lifted back over.
+   The first version put the two layers at z-index 0 and gave .app-main z-index 1
+   to climb back over them, which quietly made .app-main a stacking context and
+   trapped every fixed overlay rendered inside it - the Discover filter sheet
+   stopped being clickable, and three harnesses that had never touched the ground
+   failed. A negative z-index paints between the surface's own background and its
+   in-flow content, which is where a ground belongs, and then nothing else on the
+   page has to know the ground exists.
+   It needs the surface to BE a stacking context, or -1 escapes to the root and
+   lands under .app's own --bg. .settings-page already is one (fixed, z-index
+   210); .app is given one only while a ground is on, so the default flat app
+   keeps exactly the stacking it has always had. */
+:root:not([data-ground='off']) .app {
+  z-index: 0;
+}
+
+:root:not([data-ground='off']) :is(.app, .settings-page)::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* The wash is the safe one: a flat gradient has no bright pixel, so its contrast
+   is exact rather than measured. It reads --walnut, which every colour theme
+   defines, so it follows Slate, Sage, Plum and Graphite without a second
+   setting. */
+:root[data-ground='wash'] :is(.app, .settings-page)::before {
+  background: radial-gradient(130% 90% at 22% -6%, var(--walnut), var(--bg) 72%);
+  opacity: 0.55;
+}
+
+/* The two picture sources. */
+:root[data-ground='nowplaying'] :is(.app, .settings-page)::before,
+:root[data-ground='shuffle'] :is(.app, .settings-page)::before {
+  background-image: var(--ground-src, none);
+  background-size: cover;
+  background-position: center top;
+  filter: blur(13px) saturate(1.2);
+  /* The blur samples from outside the box, so the layer is scaled up to keep the
+     soft transparent edge a blur leaves off the screen. */
+  transform: scale(1.16);
+}
+
+/* The veil is its own pseudo-element rather than a second background layer on
+   the one above, because the blur must not apply to it: blurring a flat wash
+   costs a full-screen filter pass and changes nothing. */
+:root[data-ground='nowplaying'] :is(.app, .settings-page)::after,
+:root[data-ground='shuffle'] :is(.app, .settings-page)::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: rgba(var(--ground-veil-rgb), var(--ground-veil-a));
 }
 
 /* Bottom bar switched off in Settings. One variable, set on the app root, so
@@ -2183,30 +2306,13 @@ textarea {
 }
 
 /* ============================================================
-   Appearance (theme) control in the drawer
-   ============================================================ */
-.menu-appearance {
-  padding: 8px 12px 4px;
-}
-
-.menu-appearance-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 4px 0 10px;
-}
-
-.menu-appearance-head .menu-icon {
-  width: 20px;
-  height: 20px;
-  color: var(--accent);
-  flex: none;
-}
-
-.menu-appearance-head .menu-label {
-  font-size: var(--t-sub);
-}
-
+   Appearance controls
+   ============================================================
+   These lived in a bespoke .menu-appearance block at the top of Settings: a
+   segmented control, a swatch row and two more segmented controls stacked above
+   a page where every other section was a list of rows. They now sit on sub-pages
+   (Theme, Background, Card sizing) reached from three rows in the Appearance
+   card, so the root list is one kind of thing all the way down. */
 .seg {
   display: flex;
   gap: 4px;
@@ -2237,10 +2343,6 @@ textarea {
 }
 
 /* Color theme (accent) swatch picker */
-.menu-accent {
-  padding: 14px 12px 2px;
-}
-
 .menu-accent-label {
   font-size: var(--t-cap2);
   font-weight: var(--w-bold);
