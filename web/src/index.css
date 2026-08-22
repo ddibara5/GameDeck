@@ -132,6 +132,12 @@
   padding: var(--top-inset) 16px 0;
   background: var(--bg);
   border-bottom: 1px solid transparent;
+  /* Transparent at the top of the page, where nothing has scrolled under it
+     yet, so the ground reads continuously into the top-left gutter instead of
+     being cut off by a 54px opaque band. Unconditional rather than gated on
+     data-ground: .app behind it is painted --bg either way, so with no ground
+     this changes nothing at all. The .scrolled state below takes back over at
+     4px of scroll, which is where content starts passing underneath. */
   /* No backdrop-filter here, deliberately. See .app-header.scrolled below. */
   transition: background var(--d-base) ease, border-color var(--d-base) ease;
 }
@@ -184,6 +190,10 @@
    Switching the filter at the threshold does not pop, because the background is
    going from opaque to translucent on the same clock; the much larger change
    covers it. */
+.app-header:not(.scrolled) {
+  background: transparent;
+}
+
 .app-header.scrolled {
   background: rgba(38, 38, 42, 0.34);
   border-bottom-color: rgba(255, 255, 255, 0.14);
@@ -598,7 +608,8 @@
   position: fixed;
   inset: 0;
   z-index: 210;
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image: var(--ground);
   display: flex;
   flex-direction: column;
   animation: settings-in var(--overlay-in) var(--enter-ease);
@@ -777,7 +788,12 @@ textarea {
   max-width: 640px;
   margin: 0 auto;
   min-height: 100vh;
-  background: var(--bg);
+  /* Two properties, not the `background` shorthand: --bg stays the flat colour
+     the chips and knockouts are painted in, and --ground is the image on top of
+     it. Setting them separately is what lets the ground be a setting without
+     touching a single one of the 20 other rules that read --bg. */
+  background-color: var(--bg);
+  background-image: var(--ground);
   display: flex;
   flex-direction: column;
   position: relative;
@@ -947,9 +963,12 @@ textarea {
 
 /* ---------- Sticky search / filter header (Library) ---------- */
 
-/* Library search + filters scroll away with the list; only the app header stays fixed. */
+/* Library search + filters scroll away with the list; only the app header stays fixed.
+   Transparent rather than --bg: this block is IN FLOW (the name is a leftover),
+   so nothing ever passes behind it, and painting the page colour again would
+   punch a band out of the ground. */
 .library-sticky {
-  background: var(--bg);
+  background: transparent;
   padding: 12px 16px 10px;
   border-bottom: 1px solid var(--line);
 }
@@ -1966,7 +1985,13 @@ textarea {
   --surface-2: #fdfaf4;
   --line: #e3dacb;
   --text: #2c2823;
-  --muted: #857b6d;
+  /* Was #857b6d, which measured 3.70:1 against --surface: below the 4.5 floor
+     for the body text it carries, and it had been that way since light mode
+     shipped. #675f52 is 5.60:1 on the surface and 4.76:1 under the sheet's key
+     art veil, which is the tightest ground it has to hold. It is the lightest
+     value that clears 4.5 in BOTH places; #6d6456 passes the first and misses
+     the second at 4.40. Sampled from rendered pixels, worst case in the box. */
+  --muted: #675f52;
   --walnut: #6f4e37;
   --walnut-light: #8a6a4f;
   --accent: #9c7449;
@@ -2351,5 +2376,46 @@ textarea {
 .library-searchbar .filter-btn {
   position: relative;
   overflow: visible;
+}
+
+/* ============================================================
+   THE GROUND  (data-ground on <html>, persisted by lib/theme.js)
+
+   What the page itself is painted with behind every card. One
+   `background-image` on .app and on the full-screen overlays; no text
+   colour, weight or size changes anywhere, which is why none of the
+   app's existing contrast measurements go stale.
+
+   The light falls at 12% -6%: the top-left gutter, beside the header
+   and above the first card. That placement is the whole design. The
+   Library's poster captions are the only type in the app with nothing
+   behind them, and they sit further down and to the right, where this
+   gradient has already fallen to zero. Measured: caption contrast is
+   identical with the ground on and off.
+
+   `--glow-rgb` rather than a hex, so the gradient is written once and
+   every colour theme declares its own tint below. Picking Slate
+   recolours the ground for free instead of needing five more
+   gradients. The far stop is `rgb(... / 0)` rather than `transparent`,
+   because `transparent` is rgba(0,0,0,0) and interpolating toward it
+   drags the midpoint through grey.
+   ============================================================ */
+:root {
+  --glow-rgb: 200 169 126;
+  --ground: none;
+}
+:root[data-theme="light"] { --glow-rgb: 156 116 73; }
+
+:root[data-accent="slate"] { --glow-rgb: 134 160 194; }
+:root[data-accent="slate"][data-theme="light"] { --glow-rgb: 77 109 149; }
+:root[data-accent="sage"] { --glow-rgb: 154 171 131; }
+:root[data-accent="sage"][data-theme="light"] { --glow-rgb: 94 112 70; }
+:root[data-accent="plum"] { --glow-rgb: 177 145 176; }
+:root[data-accent="plum"][data-theme="light"] { --glow-rgb: 124 86 123; }
+:root[data-accent="graphite"] { --glow-rgb: 152 162 174; }
+:root[data-accent="graphite"][data-theme="light"] { --glow-rgb: 89 98 111; }
+
+:root[data-ground="glow"] {
+  --ground: radial-gradient(120% 58% at 12% -6%, rgb(var(--glow-rgb) / 0.26), rgb(var(--glow-rgb) / 0) 62%);
 }
 
