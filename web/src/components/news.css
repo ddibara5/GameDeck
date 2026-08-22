@@ -20,20 +20,148 @@
 .news-list {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 8px;
   padding: 0 16px 8px;
 }
 
-/* Content layer: one opaque surface, elevation instead of an outline, no glass.
+/* THE ROW.
+   Was a full-width card carrying the article art, the whole summary, the
+   relevance line, the matched game and the source links. Measured on a real
+   week that came to 704-941px against 772px of list area, so ZERO whole cards
+   fitted on a screen and 42 stories was eighteen of them. Everything below the
+   headline moved into NewsSheet; what is left is the part you scan.
+
+   Two numbers here were found by measuring, not chosen. At TWO lines the
+   headline clipped 10 of one real week's 12 titles mid-phrase, because the
+   digest writes 48-73 character headlines; three lines is 128px and five
+   stories a screen instead of none. And a 76px thumbnail still clipped two of
+   those twelve, so the thumb is 64: swept against all twelve titles, 249px
+   clips two, 255px clips one, 261px clips none. 64 is the first thumb size
+   that clears the corpus, and it costs no height at all.
+
+   Content layer: one opaque surface, elevation instead of an outline, no glass.
    Apple's materials guidance is explicit that Liquid Glass belongs to controls
-   and navigation and not to the content layer, and the general form of that rule
-   is that a card should not be competing with the thing it exists to show. So
-   the border goes and the shadow does the separating. */
-.news-card {
+   and navigation and not to the content layer. */
+.news-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 128px;
+  padding: 12px;
   background: var(--surface);
-  border-radius: var(--radius);
+  border: none;
+  border-radius: 14px;
   box-shadow: var(--e2);
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.news-row:active {
+  background: var(--surface-2);
+}
+
+.news-row-thumb {
+  width: 64px;
+  height: 64px;
+  flex: none;
+  border-radius: 10px;
   overflow: hidden;
+  background: var(--surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.news-row-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* A 3:4 cover in a square crops to the middle, which on a game cover is usually
+   the character's chest. Bias upward so the face and the logo survive. */
+.news-row-thumb img.is-cover {
+  object-position: center 22%;
+}
+
+/* No art anywhere in the chain. An inner shape here read as a broken image, so
+   the tile is simply empty: the row keeps its rhythm and claims nothing. */
+.news-row-noart {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* min-width: 0, or the nowrap meta line below sets this item's floor and the
+   whole row grows past the screen. */
+.news-row-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.news-row-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: var(--t-sub);
+  font-weight: var(--w-semi);
+  line-height: 1.26;
+  color: var(--text);
+}
+
+/* One line, always. A long outlet name beside the relevance chip wrapped to a
+   second row and took the card past 128px, so the outlet is the part that
+   gives - it is also the least useful of the three. */
+.news-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 7px;
+  font-size: var(--t-cap);
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.news-row-src {
+  color: var(--accent);
+  font-weight: var(--w-semi);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.news-row-dot {
+  opacity: 0.5;
+  flex: none;
+}
+
+.news-row-time {
+  flex: none;
+}
+
+.news-row-why,
+.news-row-heat {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  flex: none;
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: var(--t-cap2);
+  color: var(--text);
+}
+
+.news-row-heat {
+  color: var(--muted);
 }
 
 /* A story with no article image borrows the matched game's cover instead of
