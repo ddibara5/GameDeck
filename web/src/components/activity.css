@@ -10,20 +10,40 @@
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  margin: 18px 16px 8px;
+  margin: 14px 16px 6px;
 }
 
 /* ---------------------------------------------------------------- timeline */
 
+/* A day group is a card, on the same surface and radius as a Library row.
+   Nothing inside it changed: same rail, same node, same row.
+   .tl is already the per-day container, so this needs no markup change.
+
+   The reason is the ground. Every row here is type on the page with nothing
+   behind it - measured on a real background with no surface, the title reads
+   3.3:1 and the 11px arc caption 1.3:1. On this panel both come back to 13.0
+   and 6.1, and because the fill is opaque those numbers do not move whatever
+   the background turns out to be. */
+.tl {
+  position: relative;
+  margin: 0 12px 10px;
+  padding: 4px 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
 /* One gutter, one rail, drawn once per day group. Every node centres on it:
-   21 + 1 = 22 = 16 + 6. Drawing a rail per row as well put two lines side by side. */
-.tl { position: relative; }
+   19 + 1 = 20 = 14 + 6. Drawing a rail per row as well put two lines side by side.
+   Inset top and bottom so it stops short of the rounded corners instead of
+   running into them. */
 .tl::before {
   content: '';
   position: absolute;
-  left: 21px;
-  top: 0;
-  bottom: 0;
+  left: 19px;
+  top: 10px;
+  bottom: 10px;
   width: 2px;
   background: var(--line);
 }
@@ -33,7 +53,7 @@
   display: flex;
   gap: 11px;
   width: 100%;
-  padding: 9px 16px 9px 34px;
+  padding: 9px 14px 9px 32px;
   text-align: left;
   border: none;
   background: none;
@@ -49,15 +69,19 @@
    renders, it just stops pretending to be a button. */
 .activity-row.flat { cursor: default; }
 
+/* A donut punched out of whatever the row sits on. The fill was --bg, chosen
+   when the feed sat directly on the page; on the panel that is a dark hole in
+   the wrong colour, so it follows the surface. Same class of fault as the game
+   sheet's tan strip: a token picked against a ground that stopped being fixed. */
 .activity-node {
   position: absolute;
-  left: 16px;
+  left: 14px;
   top: 22px;
   width: 12px;
   height: 12px;
   box-sizing: border-box;
   border-radius: 50%;
-  background: var(--bg);
+  background: var(--surface);
   border: 2px solid var(--line);
   z-index: 2;
 }

@@ -9,8 +9,14 @@
    the title matches every other tab. The height stays a single declared number
    because the Ask view's chat pane is sized by subtracting it from the viewport;
    letting this box grow freely would push the composer off the bottom. */
+/* The bar is a FIXED height because .chat-page below subtracts it to compute
+   its own; the two move together, so re-measure the composed gaps if anything
+   in here changes size. 116 was 40px taller than its contents, and centring
+   them in it spent that slack above the subtitle and below the control: the
+   same .page-title -> .page-subtitle pair measured 2px apart on Activity and
+   16px apart here. */
 .discover-page {
-  --disc-topbar-h: 116px;
+  --disc-topbar-h: 88px;
   position: relative;
 }
 
@@ -22,8 +28,8 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 10px;
-  padding: 0 0 12px;
+  gap: 4px;
+  padding: 0 0 10px;
   border-bottom: 1px solid var(--line);
   background: transparent;
 }
@@ -607,12 +613,24 @@ button.shelf-head:active {
   font-weight: var(--w-semi);
 }
 
-.fy-row-wrap {
-  position: relative;
+/* The feed is a column of cards, the same card a Library row is: same surface,
+   same hairline, same radius, same elevation. It was flat rows on the page
+   divided by a hairline, which is the shape that breaks first if anything ever
+   sits behind the page - a row of type with no surface under it. The gap does
+   the dividing now, so the hairline between rows is gone. */
+.fy-feed {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 16px 16px;
+  gap: 10px;
 }
 
-.fy-row-wrap + .fy-row-wrap {
-  border-top: 1px solid var(--line);
+.fy-row-wrap {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
 }
 
 /* The heart is a SIBLING of the row button, never inside it: a button inside a
@@ -621,9 +639,11 @@ button.shelf-head:active {
 .fy-row {
   display: flex;
   gap: 11px;
-  align-items: flex-start;
+  /* Centred, not top-aligned: against an 88px poster the three text lines are
+     55px, and flex-start left all of that slack under the last line. */
+  align-items: center;
   width: 100%;
-  padding: 10px 46px 10px 16px;
+  padding: 10px 44px 10px 10px;
   background: none;
   border: none;
   text-align: left;
@@ -632,10 +652,12 @@ button.shelf-head:active {
   cursor: pointer;
 }
 
+/* 66 wide to match --list-thumb's default, so a pick and a Library row line up
+   across the two tabs. */
 .cover.fy-cov {
-  width: 58px;
-  height: 77px;
-  min-width: 58px;
+  width: 66px;
+  height: 88px;
+  min-width: 66px;
   border-radius: var(--r-sm);
   margin: 0;
 }
@@ -690,11 +712,17 @@ button.shelf-head:active {
   color: var(--amber);
 }
 
+/* On a card the heart is not floating over artwork any more, so it drops the
+   glass puck the base rule gives it and reads as a plain control. */
 .fy-row-wrap .wish-heart {
   position: absolute;
   top: 50%;
-  right: 10px;
+  right: 8px;
   transform: translateY(-50%);
   width: 30px;
   height: 30px;
+  background: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  color: var(--muted);
 }
