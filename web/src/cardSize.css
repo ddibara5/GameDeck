@@ -17,9 +17,10 @@
 :root[data-list='comfortable'] { --list-thumb: 66px; --list-title: 16px; }
 :root[data-list='large'] { --list-thumb: 84px; --list-title: 17.5px; }
 
-/* Continue Playing (the Library home shelf) is pinned to the Small poster width;
-   only the Discover rails follow the Shelf size setting, via the higher-specificity
-   .discover-browse rule in discover.css that reads --shelf-pw. */
+/* Base poster width for any shelf outside Discover. The Library's "Continue
+   playing" rail was the only one and has been removed, so this now serves as the
+   unscoped default; the Discover rails still override it with --shelf-pw through
+   the higher-specificity .discover-browse rule in discover.css. */
 .shelf-card,
 .shelf-poster {
   width: 116px;

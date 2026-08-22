@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import GameCard from './GameCard.jsx'
 import GameDetail from './GameDetail.jsx'
 import Skeleton from './Skeleton.jsx'
-import HomeShelf from './HomeShelf.jsx'
 import { useStatusMap, effectiveStatus } from '../lib/userStatus.js'
 import { platformMeta } from '../lib/format.js'
 import { useLibraryGames, useVibeKeywords } from '../lib/useLibraryGames.js'
@@ -177,10 +176,6 @@ export default function LibraryTab() {
           </button>
         </div>
       </div>
-
-      {!loading && !error && search.trim() === '' && activeCount === 0 ? (
-        <HomeShelf games={games} onSelect={setSelectedGame} />
-      ) : null}
 
       {loading ? (
         <Skeleton count={6} />
