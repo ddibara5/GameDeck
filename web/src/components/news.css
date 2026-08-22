@@ -31,6 +31,19 @@
    fitted on a screen and 42 stories was eighteen of them. Everything below the
    headline moved into NewsSheet; what is left is the part you scan.
 
+   128px was the first draft and it carried 20px of dead air. The row is a flex
+   box with align-items: center, so a fixed height taller than its content just
+   distributes the slack around the text, which is what Dave saw as "white space
+   between the lettering". Measured with height:auto: 89px for a two-line
+   headline, 108px for a three-line one. So the row is 108 and the slack is
+   gone from ten of the week's twelve rows entirely.
+
+   Bigger type was the alternative and it is not free. Sweeping the twelve real
+   titles: 16px needs 277px to clip none, which is a 48px thumbnail, and 17px
+   needs 293px, which is 32px. Both trade the picture for the point size, and
+   the picture is the reason this layout beat a plain headline list. 15px is the
+   largest size that clips nothing beside a 64px thumb.
+
    Two numbers here were found by measuring, not chosen. At TWO lines the
    headline clipped 10 of one real week's 12 titles mid-phrase, because the
    digest writes 48-73 character headlines; three lines is 128px and five
@@ -47,7 +60,7 @@
   align-items: center;
   gap: 12px;
   width: 100%;
-  height: 128px;
+  height: 108px;
   padding: 12px;
   background: var(--surface);
   border: none;
@@ -116,12 +129,17 @@
 }
 
 /* One line, always. A long outlet name beside the relevance chip wrapped to a
-   second row and took the card past 128px, so the outlet is the part that
-   gives - it is also the least useful of the three. */
+   second row and took the card past its height, so the outlet is the part that
+   gives - it is also the least useful of the three.
+
+   Fixed 20px, which is the chip's own height. Without it a row carrying a chip
+   is 5px taller than one that is not, and with the row sized to its content
+   that produced three different heights in one list. */
 .news-row-meta {
   display: flex;
   align-items: center;
   gap: 6px;
+  height: 20px;
   margin-top: 7px;
   font-size: var(--t-cap);
   color: var(--muted);

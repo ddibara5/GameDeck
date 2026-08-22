@@ -149,7 +149,9 @@ const png = (r) => r.fulfill({
 })
 
 async function open(browser) {
-  const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, serviceWorkers: 'block' })
+  // hasTouch, because two of the assertions below are about a touch drag and
+  // TouchEvent does not exist in a context without it.
+  const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, hasTouch: true, serviceWorkers: 'block' })
   const page = await ctx.newPage()
   // Generic BEFORE specific: the last matching route wins in Playwright.
   await page.route('**/rest/v1/**', (r) => json(r, []))
@@ -193,7 +195,11 @@ const list = await page.evaluate(() => {
   }
 })
 check('the tab renders rows at all', list.count >= 7, `${list.count} rows`)
-check('every row is exactly 128px', list.heights.length === 1 && list.heights[0] === 128, `heights: ${list.heights.join(', ')}`)
+// One height, and that height is the CONTENT's. 128 was the first draft and it
+// left 20px of slack for align-items: center to spread around the text. The
+// uniformity is the part worth guarding: it is what fails if the meta line ever
+// wraps again.
+check('every row is exactly 108px', list.heights.length === 1 && list.heights[0] === 108, `heights: ${list.heights.join(', ')}`)
 check('the row is a real button, not a div with an onClick', list.tags.length === 1 && list.tags[0] === 'BUTTON', list.tags.join(','))
 // Guarded on the count. Against the previous build this measured "0 of 0
 // clipped" and PASSED, which is the vacuous pass this project has been bitten
@@ -292,6 +298,103 @@ check(
   sheet && sheet.bandBottom !== null && sheet.bandBottom <= sheet.titleTop,
   `band ends ${sheet?.bandBottom}px, headline starts ${sheet?.titleTop}px`
 )
+
+/* ---------- swipe down, from the art ---------- */
+
+// A synthetic touch drag, in TWO calls with a frame between them.
+//
+// This is not fussiness. useSheetDrag's onTouchEnd reads `dragY` from the
+// closure it was created in, so it only sees the drag if React has re-rendered
+// since the last touchmove. Firing start, moves and end inside one evaluate()
+// batches all of it into a single tick, onTouchEnd reads dragY === 0, and the
+// sheet stays open no matter how far the "finger" moved. The first version of
+// this harness did exactly that and reported a real feature as broken.
+async function dragDown(page, selector, dy) {
+  const started = await page.evaluate(
+    ([sel, dist]) => {
+      const el = document.querySelector(sel)
+      if (!el) return false
+      const r = el.getBoundingClientRect()
+      const x = Math.round(r.left + r.width / 2)
+      const y = Math.round(r.top + Math.min(r.height / 2, 60))
+      window.__dragEl = el
+      window.__dragXY = [x, y + dist]
+      const touch = (cy) => new Touch({ identifier: 1, target: el, clientX: x, clientY: cy })
+      const fire = (type, cy) =>
+        el.dispatchEvent(
+          new TouchEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            touches: [touch(cy)],
+            changedTouches: [touch(cy)],
+          })
+        )
+      fire('touchstart', y)
+      for (let i = 1; i <= 6; i++) fire('touchmove', y + (dist * i) / 6)
+      return true
+    },
+    [selector, dy]
+  )
+  if (!started) return false
+  await page.waitForTimeout(120)
+  await page.evaluate(() => {
+    const el = window.__dragEl
+    const [x, y] = window.__dragXY
+    const t = new Touch({ identifier: 1, target: el, clientX: x, clientY: y })
+    el.dispatchEvent(
+      new TouchEvent('touchend', { bubbles: true, cancelable: true, touches: [], changedTouches: [t] })
+    )
+  })
+  return true
+}
+
+const bandInZone = await page.evaluate(
+  () => Boolean(document.querySelector('.sheet-drag-zone .ns-band'))
+)
+check('the art is inside the drag zone, not beside it', bandInZone === true, String(bandInZone))
+
+// Does the gesture reach the sheet AT ALL? Without this, "dragging the body
+// does not close it" passes just as well when the drag mechanism is inert, and
+// the assertion after it would be measuring nothing.
+await page.evaluate(([sel]) => {
+  const el = document.querySelector(sel)
+  const r = el.getBoundingClientRect()
+  const x = Math.round(r.left + r.width / 2)
+  const y = Math.round(r.top + 40)
+  const touch = (cy) => new Touch({ identifier: 1, target: el, clientX: x, clientY: cy })
+  const fire = (type, cy) =>
+    el.dispatchEvent(
+      new TouchEvent(type, { bubbles: true, cancelable: true, touches: [touch(cy)], changedTouches: [touch(cy)] })
+    )
+  fire('touchstart', y)
+  fire('touchmove', y + 60)
+}, ['.ns-band'])
+await page.waitForTimeout(120)
+const moved = await page.evaluate(() => document.querySelector('.news-sheet')?.style.transform || '')
+check('a drag on the art moves the sheet with the finger', /translateY\(\d/.test(moved), `transform: ${moved || '(none)'}`)
+await page.evaluate(() => {
+  const el = document.querySelector('.ns-band')
+  const t = new Touch({ identifier: 1, target: el, clientX: 100, clientY: 100 })
+  el.dispatchEvent(new TouchEvent('touchend', { bubbles: true, cancelable: true, touches: [], changedTouches: [t] }))
+})
+await page.waitForTimeout(300)
+
+// A drag on the BODY must not dismiss. Without this the assertion below would
+// pass just as well if the handlers were bolted to the whole sheet, which would
+// eat the sheet's own scrolling - the exact thing useSheetDrag warns about.
+await dragDown(page, '.ns-sum', 220)
+await page.waitForTimeout(500)
+const bodyDragOpen = Boolean(await page.$('.news-sheet'))
+check('dragging the summary does NOT close the sheet', bodyDragOpen, bodyDragOpen ? 'still open' : 'closed')
+
+await dragDown(page, '.ns-band', 220)
+await page.waitForTimeout(600)
+const stillOpen = Boolean(await page.$('.news-sheet'))
+check('dragging the art DOES close it', !stillOpen, stillOpen ? 'still open' : 'closed')
+
+// Reopened, because the assertions after this one expect a sheet.
+await page.locator('.news-row', { hasText: 'Naughty Dog' }).first().click()
+await page.waitForTimeout(700)
 
 await page.keyboard.press('Escape').catch(() => {})
 await page.evaluate(() => document.querySelector('.modal-backdrop')?.click())

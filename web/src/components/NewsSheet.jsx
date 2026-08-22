@@ -66,29 +66,36 @@ export default function NewsSheet({ item, rel, onClose, onOpenGame }) {
           transition: dragging ? 'none' : 'transform 0.2s ease',
         }}
       >
+        {/* The ART IS PART OF THE DRAG ZONE, exactly as the cover is on the game
+            sheet. A sheet you can only dismiss by the 40px grabber reads as
+            broken on a phone; the band is 196px of surface that does nothing
+            else, so it is the natural place to pull from. Safe to include
+            because it holds no controls and nothing scrollable - the zone's
+            move handler calls preventDefault, which would eat the sheet's own
+            scroll if it covered the body. */}
         <div className="sheet-drag-zone" {...dragHandlers}>
           <div className="modal-handle" />
-        </div>
 
-        {/* A band the text sits BELOW, not a wash it sits on. The game sheet
-            spent three commits learning that a layer behind a headline turns
-            into an argument about how opaque the veil has to be, and a press
-            photo with a face in it wins that argument every time. */}
-        {art ? (
-          <div className={`ns-band${art.kind === 'cover' ? ' cover' : ''}`}>
-            {art.kind === 'cover' ? (
-              <img className="ns-band-fill" src={art.src} alt="" aria-hidden="true" decoding="async" />
-            ) : null}
-            <img
-              key={art.src}
-              className="ns-band-img"
-              src={art.src}
-              alt=""
-              decoding="async"
-              onError={() => setArtStep((s) => s + 1)}
-            />
-          </div>
-        ) : null}
+          {/* A band the text sits BELOW, not a wash it sits on. The game sheet
+              spent three commits learning that a layer behind a headline turns
+              into an argument about how opaque the veil has to be, and a press
+              photo with a face in it wins that argument every time. */}
+          {art ? (
+            <div className={`ns-band${art.kind === 'cover' ? ' cover' : ''}`}>
+              {art.kind === 'cover' ? (
+                <img className="ns-band-fill" src={art.src} alt="" aria-hidden="true" decoding="async" />
+              ) : null}
+              <img
+                key={art.src}
+                className="ns-band-img"
+                src={art.src}
+                alt=""
+                decoding="async"
+                onError={() => setArtStep((s) => s + 1)}
+              />
+            </div>
+          ) : null}
+        </div>
 
         <div className="ns-body">
           <div className="news-meta">
