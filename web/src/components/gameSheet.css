@@ -100,13 +100,53 @@
   gap: 6px;
   margin: 10px 0 2px;
 }
+/* ---------- Controls that sit ON the card ----------
+   The chips and the two secondary buttons used to be painted in --surface-2 and
+   --line, which are fixed tokens chosen against a fixed --surface. The card's
+   background is not fixed any more - it is sampled from the cover - so those
+   fills read as grey slabs dropped onto a coloured card.
+
+   Translucent instead, so they lift or deepen whatever the card happens to be
+   and stay part of it. White over the dark theme, black over the light one,
+   which is the only pair that works in both directions from an arbitrary hue.
+
+   This MOVES them across a line the contrast audit draws. An opaque fill is a
+   known ground, so repro/tint.mjs used to skip those elements; a translucent one
+   composites over the tint and has to be measured like any other text on the
+   card. The audit's threshold moved from "any fill" to "an effectively opaque
+   fill" in the same change, or this would have gone unchecked.
+
+   .meta-chip takes --text with them. It was --muted, and --muted needs the tint
+   at L 0.15 or below to clear 4.5 while the band reaches 0.20 - it only ever
+   passed because the opaque fill was hiding it. */
 .meta-chip {
   font-size: var(--t-cap);
-  color: var(--muted);
-  border: 1px solid var(--line);
-  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--gs-hairline);
+  background: var(--gs-raise);
   border-radius: var(--r-pill);
   padding: 3px 9px;
+}
+
+/* `:not(.filter-sheet)` is doing real work here, not tidiness. FOUR other
+   components render `<div className="modal-sheet filter-sheet">` - the Discover
+   filters, the rail sort, the Library filters and the shuffler - so scoping to
+   `.modal-sheet` alone restyles every one of them, and they sit on a fixed
+   --surface where the original token pair is still correct. Only the game sheet
+   has a --gs-tint. */
+.modal-sheet:not(.filter-sheet) {
+  --gs-raise: rgba(255, 255, 255, 0.08);
+  --gs-hairline: rgba(255, 255, 255, 0.14);
+}
+
+[data-theme="light"] .modal-sheet:not(.filter-sheet) {
+  --gs-raise: rgba(0, 0, 0, 0.05);
+  --gs-hairline: rgba(0, 0, 0, 0.12);
+}
+
+.modal-sheet:not(.filter-sheet) .discover-action:not(.primary) {
+  background: var(--gs-raise);
+  border-color: var(--gs-hairline);
 }
 
 /* Summary blurb. */

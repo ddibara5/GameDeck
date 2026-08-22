@@ -28,13 +28,42 @@ const day = (y, m, d) => Math.floor(Date.UTC(y, m, d) / 1000)
 // `released` is a calendar day stored at UTC midnight, and Home rebuilds the
 // local date from its UTC parts, so the fixture has to be UTC midnight of a
 // LOCAL calendar day or the row lands a day off in ET.
-const relDay = (n) => {
-  const t = new Date()
-  const d = new Date(t.getFullYear(), t.getMonth(), t.getDate() + n)
-  return Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 1000)
+// ONE INSTANT, in both clocks. This harness used to build its fixture from
+// `new Date()` and let the page read the machine's clock, which made eight of
+// its assertions pass or fail depending on the hour it was run: 147/147 at
+// 18:00 ET, 139/147 at 21:00, 149/149 again the next morning, with nothing
+// changed in between. A test that clears itself overnight is worse than one
+// that fails, because it teaches you to ignore the number - twice this week a
+// build-and-diff cycle went on proving those eight were not a regression.
+//
+// Wednesday, mid-afternoon: past days exist inside the current week, today is
+// not over, and it is nowhere near midnight in either zone or a DST boundary.
+const NOW = new Date('2026-08-19T15:00:00-04:00')
+const TZ = 'America/New_York'
+
+// The calendar day AT THE PAGE'S TIMEZONE, not the node process's. That is the
+// second half of the bug and the easier half to miss: node runs in whatever TZ
+// the machine has (UTC in this container), the page is pinned to ET, and for
+// the four hours between ET midnight and UTC midnight those two disagree about
+// what day it is. Deriving both from the same instant IN ET removes the
+// disagreement by construction rather than by choosing a lucky hour.
+const dayInTz = (d) => {
+  const f = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' })
+  const [y, m, dd] = f.format(d).split('-').map(Number)
+  return { y, m: m - 1, d: dd }
 }
-const iso = (daysAgo) => new Date(Date.now() - daysAgo * 86400000).toISOString()
-const dkey = (daysAgo) => new Date(Date.now() - daysAgo * 86400000).toISOString().slice(0, 10)
+
+// `released` is a calendar day stored at UTC midnight, and Home rebuilds the
+// local date from its UTC parts, so this has to be UTC midnight of an ET day.
+const relDay = (n) => {
+  const { y, m, d } = dayInTz(NOW)
+  return Math.floor(Date.UTC(y, m, d + n) / 1000)
+}
+const iso = (daysAgo) => new Date(NOW.getTime() - daysAgo * 86400000).toISOString()
+const dkey = (daysAgo) => {
+  const { y, m, d } = dayInTz(NOW)
+  return new Date(Date.UTC(y, m, d - daysAgo)).toISOString().slice(0, 10)
+}
 
 const ACTIVITY = [
   { event_date: dkey(1), title: 'Persona 5 Royal', environment: 'xbox', minutes_delta: 98, achievements_delta: 3, percent_after: 33, cover_small: null, master_id: 550043, earned_awards_after: 22, total_awards: 52 },
@@ -140,6 +169,12 @@ const ctx = await browser.newContext({
   timezoneId: 'America/New_York',
 })
 const page = await ctx.newPage()
+// The other half of pinning the clock. Without this the fixture is fixed to
+// 19 Aug and the app still asks the machine what day it is, so the two disagree
+// by however far the real date has moved on - which is a harder failure to read
+// than the drift it replaces. Set before the first navigation, because Home
+// reads the date on mount.
+await page.clock.setFixedTime(NOW)
 
 const problems = []
 page.on('requestfailed', (r) => problems.push('requestfailed :: ' + r.url()))
@@ -168,7 +203,7 @@ await page.route('**/wsrv.nl/**', (route) => route.fulfill({ status: 200, conten
 // Settings asks GitHub for the latest commit to print a version line. It is an
 // external service this harness has no business hitting, and the sandbox blocks
 // it, so it is answered here rather than left to fail and pollute the verdict.
-await page.route('**/api.github.com/**', (route) => json(route, [{ sha: 'stubbed0000000000000000000000000000000', commit: { message: 'stub', author: { date: new Date().toISOString() } } }]))
+await page.route('**/api.github.com/**', (route) => json(route, [{ sha: 'stubbed0000000000000000000000000000000', commit: { message: 'stub', author: { date: NOW.toISOString() } } }]))
 await page.route('**/images.igdb.com/**', (route) => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"/>' }))
 
 const results = []

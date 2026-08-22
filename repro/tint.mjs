@@ -106,16 +106,24 @@ async function worstContrast(page) {
       // Decorative glyphs are exempt: the rating's star is aria-hidden and the
       // number beside it carries the value, so its colour is not text contrast.
       if (el.closest('[aria-hidden="true"]')) continue
-      // Only text sitting on the CARD. Anything with an opaque fill of its own
-      // (the Play button, the meta chips) is protected by that fill, and the
-      // first version of this check compared button text against the sheet
-      // behind the button and reported 1.12:1 on a perfectly fine control.
+      // Only text whose ground is the CARD. An element with an EFFECTIVELY
+      // OPAQUE fill of its own - the accent Play button - carries its own known
+      // ground and its contrast has nothing to do with the tint; measuring it
+      // against the sheet behind it reported 1.12:1 on a perfectly fine control.
+      //
+      // The threshold is 0.9, not "any fill at all". The chips and the two
+      // secondary buttons are translucent now so they take the card's colour,
+      // which means they composite over an arbitrary tint and must be measured
+      // like everything else. At the old "> 0.05" they would have been skipped
+      // for having a background at all, and the change they were part of would
+      // have shipped unchecked.
+      const OPAQUE = 0.9
       let onCard = true
       for (let n = el; n && n !== sheet; n = n.parentElement) {
         const m = getComputedStyle(n).backgroundColor.match(/rgba?\(([^)]+)\)/)
         if (m) {
           const p = m[1].split(',').map(Number)
-          if ((p.length > 3 ? p[3] : 1) > 0.05) { onCard = false; break }
+          if ((p.length > 3 ? p[3] : 1) >= OPAQUE) { onCard = false; break }
         }
         if (getComputedStyle(n).backgroundImage !== 'none') { onCard = false; break }
       }
