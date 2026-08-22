@@ -14,10 +14,20 @@ const MARK = (
   </svg>
 )
 
+const CARET = (
+  <svg className="brand-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M6 9l6 6 6-6" />
+  </svg>
+)
+
 export default function Brand({ onOpen }) {
   return (
     <button type="button" className="brand-btn" onClick={onOpen} aria-label="Open menu" aria-haspopup="menu">
       {MARK}
+      <span className="brand-word">
+        Game<b>Deck</b>
+      </span>
+      {CARET}
     </button>
   )
 }

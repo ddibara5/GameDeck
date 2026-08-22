@@ -167,19 +167,26 @@ export default function App() {
     <div className={`app${nav.barShown ? '' : ' bar-off'}`}>
       <header className={`app-header${scrolled ? ' scrolled' : ''}`}>
         <Brand onOpen={() => setMenuOpen(true)} />
-        {/* The screen title, permanently, next to the mark. It used to be a
-            stand-in that faded in once the tab's own 34px title had scrolled
-            away, and it was aria-hidden because that <h1> was the real heading.
-            With the wordmark gone there is room for it at every scroll position,
-            so the 34px copy is what goes instead and this becomes the heading:
-            one <h1> per screen, in the one place that always says where you are.
+        {/* The inline stand-in for the large title below, which fades in once
+            that title has scrolled away, so the header always answers "where am
+            I?" without costing the screen a permanent 34px.
 
-            Rendered only when there is something to say. A drawer-opened overlay
-            carries its own title and blanks this one, and an empty <h1> is worse
-            than no <h1>. */}
-        {headerTitle ? <h1 className="app-header-title">{headerTitle}</h1> : null}
+            NOT the heading, and aria-hidden while invisible: .page-title below
+            is the real <h1>, and two live copies would be read out twice. */}
+        {headerTitle ? (
+          <span className="app-header-title" aria-hidden={!scrolled}>
+            {headerTitle}
+          </span>
+        ) : null}
       </header>
       <main className="app-main">
+        {/* The large title, rendered ONCE here rather than by each of the six
+            tabs. That is the only real difference from the shape this had
+            before 8824716: eight copies of the same <h1> across six files were
+            what let one of them drift out of step with the others, and the
+            header already knows the tab's name. Overlays blank it for the same
+            reason they blank the header copy - they carry their own heading. */}
+        {headerTitle ? <h1 className="page-title">{headerTitle}</h1> : null}
         <Suspense fallback={null}>
           {activeTab === 'home' && (
             <HomeTab

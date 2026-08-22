@@ -185,11 +185,20 @@ await page.waitForTimeout(900)
 
 const home = await page.evaluate(() => ({
   title: document.querySelector('.app-header-title')?.textContent.trim(),
-  // The title moved into the header on 21 Aug and became the heading with it.
-  // Both halves are asserted: one h1, and it is the header's.
+  // The large title came back on 22 Aug and took the heading with it, so the
+  // header copy is a stand-in again. Three halves to that, all asserted:
+  // exactly one h1, it is the large title, and the header's copy is NOT an h1.
   h1s: [...document.querySelectorAll('h1')].map((e) => e.textContent.trim()),
-  h1InHeader: document.querySelector('.app-header h1.app-header-title') !== null,
-  oldTitles: document.querySelectorAll('.page-title').length,
+  h1IsPageTitle: document.querySelector('h1.page-title') !== null,
+  headerCopyIsHeading: document.querySelector('.app-header h1') !== null,
+  // Rendered ONCE, by App, above <main> - not once per tab, which is the shape
+  // that let one of eight copies drift out of step.
+  pageTitles: document.querySelectorAll('.page-title').length,
+  standin: (() => {
+    const e = document.querySelector('.app-header-title')
+    if (!e) return null
+    return { opacity: getComputedStyle(e).opacity, hidden: e.getAttribute('aria-hidden') }
+  })(),
   subtitle: document.querySelector('.page-subtitle')?.textContent.trim(),
   headerH: Math.round(document.querySelector('.app-header').getBoundingClientRect().height),
   firstCardTop: (() => {
@@ -275,16 +284,31 @@ check('Home is the active tab', home.active === 'Home', home.active)
 
 /* ------------------------------------------------- the header carries it */
 
-// A heading that is never painted is still in the accessibility tree, so the
-// 34px copies were deleted from the tabs rather than hidden. Exactly one h1, in
-// the header, saying the tab's name.
-check('exactly one heading, in the header', home.h1s.length === 1 && home.h1InHeader, home.h1s.join('|'))
+// The large title is the heading again. Two live copies of the same words would
+// be read out twice, so the header's is a span and is aria-hidden while it is
+// invisible - that pairing is the assertion, not the h1 count on its own.
+check(
+  'exactly one heading, and it is the large title',
+  home.h1s.length === 1 && home.h1IsPageTitle && !home.headerCopyIsHeading,
+  `${home.h1s.join('|')}  headerIsH1=${home.headerCopyIsHeading}`
+)
 check('the heading is the tab name', home.h1s[0] === 'Home', home.h1s[0])
-check('no 34px copy is left anywhere', home.oldTitles === 0, String(home.oldTitles))
+// One copy, from App, rather than one per tab.
+check('the large title is rendered exactly once', home.pageTitles === 1, String(home.pageTitles))
+check(
+  'and the header copy is invisible and silent at the top of the page',
+  home.standin && home.standin.opacity === '0' && home.standin.hidden === 'true',
+  JSON.stringify(home.standin)
+)
 // The one part the header cannot carry. On Home it is the date.
 check('the subtitle survives', /^[A-Z][a-z]+day, /.test(home.subtitle || ''), home.subtitle)
-// The point of the change. 218 before the chips came off, 210 after, 166 now.
-check('the first card clears the old title block', home.firstCardTop !== null && home.firstCardTop < 190, String(home.firstCardTop))
+// The large title is back above the first card, so this is deliberately NOT the
+// 190 it was: that number locked the title being gone. 218 before the chips came
+// off, 210 after, 166 with the title in the header, and back around 250 now that
+// the 34px copy and its subtitle sit above the fold again. The assertion that
+// still means something is that the header itself did not grow.
+check('the first card clears the title block', home.firstCardTop !== null && home.firstCardTop < 290, String(home.firstCardTop))
+check('and the header is still 44px', home.headerH === 44, `${home.headerH}px`)
 check('Now playing renders with its arc', home.cardTitles.includes('Now playing') && home.arcs === 1, `arcs=${home.arcs}`)
 // One tile left in the catalog, so the run is a run of one and takes the whole
 // width. Asserted as a COLUMN COUNT rather than a pixel width: a half-width tile

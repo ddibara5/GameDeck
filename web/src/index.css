@@ -123,6 +123,8 @@
 .app-header {
   position: sticky;
   top: 0;
+  /* Containing block for .app-header-title, which is absolutely positioned so it
+     centres on the header rather than on the gap beside the lockup. */
   z-index: 40;
   box-sizing: border-box;
   height: calc(var(--app-header-h) + var(--top-inset));
@@ -213,22 +215,44 @@
 /* The large title's stand-in once it has scrolled off. Absolutely positioned so
    it is centred on the header rather than on the space left between the brand
    and the actions, and so adding it cannot shift either of them. */
+/* The large title's stand-in once it has scrolled off. Absolutely positioned so
+   it is centred on the header rather than on the space left between the brand
+   and the right edge, and so its appearing cannot shift the lockup. */
 .app-header-title {
-  flex: 1;
-  min-width: 0;
-  /* This is an h1 now, and the UA default is 0.67em top and bottom. The header
-     is a fixed-height flex row so symmetric margins do not move it visually,
-     which is exactly why this is easy to miss: it only shows up as a clipped
-     descender once the type grows. */
-  margin: 0;
-  font-size: var(--t-t3);
-  font-weight: var(--w-bold);
-  letter-spacing: var(--t-large-tr);
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: var(--top-inset);
+  height: var(--app-header-h);
+  display: flex;
+  align-items: center;
+  max-width: 58%;
+  font-size: var(--t-body);
+  font-weight: var(--w-semi);
+  letter-spacing: var(--t-body-tr);
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--d-base) var(--ease-out);
+}
+
+.app-header.scrolled .app-header-title {
+  opacity: 1;
+}
+
+/* The screen's real heading, and the only <h1> on the page. Rendered once by
+   App.jsx above <main> rather than by each tab: eight copies across six files
+   is what let one of them drift last time. */
+.page-title {
+  margin: 6px 0 2px;
+  padding: 0 16px;
+  font-size: var(--t-large);
+  font-weight: var(--w-bold);
+  letter-spacing: var(--t-large-tr);
+  color: var(--text);
 }
 
 .brand-btn {
@@ -248,13 +272,21 @@
   opacity: 0.7;
 }
 
-/* The brand lockup is an eyebrow, not the page heading. It used to be the only
-   thing in the header, at 27px, which left no room for the app to say which
-   screen you were on. The large title below the header does that job now, so the
-   lockup steps back: small, quieter, still tappable, still the drawer handle. */
+/* The lockup is the header again, with the large title below carrying the screen
+   name. 30px rather than the 23 it shrank to, and 30 is a CEILING, not a taste
+   call: in a standalone install iOS 26 fades everything above y=90, --top-inset
+   puts the header's content box at y=85, and a mark centred in a 43px row lands
+   its top edge at 85 + (43 - h) / 2. Measured against that floor:
+
+     23px -> y=95 (+5)    30px -> y=92 (+2)    34px -> y=90 (+0)    38px -> y=88 (IN THE BAND)
+
+   So 30 keeps 2px of margin and 34 has none. Anything larger paints into the
+   fade and reads as out of focus on device while identical type further down the
+   page is crisp. Do not grow this without re-measuring, and do NOT reduce the
+   +26px in --top-inset to make room. */
 .brand-mark {
-  width: 23px;
-  height: 25px;
+  width: 28px;
+  height: 30px;
   display: block;
   flex: none;
 }
