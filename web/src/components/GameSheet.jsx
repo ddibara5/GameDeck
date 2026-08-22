@@ -158,22 +158,60 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   // IGDB nor wsrv.nl documents that it does, and a missing header fails silently
   // as "no tint". The API route serves the same bytes from this origin, so the
   // question does not arise. See web/api/tint.js.
-  // ONE read of one image gives both the card's colour and its backdrop. They
-  // cannot share a fetch any other way: the sampler needs crossOrigin, a CSS
-  // background never has it, and the two cache partitions do not meet.
-  const [look, setLook] = useState({ color: null, backdrop: null })
-  const tintId = game ? coverImageId(game) : null
-  const tintSrc = tintId ? `/api/tint?id=${encodeURIComponent(tintId)}` : null
+  // THE CARD SETTLES IN TWO MOVES, and the rule that shapes both of them is
+  // that the colour and the backdrop must always come from the SAME picture.
+  // The version that did not - key art behind a cover-sampled colour - looked
+  // like a rendering fault: warm art dissolving into a teal card. Mocking it is
+  // the only reason it was caught.
+  //
+  //   fast  the cover, colour only. Already decoded and in cache because it is
+  //         the image you just tapped, so the card is the right colour in ~80ms
+  //         and no picture is encoded that nobody paints.
+  //   rich  the key art, colour AND backdrop, from one read. Arrives with the
+  //         IGDB media fetch for a library game, immediately for a Discover one
+  //         whose payload already carries it, and instantly on any second open
+  //         because that fetch is on disk for a week.
+  //
+  // `rich` wins whenever it exists rather than the two racing, so whichever
+  // resolves first the pair on screen is never mismatched.
+  const [fast, setFast] = useState(null)
+  const [rich, setRich] = useState(null)
+  const coverId = game ? coverImageId(game) : null
+  const fastSrc = coverId ? `/api/tint?id=${encodeURIComponent(coverId)}&kind=cover` : null
+  // The discover payload carries backdropId at open; a library row only learns
+  // it from the media fetch. Same field either way, so this is one expression.
+  const bdSrc = (() => {
+    const from = (media && media.backdropId ? media : null) || (game && game.backdropId ? game : null)
+    if (!from) return null
+    return `/api/tint?id=${encodeURIComponent(from.backdropId)}&kind=${encodeURIComponent(from.backdropKind || 'screenshot')}`
+  })()
+
   useEffect(() => {
-    if (!tintSrc) { setLook({ color: null, backdrop: null }); return undefined }
+    if (!fastSrc) { setFast(null); return undefined }
     let alive = true
-    setLook({ color: null, backdrop: null })
-    coverLook(tintSrc, resolveTheme()).then((l) => {
-      if (alive) setLook(l)
+    setFast(null)
+    coverLook(fastSrc, resolveTheme()).then((c) => {
+      if (alive) setFast(c)
     })
     return () => { alive = false }
-  }, [tintSrc])
-  const tint = look.color
+  }, [fastSrc])
+
+  useEffect(() => {
+    if (!bdSrc) { setRich(null); return undefined }
+    let alive = true
+    setRich(null)
+    coverLook(bdSrc, resolveTheme()).then((c) => {
+      // Only promote once a colour actually came back. A read that failed means
+      // the picture will not paint either, so the card stays on the cover's.
+      if (alive && c) setRich(c)
+    })
+    return () => { alive = false }
+  }, [bdSrc])
+
+  const tint = rich || fast
+  // The <img> below is the same url the colour was sampled from, so painting it
+  // is a cache hit rather than a second download.
+  const backdrop = rich ? bdSrc : null
 
   if (!game) return null
 
@@ -241,16 +279,20 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
           ...(tint ? { '--gs-tint': tint } : null),
         }}
       >
-        {/* The cover again, blurred and full bleed, masked out before any text
-            starts. One 90px request pays for both the card's colour and its
-            backdrop: this is a data url re-encoded from the image the sampler
-            already decoded, so it costs no request of its own and appears on
-            the same frame as the colour. Deliberately NOT the cover element's
-            own url, which goes through the CDN at the slot's width (~480px) and
-            would be a second fetch of a picture about to be blurred anyway. */}
-        {look.backdrop ? (
+        {/* The game's KEY ART, blurred and full bleed, masked out before any
+            text starts. Not the cover: the cover is the poster sitting on top
+            of this, and blurring the same picture behind itself is what made
+            the card read as the poster twice. Artworks are landscape and carry
+            no HUD, which is why they beat screenshots here.
+
+            A plain <img>. It carries crossOrigin only to match the sampler's
+            request exactly; the sharing itself does not depend on that, since
+            Chromium keys the cache by url and this route is same-origin and
+            immutable. Measured: the second read of the same url transfers 300
+            bytes against the first one's 5611. */}
+        {backdrop ? (
           <div className="gs-hero" aria-hidden="true">
-            <div className="gs-hero-img" style={{ backgroundImage: `url(${look.backdrop})` }} />
+            <img className="gs-hero-img" src={backdrop} crossOrigin="anonymous" alt="" decoding="async" />
           </div>
         ) : null}
 

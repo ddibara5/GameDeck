@@ -41,26 +41,80 @@ const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) +
 const json = (r, b) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(b) })
 
 // The tint's whole safety argument is that the CLAMP bounds the card's colour,
-// so the fixture uses the two extremes a cover can be rather than one game's
-// art. A near-white cover is the worst case for text; a saturated one is the
-// worst case for the clamp's saturation ceiling.
-const COVERS = { 'near-white': '#fffdf6', teal: '#2f6b63', 'hot magenta': '#ff00aa' }
+// so the fixture uses the extremes rather than one game's art. A near-white
+// source is the worst case for text; a saturated one is the worst case for the
+// clamp's saturation ceiling.
+//
+// Each case carries TWO pictures, and they are deliberately in different colour
+// families. The card paints its backdrop from the game's key art and samples
+// its colour from that same key art, while the fast first pass samples the
+// COVER - so a fixture where the two agree could not tell a correct card from
+// the mismatched one that shipped in the mockup (warm art dissolving into a
+// teal card). Different families make that distinguishable.
+const COVERS = {
+  'near-white': { cover: '#fffdf6', art: '#2b4a7d' },
+  teal: { cover: '#2f6b63', art: '#b4551f' },
+  'hot magenta': { cover: '#ff00aa', art: '#3d7a2e' },
+}
 
-async function openSheet(page, coverHex, theme) {
+// The same clamp as src/lib/tint.js, run over a flat fixture colour, so an
+// assertion can say WHICH picture the card's colour came from rather than just
+// that it has one.
+function clampFixture(hex, theme) {
+  const n = parseInt(hex.slice(1), 16)
+  const rgb = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => v / 255)
+  const mx = Math.max(...rgb)
+  const mn = Math.min(...rgb)
+  const l = (mx + mn) / 2
+  let h = 0
+  let sat = 0
+  if (mx !== mn) {
+    const d = mx - mn
+    sat = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn)
+    h = mx === rgb[0] ? ((rgb[1] - rgb[2]) / d + (rgb[1] < rgb[2] ? 6 : 0)) / 6
+      : mx === rgb[1] ? ((rgb[2] - rgb[0]) / d + 2) / 6
+        : ((rgb[0] - rgb[1]) / d + 4) / 6
+  }
+  const cl = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v)
+  const [lo, hi] = theme === 'light' ? [0.83, 0.88] : [0.13, 0.2]
+  const ll = cl(l, lo, hi)
+  const ss = sat < 0.05 ? 0 : cl(sat, 0.18, 0.42)
+  if (ss === 0) { const v = Math.round(ll * 255); return [v, v, v] }
+  const q = ll < 0.5 ? ll * (1 + ss) : ll + ss - ll * ss
+  const pp = 2 * ll - q
+  const hue = (t) => {
+    if (t < 0) t += 1
+    if (t > 1) t -= 1
+    if (t < 1 / 6) return pp + (q - pp) * 6 * t
+    if (t < 1 / 2) return q
+    if (t < 2 / 3) return pp + (q - pp) * (2 / 3 - t) * 6
+    return pp
+  }
+  return [hue(h + 1 / 3), hue(h), hue(h - 1 / 3)].map((v) => Math.round(v * 255))
+}
+
+async function openSheet(page, pics, theme) {
   await page.route('**/rest/v1/**', (r) => json(r, []))
   // Generic BEFORE specific: the last matching route wins in Playwright, so
   // registering '**/api/**' after these would swallow both of them.
   await page.route('**/api/**', (r) => json(r, {}))
   await page.route('**/api/discover**', (r) =>
-    json(r, { games: [{ id: 100, name: 'Mortal Shell II', summary: LONG, cover: COVER, year: 2026, rating: 90, screenshots: [SHOT, SHOT, SHOT], genres: ['Role-playing (RPG)', 'Adventure'], platforms: ['PS5', 'Series X|S'], companies: [{ name: 'Cold Symmetry', developer: true }], url: 'https://www.igdb.com/games/mortal-shell-ii' }] })
+    json(r, { games: [{ id: 100, name: 'Mortal Shell II', summary: LONG, cover: COVER, coverId: 'cofix', backdropId: 'arfix', backdropKind: 'artwork', year: 2026, rating: 90, screenshots: [SHOT, SHOT, SHOT], genres: ['Role-playing (RPG)', 'Adventure'], platforms: ['PS5', 'Series X|S'], companies: [{ name: 'Cold Symmetry', developer: true }], url: 'https://www.igdb.com/games/mortal-shell-ii' }] })
   )
   // /api/tint serves image BYTES from this origin. No CORS headers on purpose:
   // the reason the route exists at all is that the canvas read must not depend
   // on a header the IGDB CDN may or may not send.
-  await page.route('**/api/tint**', (r) =>
-    r.fulfill({ status: 200, contentType: 'image/svg+xml', body: `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="90"><rect width="64" height="90" fill="${coverHex}"/></svg>` })
-  )
-  const img = (r) => r.fulfill({ status: 200, contentType: 'image/svg+xml', body: `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="90"><rect width="64" height="90" fill="${coverHex}"/></svg>` })
+  //
+  // It answers DIFFERENTLY per kind, which is what lets the assertions below
+  // tell the two stages apart. Portrait for the cover, landscape for the key
+  // art, matching the real buckets.
+  await page.route('**/api/tint**', (r) => {
+    const art = /kind=(artwork|screenshot)/.test(r.request().url())
+    const [w, h] = art ? [569, 320] : [90, 128]
+    const fill = art ? pics.art : pics.cover
+    r.fulfill({ status: 200, contentType: 'image/svg+xml', body: `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><rect width="${w}" height="${h}" fill="${fill}"/></svg>` })
+  })
+  const img = (r) => r.fulfill({ status: 200, contentType: 'image/svg+xml', body: `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="90"><rect width="64" height="90" fill="${pics.cover}"/></svg>` })
   await page.route('**/images.igdb.com/**', img)
   await page.route('**/wsrv.nl/**', img)
 
@@ -208,10 +262,10 @@ const browser = await chromium.launch({ executablePath: process.env.PW_CHROME })
 
 /* ----------------------------------------------------------------- the tint */
 for (const theme of ['dark', 'light']) {
-  for (const [label, hex] of Object.entries(COVERS)) {
+  for (const [label, pics] of Object.entries(COVERS)) {
     const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, serviceWorkers: 'block' })
     const page = await ctx.newPage()
-    const ms = await openSheet(page, hex, theme)
+    const ms = await openSheet(page, pics, theme)
     const tag = `${theme}/${label}`
 
     check(`${tag}: the card takes a tint`, ms !== null, ms === null ? 'never applied' : `applied in ${ms}ms`)
@@ -264,6 +318,22 @@ for (const theme of ['dark', 'light']) {
       `${tag}: no foreign line across the top of the card`,
       rowGap <= 12,
       `top row rgb(${rowRgb.join(',')}) against the card's rgb(${cardRgb.join(',')}): distance ${rowGap}`
+    )
+
+    // THE MISMATCH. The colour and the backdrop must come from the same picture.
+    // The version that sampled the colour from the COVER while painting key art
+    // behind it looked like a rendering fault, and it would have shipped: it is
+    // the obvious design, because the cover is the fast image. So this asserts
+    // WHICH picture the colour came from, by computing both clamps and
+    // requiring the card to match the one the backdrop was drawn from.
+    const wantArt = clampFixture(pics.art, theme)
+    const wantCover = clampFixture(pics.cover, theme)
+    const cardRgbNow = (bottom.match(/\d+/g) || []).slice(0, 3).map(Number)
+    const dTo = (t) => Math.round(Math.sqrt(cardRgbNow.reduce((a, v, i) => a + (v - t[i]) ** 2, 0)))
+    check(
+      `${tag}: the colour comes from the same picture as the backdrop`,
+      dTo(wantArt) <= 12 && dTo(wantArt) < dTo(wantCover),
+      `card rgb(${cardRgbNow.join(',')})  key art clamp rgb(${wantArt.join(',')}) d=${dTo(wantArt)}  cover clamp rgb(${wantCover.join(',')}) d=${dTo(wantCover)}`
     )
 
     // Effect, not presence. A tint equal to --surface is a tint that does nothing.
@@ -341,6 +411,47 @@ for (const theme of ['dark', 'light']) {
     )
     await ctx.close()
   }
+}
+
+/* ------------------- a game with no key art falls back to the cover, quietly */
+{
+  const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, serviceWorkers: 'block' })
+  const page = await ctx.newPage()
+  await page.route('**/rest/v1/**', (r) => json(r, []))
+  await page.route('**/api/**', (r) => json(r, {}))
+  // No backdropId at all - one game in twenty is like this, and the API's own
+  // fallback chain ends at the cover, so the client must survive the field
+  // simply being absent rather than assuming it is always there.
+  await page.route('**/api/discover**', (r) =>
+    json(r, { games: [{ id: 102, name: 'Artless', summary: LONG, cover: COVER, coverId: 'cofix', year: 2026, rating: 70, screenshots: [], genres: [], platforms: [], companies: [], url: null }] })
+  )
+  await page.route('**/api/tint**', (r) =>
+    r.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="90" height="128"><rect width="90" height="128" fill="#2f6b63"/></svg>' })
+  )
+  await page.goto(BASE, { waitUntil: 'networkidle' })
+  await page.waitForTimeout(400)
+  await page.getByRole('button', { name: /^Discover/ }).first().click()
+  await page.waitForTimeout(1100)
+  await page.getByRole('tab', { name: 'Browse', exact: true }).click()
+  await page.waitForTimeout(500)
+  await page.fill('.search-input', 'artless')
+  await page.waitForTimeout(1300)
+  const card = await page.$('.discover-card')
+  if (card) { await card.click(); await page.waitForTimeout(1200) }
+  const r = await page.evaluate(() => {
+    const s = document.querySelector('.modal-sheet')
+    if (!s) return null
+    return {
+      bg: getComputedStyle(s).backgroundColor,
+      hero: Boolean(document.querySelector('.gs-hero')),
+    }
+  })
+  const want = clampFixture('#2f6b63', 'dark')
+  const got = r ? (r.bg.match(/\d+/g) || []).slice(0, 3).map(Number) : []
+  const d = r ? Math.round(Math.sqrt(got.reduce((a, v, i) => a + (v - want[i]) ** 2, 0))) : 999
+  check('a game with no key art still takes the cover\'s colour', Boolean(r) && d <= 12, `card ${r ? r.bg : '-'} against the cover clamp rgb(${want.join(',')}): distance ${d}`)
+  check('and paints no backdrop rather than a broken one', Boolean(r) && !r.hero, r ? `hero present: ${r.hero}` : '-')
+  await ctx.close()
 }
 
 /* ------------------------------------- a game with no cover still opens fine */

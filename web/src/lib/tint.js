@@ -103,19 +103,6 @@ export function clampTint(rgb, theme = 'dark') {
   return hslToRgb(h, clamp(s, SAT_RANGE[0], SAT_RANGE[1]), ll)
 }
 
-// The backdrop is drawn from the SAME decoded image as the colour, handed back
-// as a data url. It cannot share a cache entry with a CSS background-image no
-// matter how identical the address is: this one is fetched with
-// `crossOrigin = 'anonymous'` and a CSS background never is, so the two live in
-// different cache partitions and the browser fetches twice. Measured, before
-// this: two requests for /api/tint?id=co1 on every sheet open.
-//
-// 90px wide is the source's own width, so nothing is upscaled, and the result
-// is blurred past 34px on screen anyway. WebP at 0.72 keeps the string small.
-const BACKDROP_W = 90
-const BACKDROP_TYPE = 'image/webp'
-const BACKDROP_Q = 0.72
-
 /**
  * Average colour of an image, or null if it cannot be read.
  *
@@ -145,23 +132,7 @@ export function sampleImage(url) {
           if (d[i + 3] < MIN_ALPHA) continue
           r += d[i]; g += d[i + 1]; b += d[i + 2]; n++
         }
-        if (!n) return done(null)
-        // Re-draw at backdrop size from the image already in hand. Wrapped
-        // separately so a browser that will not encode webp costs the backdrop
-        // and not the colour.
-        let backdrop = null
-        try {
-          const bc = document.createElement('canvas')
-          const ratio = img.naturalHeight / img.naturalWidth || 1
-          bc.width = BACKDROP_W
-          bc.height = Math.max(1, Math.round(BACKDROP_W * ratio))
-          bc.getContext('2d').drawImage(img, 0, 0, bc.width, bc.height)
-          const url = bc.toDataURL(BACKDROP_TYPE, BACKDROP_Q)
-          if (url && url.startsWith('data:image/')) backdrop = url
-        } catch {
-          backdrop = null
-        }
-        done({ rgb: [Math.round(r / n), Math.round(g / n), Math.round(b / n)], backdrop })
+        done(n ? [Math.round(r / n), Math.round(g / n), Math.round(b / n)] : null)
       } catch {
         done(null) // tainted canvas
       }
@@ -174,15 +145,26 @@ export function sampleImage(url) {
 }
 
 /**
- * One read of one image, both things the card needs from it.
- * Resolves to `{ color, backdrop }`, either of which may be null.
+ * Sample and clamp in one call. Resolves to a css rgb() string, or null.
+ *
+ * This used to hand back a data url of the picture as well, on the reasoning
+ * that a CSS background-image is fetched without crossOrigin and could not
+ * share a cache entry with this read. **That reasoning was wrong**, and the
+ * measurement that seemed to confirm it was taken under Playwright's
+ * page.route, which bypasses the HTTP cache and so reports two fetches whatever
+ * the truth is.
+ *
+ * Measured properly, with no interception, on this origin: the second request
+ * for the same url transfers 300 bytes against the first one's 5611, whether it
+ * is an <img> or a CSS background. Chromium keys the cache by url, not by CORS
+ * mode, and /api/tint is same-origin and immutable. One fetch, reused.
+ *
+ * So the data url was solving a problem that did not exist, and it cost real
+ * work: at the 90px cover the re-encode was free, but at 569px key art it was
+ * ~40KB of base64 built on the main thread on every open. The backdrop is a
+ * plain <img> now.
  */
 export async function coverLook(url, theme = 'dark') {
-  const got = await sampleImage(url)
-  if (!got) return { color: null, backdrop: null }
-  const t = clampTint(got.rgb, theme)
-  return {
-    color: t ? `rgb(${t[0]}, ${t[1]}, ${t[2]})` : null,
-    backdrop: got.backdrop,
-  }
+  const t = clampTint(await sampleImage(url), theme)
+  return t ? `rgb(${t[0]}, ${t[1]}, ${t[2]})` : null
 }

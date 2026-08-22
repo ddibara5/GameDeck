@@ -339,12 +339,21 @@
    the same trap as the scale overhang that shipped as a visible band in
    567a27d. No transform here: a transform would scale the mask with the
    element and move its last stop off the offsets it was measured against. */
+/* An <img>, not a background, so it shares the colour sampler's cache entry
+   (see src/lib/tint.js). object-fit does what background-size: cover did. */
 .gs-hero-img {
   position: absolute;
   inset: -14%;
-  background-size: cover;
-  background-position: center 30%;
-  filter: blur(34px) saturate(1.25);
+  width: 128%;
+  height: 128%;
+  object-fit: cover;
+  object-position: center 30%;
+  /* 14, not 34. 34 was the number a 90px cover needed: stretched 5.7x across
+     this band, anything less revealed the enlargement rather than the picture.
+     Key art is 569px into a ~503px box, so the only scaling left is the 1.7x
+     the band's portrait shape forces, and the blur can go back to being a
+     choice about how much of the art you want to read. */
+  filter: blur(14px) saturate(1.25);
   opacity: 0;
   animation: gs-hero-in 240ms ease forwards;
 }
