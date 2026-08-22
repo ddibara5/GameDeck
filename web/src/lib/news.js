@@ -84,6 +84,25 @@ export function hostOf(url) {
   }
 }
 
+// Presentational, and here rather than in a component because the row and the
+// sheet both render them. A second copy in the other file is exactly how two
+// views of the same story start disagreeing about what "1 day ago" means.
+export function relTime(iso) {
+  if (!iso) return ''
+  const then = new Date(iso).getTime()
+  if (!then || isNaN(then)) return ''
+  const diffH = Math.round((Date.now() - then) / 3600000)
+  if (diffH < 1) return 'just now'
+  if (diffH < 24) return `${diffH}h ago`
+  const d = Math.round(diffH / 24)
+  return d === 1 ? '1 day ago' : `${d} days ago`
+}
+
+export function faviconFor(url) {
+  const host = hostOf(url)
+  return host ? `https://www.google.com/s2/favicons?domain=${host}&sz=32` : ''
+}
+
 // Collapse repeated outlets to unique sources (first occurrence wins), so a story
 // covered five times by three outlets shows three links, not five.
 export function dedupeSources(sources) {
