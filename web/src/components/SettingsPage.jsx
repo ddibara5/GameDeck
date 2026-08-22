@@ -6,8 +6,6 @@ import {
   setTheme,
   getAccent,
   setAccent,
-  getGround,
-  setGround,
   getShelfSize,
   setShelfSize,
   getListSize,
@@ -58,15 +56,6 @@ const ACCENT_OPTIONS = [
   { key: 'graphite', label: 'Graphite', ring: '#202124', dot: '#98a2ae', ringLight: '#e8e9ec', dotLight: '#59626f' },
 ]
 
-// The app ground. Two states rather than a menu of five: the glow was the one
-// picked out of the five reviewed, and shipping the other four as options would
-// be offering a choice nobody made. "Off" is first because it is the app as it
-// was, and a ground you cannot turn off is a redesign rather than a setting.
-const GROUND_OPTIONS = [
-  { key: 'none', label: 'Off' },
-  { key: 'glow', label: 'Glow' },
-]
-
 // Poster width on horizontal rails (Continue Playing, Discover, wishlist, Game Pass).
 const SHELF_SIZE_OPTIONS = [
   { key: 's', label: 'Small' },
@@ -91,7 +80,6 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
   const [keySet, setKeySet] = useState(() => Boolean(getAppKey()))
   const [theme, setThemeState] = useState(() => getTheme())
   const [accent, setAccentState] = useState(() => getAccent())
-  const [ground, setGroundState] = useState(() => getGround())
   const [shelfSize, setShelfSizeState] = useState(() => getShelfSize())
   const [listSize, setListSizeState] = useState(() => getListSize())
   const [chatsCleared, setChatsCleared] = useState(false)
@@ -267,10 +255,6 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
     setAccentState(setAccent(key))
   }
 
-  function changeGround(key) {
-    setGroundState(setGround(key))
-  }
-
   function changeShelfSize(key) {
     setShelfSizeState(setShelfSize(key))
   }
@@ -349,23 +333,6 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
                     <i />
                   </span>
                   <span className="accent-name">{opt.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="menu-accent">
-            <div className="menu-accent-label">Background glow</div>
-            <div className="seg" role="group" aria-label="Background glow">
-              {GROUND_OPTIONS.map((opt) => (
-                <button
-                  key={opt.key}
-                  type="button"
-                  className={`seg-btn${ground === opt.key ? ' active' : ''}`}
-                  onClick={() => changeGround(opt.key)}
-                  aria-pressed={ground === opt.key}
-                >
-                  {opt.label}
                 </button>
               ))}
             </div>

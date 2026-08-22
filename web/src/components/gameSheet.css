@@ -6,15 +6,30 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  color: var(--muted);
+  /* --text, like the blurb. Every piece of copy that sits directly on the card
+     is --text now, and that is what lets the tint be strong enough to see: with
+     --muted here the safe lightness band was so narrow that a pale cover in
+     light mode came out 8 rgb units from the untinted card. Size and weight
+     still separate this row from the title. */
+  color: var(--text);
   font-size: var(--t-foot);
   margin: 2px 0 4px;
 }
 
+/* The NUMBER is --text and only the glyph is amber. --amber on the card
+   measured 2.85:1 in light and 4.81:1 in dark, and it fails on the untinted
+   surface too, so this is an old bug rather than one the tint introduced - the
+   tint is just what made it worth measuring. The star carries no meaning the
+   number does not, so it can stay decorative. */
 .gs-star {
-  color: var(--amber);
+  color: var(--text);
   font-weight: var(--w-semi);
   white-space: nowrap;
+}
+
+.gs-star i {
+  color: var(--amber);
+  font-style: normal;
 }
 
 /* The sheet is portaled to <body>, so it must clear the full-screen overlays it can
@@ -200,175 +215,35 @@
   border: 1px solid var(--line);
 }
 
-/* ---------- The sheet's own key art ----------
-   The sheet takes the first screenshot the shot strip below it is already
-   loading, blurred to a colour field behind an opaque-enough veil. Same URL, so
-   the browser serves it from cache and this costs no extra request at all.
+/* ---------- The card's colour ----------
+   Set per game by GameSheet as an inline --gs-tint, and unset the rest of the
+   time, so this one line is both the tinted card and the plain one.
 
-   ## The two things that made the first attempt wrong
+   This replaces a blurred screenshot behind a veil, which is worth writing down
+   because the replacement is not a simplification for its own sake: that
+   structure shipped three defects in three commits (it sized to the padding box
+   and scrolled away; its scaled art escaped the veil as a band; and once both
+   were fixed the veil had to be so opaque that the art moved the card by one
+   rgb unit). All three came from the same root - an unbounded IMAGE and text
+   competing for the same pixels, where the text has to win, so the image loses
+   everything.
 
-   `.modal-sheet` IS the scroll container. An absolutely positioned child at
-   `inset: 0` is therefore sized to the visible padding box, not to the content:
-   measured 749px against a 1081px scroll height. It also scrolled away with the
-   content, so the lower third of a long sheet had no art under it at all.
+   A colour sampled from the cover and clamped into a known lightness band ends
+   that. The ground under the text is knowable in advance, so it can be strong
+   enough to see: every clamped tint holds --muted at 4.74:1 or better in dark
+   and 4.62:1 in light, worst hue, worst saturation, solved across all 360 hues
+   rather than sampled from one game. See src/lib/tint.js.
 
-   Worse, the art carried `transform: scale(1.25)` and the veil did not, so the
-   art painted 936px against a 749px veil and overhung it by ~93px top and
-   bottom. Clipped at scroll top, but scroll down and that overhang appeared
-   BELOW the veil as a band of raw, unveiled screenshot across the sheet.
-
-   ## What it does now
-
-   One `.gs-bg` wrapper, `position: sticky`, which is the only one of the three
-   that stays put: `absolute` sizes to the scroll port and scrolls away, and
-   `fixed` inside a `will-change: transform` ancestor behaves as absolute and
-   does the same. Sticky reads as a backdrop and is cheaper too, one screen of
-   blur instead of one document of it.
-
-   The wrapper also CLIPS. `overflow: hidden` on it contains the art's scale
-   overhang, so the veil inside it covers exactly what the art covers, always.
-   That containment is the fix for the band; do not move the veil out of it.
-
-   The veil is 92% in dark and 96% in light, and those are not a matched pair by
-   accident: light starts from a much brighter surface, so the same alpha lets
-   far more of the art through.
-
-   **92 rather than the 88 this was designed at, because the review measured the
-   wrong game.** 88% holds at 5.40:1 against Clair Obscur's mid-dark teal key
-   art, which is what the mock used. Against a blown-out BRIGHT screenshot, the
-   real worst case, the same veil gives 4.21:1 and the summary drops under the
-   4.5 floor. repro/ground.mjs deliberately stubs a near-white screenshot for
-   exactly this reason, and caught it. At 92% the same worst case measures
-   4.87:1, and the art still reads as a colour field.
-
-   Light needs no equivalent bump: at 96% it is 5.15:1 against near-black art
-   and 5.61:1 against white. It only clears either because --muted was fixed in
-   the same change; at the old #857b6d it was 3.14. */
+   background-color, not a gradient: it covers the sheet's whole scroll area
+   natively, which is what "the whole card" means. An absolutely positioned
+   layer only ever covered the padding box, and that was defect one. */
 .modal-sheet {
-  position: relative;
-}
-
-.gs-bg {
-  /* IN FLOW at the top of the sheet, with a negative bottom margin so it takes
-     no layout space, and NOT sticky. This is the third structure this backdrop
-     has had, and the reason is contrast, not layout.
-
-     Sticky pinned the art to the viewport while the CONTENT scrolled through
-     it. That is fine for a uniform veil and fatal for a graded one: text ends
-     up wherever the scroll puts it, so the thinnest part of the veil has to
-     protect the weakest text anyway, and a gradient buys nothing. Measured, on
-     a graded pinned veil: the rating star read 4.27:1 at the top of the scroll
-     and 1.81:1 at the bottom of it. Same element, same veil, same art.
-
-     In flow, every element keeps a FIXED offset into the veil no matter where
-     the sheet is scrolled, so the gradient can be thin where the cover is and
-     opaque where the blurb is, and each piece of text has exactly one contrast
-     value instead of a range. That is what makes the art visible without
-     putting any text at risk.
-
-     `relative` is REQUIRED and subtle enough that removing it looks safe:
-     .gs-art and .gs-veil are absolutely positioned at inset 0, so they size to
-     the nearest POSITIONED ancestor. Static, this element is not one, and both
-     layers resolved against .modal-sheet instead: measured 936px of art and a
-     749px veil inside a 460px band, escaping `overflow: hidden` entirely
-     (overflow does not clip a descendant whose containing block is outside it)
-     and scrolling away with the sheet. That is the same defect as 5acad7c in a
-     new structure, and the assertion written for that one is what caught it.
-
-     --gs-bleed-y is the sheet's border-top (1) plus its padding-top (16);
-     --gs-bleed-x is its padding-left/right. Keep these in step with
-     `.modal-sheet`'s padding in index.css. */
-  position: relative;
-  --gs-bleed-y: 17px;
-  --gs-bleed-x: 20px;
-  /* Tall enough to cover the cover, the title and the meta line, which is
-     everything above the blurb. Measured from the top of this element: title
-     369, meta and star 397, blurb 480. The band ends before the blurb, so the
-     blurb sits on the plain surface and needs no veil at all. */
-  height: 460px;
-  margin: calc(-1 * var(--gs-bleed-y)) calc(-1 * var(--gs-bleed-x)) -460px;
-  overflow: hidden;
-  pointer-events: none;
-  border-radius: inherit;
-}
-
-.gs-art,
-.gs-veil {
-  position: absolute;
-  inset: 0;
-}
-
-.gs-art {
-  background-size: cover;
-  background-position: center;
-  /* Scale past the edges so the blur's soft rim never shows as a seam. Safe
-     only because .gs-bg clips it; without that wrapper this is the band. */
-  transform: scale(1.25);
-  /* Saturated UP, not down. The veil only lets ~8-38% of the art through, and
-     at that weight LUMINANCE reads as nothing while CHROMA still reads as a
-     tint. 0.85 was the number that made this invisible: measured against a
-     typical dark screenshot, the sheet lifted from rgb(35,33,32) to
-     rgb(36,35,34). One unit. */
-  filter: blur(26px) saturate(1.8);
-  /* Screenshots arrive ~240ms after the sheet opens, so it fades rather than
-     pops. Deliberately NOT `will-change: filter`: benchmarked at p95 2.5ms
-     promoted against 2.1ms unpromoted, so the hint costs more than it saves. */
-  opacity: 0;
-  animation: gs-art-in 320ms ease forwards;
-}
-
-@keyframes gs-art-in {
-  to {
-    opacity: 1;
-  }
+  background-color: var(--gs-tint, var(--surface));
+  transition: background-color 260ms ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .gs-art {
-    opacity: 1;
-    animation: none;
+  .modal-sheet {
+    transition: none;
   }
-}
-
-/* A GRADIENT, not a flat wash, and the reason is a contradiction the flat one
-   could not escape: the veil has to be opaque enough to protect the body text
-   against a blown-out white screenshot, and a veil that opaque leaves nothing
-   of the art. At 0.92 flat, typical dark art lifted the sheet by ONE rgb unit.
-
-   The gradient separates the two jobs by height, which only works because the
-   band is in flow (see .gs-bg): the cover sits at 0.46 where the art can carry
-   real colour, and by 385px it is 0.96, MORE opaque than the flat veil ever
-   was. So the rating star, the lowest-contrast thing over the art, is better
-   protected here than it was before: 4.94:1 against a blown-out white
-   screenshot, against 4.66:1 flat.
-
-   Stops in px, not %, and they are tied to the 460px band rather than to the
-   viewport: the elements they protect sit at fixed offsets (title 369, star
-   397), so a percentage would slide the protection off them on a taller
-   phone. */
-.gs-veil {
-  background: linear-gradient(
-    180deg,
-    rgba(35, 33, 32, 0.46) 0,
-    rgba(35, 33, 32, 0.66) 280px,
-    rgba(35, 33, 32, 0.96) 385px,
-    rgba(35, 33, 32, 1) 100%
-  );
-}
-
-[data-theme="light"] .gs-veil {
-  background: linear-gradient(
-    180deg,
-    rgba(246, 241, 233, 0.58) 0,
-    rgba(246, 241, 233, 0.78) 280px,
-    rgba(246, 241, 233, 0.97) 385px,
-    rgba(246, 241, 233, 1) 100%
-  );
-}
-
-/* Everything the sheet renders sits above the backdrop. Scoped to direct
-   children so nothing inside a card needs its own z-index. */
-.modal-sheet > *:not(.gs-bg) {
-  position: relative;
-  z-index: 1;
 }

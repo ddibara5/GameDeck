@@ -5,7 +5,7 @@ import { useDelayedClose } from '../lib/useDelayedClose.js'
 import { useSheetDrag } from '../lib/useSheetDrag.js'
 import { lockScroll } from '../lib/scrollLock.js'
 import { useAchievementsUrl } from '../lib/useLibraryGames.js'
-import { igdbCover, platformMeta, minutesToHhm, formatDate, releaseLabel } from '../lib/format.js'
+import { coverImageId, igdbCover, platformMeta, minutesToHhm, formatDate, releaseLabel } from '../lib/format.js'
 import {
   STATUSES,
   STATUS_LABELS,
@@ -16,6 +16,8 @@ import {
 } from '../lib/userStatus.js'
 import { useWishlist, toggleWishlist } from '../lib/wishlist.js'
 import { fetchGameById } from '../lib/discover.js'
+import { tintFor } from '../lib/tint.js'
+import { resolveTheme } from '../lib/theme.js'
 import Lightbox from './Lightbox.jsx'
 import './gameSheet.css'
 
@@ -144,6 +146,31 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   // Lock background scroll while the sheet is open (shared ref-counted lock).
   useEffect(() => lockScroll(), [])
 
+  // The card's colour. Sampled from the COVER rather than from a screenshot,
+  // for two reasons. It is fast: the cover is the image you just tapped, so it
+  // is already decoded and in cache, and the tint lands on the first frame
+  // instead of after the IGDB media fetch that the old blurred backdrop waited
+  // on. And it is stable: one source means the card does not change colour a
+  // beat after it opens.
+  //
+  // Read through /api/tint rather than straight off the image CDN. A canvas
+  // read of a cross-origin image needs the host to send CORS headers, neither
+  // IGDB nor wsrv.nl documents that it does, and a missing header fails silently
+  // as "no tint". The API route serves the same bytes from this origin, so the
+  // question does not arise. See web/api/tint.js.
+  const [tint, setTint] = useState(null)
+  useEffect(() => {
+    if (!game) return undefined
+    const imageId = coverImageId(game)
+    if (!imageId) { setTint(null); return undefined }
+    let alive = true
+    setTint(null)
+    tintFor(`/api/tint?id=${encodeURIComponent(imageId)}`, resolveTheme()).then((t) => {
+      if (alive) setTint(t)
+    })
+    return () => { alive = false }
+  }, [game, owned])
+
   if (!game) return null
 
   const title = game.title || game.name
@@ -157,7 +184,6 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   const companies = (media && media.companies) || game.companies || []
   const summary = (media && media.summary) || game.summary || null
   const screenshots = (media && media.screenshots) || game.screenshots || []
-  const artUrl = screenshots.length ? screenshots[0] : null
   const url = (media && media.url) || game.url || null
   const year = game.release_year || game.year || (media && media.year) || null
   // Exact release date, as precise as IGDB actually is about it (a full day for
@@ -205,20 +231,12 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
         style={{
           transform: closing ? 'translateY(110%)' : dragY ? `translateY(${dragY}px)` : undefined,
           transition: dragging ? 'none' : 'transform 0.2s ease',
+          // Falls back to --surface in the stylesheet until (or unless) a tint
+          // resolves, so a game with no cover, or a CDN that will not send CORS
+          // headers, gets exactly the card it had before.
+          ...(tint ? { '--gs-tint': tint } : null),
         }}
       >
-        {/* The sheet's own key art. `screenshots[0]` is the exact URL the shot
-            strip further down is already loading, so this is a cache hit and
-            not a second request. Absent for a game IGDB has no screenshots for,
-            which is a real case, and then the sheet is the flat surface it has
-            always been. */}
-        {artUrl ? (
-          <div className="gs-bg" aria-hidden="true">
-            <div className="gs-art" style={{ backgroundImage: `url(${artUrl})` }} />
-            <div className="gs-veil" />
-          </div>
-        ) : null}
-
         <div className="sheet-drag-zone" {...dragHandlers}>
           <div className="modal-handle" />
           <Cover src={coverSrc} title={title} size="lg" />
@@ -228,7 +246,11 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
         {metaText || rating != null ? (
           <div className="gs-meta">
             {metaText ? <span>{metaText}</span> : null}
-            {rating != null ? <span className="gs-star">{'★'} {rating}</span> : null}
+            {rating != null ? (
+              <span className="gs-star">
+                <i aria-hidden="true">{'★'}</i> {rating}
+              </span>
+            ) : null}
           </div>
         ) : null}
         {!owned && inLibrary ? <span className="in-library-badge sheet">In your library</span> : null}

@@ -8,8 +8,7 @@
   position: fixed;
   inset: 0;
   z-index: 205;
-  background-color: var(--bg);
-  background-image: var(--ground);
+  background: var(--bg);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;

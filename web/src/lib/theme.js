@@ -35,42 +35,6 @@ export function setAccent(name) {
   return a
 }
 
-// The app ground: what the page itself is painted with behind every card.
-//
-// 'glow' is a soft wash of the current accent in the top-left gutter, above the
-// first card and beside the header. 'none' is the flat colour the app shipped
-// with, and it stays a real option rather than an absence: a ground you cannot
-// turn off is a redesign, not a setting.
-//
-// Applied via data-ground on <html>, exactly like data-accent, so the gradient
-// lives in index.css and is written in `--glow-rgb`, which every colour theme
-// declares for itself. Picking Slate recolours the ground for free.
-const GROUND_KEY = 'gamedeck_ground_v1'
-const GROUNDS = new Set(['glow', 'none'])
-
-export function getGround() {
-  try {
-    const v = localStorage.getItem(GROUND_KEY)
-    return GROUNDS.has(v) ? v : 'glow'
-  } catch {
-    return 'glow'
-  }
-}
-
-export function applyGround(name) {
-  document.documentElement.setAttribute('data-ground', GROUNDS.has(name) ? name : 'glow')
-}
-
-export function setGround(name) {
-  const g = GROUNDS.has(name) ? name : 'glow'
-  try {
-    localStorage.setItem(GROUND_KEY, g)
-  } catch {
-    /* storage unavailable - preference just won't persist */
-  }
-  applyGround(g)
-  return g
-}
 
 // Card sizing. Shelf = poster width on every horizontal rail (Continue Playing,
 // Discover shelves, wishlist, Game Pass). List = Library / Discover list-row
@@ -166,7 +130,6 @@ export function setTheme(pref) {
 export function initTheme() {
   applyTheme(getTheme())
   applyAccent(getAccent())
-  applyGround(getGround())
   applyShelfSize(getShelfSize())
   applyListSize(getListSize())
   try {

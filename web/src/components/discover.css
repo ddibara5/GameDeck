@@ -371,8 +371,7 @@ button.shelf-head:active {
   position: fixed;
   inset: 0;
   z-index: 205;
-  background-color: var(--bg);
-  background-image: var(--ground);
+  background: var(--bg);
   display: flex;
   flex-direction: column;
   animation: rail-in var(--overlay-in) var(--enter-ease);
