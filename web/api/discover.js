@@ -262,7 +262,7 @@ function applyRerank(rail, nowTs, rows, limit, offset = 0, sortOverride = null) 
 const GAME_FIELDS =
   'fields name,summary,cover.image_id,first_release_date,total_rating,total_rating_count,' +
   'genres.name,keywords.name,themes.name,platforms.name,platforms.abbreviation,' +
-  'screenshots.image_id,involved_companies.company.name,involved_companies.developer,url,' +
+  'screenshots.image_id,artworks.image_id,involved_companies.company.name,involved_companies.developer,url,' +
   'release_dates.date,release_dates.category,release_dates.human,' +
   'game_type,parent_game,version_parent';
 
@@ -354,10 +354,23 @@ function computeRelease(g) {
   return { ts: best.date, precision, label: best.human || null };
 }
 
+// The one image the game sheet paints its backdrop from. Key art first, then a
+// screenshot, then the cover, which is always there and is the reason this can
+// never come back empty for an enriched game.
+function pickBackdrop(g) {
+  const art = (g.artworks || []).find((a) => a && a.image_id);
+  if (art) return { id: art.image_id, kind: 'artwork' };
+  const shot = (g.screenshots || []).find((s) => s && s.image_id);
+  if (shot) return { id: shot.image_id, kind: 'screenshot' };
+  const cov = g.cover && g.cover.image_id;
+  return cov ? { id: cov, kind: 'cover' } : { id: null, kind: null };
+}
+
 function normalize(g) {
   const companies = (g.involved_companies || [])
     .filter((c) => c && c.company && c.company.name)
     .map((c) => ({ name: c.company.name, developer: !!c.developer }));
+  const backdrop = pickBackdrop(g);
   return {
     id: g.id,
     name: g.name,
@@ -374,6 +387,18 @@ function normalize(g) {
     themes: (g.themes || []).map((x) => x.name),
     platforms: (g.platforms || []).map((x) => x.abbreviation || x.name),
     screenshots: (g.screenshots || []).map((s) => IMG(s.image_id, 'screenshot_med')).filter(Boolean).slice(0, 6),
+    // ARTWORKS are key art without a HUD on it, which is what you actually want
+    // behind a card; screenshots are gameplay and often carry a health bar and a
+    // minimap. Coverage is thinner than screenshots, so this is a preference,
+    // not a source.
+    artworks: (g.artworks || []).map((a) => IMG(a.image_id, 'screenshot_med')).filter(Boolean).slice(0, 4),
+    // The ONE image id the game sheet should paint its backdrop from, chosen
+    // here rather than in the client so the preference order lives in one place:
+    // key art, else a screenshot, else the cover. `backdropKind` travels with it
+    // because the id alone does not say which IGDB size bucket it lives in, and
+    // asking for the wrong bucket is a 404 rather than a smaller picture.
+    backdropId: backdrop.id,
+    backdropKind: backdrop.kind,
     companies,
     url: g.url || null,
     // Surfaced so the deprecated-`category` replacement can be checked against

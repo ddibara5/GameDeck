@@ -20,16 +20,33 @@
  */
 
 const ID = /^[A-Za-z0-9_-]{1,40}$/;
-const UPSTREAM = (id) => `https://images.igdb.com/igdb/image/upload/t_cover_small/${id}.jpg`;
+
+// An IGDB image id does not say which size bucket it lives in, and asking for
+// the wrong one is a 404 rather than a smaller picture, so the caller passes the
+// kind alongside the id. `cover` stays the default so every existing caller is
+// unaffected.
+//
+// screenshot_med is 569px, which is about 1:1 against the ~510px band the
+// backdrop fills. The cover bucket is 90px into the same band: 5.7x, and past a
+// point turning the blur down reveals the enlargement rather than the picture.
+const BUCKET = {
+  cover: 't_cover_small',
+  screenshot: 't_screenshot_med',
+  artwork: 't_screenshot_med',
+};
+
+const UPSTREAM = (id, kind) =>
+  `https://images.igdb.com/igdb/image/upload/${BUCKET[kind] || BUCKET.cover}/${id}.jpg`;
 
 export default async function handler(req, res) {
   const id = String((req.query && req.query.id) || '');
-  if (!ID.test(id)) {
-    res.status(400).json({ error: 'bad id' });
+  const kind = String((req.query && req.query.kind) || 'cover');
+  if (!ID.test(id) || !BUCKET[kind]) {
+    res.status(400).json({ error: 'bad id or kind' });
     return;
   }
   try {
-    const upstream = await fetch(UPSTREAM(id));
+    const upstream = await fetch(UPSTREAM(id, kind));
     if (!upstream.ok) {
       // Do not cache a miss: a cover can be added to IGDB later.
       res.setHeader('Cache-Control', 'no-store');
