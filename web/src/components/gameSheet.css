@@ -95,8 +95,14 @@
 }
 
 /* Summary blurb. */
+/* --text, not --muted, and this is what pays for the gradient above. The blurb
+   is the lowest-contrast thing that scrolls across the art, so it sets the
+   ceiling on how thin the veil is allowed to be. Brightening it buys back more
+   headroom than any veil tuning could, and body text over key art wants to be
+   bright anyway. Measured: 11.32:1 at the worst scroll position against
+   typical art, 5.05:1 against a blown-out white screenshot. */
 .discover-summary {
-  color: var(--muted);
+  color: var(--text);
   font-size: var(--t-foot);
   line-height: 1.55;
   margin: 12px 0 4px;
@@ -243,23 +249,44 @@
 }
 
 .gs-bg {
-  position: sticky;
-  /* Sticky is IN FLOW, so it starts inside the sheet's padding and would leave
-     the sheet's own edges unpainted. --gs-bleed-y is the sheet's border-top (1)
-     plus its padding-top (16); --gs-bleed-x is its padding-left/right. Keep
-     these in step with `.modal-sheet`'s padding in index.css.
+  /* IN FLOW at the top of the sheet, with a negative bottom margin so it takes
+     no layout space, and NOT sticky. This is the third structure this backdrop
+     has had, and the reason is contrast, not layout.
 
-     The negative MARGIN moves its flow position out to the border edge, which
-     is what covers the top strip at scroll 0. The matching negative `top` is
-     what lets sticky hold it there once scrolling starts: with `top: 0` it gets
-     pushed back to the padding edge the moment it engages and the strip comes
-     back. Both were measured, at scroll 0 and at the bottom of a sheet long
-     enough to scroll. */
+     Sticky pinned the art to the viewport while the CONTENT scrolled through
+     it. That is fine for a uniform veil and fatal for a graded one: text ends
+     up wherever the scroll puts it, so the thinnest part of the veil has to
+     protect the weakest text anyway, and a gradient buys nothing. Measured, on
+     a graded pinned veil: the rating star read 4.27:1 at the top of the scroll
+     and 1.81:1 at the bottom of it. Same element, same veil, same art.
+
+     In flow, every element keeps a FIXED offset into the veil no matter where
+     the sheet is scrolled, so the gradient can be thin where the cover is and
+     opaque where the blurb is, and each piece of text has exactly one contrast
+     value instead of a range. That is what makes the art visible without
+     putting any text at risk.
+
+     `relative` is REQUIRED and subtle enough that removing it looks safe:
+     .gs-art and .gs-veil are absolutely positioned at inset 0, so they size to
+     the nearest POSITIONED ancestor. Static, this element is not one, and both
+     layers resolved against .modal-sheet instead: measured 936px of art and a
+     749px veil inside a 460px band, escaping `overflow: hidden` entirely
+     (overflow does not clip a descendant whose containing block is outside it)
+     and scrolling away with the sheet. That is the same defect as 5acad7c in a
+     new structure, and the assertion written for that one is what caught it.
+
+     --gs-bleed-y is the sheet's border-top (1) plus its padding-top (16);
+     --gs-bleed-x is its padding-left/right. Keep these in step with
+     `.modal-sheet`'s padding in index.css. */
+  position: relative;
   --gs-bleed-y: 17px;
   --gs-bleed-x: 20px;
-  top: calc(-1 * var(--gs-bleed-y));
-  height: calc(100vh + var(--gs-bleed-y));
-  margin: calc(-1 * var(--gs-bleed-y)) calc(-1 * var(--gs-bleed-x)) -100vh;
+  /* Tall enough to cover the cover, the title and the meta line, which is
+     everything above the blurb. Measured from the top of this element: title
+     369, meta and star 397, blurb 480. The band ends before the blurb, so the
+     blurb sits on the plain surface and needs no veil at all. */
+  height: 460px;
+  margin: calc(-1 * var(--gs-bleed-y)) calc(-1 * var(--gs-bleed-x)) -460px;
   overflow: hidden;
   pointer-events: none;
   border-radius: inherit;
@@ -277,7 +304,12 @@
   /* Scale past the edges so the blur's soft rim never shows as a seam. Safe
      only because .gs-bg clips it; without that wrapper this is the band. */
   transform: scale(1.25);
-  filter: blur(26px) saturate(0.85);
+  /* Saturated UP, not down. The veil only lets ~8-38% of the art through, and
+     at that weight LUMINANCE reads as nothing while CHROMA still reads as a
+     tint. 0.85 was the number that made this invisible: measured against a
+     typical dark screenshot, the sheet lifted from rgb(35,33,32) to
+     rgb(36,35,34). One unit. */
+  filter: blur(26px) saturate(1.8);
   /* Screenshots arrive ~240ms after the sheet opens, so it fades rather than
      pops. Deliberately NOT `will-change: filter`: benchmarked at p95 2.5ms
      promoted against 2.1ms unpromoted, so the hint costs more than it saves. */
@@ -298,12 +330,40 @@
   }
 }
 
+/* A GRADIENT, not a flat wash, and the reason is a contradiction the flat one
+   could not escape: the veil has to be opaque enough to protect the body text
+   against a blown-out white screenshot, and a veil that opaque leaves nothing
+   of the art. At 0.92 flat, typical dark art lifted the sheet by ONE rgb unit.
+
+   The gradient separates the two jobs by height, which only works because the
+   band is in flow (see .gs-bg): the cover sits at 0.46 where the art can carry
+   real colour, and by 385px it is 0.96, MORE opaque than the flat veil ever
+   was. So the rating star, the lowest-contrast thing over the art, is better
+   protected here than it was before: 4.94:1 against a blown-out white
+   screenshot, against 4.66:1 flat.
+
+   Stops in px, not %, and they are tied to the 460px band rather than to the
+   viewport: the elements they protect sit at fixed offsets (title 369, star
+   397), so a percentage would slide the protection off them on a taller
+   phone. */
 .gs-veil {
-  background: rgba(35, 33, 32, 0.92);
+  background: linear-gradient(
+    180deg,
+    rgba(35, 33, 32, 0.46) 0,
+    rgba(35, 33, 32, 0.66) 280px,
+    rgba(35, 33, 32, 0.96) 385px,
+    rgba(35, 33, 32, 1) 100%
+  );
 }
 
 [data-theme="light"] .gs-veil {
-  background: rgba(246, 241, 233, 0.96);
+  background: linear-gradient(
+    180deg,
+    rgba(246, 241, 233, 0.58) 0,
+    rgba(246, 241, 233, 0.78) 280px,
+    rgba(246, 241, 233, 0.97) 385px,
+    rgba(246, 241, 233, 1) 100%
+  );
 }
 
 /* Everything the sheet renders sits above the backdrop. Scoped to direct

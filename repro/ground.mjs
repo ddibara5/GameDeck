@@ -267,14 +267,72 @@ if (hasArt) {
     Boolean(g0) && g0.top === 0 && g0.left === 0 && g0.w === g0.sheetW,
     g0 ? `top ${g0.top}  left ${g0.left}  width ${g0.w} of ${g0.sheetW}` : '-'
   )
+  // The art is an in-flow band, so it SCROLLS. That is deliberate, and it is the
+  // property this assertion now guards: because the band moves with the
+  // content, every element keeps a fixed offset into the veil, so a given piece
+  // of text has ONE contrast value rather than a range. The pinned version was
+  // the opposite - the rating star measured 4.27:1 at scroll top and 1.81:1 at
+  // scroll bottom against the same art - which is why a graded veil and a
+  // pinned backdrop cannot both be right.
+  const backdropUnder = (sel) => page.evaluate((s) => {
+    const el = document.querySelector(s)
+    const bg = document.querySelector('.gs-bg')
+    if (!el || !bg) return null
+    return Math.round(el.getBoundingClientRect().top - bg.getBoundingClientRect().top)
+  }, sel)
+  const starTop0 = await backdropUnder('.gs-star')
   await page.evaluate(() => { document.querySelector('.modal-sheet').scrollTop = 99999 })
   await page.waitForTimeout(400)
-  const g1 = await geo()
+  const starTop1 = await backdropUnder('.gs-star')
   check(
-    'and it stays put when the sheet is scrolled to the bottom',
-    Boolean(g1) && g1.top === 0 && g1.covers,
-    g1 ? `top ${g1.top}  covers ${g1.covers}` : '-'
+    'the veil travels with the content, so contrast does not depend on scroll',
+    starTop0 != null && starTop0 === starTop1,
+    `star sits ${starTop0}px into the veil at the top and ${starTop1}px at the bottom`
   )
+
+  // The bug Dave actually reported. Every assertion above proves the art
+  // EXISTS; none of them proved it does anything, and at a flat 0.92 veil it
+  // did not: a typical dark screenshot moved the sheet from rgb(35,33,32) to
+  // rgb(36,35,34). One unit. Measure the lift instead of the markup.
+  const lift = await page.evaluate(async () => {
+    const bg = document.querySelector('.gs-bg')
+    if (!bg) return null
+    const before = bg.style.display
+    const read = () => {
+      const r = document.querySelector('.modal-sheet').getBoundingClientRect()
+      return { x: Math.round(r.left) + 4, y: Math.round(r.top) + 4, w: Math.round(r.width) - 8 }
+    }
+    return { box: read(), restore: before }
+  })
+  if (lift) {
+    const hide2 = await page.addStyleTag({
+      content: '.modal-sheet > *:not(.gs-bg):not(.gs-art):not(.gs-veil){visibility:hidden !important}',
+    })
+    await page.evaluate(() => { document.querySelector('.modal-sheet').scrollTop = 0 })
+    await page.waitForTimeout(200)
+    const buf = await page.screenshot({ clip: { x: lift.box.x, y: lift.box.y, width: lift.box.w, height: 240 } })
+    await hide2.evaluate((el) => el.remove())
+    const avg = await page.evaluate(async (b64) => {
+      const i = new Image(); i.src = 'data:image/png;base64,' + b64; await i.decode()
+      const c = document.createElement('canvas'); c.width = i.width; c.height = i.height
+      c.getContext('2d').drawImage(i, 0, 0)
+      const d = c.getContext('2d').getImageData(0, 0, i.width, i.height).data
+      let r = 0, g = 0, b = 0, n = 0
+      for (let k = 0; k < d.length; k += 4) { r += d[k]; g += d[k + 1]; b += d[k + 2]; n++ }
+      return [Math.round(r / n), Math.round(g / n), Math.round(b / n)]
+    }, buf.toString('base64'))
+    const surface = [35, 33, 32]
+    const dist = Math.round(Math.sqrt(avg.reduce((t, v, i) => t + (v - surface[i]) ** 2, 0)))
+    // 28 was the shipped number against this same near-white fixture, and it was
+    // invisible on a phone. 60 is comfortably past it without being a wash.
+    check(
+      'and the art actually tints the sheet, rather than merely existing',
+      dist >= 60,
+      `sheet top reads rgb(${avg.join(',')}) against a plain rgb(35,33,32): distance ${dist}`
+    )
+    await page.evaluate(() => { document.querySelector('.modal-sheet').scrollTop = 99999 })
+    await page.waitForTimeout(300)
+  }
 
   // The band. Hide the sheet's own content and photograph the backdrop alone,
   // then take the brightest pixel in the WHOLE sheet. Sampling with the content
