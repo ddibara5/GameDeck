@@ -213,10 +213,10 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
             which is a real case, and then the sheet is the flat surface it has
             always been. */}
         {artUrl ? (
-          <>
-            <div className="gs-art" style={{ backgroundImage: `url(${artUrl})` }} aria-hidden="true" />
-            <div className="gs-veil" aria-hidden="true" />
-          </>
+          <div className="gs-bg" aria-hidden="true">
+            <div className="gs-art" style={{ backgroundImage: `url(${artUrl})` }} />
+            <div className="gs-veil" />
+          </div>
         ) : null}
 
         <div className="sheet-drag-zone" {...dragHandlers}>

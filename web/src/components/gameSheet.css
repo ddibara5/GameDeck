@@ -199,10 +199,29 @@
    loading, blurred to a colour field behind an opaque-enough veil. Same URL, so
    the browser serves it from cache and this costs no extra request at all.
 
-   `position: relative` on the panel, and the two layers at `inset: 0`, so the
-   art spans the whole SCROLL height rather than just the visible window. A
-   sheet you scroll keeps its colour the whole way down instead of running out
-   of art halfway.
+   ## The two things that made the first attempt wrong
+
+   `.modal-sheet` IS the scroll container. An absolutely positioned child at
+   `inset: 0` is therefore sized to the visible padding box, not to the content:
+   measured 749px against a 1081px scroll height. It also scrolled away with the
+   content, so the lower third of a long sheet had no art under it at all.
+
+   Worse, the art carried `transform: scale(1.25)` and the veil did not, so the
+   art painted 936px against a 749px veil and overhung it by ~93px top and
+   bottom. Clipped at scroll top, but scroll down and that overhang appeared
+   BELOW the veil as a band of raw, unveiled screenshot across the sheet.
+
+   ## What it does now
+
+   One `.gs-bg` wrapper, `position: sticky`, which is the only one of the three
+   that stays put: `absolute` sizes to the scroll port and scrolls away, and
+   `fixed` inside a `will-change: transform` ancestor behaves as absolute and
+   does the same. Sticky reads as a backdrop and is cheaper too, one screen of
+   blur instead of one document of it.
+
+   The wrapper also CLIPS. `overflow: hidden` on it contains the art's scale
+   overhang, so the veil inside it covers exactly what the art covers, always.
+   That containment is the fix for the band; do not move the veil out of it.
 
    The veil is 92% in dark and 96% in light, and those are not a matched pair by
    accident: light starts from a much brighter surface, so the same alpha lets
@@ -223,18 +242,40 @@
   position: relative;
 }
 
+.gs-bg {
+  position: sticky;
+  /* Sticky is IN FLOW, so it starts inside the sheet's padding and would leave
+     the sheet's own edges unpainted. --gs-bleed-y is the sheet's border-top (1)
+     plus its padding-top (16); --gs-bleed-x is its padding-left/right. Keep
+     these in step with `.modal-sheet`'s padding in index.css.
+
+     The negative MARGIN moves its flow position out to the border edge, which
+     is what covers the top strip at scroll 0. The matching negative `top` is
+     what lets sticky hold it there once scrolling starts: with `top: 0` it gets
+     pushed back to the padding edge the moment it engages and the strip comes
+     back. Both were measured, at scroll 0 and at the bottom of a sheet long
+     enough to scroll. */
+  --gs-bleed-y: 17px;
+  --gs-bleed-x: 20px;
+  top: calc(-1 * var(--gs-bleed-y));
+  height: calc(100vh + var(--gs-bleed-y));
+  margin: calc(-1 * var(--gs-bleed-y)) calc(-1 * var(--gs-bleed-x)) -100vh;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
 .gs-art,
 .gs-veil {
   position: absolute;
   inset: 0;
-  pointer-events: none;
-  border-radius: inherit;
 }
 
 .gs-art {
   background-size: cover;
   background-position: center;
-  /* scale past the edges so the blur's soft border does not show as a seam */
+  /* Scale past the edges so the blur's soft rim never shows as a seam. Safe
+     only because .gs-bg clips it; without that wrapper this is the band. */
   transform: scale(1.25);
   filter: blur(26px) saturate(0.85);
   /* Screenshots arrive ~240ms after the sheet opens, so it fades rather than
@@ -265,9 +306,9 @@
   background: rgba(246, 241, 233, 0.96);
 }
 
-/* Everything the sheet renders sits above the two layers. Scoped to direct
+/* Everything the sheet renders sits above the backdrop. Scoped to direct
    children so nothing inside a card needs its own z-index. */
-.modal-sheet > *:not(.gs-art):not(.gs-veil) {
+.modal-sheet > *:not(.gs-bg) {
   position: relative;
   z-index: 1;
 }

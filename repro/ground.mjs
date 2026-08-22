@@ -61,8 +61,16 @@ const json = (r, body) => r.fulfill({ status: 200, contentType: 'application/jso
 await page.route('**/rest/v1/**', (r) => json(r, r.request().url().includes('/games') ? games : []))
 await page.route('**/api/**', (r) => json(r, {}))
 const UNOWNED = 'Mortal Shell II'
+// Long enough to SCROLL. The first version of this file used a one-line summary
+// and three screenshots, so the sheet never overflowed, and two defects that
+// only appear below the fold went out to production: the backdrop was sized to
+// the scroll port and scrolled away, and the art's scale overhang showed under
+// the veil as a band of raw screenshot. Anything asserted about a sheet has to
+// be asserted about a sheet you can scroll.
+const LONG =
+  'Their flesh is your weapon. Possess warrior Shells, dethrone false gods and redeem a ravaged world in a standalone sequel built around adrenaline-charged, high-stakes combat. Every Shell carries its own history and its own way of dying, and the world remembers which ones you wore. Parry, harden and counter through a decaying pilgrimage of a map that folds back on itself, and decide how much of yourself is worth spending to get through it.'
 await page.route('**/api/discover**', (r) =>
-  json(r, { games: [{ id: 100, name: UNOWNED, summary: 'Their flesh is your weapon. Possess warrior Shells, dethrone false gods, redeem a ravaged world.', cover: null, year: 2026, rating: 90, screenshots: [SHOT, SHOT, SHOT], genres: ['Role-playing (RPG)'], platforms: ['Series X|S'] }] })
+  json(r, { games: [{ id: 100, name: UNOWNED, summary: LONG, cover: null, year: 2026, rating: 90, screenshots: [SHOT, SHOT, SHOT, SHOT, SHOT, SHOT], genres: ['Role-playing (RPG)', 'Adventure', 'Indie'], keywords: ['soulslike', 'dark fantasy', 'parrying'], themes: ['Action', 'Fantasy'], platforms: ['Series X|S', 'PS5', 'PC'], companies: [{ name: 'Cold Symmetry', developer: true }], url: 'https://www.igdb.com/games/mortal-shell-ii' }] })
 )
 // A BRIGHT screenshot on purpose. The veil has to hold against the worst art a
 // game can have, and a dark one would pass a veil that is far too thin.
@@ -231,6 +239,70 @@ if (hasArt) {
     const r = ratio(fg, bg)
     check('the summary clears 4.5 against the WORST pixel of the art', r >= 4.5, `${r.toFixed(2)}:1  on rgb(${bg.join(',')})`)
   }
+
+  /* --------------------------------------------- and below the fold */
+
+  // Every assertion above this point is about the TOP of the sheet, and both
+  // production defects lived below it. This block is the one that would have
+  // caught them.
+  const geo = () => page.evaluate(() => {
+    const sh = document.querySelector('.modal-sheet')
+    const bg = document.querySelector('.gs-bg')
+    if (!sh || !bg) return null
+    const a = sh.getBoundingClientRect()
+    const b = bg.getBoundingClientRect()
+    return {
+      scrolls: sh.scrollHeight > sh.clientHeight + 8,
+      top: Math.round(b.top - a.top),
+      left: Math.round(b.left - a.left),
+      w: Math.round(b.width), sheetW: Math.round(a.width),
+      covers: Math.round(b.height) >= sh.clientHeight,
+    }
+  })
+  const g0 = await geo()
+  // Vacuous-guard: if the sheet does not overflow, nothing below proves anything.
+  check('the sheet is long enough to scroll', Boolean(g0 && g0.scrolls), g0 ? String(g0.scrolls) : '(no bg)')
+  check(
+    'the backdrop reaches the sheet edges, not just its padding box',
+    Boolean(g0) && g0.top === 0 && g0.left === 0 && g0.w === g0.sheetW,
+    g0 ? `top ${g0.top}  left ${g0.left}  width ${g0.w} of ${g0.sheetW}` : '-'
+  )
+  await page.evaluate(() => { document.querySelector('.modal-sheet').scrollTop = 99999 })
+  await page.waitForTimeout(400)
+  const g1 = await geo()
+  check(
+    'and it stays put when the sheet is scrolled to the bottom',
+    Boolean(g1) && g1.top === 0 && g1.covers,
+    g1 ? `top ${g1.top}  covers ${g1.covers}` : '-'
+  )
+
+  // The band. Hide the sheet's own content and photograph the backdrop alone,
+  // then take the brightest pixel in the WHOLE sheet. Sampling with the content
+  // still up finds the accent on a chip or a button and says nothing about the
+  // art, which is how the first attempt at this assertion fooled itself.
+  //
+  // The :not list names the OLD structure's layers as well as the new wrapper.
+  // Without that, running this against the build that has the defect hides the
+  // very art it is meant to catch and the assertion passes on both. Checked by
+  // running it against both builds, which is the only way to know.
+  //
+  // The fixture's screenshot is near-white, so raw art reads about 0.9 and the
+  // veiled ground about 0.04. Anything above 0.15 is unveiled art on screen.
+  const hideAll = await page.addStyleTag({
+    content: '.modal-sheet > *:not(.gs-bg):not(.gs-art):not(.gs-veil) { visibility: hidden !important }',
+  })
+  await page.waitForTimeout(150)
+  const sheetBox = await page.evaluate(() => {
+    const a = document.querySelector('.modal-sheet').getBoundingClientRect()
+    return { x: Math.round(a.left), y: Math.round(a.top), width: Math.round(a.width), height: Math.round(a.height) }
+  })
+  const botBg = await avgOf(await page.screenshot({ clip: sheetBox }))
+  await hideAll.evaluate((el) => el.remove())
+  check(
+    'no band of unveiled art anywhere in the sheet, scrolled to the bottom',
+    lum(botBg) < 0.15,
+    `brightest pixel rgb(${botBg.join(',')})  luminance ${lum(botBg).toFixed(3)}`
+  )
 }
 
 /* --------------------------------------------------- turning it off */
