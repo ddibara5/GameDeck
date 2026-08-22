@@ -164,97 +164,18 @@
   color: var(--muted);
 }
 
-/* A story with no article image borrows the matched game's cover instead of
-   rendering no band at all.
-
-   That used to mean a 76x107 cover floating in a 368px-wide band: 29% of the
-   width IGDB actually served, from a 264x374 source. The justification was that
-   filling the band "would blow the cover up past its native size", which was
-   backwards - the source is wider than the card. Square key art fared worse
-   still, getting shrunk AND cropped by object-fit: cover.
-
-   The fix is the standard one: the same image, scaled up and blurred, fills the
-   band behind a sharp copy at a size worth looking at. Nothing is cropped, and
-   the fill is drawn from the artwork rather than invented. */
-.news-card-band {
-  background: var(--surface-2);
-}
-
-.news-card-band.cover {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 158px;
-  overflow: hidden;
-  background: var(--surface-2);
-}
-
-/* Inset well past the edges so the blur has material to sample and does not
-   wash out to the band's own background at the corners. */
-.news-card-fill {
-  position: absolute;
-  inset: -20%;
-  width: 140%;
-  height: 140%;
-  object-fit: cover;
-  filter: blur(24px) saturate(140%) brightness(0.6);
-  pointer-events: none;
-}
-
-/* Light theme wants the opposite correction. Most covers are dark, so a
-   full-strength fill puts a heavy black band across an otherwise pale card.
-   Lifting it and letting the band's own surface show through keeps the card
-   reading as one object. */
-[data-theme='light'] .news-card-fill {
-  filter: blur(24px) saturate(130%) brightness(1.12);
-  opacity: 0.5;
-}
-
-.news-card-img {
-  display: block;
-  width: 100%;
-  height: 168px;
-  object-fit: cover;
-  background: var(--surface-2);
-}
-
-.news-card-band.cover .news-card-img {
-  position: relative;
-  width: auto;
-  height: 130px;
-  max-width: 55%;
-  border: none;
-  border-radius: var(--r-xs);
-  object-fit: contain;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45), 0 0 0 0.5px rgba(255, 255, 255, 0.12);
-  background: none;
-}
-
 /* The story with the strongest personal hook (a game you are actively playing)
-   gets an edge rather than a bigger card, so the rhythm of the list survives. */
-.news-card.pin {
-  border-color: var(--accent);
+   gets an edge rather than a bigger row, so the rhythm of the list survives.
+   An inset ring rather than border-color: the row has no border to colour. */
+.news-row.pin {
+  box-shadow: var(--e2), inset 0 0 0 1px var(--accent);
 }
 
 /* Read state. Per-story, keyed on the article url - see lib/news.js for why not
-   the row id. Recedes rather than hides: a read story is still the week's news. */
-.news-card.read {
+   the row id. Recedes rather than hides: a read story is still the week's news.
+   Opening the sheet is what sets it now, since the row shows nothing else. */
+.news-row.read {
   opacity: 0.58;
-}
-
-.news-card.read .news-card-title {
-  font-weight: var(--w-semi);
-}
-
-.news-read-flag {
-  margin-left: auto;
-  flex: none;
-  font-size: var(--t-cap2);
-  font-weight: var(--w-bold);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--muted);
 }
 
 /* How widely the story was covered. Gated at OUTLET_CHIP_MIN because most rows
@@ -299,10 +220,6 @@
   color: var(--muted);
 }
 
-.news-card-body {
-  padding: 14px 16px 15px;
-}
-
 .news-meta {
   display: flex;
   align-items: center;
@@ -339,22 +256,6 @@
 .news-meta-time::before {
   content: '\00B7';
   margin-right: 6px;
-}
-
-.news-card-title {
-  font-size: var(--t-body);
-  font-weight: var(--w-semi);
-  line-height: 1.3;
-  color: var(--text);
-  letter-spacing: var(--t-body-tr);
-  margin: 0 0 7px;
-}
-
-.news-card-summary {
-  font-size: var(--t-sub);
-  line-height: 1.58;
-  color: color-mix(in srgb, var(--text), var(--muted) 32%);
-  margin: 0 0 12px;
 }
 
 .news-sources {
@@ -709,4 +610,86 @@
    16px gutter every list on this tab uses. */
 .news-seg {
   margin: 0 16px 14px;
+}
+
+/* ---------------------------------------------------------------------------
+   The story sheet. Everything the row drops.
+   --------------------------------------------------------------------------- */
+
+/* The band is a picture the text sits BELOW, not one it sits on. Three commits
+   on the game sheet went into learning that a layer behind a headline turns
+   into an argument about how opaque the veil has to be, and a press photo with
+   a face in it wins that argument every time. So the art simply stops, and the
+   contrast claim is geometric rather than per-image. */
+.ns-band {
+  position: relative;
+  height: 196px;
+  /* -20px is .modal-sheet's own horizontal padding, so the band bleeds to the
+     card edge. Tied to that value: if the sheet's padding changes, so does this. */
+  margin: 0 -20px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.ns-band.cover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Same trick the old card band used: a 3:4 cover cannot fill a 16:9 band, so
+   the same image blown up and blurred fills it behind a sharp copy. */
+.ns-band-fill {
+  position: absolute;
+  inset: -20%;
+  width: 140%;
+  height: 140%;
+  object-fit: cover;
+  filter: blur(24px) saturate(140%) brightness(0.6);
+  pointer-events: none;
+}
+
+/* Light theme wants the opposite correction. Most covers are dark, so a
+   full-strength fill puts a heavy black band across an otherwise pale sheet. */
+[data-theme='light'] .ns-band-fill {
+  filter: blur(24px) saturate(130%) brightness(1.12);
+  opacity: 0.5;
+}
+
+.ns-band-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ns-band.cover .ns-band-img {
+  position: relative;
+  width: auto;
+  height: 164px;
+  max-width: 55%;
+  border-radius: var(--r-xs);
+  object-fit: contain;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45), 0 0 0 0.5px rgba(255, 255, 255, 0.12);
+}
+
+.ns-body {
+  padding-top: 14px;
+}
+
+.ns-title {
+  font-size: var(--t-t2);
+  font-weight: var(--w-bold);
+  line-height: 1.2;
+  letter-spacing: var(--t-t2-tr);
+  color: var(--text);
+  margin: 0 0 12px;
+}
+
+.ns-sum {
+  font-size: var(--t-body);
+  line-height: 1.5;
+  color: var(--text);
+  letter-spacing: var(--t-body-tr);
+  margin: 14px 0 0;
 }

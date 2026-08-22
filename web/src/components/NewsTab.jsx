@@ -9,21 +9,21 @@ import {
   WEEK_VISIBLE,
   FORYOU_VISIBLE,
   cardArtChain,
-  coverSrc,
   outletCount,
   OUTLET_CHIP_MIN,
   markNewsSeen,
   newestStamp,
   markRead,
   useReadNews,
-  hostOf,
+  relTime,
   NEWS_SORTS,
   getNewsSort,
   setNewsSort,
 } from '../lib/news.js'
-import { useWishlist, addToWishlist } from '../lib/wishlist.js'
+import { useWishlist } from '../lib/wishlist.js'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
 import { loadGamePass, fetchGameById } from '../lib/discover.js'
+import NewsSheet from './NewsSheet.jsx'
 import DiscoverDetail from './DiscoverDetail.jsx'
 import GameDetail from './GameDetail.jsx'
 import Skeleton from './Skeleton.jsx'
@@ -35,6 +35,9 @@ export default function NewsTab() {
   const [loading, setLoading] = useState(true)
   const [gamepassIds, setGamepassIds] = useState(null)
   const [openGame, setOpenGame] = useState(null)
+  // The story whose sheet is up. { item, rel } rather than an id, because the
+  // relevance is computed per week-section and is not on the row.
+  const [openStory, setOpenStory] = useState(null)
   const mountedRef = useRef(true)
   const { ids: wishlistIds } = useWishlist()
   const { games } = useLibraryGames()
@@ -125,6 +128,14 @@ export default function NewsTab() {
     setOpenGame({ kind: 'discover', game: g, inLibrary: false })
   }
 
+  // Opening the sheet IS reading the story now: the row shows the headline and
+  // nothing else, so a tap is the only way to have read anything. Following a
+  // source link still marks it too, for the case where the sheet is skipped.
+  function openStoryFor(item, rel) {
+    markRead(item.primaryUrl)
+    setOpenStory({ item, rel })
+  }
+
   return (
     <div {...pull.handlers}>
       <div className="news-pull" ref={pull.gutterRef}>
@@ -181,7 +192,7 @@ export default function NewsTab() {
               past={gi > 0}
               sets={sets}
               readSet={readSet}
-              onOpenGame={openGameFor}
+              onOpenStory={openStoryFor}
               sort={sort}
             />
           ))}
@@ -190,6 +201,15 @@ export default function NewsTab() {
           </div>
         </>
       )}
+
+      {openStory ? (
+        <NewsSheet
+          item={openStory.item}
+          rel={openStory.rel}
+          onClose={() => setOpenStory(null)}
+          onOpenGame={openGameFor}
+        />
+      ) : null}
 
       {openGame?.kind === 'owned' ? (
         <GameDetail game={openGame.game} onClose={() => setOpenGame(null)} />
@@ -207,7 +227,7 @@ export default function NewsTab() {
 
 // Only the newest week is split into For you / Also this week. Older weeks stay
 // as one list; splitting a week you have already read just moves things around.
-function WeekSection({ group, past, sets, readSet, onOpenGame, sort }) {
+function WeekSection({ group, past, sets, readSet, onOpenStory, sort }) {
   const split = useMemo(() => splitForYou(group.items, sets), [group.items, sets])
 
   const list = (entries, key) => (
@@ -215,7 +235,7 @@ function WeekSection({ group, past, sets, readSet, onOpenGame, sort }) {
       key={key}
       entries={entries}
       readSet={readSet}
-      onOpenGame={onOpenGame}
+      onOpenStory={onOpenStory}
       // Both lists cap now. For you was uncapped until a refreshed week grew to
       // 68 stories and the section ran ~30 cards deep; it just gets a longer
       // leash than the tail does.
@@ -273,7 +293,7 @@ function WeekSection({ group, past, sets, readSet, onOpenGame, sort }) {
 // and the tail is simply not drawn until asked for. That way a story pushed down
 // by a later refresh is one tap away instead of gone, and the read state keyed
 // on its url stays meaningful.
-function CappedList({ entries, readSet, onOpenGame, cap }) {
+function CappedList({ entries, readSet, onOpenStory, cap }) {
   const [showAll, setShowAll] = useState(false)
   const hidden = Math.max(0, entries.length - cap)
   const shown = showAll || hidden === 0 ? entries : entries.slice(0, cap)
@@ -287,7 +307,7 @@ function CappedList({ entries, readSet, onOpenGame, cap }) {
             item={entry.item}
             rel={entry.rel}
             read={readSet.has(entry.item.primaryUrl)}
-            onOpenGame={onOpenGame}
+            onOpen={() => onOpenStory(entry.item, entry.rel)}
           />
         ))}
       </div>
@@ -300,24 +320,77 @@ function CappedList({ entries, readSet, onOpenGame, cap }) {
   )
 }
 
-function NewsCard({ item, rel, read, onOpenGame }) {
+function NewsCard({ item, rel, read, onOpen }) {
   // Index into the art chain, advanced on load failure. The article image is a
   // hotlink and dies on someone else's schedule; the cover behind it is ours.
   const [artStep, setArtStep] = useState(0)
   const sources = dedupeSources(item.sources)
   const lead = sources[0] || null
-  const fav = lead ? faviconFor(lead.url) : ''
   const when = relTime(item.publishedAt)
   const chain = cardArtChain(item, rel.row?.cover_igdb)
   const art = chain[artStep] || null
   const outlets = outletCount(item.sources)
 
-  const shownSources = sources.slice(0, 2)
-  const extra = sources.length - shownSources.length
-  const onRead = () => markRead(item.primaryUrl)
+  // ONE right-hand slot, and the relevance hook owns it. "In your library" says
+  // more about whether to open a story than "4 outlets" does, and the two
+  // stacked wrapped the meta line onto a second row, which is 20px this layout
+  // does not have. The outlet count still shows in the sheet either way.
+  const flag = rel.why
+    ? { cls: 'news-row-why', text: rel.why, dot: true }
+    : outlets >= OUTLET_CHIP_MIN
+      ? { cls: 'news-row-heat', text: `${outlets} outlets`, dot: false }
+      : null
 
   return (
-    <article className={`news-card${read ? ' read' : ''}${rel.tier >= 4 ? ' pin' : ''}`}>
+    <button
+      type="button"
+      className={`news-row${read ? ' read' : ''}${rel.tier >= 4 ? ' pin' : ''}`}
+      onClick={onOpen}
+    >
+      <span className="news-row-thumb">
+        {art ? (
+          <img
+            key={art.src}
+            className={art.kind === 'cover' ? 'is-cover' : undefined}
+            src={art.src}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            onError={() => setArtStep((s) => s + 1)}
+          />
+        ) : (
+          <span className="news-row-noart" aria-hidden="true" />
+        )}
+      </span>
+
+      <span className="news-row-text">
+        {/* Three lines, not two. At two this clipped 10 of one real week's 12
+            headlines mid-phrase, because the digest writes 48-73 character
+            titles into 261px. The third line costs 20px and one story per
+            screen; see news.css for the thumbnail width it is paired with. */}
+        <span className="news-row-title">{item.title}</span>
+        <span className="news-row-meta">
+          {lead ? <span className="news-row-src">{lead.name}</span> : null}
+          {when ? (
+            <>
+              <span className="news-row-dot" aria-hidden="true">&middot;</span>
+              <span className="news-row-time">{when}</span>
+            </>
+          ) : null}
+          {flag ? (
+            <span className={flag.cls}>
+              {flag.dot ? <span className="news-why-dot" /> : null}
+              {flag.text}
+            </span>
+          ) : null}
+        </span>
+      </span>
+    </button>
+  )
+}
+
+const _REMOVED_CARD_BODY = (
+    <article>
       {art ? (
         <div className={`news-card-band${art.kind === 'cover' ? ' cover' : ''}`}>
           {/* A 3:4 cover cannot fill a 16:9 band, and the old answer was to
