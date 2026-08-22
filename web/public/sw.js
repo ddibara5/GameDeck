@@ -6,9 +6,11 @@
 // - Icons and the manifest: NOT HANDLED AT ALL. They are fetched by iOS outside the
 //   page context, and a worker in that path can only serve something stale.
 // - Every OTHER same-origin file: network-first, since a stable url may change bytes.
-// - IGDB game art (cross-origin): cache-first in a capped image cache, so covers and
-//   screenshots load instantly on repeat views and work offline. This class of request
-//   was previously skipped entirely (cross-origin bail), which is why images felt slow.
+// - Game art AND news art (cross-origin): cache-first in a capped image cache, so
+//   covers, screenshots and story thumbnails load instantly on repeat views and work
+//   offline. Everything reaches this branch because it goes through wsrv.nl or
+//   images.igdb.com; a press CDN hotlinked directly would fall through the
+//   cross-origin bail below and never be cached at all, which is what News did.
 // - Supabase / API calls: network-first, falling back to cache when offline.
 
 // Bumped to v4 to evict the v3 cache, which is holding stale icons and an old
@@ -16,7 +18,12 @@
 // not in KEEP, so the rename is what actually clears them.
 const SHELL_CACHE = 'gamedeck-shell-v4';
 const IMG_CACHE = 'gamedeck-img-v1';
-const IMG_CACHE_LIMIT = 300; // ~300 covers/screenshots; oldest evicted first (FIFO).
+// Raised from 300 when News article art started coming through wsrv.nl too. A
+// week of stories is ~12 thumbnails and the tab keeps several weeks, so on the
+// old cap a scroll through News could evict a whole library's worth of covers.
+// These are downscaled WebP - a 128px thumbnail is a few kB - so 500 is still a
+// small cache.
+const IMG_CACHE_LIMIT = 500; // covers, screenshots and news art; oldest evicted first (FIFO).
 const KEEP = [SHELL_CACHE, IMG_CACHE];
 // The manifest is deliberately NOT precached. See the bypass in the fetch handler.
 const APP_SHELL = ['/', '/index.html'];

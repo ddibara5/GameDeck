@@ -13,6 +13,7 @@ import {
   relTime,
   faviconFor,
 } from '../lib/news.js'
+import { remoteImg } from '../lib/format.js'
 import { addToWishlist } from '../lib/wishlist.js'
 import './news.css'
 
@@ -36,6 +37,12 @@ import './news.css'
  * art happens to be an IGDB cover. Neither is worth it, so the sheet keeps the
  * plain surface.
  */
+// The band is full sheet width at 196px tall; 800 covers it at 2x on the widest
+// phone. The blurred fill behind a cover is scaled 140% and blurred 24px, so it
+// has no detail left to resolve and is fetched small on purpose.
+const BAND_W = 800
+const FILL_W = 200
+
 export default function NewsSheet({ item, rel, onClose, onOpenGame }) {
   const { closing, requestClose } = useDelayedClose(onClose)
   const { dragY, dragging, handlers: dragHandlers } = useSheetDrag(requestClose)
@@ -83,12 +90,12 @@ export default function NewsSheet({ item, rel, onClose, onOpenGame }) {
           {art ? (
             <div className={`ns-band${art.kind === 'cover' ? ' cover' : ''}`}>
               {art.kind === 'cover' ? (
-                <img className="ns-band-fill" src={art.src} alt="" aria-hidden="true" decoding="async" />
+                <img className="ns-band-fill" src={remoteImg(art.src, FILL_W)} alt="" aria-hidden="true" decoding="async" />
               ) : null}
               <img
                 key={art.src}
                 className="ns-band-img"
-                src={art.src}
+                src={remoteImg(art.src, BAND_W)}
                 alt=""
                 decoding="async"
                 onError={() => setArtStep((s) => s + 1)}

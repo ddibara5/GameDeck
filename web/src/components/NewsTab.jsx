@@ -20,6 +20,7 @@ import {
   getNewsSort,
   setNewsSort,
 } from '../lib/news.js'
+import { remoteImg } from '../lib/format.js'
 import { useWishlist } from '../lib/wishlist.js'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
 import { loadGamePass, fetchGameById } from '../lib/discover.js'
@@ -320,6 +321,10 @@ function CappedList({ entries, readSet, onOpenStory, cap }) {
   )
 }
 
+// 64px square at 2x. Asking for the slot rather than the publisher's original is
+// most of the point: one row's source image is 1600px wide.
+const THUMB_W = 128
+
 function NewsCard({ item, rel, read, onOpen }) {
   // Index into the art chain, advanced on load failure. The article image is a
   // hotlink and dies on someone else's schedule; the cover behind it is ours.
@@ -352,7 +357,7 @@ function NewsCard({ item, rel, read, onOpen }) {
           <img
             key={art.src}
             className={art.kind === 'cover' ? 'is-cover' : undefined}
-            src={art.src}
+            src={remoteImg(art.src, THUMB_W)}
             alt=""
             loading="lazy"
             decoding="async"

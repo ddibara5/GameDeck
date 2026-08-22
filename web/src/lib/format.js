@@ -338,6 +338,58 @@ export function optImg(url, targetW = 240) {
   return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${w}&output=webp&q=82`
 }
 
+// HTML entities inside a url. The news ingest stores what the feed handed it and
+// some feeds escape their query strings: four rows in `news` currently hold
+// "?w=400&#038;h=600", which is not an address and cannot load. Decoding on the
+// way out fixes the rows already in the table as well as the next ones, which a
+// fix in the ingest alone would not.
+const NAMED_ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" }
+
+function unescapeUrl(url) {
+  return String(url).replace(/&(#[Xx]?[0-9A-Fa-f]+|[A-Za-z]+);/g, (whole, body) => {
+    if (body[0] !== '#') return NAMED_ENTITIES[body.toLowerCase()] ?? whole
+    const hex = body[1] === 'x' || body[1] === 'X'
+    const code = parseInt(body.slice(hex ? 2 : 1), hex ? 16 : 10)
+    return Number.isFinite(code) && code > 0 ? String.fromCodePoint(code) : whole
+  })
+}
+
+/**
+ * Art from a host that is not ours, sized for the slot it is going into.
+ *
+ * News article images are hotlinks into a dozen press CDNs - IGN, GameSpot,
+ * PlayStation Blog, ytimg, staticflickr, s-microsoft - and loading them straight
+ * from the browser has three separate problems:
+ *
+ *   1. they are not cached. The service worker cache-firsts `images.igdb.com`
+ *      and `wsrv.nl` and nothing else, so every one of those hosts is refetched
+ *      on every visit to the tab;
+ *   2. they are the publisher's full-size asset. One row's flickr image is
+ *      1600px wide and lands in a 64px square;
+ *   3. they carry this origin's Referer, and a host with hotlink protection is
+ *      entitled to refuse it - which looks from here exactly like a broken
+ *      image.
+ *
+ * Fetching through the same image CDN the covers already use answers all three
+ * at once: one host instead of a dozen, a host the worker already caches, a
+ * downscaled WebP instead of a press JPEG, and a server-side fetch rather than a
+ * hotlink from this origin.
+ *
+ * This is deliberately NOT a change to optImg. optImg's contract is that a
+ * non-IGDB url passes through untouched, and its four call sites rely on it: an
+ * Exophase cover is a 109x60 banner and routing it through a CDN would resize a
+ * thing that is already the wrong shape. This is the opposite intent, so it is a
+ * different function.
+ */
+export function remoteImg(url, targetW = 240) {
+  if (!url) return url
+  const clean = unescapeUrl(url)
+  if (!/^https?:\/\//i.test(clean)) return clean
+  // IGDB art keeps the bucket cap, so a cover is still never asked to enlarge.
+  if (clean.indexOf('images.igdb.com') !== -1) return optImg(clean, targetW)
+  return `https://wsrv.nl/?url=${encodeURIComponent(clean)}&w=${targetW}&output=webp&q=82`
+}
+
 /**
  * The best cover for an owned game row: IGDB art, falling back to whatever the
  * platform sync stored.
