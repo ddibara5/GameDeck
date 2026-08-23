@@ -177,16 +177,44 @@ const rgbOf = (css) => {
   return out && out.length >= 3 ? out.slice(0, 3).map(Number) : [0, 0, 0]
 }
 
-// The text the veil has to protect is --muted, not --text. Measured in light
-// mode on a ground: --text cleared comfortably while the three --muted labels
-// (the page subtitle, "Showing", the Activity day label) sat near 2.8:1. Sizing
-// the veil to the brighter of the two would have looked fine and failed the
-// smallest type on the screen.
+// THE VEIL IS SIZED AGAINST --text, AND THAT IS A CHANGE.
+//
+// It used to be --muted, on the correct observation that --muted was the
+// smallest, faintest type on the screen and that sizing to --text would have
+// failed it. What was never checked is how much type that actually WAS. Walked
+// across all five tabs, matching every run of --muted text and asking what is
+// painted between it and the ground:
+//
+//   109 of 123 runs sit on something opaque - a game card, a day card, a chart
+//     card, a Home tile. They cannot see the ground at all.
+//   14 sit on the bare ground, and every one of them is the same three things:
+//     .page-subtitle (one line per tab), .activity-group-label (the day
+//     headings) and .empty-state / .showing-label.
+//
+// So the entire picture was being covered to protect fourteen runs of 13px grey
+// text, while the 109 that look identical were already on cards. Measured on a
+// realistic piece of key art, dark theme:
+//
+//   bar                     floor    picture left
+//   --muted at 4.5:1         0.74        26%
+//   --text  at 4.5:1         0.38        62%
+//
+// The answer is not to lower the bar. It is to stop putting faint text on a
+// photograph: index.css promotes those four selectors to --text whenever a
+// picture ground is on (see "Secondary type on the ground"), so --muted is no
+// longer on it and --text is what the veil has to clear. The contrast guarantee
+// goes UP - those labels move from exactly 4.5:1 to comfortably past it - and
+// two thirds of the picture stops being thrown away.
+//
+// This is why repro/ground.mjs no longer asserts a hand-picked list of five
+// elements: it walks the DOM on every tab, finds every run of text that is
+// actually on the ground, and measures all of them. A future label dropped onto
+// the ground in --muted has to be caught by the harness, not by this comment.
 function readPalette() {
   const cs = getComputedStyle(document.documentElement)
-  const muted = rgbOf(cs.getPropertyValue('--muted') || '#a89f92')
+  const text = rgbOf(cs.getPropertyValue('--text') || '#f2ece4')
   const veil = rgbOf(cs.getPropertyValue('--ground-veil-rgb') || '18,16,14')
-  return { mutedL: lum(...muted), veil }
+  return { onGroundL: lum(...text), veil }
 }
 
 // BOTH ends of the picture, not just the bright one.
@@ -265,12 +293,12 @@ const chanOf = (l) => {
   return Math.max(0, Math.min(255, Math.round(x * 255)))
 }
 
-export function veilFor(extremes, { mutedL, veil }) {
+export function veilFor(extremes, { onGroundL, veil }) {
   const ends = (Array.isArray(extremes) ? extremes : [extremes]).map(chanOf)
   for (let a = VEIL_MIN; a <= VEIL_MAX + 1e-9; a += VEIL_STEP) {
     const ok = ends.every((g) => {
       const mixed = veil.map((v) => v * a + g * (1 - a))
-      return contrast(lum(mixed[0], mixed[1], mixed[2]), mutedL) >= AA
+      return contrast(lum(mixed[0], mixed[1], mixed[2]), onGroundL) >= AA
     })
     if (ok) return Math.round(a * 100) / 100
   }

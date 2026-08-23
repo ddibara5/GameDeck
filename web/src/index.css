@@ -1145,6 +1145,53 @@ textarea {
   transform: scale(1.16);
 }
 
+/* ---------- Secondary type on the ground ----------
+
+   The four selectors below are, empirically, the ONLY text in the app that sits
+   directly on the ground. Walked across all five tabs, matching every run of
+   --muted text and asking what is painted between it and the ground: 109 of 123
+   runs are on an opaque card - a game card, a day card, a chart card, a Home
+   tile - and cannot see the ground at all. These fourteen can.
+
+   They were the reason the veil sat at 0.74-0.84: it was covering the whole
+   photograph to hold 13px grey text at 4.5:1. Promoting them to --text while a
+   picture is on costs nothing anyone will miss - the muted/primary hierarchy is
+   carried by size and weight here as much as by colour, and it is still intact
+   on the flat and wash grounds - and it lets the veil be sized against --text
+   instead. Measured on realistic key art, dark: the floor goes 0.74 to 0.38, so
+   the picture goes from 26% visible to 62%.
+
+   The guarantee gets STRONGER, not weaker. These labels move from sitting at
+   exactly the 4.5:1 the veil was solved for to sitting comfortably past it, and
+   repro/ground.mjs now finds every run of on-ground text by walking the DOM
+   rather than by naming five of them, so a new label dropped here in --muted
+   fails the harness instead of quietly lowering the bar.
+
+   .lane-chip and .seg-btn are in the list even though they are not on the BARE
+   ground - they are on glass, and glass is not cover: the picture reads straight
+   through 0.34 and 0.58 alpha. The walk found .lane-chip at 3.35:1 dark and
+   2.96:1 light, a real AA failure that the four hand-picked targets had never
+   looked at. Both are safe to promote because their selected state is carried by
+   an ACCENT FILL, not by the label colour, so the distinction survives.
+
+   .tabbar-btn is deliberately NOT here, and it is the one --muted run left with
+   the ground behind it. Its selected state IS a colour (#ece7df against
+   --muted), and --text is close enough to #ece7df that promoting the inactive
+   labels would leave the 0.16 pill doing all the work. It measures 4.63:1 dark
+   and 5.45:1 light against the harness's deliberately hostile picture, and the
+   walk now measures it on every run, so a regression is caught rather than
+   assumed away. */
+/* `:not(.active)` on the two chips is load-bearing. `.lane-chip.active` and
+   `.seg-btn.active` set `color: var(--bg)` for the knockout on their accent
+   fill, at specificity 0,2,0 - and `:root[data-ground-art] :is(.lane-chip)` is
+   0,3,0, so without the exclusion this rule would win and paint the knockout in
+   --text on an accent pill. Verified as a measurement, not by counting: the
+   composited check on the segmented control is in repro/accent.mjs. */
+:root[data-ground-art] :is(.page-subtitle, .activity-group-label, .showing-label, .empty-state),
+:root[data-ground-art] :is(.lane-chip, .seg-btn):not(.active) {
+  color: var(--text);
+}
+
 /* The veil is its own pseudo-element rather than a second background layer on
    the one above, because the blur must not apply to it: blurring a flat wash
    costs a full-screen filter pass and changes nothing.

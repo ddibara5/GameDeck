@@ -196,15 +196,68 @@ console.log(`note   veil dark ${veils.dark}, light ${veils.light}`)
 // curves inward at the ends and crosses the first button's box well below the
 // 2px trim, so "the closest pixel to the text" kept picking the ring and read
 // 2.75 about a surface that composites to rgb(26).
-const TARGETS = [
-  // .page-title is the <h1> wrapper since the bar and the title merged; the
-  // words are on .brand-title inside it.
-  ['.brand-title', 'the large page title', AA_LARGE],
-  ['.page-subtitle', 'the page subtitle', AA_BODY],
-  ['.game-title', 'a Library row title', AA_BODY],
-  ['.tabbar-btn:not(.active) >> nth=2', 'a tab bar label', AA_BODY],
-]
-const HIDE = '.brand-title,.page-subtitle,.game-title,.tabbar-btn'
+const HIDE = '[data-gt]'
+
+/**
+ * FIND the text on the ground, do not name it.
+ *
+ * This used to be four hand-picked selectors, and that is how the veil came to
+ * be sized wrong for months. It was solved against --muted because --muted was
+ * the faintest thing on screen - which was true, and which nobody checked the
+ * SCOPE of. 109 of the 123 runs of --muted text in this app sit on an opaque
+ * card and cannot see the ground at all; 14 could. The whole photograph was
+ * being covered at 0.74-0.84 for those fourteen, and a harness that measured
+ * four elements by name had no way to say so.
+ *
+ * So this walks the DOM and asks each run of text what is actually painted
+ * between it and the ground. Translucent glass does NOT count as cover: the tab
+ * bar is 0.34 alpha and the picture reads straight through it, so its labels are
+ * on the ground and are measured. Only a fully opaque ancestor ends the walk.
+ *
+ * Deduped by (class, size, colour) so that 36 identical day labels are measured
+ * once and every DISTINCT case is measured - the goal is coverage of kinds, not
+ * of instances.
+ */
+async function onGround(page) {
+  return page.evaluate(() => {
+    const seen = new Map()
+    let n = 0
+    for (const el of document.querySelectorAll('*')) {
+      const txt = [...el.childNodes].filter((x) => x.nodeType === 3).map((x) => x.textContent.trim()).join(' ').trim()
+      if (!txt) continue
+      const r = el.getBoundingClientRect()
+      if (r.width < 8 || r.height < 8) continue
+      const cs = getComputedStyle(el)
+      if (cs.visibility === 'hidden' || cs.opacity === '0') continue
+
+      let node = el
+      let covered = false
+      while (node && node !== document.documentElement) {
+        if (node.classList.contains('app') || node.classList.contains('settings-page')) break
+        const s = getComputedStyle(node)
+        const m = s.backgroundColor.match(/[\d.]+/g) || []
+        const alpha = m.length >= 4 ? Number(m[3]) : m.length ? 1 : 0
+        // Opaque ends the walk. Anything less and the ground is still visible
+        // through it, which is the case the tab bar and the segmented control
+        // are in - and the case a "does it have a background" test gets wrong.
+        if (alpha >= 0.999) { covered = true; break }
+        node = node.parentElement
+      }
+      if (covered) continue
+
+      const size = parseFloat(cs.fontSize) || 13
+      const weight = Number(cs.fontWeight) || 400
+      // WCAG large text: 24px, or 18.66px at 700+.
+      const large = size >= 24 || (size >= 18.66 && weight >= 700)
+      const key = `${el.className}|${cs.fontSize}|${cs.color}`
+      if (seen.has(key)) continue
+      el.setAttribute('data-gt', String(n))
+      seen.set(key, { id: n, large, size: cs.fontSize, cls: String(el.className).slice(0, 26) || el.tagName.toLowerCase(), txt: txt.slice(0, 22) })
+      n += 1
+    }
+    return [...seen.values()]
+  })
+}
 
 for (const theme of ['dark', 'light']) {
   const { ctx, page } = await open(theme)
@@ -264,11 +317,38 @@ for (const theme of ['dark', 'light']) {
     return worst ? ratio(color, worst) : 0
   }
 
-  for (const [sel, label, bar] of TARGETS) {
-    const r = await measure(sel)
-    if (r == null) { check(`${theme}: ${label} over the ground`, false, 'not rendered'); continue }
-    check(`${theme}: ${label} over the ground`, r >= bar, `${r.toFixed(2)} vs ${bar}`)
+  // Every distinct run of text on the ground, on every tab, rather than four by
+  // name. `worst` is reported as one assertion per tab plus the offender, so a
+  // failure says WHICH element rather than just that the tab failed.
+  let onGroundTotal = 0
+  for (const tab of ['Home', 'Library', 'Activity', 'Discover', 'News']) {
+    const btn = page.locator('.tabbar-btn', { hasText: tab })
+    if (await btn.count()) {
+      await btn.first().click()
+      await page.waitForTimeout(1500)
+    }
+    await page.evaluate(() => document.querySelectorAll('[data-gt]').forEach((el) => el.removeAttribute('data-gt')))
+    const found = await onGround(page)
+    onGroundTotal += found.length
+    let worst = { r: 99, of: 'nothing' }
+    let missed = 0
+    for (const f of found) {
+      const r = await measure(`[data-gt="${f.id}"]`)
+      if (r == null || r === 0) { missed += 1; continue }
+      const bar = f.large ? AA_LARGE : AA_BODY
+      if (r - bar < worst.r - (worst.bar || 0)) worst = { r, bar, of: `.${f.cls} ${f.size} "${f.txt}"` }
+    }
+    check(`${theme}/${tab}: every run of text on the ground clears its bar`,
+      found.length > 0 && worst.r >= (worst.bar || AA_BODY),
+      `${found.length} distinct runs, worst ${worst.r === 99 ? 'n/a' : worst.r.toFixed(2)} vs ${worst.bar || '-'} on ${worst.of}${missed ? ` (${missed} off-screen)` : ''}`)
   }
+  // The count itself, so a change that quietly stops finding anything - a
+  // selector rename, a walk that ends too early - fails instead of passing with
+  // zero elements measured.
+  check(`${theme}: the walk found text on every tab`, onGroundTotal >= 20, `${onGroundTotal} distinct runs across five tabs`)
+
+  await page.locator('.tabbar-btn', { hasText: 'Library' }).first().click()
+  await page.waitForTimeout(1400)
 
   // The bar's permanent state. Once scrolled it is 17px of --text on glass with
   // BOTH the page content and the ground behind it, which is the only glass in

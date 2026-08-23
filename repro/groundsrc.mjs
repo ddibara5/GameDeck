@@ -258,6 +258,85 @@ let floorDark = null
   check('a middle setting sits between the two', st.veil > floorDark && st.veil < 0.92, `${floorDark} < ${st.veil} < 0.92`)
   await ctx.close()
 }
+/* THE SLIDER, DRIVEN.
+ *
+ * Every assertion above sets the stored value and reloads, which is how a slider
+ * that did nothing a user could see shipped: `--ground-veil-a` moved, the number
+ * was right, and the picture behind it did not visibly change because the
+ * measured floor sat at 0.76 of a 0.92 ceiling. A stored-value check cannot tell
+ * those apart. This one drags the control and photographs the ground.
+ */
+{
+  const { ctx, page } = await open('dark', { ground: 'nowplaying' })
+  await openSettings(page)
+  await openBackground(page)
+  const slider = page.locator('.settings-slider')
+  const box = await slider.boundingBox()
+  // The bare ground, so a card is not averaged into the reading.
+  const groundMean = async () => {
+    const tag = await page.addStyleTag({
+      content: '.settings-page > *, .app > *, .tabbar { visibility: hidden !important; }',
+    })
+    await page.waitForTimeout(120)
+    const shot = await page.screenshot({ clip: { x: 40, y: 300, width: 300, height: 300 } })
+    await tag.evaluate((el) => el.remove())
+    return page.evaluate(async (b64) => {
+      const img = await createImageBitmap(await (await fetch(`data:image/png;base64,${b64}`)).blob())
+      const c = new OffscreenCanvas(img.width, img.height)
+      const g = c.getContext('2d')
+      g.drawImage(img, 0, 0)
+      const px = g.getImageData(0, 0, img.width, img.height).data
+      let sum = 0
+      let n = 0
+      for (let i = 0; i < px.length; i += 4) { sum += (px[i] + px[i + 1] + px[i + 2]) / 3; n += 1 }
+      return Math.round((sum / n) * 100) / 100
+    }, shot.toString('base64'))
+  }
+  const drag = async (frac) => {
+    await page.mouse.move(box.x + 4, box.y + box.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(box.x + box.width * frac, box.y + box.height / 2, { steps: 10 })
+    await page.mouse.up()
+    await page.waitForTimeout(400)
+  }
+
+  const atLeft = await groundMean()
+  const veilLeft = await page.evaluate(() => Number(getComputedStyle(document.documentElement).getPropertyValue('--ground-veil-a')))
+  await drag(0.99)
+  const veilRight = await page.evaluate(() => Number(getComputedStyle(document.documentElement).getPropertyValue('--ground-veil-a')))
+  const atRight = await groundMean()
+  const stored = await page.evaluate(() => localStorage.getItem('gamedeck_ground_intensity_v1'))
+
+  check('dragging the slider moves the veil', veilRight > veilLeft, `${veilLeft} -> ${veilRight}`)
+  check('...and persists what was chosen', Number(stored) > 0.9, stored)
+
+  // THE TWO THAT MATTER, and the first version of this pair was too weak to
+  // catch the bug it was written for.
+  //
+  // "Dragging changes the rendered pixel" passes on the broken build: the veil
+  // moved 0.82 to 0.92 and the ground moved 17 of 255, which is a change, just
+  // not one anybody could see. The defect was never that the control did
+  // nothing - it was that the FLOOR was so high there was no picture left to
+  // control. So the floor is asserted directly.
+  //
+  // 0.70 is a product decision, said plainly: below 30% of the picture surviving
+  // at the floor this is a tinted page rather than a background, and the slider
+  // is decoration. It is asserted against the deliberately hostile fixture -
+  // near-black to near-white with a specular blob - so real key art has margin.
+  console.log(`note   floor ${veilLeft}; ground mean ${atLeft} at the floor, ${atRight} at the ceiling`)
+  check('the floor leaves a picture to control', veilLeft <= 0.7,
+    `${veilLeft} - ${Math.round((1 - veilLeft) * 100)}% of the picture survives it`)
+  check('...so the full travel is something you can see', Math.abs(atLeft - atRight) >= 30,
+    `${Math.abs(atLeft - atRight).toFixed(1)} of 255 across the full travel`)
+
+  await drag(0.01)
+  const backVeil = await page.evaluate(() => Number(getComputedStyle(document.documentElement).getPropertyValue('--ground-veil-a')))
+  check('...and it goes back down again', backVeil < veilRight, `${veilRight} -> ${backVeil}`)
+  // It can never go BELOW the measured floor, which is the whole safety argument.
+  check('...but never below the measured floor', backVeil >= veilLeft - 0.001, `${backVeil} vs floor ${veilLeft}`)
+  await ctx.close()
+}
+
 {
   // The end that could actually fail. Intensity 1 is trivially safe - more veil
   // is more contrast - so the assertion that matters is at 0, where the slider is
