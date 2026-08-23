@@ -1062,6 +1062,25 @@ textarea {
 :root {
   --ground-veil-rgb: 18, 16, 14;
   --ground-veil-a: 0.6;
+
+  /* GRAIN, because a flat veil over a blurred photograph bands on an OLED.
+     Wide smooth gradients are exactly what 8-bit colour handles worst, and both
+     ground layers are one: a 13px blur of a photograph, and a radial wash. The
+     noise dithers the step so the eye stops resolving the contour.
+
+     One inline SVG tile rather than a PNG: it is 300 bytes in the stylesheet
+     instead of a request, it is resolution independent, and the browser
+     rasterises the 140px tile once. feColorMatrix saturate 0 is not optional -
+     feTurbulence generates each channel independently, so without it the noise
+     is coloured confetti rather than grain.
+
+     The strength is baked into the tile's own opacity rather than applied with
+     `opacity` on the layer, because the veil shares that layer and halving the
+     veil to dim the grain would undo the contrast measurement. At 0.04 over a
+     mid grey the noise moves the composite by roughly +/-5 of the 255 levels -
+     an 8-bit step is one level, so it is comfortably enough to dither a contour
+     and still reads as paper rather than as an effect. */
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
 }
 :root[data-theme='light'] {
   --ground-veil-rgb: 244, 240, 233;
@@ -1128,14 +1147,30 @@ textarea {
 
 /* The veil is its own pseudo-element rather than a second background layer on
    the one above, because the blur must not apply to it: blurring a flat wash
-   costs a full-screen filter pass and changes nothing. */
-:root[data-ground-art] :is(.app, .settings-page)::after {
+   costs a full-screen filter pass and changes nothing.
+
+   It carries the grain as well, and the WASH gets this layer too even though it
+   has no veil - a radial gradient across a whole screen is the worst banding
+   case in the app, worse than the blurred photograph, and it had nothing on top
+   of it at all. Same layer, one of the two backgrounds. */
+:root[data-ground-art] :is(.app, .settings-page)::after,
+:root[data-ground='wash'] :is(.app, .settings-page)::after {
   content: '';
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: rgba(var(--ground-veil-rgb), var(--ground-veil-a));
+  background-image: var(--grain);
+  background-repeat: repeat;
+  background-size: 140px 140px;
+}
+
+/* The veil itself is art-only, and it is a background COLOR so it composites
+   under the grain image on the same element rather than needing a third layer.
+   There is no `opacity` anywhere in this pair: the veil's alpha is on the colour
+   and the grain's is inside the tile, so neither can dim the other. */
+:root[data-ground-art] :is(.app, .settings-page)::after {
+  background-color: rgba(var(--ground-veil-rgb), var(--ground-veil-a));
 }
 
 /* Bottom bar switched off in Settings. One variable, set on the app root, so
@@ -2701,3 +2736,33 @@ textarea {
   overflow: visible;
 }
 
+
+/* ---------- Reduced transparency ----------
+
+   iOS puts this behind a Settings toggle, and people turn it on for a reason:
+   translucent chrome over moving content is hard to read. The app answers
+   prefers-reduced-motion in three places and had never answered this one.
+
+   The response is the honest one rather than the literal one. Literal would be
+   "remove the blur", which leaves the same 34%-alpha fill over a photograph and
+   makes it WORSE - the blur is what stops the picture competing with the text.
+   So both go: the material becomes the page's own opaque surface, and the filter
+   goes with it, because a backdrop-filter behind an opaque fill is a full-screen
+   compositing pass that changes nothing.
+
+   Both selectors, deliberately. `--glass` is redefined at :root[data-theme=
+   "light"] further up, which outranks a bare :root here no matter where this
+   block sits, so light mode would have kept its translucent material while dark
+   mode went opaque.
+
+   The ground's own veil is NOT set here: it is an inline style written by
+   lib/ground.js, which a stylesheet cannot outrank. ground.js reads the same
+   media query and puts a floor under the intensity slider instead. */
+@media (prefers-reduced-transparency: reduce) {
+  :root,
+  :root[data-theme='light'] {
+    --glass: var(--surface);
+    --glass-chip: var(--surface-2);
+    --glass-blur: none;
+  }
+}

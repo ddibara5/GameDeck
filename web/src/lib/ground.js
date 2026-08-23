@@ -93,6 +93,27 @@ export function setPinnedGame(game) {
 // covered, and that is the whole control - 0 is the floor, 1 is VEIL_MAX. There is
 // no way to express "less than legible" in it, which is why it can be a taste
 // setting at all.
+//
+// REDUCED TRANSPARENCY puts a floor under that control rather than adding a
+// second number. Someone who turned on iOS's toggle asked for less see-through,
+// and the ground is the largest see-through thing in the app; index.css answers
+// the same query by making the glass bars opaque. Expressing it as "the slider
+// cannot go below half" reuses a control that already exists, is bounded by the
+// same ceiling, and cannot contradict the contrast floor - and the user can still
+// push it further up.
+//
+// It cannot be done in CSS: --ground-veil-a is an inline style written below, and
+// a stylesheet does not outrank one.
+const QUIET_FLOOR = 0.5
+const quietQuery = () => {
+  try {
+    return window.matchMedia('(prefers-reduced-transparency: reduce)')
+  } catch {
+    return null
+  }
+}
+const wantsQuiet = () => Boolean(quietQuery() && quietQuery().matches)
+
 export function getGroundIntensity() {
   try {
     const n = Number(localStorage.getItem(INTENSITY_KEY))
@@ -403,7 +424,7 @@ let lastFloor = null
 const VEIL_CEIL = VEIL_MAX
 
 function veilWith(floor) {
-  const t = getGroundIntensity()
+  const t = Math.max(getGroundIntensity(), wantsQuiet() ? QUIET_FLOOR : 0)
   const a = floor + t * Math.max(0, VEIL_CEIL - floor)
   return Math.round(Math.min(VEIL_CEIL, a) * 100) / 100
 }
@@ -547,4 +568,13 @@ export function setGround(value) {
 
 export function initGround() {
   applyGround(getGround())
+  // The toggle can be flipped while the app is open, and on iOS it is: it lives
+  // in Settings, which is one swipe away. Repaint from the floor already on the
+  // page rather than re-resolving anything - the picture has not changed.
+  const q = quietQuery()
+  if (q && typeof q.addEventListener === 'function') {
+    q.addEventListener('change', () => {
+      if (lastFloor != null) root().style.setProperty('--ground-veil-a', String(veilWith(lastFloor)))
+    })
+  }
 }
