@@ -11,7 +11,17 @@ import {
   getListSize,
   setListSize,
 } from '../lib/theme.js'
-import { getGround, setGround, GROUND_OPTIONS } from '../lib/ground.js'
+import {
+  getGround,
+  setGround,
+  GROUND_OPTIONS,
+  isArtGround,
+  getPinnedGame,
+  setPinnedGame,
+  getGroundIntensity,
+  setGroundIntensity,
+} from '../lib/ground.js'
+import GamePinPicker from './GamePinPicker.jsx'
 import { useMountTransition } from '../lib/useMountTransition.js'
 import { lockScroll } from '../lib/scrollLock.js'
 import { MenuItem, ICONS, relTime } from './menuUI.jsx'
@@ -84,10 +94,16 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
   const [shelfSize, setShelfSizeState] = useState(() => getShelfSize())
   const [listSize, setListSizeState] = useState(() => getListSize())
   const [ground, setGroundState] = useState(() => getGround())
-  // Which sub-page is open: null is the root list. One piece of state rather than
-  // three booleans, because they are mutually exclusive by construction and the
-  // back button has exactly one thing to clear.
-  const [sub, setSub] = useState(null)
+  const [pin, setPinState] = useState(() => getPinnedGame())
+  const [intensity, setIntensityState] = useState(() => getGroundIntensity())
+  // The open sub-pages, outermost first. A single `sub` string was enough while
+  // every second level was a leaf; Background now leads to a game picker, so the
+  // page has a third level and the thing Escape and the back-swipe do is POP, not
+  // clear. A stack says that once and every level after this one is free.
+  const [stack, setStack] = useState([])
+  const push = (name) => setStack((s) => (s.includes(name) ? s : [...s, name]))
+  const pop = () => setStack((s) => s.slice(0, -1))
+  const depthOf = (name) => stack.indexOf(name)
   const [chatsCleared, setChatsCleared] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [syncNote, setSyncNote] = useState('')
@@ -105,14 +121,14 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
     const onKey = (e) => {
       if (e.key !== 'Escape') return
       // Back one level, not out. Escape on a sub-page returning you all the way
-      // to the app is the thing that makes a two-level settings screen feel like
-      // a trap door.
-      if (sub) setSub(null)
+      // to the app is the thing that makes a nested settings screen feel like a
+      // trap door.
+      if (stack.length) pop()
       else onClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [mounted, onClose, sub])
+  }, [mounted, onClose, stack.length])
 
   // Lock background scroll while the page is open, so the page behind it can't
   // scroll and its scrollbar doesn't show through.
@@ -149,7 +165,7 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
       // Only act on a clearly horizontal gesture, so vertical scrolling is untouched.
       if (Math.abs(dx) <= Math.abs(dy)) return
       if (fromEdge && dx > BACK_DX) {
-        if (sub) setSub(null)
+        if (stack.length) pop()
         else onClose()
         tracking = false
       }
@@ -166,7 +182,7 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
       window.removeEventListener('touchmove', onMove)
       window.removeEventListener('touchend', onEnd)
     }
-  }, [mounted, onClose, sub])
+  }, [mounted, onClose, stack.length])
 
   // Load freshness data + version once when the page opens.
   useEffect(() => {
@@ -263,7 +279,7 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
   // remembers the sub-page you were on when you dismissed it, and the gear button
   // appears to open a random screen.
   useEffect(() => {
-    if (!open) setSub(null)
+    if (!open) setStack([])
   }, [open])
 
   function changeTheme(pref) {
@@ -284,6 +300,19 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
 
   function changeGround(key) {
     setGroundState(setGround(key))
+  }
+
+  function changeIntensity(t) {
+    setIntensityState(setGroundIntensity(t))
+  }
+
+  function changePin(game) {
+    setPinState(setPinnedGame(game))
+    // Choosing a picture is choosing the source. Landing back on a Background page
+    // still reading "Now playing" after picking a game is the version where the
+    // picker appears to have done nothing.
+    if (getGround() !== 'pinned') setGroundState(setGround('pinned'))
+    pop()
   }
 
   function toggleKey() {
@@ -310,6 +339,13 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
   const themeValue = `${labelOf(THEME_OPTIONS, theme)} · ${labelOf(ACCENT_OPTIONS, accent)}`
   const cardsValue = `${labelOf(SHELF_SIZE_OPTIONS, shelfSize)} · ${labelOf(LIST_SIZE_OPTIONS, listSize)}`
   const groundValue = labelOf(GROUND_OPTIONS, ground)
+  // The oldest of the four sync stamps, because the question this section answers
+  // is "is anything stale", and the answer to that is never the freshest one.
+  const syncStamps = [...DIRECT_SOURCES.map((s2) => sourceSync[s2.key]), fallbackSync].filter(Boolean)
+  const oldestSync = syncStamps.length === DIRECT_SOURCES.length + 1
+    ? syncStamps.reduce((a, b) => (new Date(b) < new Date(a) ? b : a))
+    : null
+  const sourcesValue = oldestSync ? `Oldest ${relTime(oldestSync)}` : '-'
 
   return (
     <div className={`settings-page${closing ? ' closing' : ''}`} role="dialog" aria-label="Settings">
@@ -326,9 +362,9 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
         <div className="settings-section">
           <div className="menu-sec-label">Appearance</div>
           <div className="settings-group">
-            <MenuItem glyph={ICONS.appear} label="Theme" sub="Light or dark, and the color" value={themeValue} onClick={() => setSub('theme')} />
-            <MenuItem glyph={ICONS.image} label="Background" sub="What sits behind every tab" value={groundValue} onClick={() => setSub('background')} />
-            <MenuItem glyph={ICONS.layers} label="Card sizing" sub="Posters and list rows" value={cardsValue} onClick={() => setSub('cards')} />
+            <MenuItem glyph={ICONS.appear} label="Theme" sub="Light or dark, and the color" value={themeValue} onClick={() => push('theme')} />
+            <MenuItem glyph={ICONS.image} label="Background" sub="What sits behind every tab" value={groundValue} onClick={() => push('background')} />
+            <MenuItem glyph={ICONS.layers} label="Card sizing" sub="Posters and list rows" value={cardsValue} onClick={() => push('cards')} />
           </div>
         </div>
 
@@ -382,30 +418,18 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
               disabled
               chevron={false}
             />
-          </div>
-
-          <div className="settings-group">
-            {DIRECT_SOURCES.map((s) => (
-              <MenuItem
-                key={s.key}
-                glyph={ICONS.clock}
-                label={s.label}
-                value={relTime(sourceSync[s.key]) || '-'}
-                disabled
-                chevron={false}
-              />
-            ))}
-            {/* Reads in parallel with the three above it; the subtitle carries the
-                backup-source distinction the Fallback header used to. */}
+            {/* Four read-only timestamps and a profile link were five of the
+                seventeen rows on the root list, and none of them is a control.
+                They are what you open when something looks stale, so they move
+                behind the one row that says whether anything IS - the OLDEST of
+                the four, because the freshest can never answer that. */}
             <MenuItem
-              glyph={ICONS.clock}
-              label="Exophase"
-              sub="Backup source, fills what the direct APIs cannot"
-              value={relTime(fallbackSync) || '-'}
-              disabled
-              chevron={false}
+              glyph={ICONS.layers}
+              label="Sources"
+              sub="When each platform last reported"
+              value={sourcesValue}
+              onClick={() => push('sources')}
             />
-            <MenuItem glyph={ICONS.link} label="Exophase profile" href={EXOPHASE_PROFILE_URL} />
           </div>
         </div>
 
@@ -443,7 +467,7 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
         </div>
       </div>
 
-      <SubPage open={sub === 'theme'} title="Theme" onBack={() => setSub(null)}>
+      <SubPage open={stack.includes('theme')} depth={depthOf('theme')} title="Theme" onBack={pop}>
         <Field label="Appearance">
           <Seg options={THEME_OPTIONS} value={theme} onPick={changeTheme} name="Appearance" />
         </Field>
@@ -480,26 +504,108 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
           settings overlay paints the ground itself (see index.css), so tapping a
           source changes the screen you are standing on. A 40px thumbnail of the
           same thing would be a worse copy of what is already behind it. */}
-      <SubPage open={sub === 'background'} title="Background" onBack={() => setSub(null)}>
+      <SubPage open={stack.includes('background')} depth={depthOf('background')} title="Background" onBack={pop}>
         <div className="settings-group">
           {GROUND_OPTIONS.map((opt) => (
             <MenuItem
               key={opt.key}
               glyph={ground === opt.key ? ICONS.check : ICONS.dot}
               label={opt.label}
-              sub={opt.sub}
+              // The pinned row carries the game instead of its description once
+              // there is one, because at that point the description is the row
+              // above it and the game is the thing you came here to check.
+              sub={opt.key === 'pinned' && pin ? pin.title || 'A game you chose' : opt.sub}
               onClick={() => changeGround(opt.key)}
               chevron={false}
             />
           ))}
         </div>
+
+        {/* Only under `pinned`, because it is the only source whose picture is a
+            choice. Offering it under the other three would imply they can be
+            overridden, and then the override would silently do nothing. */}
+        {ground === 'pinned' ? (
+          <div className="settings-group">
+            <MenuItem
+              glyph={ICONS.star}
+              label={pin ? 'Change game' : 'Choose a game'}
+              sub={pin ? pin.title : 'Nothing pinned yet, so the background stays flat'}
+              onClick={() => push('pin')}
+            />
+          </div>
+        ) : null}
+
+        {/* The slider is only meaningful over a photograph: the wash has no
+            picture to show more or less of, and `off` has no layer at all.
+
+            No `hint` on the Field. The scale below the track names both ends and
+            the note under the page makes the measured-floor claim in full; a third
+            grey paragraph between them said the same thing a third time. */}
+        {isArtGround(ground) ? (
+          <Field label="Intensity">
+            <input
+              className="settings-slider"
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={intensity}
+              onChange={(e) => changeIntensity(e.target.value)}
+              aria-label="Background intensity"
+            />
+            <div className="settings-scale">
+              <span>As much picture as is legible</span>
+              <span>Quieter</span>
+            </div>
+          </Field>
+        ) : null}
+
         <p className="settings-note">
           Over key art the background darkens itself until the smallest text on screen still
-          clears the contrast bar, so how much of the picture shows depends on the picture.
+          clears the contrast bar, so how much of the picture shows depends on the picture. The
+          slider starts at that measured point and only ever covers more, so no setting here can
+          make the text unreadable.
         </p>
       </SubPage>
 
-      <SubPage open={sub === 'cards'} title="Card sizing" onBack={() => setSub(null)}>
+      {/* Third level, over Background. Mounted only while it is open, because it
+          reads the whole library and Settings should not pay for that to show a
+          list of five appearance rows. */}
+      <SubPage open={stack.includes('pin')} depth={depthOf('pin')} title="Pin a game" onBack={pop}>
+        <GamePinPicker pinnedId={pin ? pin.master_id : null} onPick={changePin} />
+      </SubPage>
+
+      <SubPage open={stack.includes('sources')} depth={depthOf('sources')} title="Sources" onBack={pop}>
+        <div className="settings-group">
+          {DIRECT_SOURCES.map((src) => (
+            <MenuItem
+              key={src.key}
+              glyph={ICONS.clock}
+              label={src.label}
+              value={relTime(sourceSync[src.key]) || '-'}
+              disabled
+              chevron={false}
+            />
+          ))}
+          {/* Reads in parallel with the three above it; the subtitle carries the
+              backup-source distinction the Fallback header used to. */}
+          <MenuItem
+            glyph={ICONS.clock}
+            label="Exophase"
+            sub="Backup source, fills what the direct APIs cannot"
+            value={relTime(fallbackSync) || '-'}
+            disabled
+            chevron={false}
+          />
+          <MenuItem glyph={ICONS.link} label="Exophase profile" href={EXOPHASE_PROFILE_URL} />
+        </div>
+        <p className="settings-note">
+          Each platform syncs from its own API and they fail independently, so a dead token shows
+          up here as one row that stopped moving rather than as playtime that quietly stopped.
+        </p>
+      </SubPage>
+
+      <SubPage open={stack.includes('cards')} depth={depthOf('cards')} title="Card sizing" onBack={pop}>
         <Field label="Shelf posters" hint="Continue playing, Discover rails, wishlist">
           <Seg options={SHELF_SIZE_OPTIONS} value={shelfSize} onPick={changeShelfSize} name="Shelf size" />
         </Field>
@@ -518,11 +624,21 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
    second implementation of them. It is mounted inside <SettingsPage> but position:
    fixed, so nesting costs nothing in layout and buys the shared state. */
 
-function SubPage({ open, title, onBack, children }) {
+function SubPage({ open, depth = 0, title, onBack, children }) {
   const { mounted, closing } = useMountTransition(open)
   if (!mounted) return null
+  // z-index by position in the stack rather than a class per level, so a fourth
+  // level is a number and not another CSS rule. Clamped at 0 so a page that is
+  // mid-close (depth is already -1, because the stack popped before the exit
+  // animation finished) does not fall under the root list on the way out.
+  const z = 211 + Math.max(0, depth)
   return (
-    <div className={`settings-page settings-sub${closing ? ' closing' : ''}`} role="dialog" aria-label={title}>
+    <div
+      className={`settings-page settings-sub${closing ? ' closing' : ''}`}
+      style={{ zIndex: z }}
+      role="dialog"
+      aria-label={title}
+    >
       <div className="settings-hd">
         <button type="button" className="settings-back" onClick={onBack} aria-label="Back">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

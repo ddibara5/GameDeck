@@ -2,7 +2,7 @@
 //
 // Same shape as theme.js - a stored preference applied by setting an attribute
 // on <html>, with the actual paint in index.css - plus one thing theme.js does
-// not need: two of the four sources are photographs, and a photograph has to be
+// not need: four of the six sources are photographs, and a photograph has to be
 // measured before it is safe to put type over.
 //
 // WHY THE VEIL IS COMPUTED AND NOT A SETTING
@@ -25,14 +25,26 @@
 // for every launch, including the `off` and `wash` ones that never touch either.
 
 const KEY = 'gamedeck_ground_v1'
-const SOURCES = new Set(['off', 'wash', 'nowplaying', 'shuffle'])
+const PIN_KEY = 'gamedeck_ground_pin_v1'
+const INTENSITY_KEY = 'gamedeck_ground_intensity_v1'
+
+// The four picture sources, as a set rather than a list of `||` comparisons.
+// Everything that branches on "is this a photograph" - whether to measure, whether
+// to offer the intensity slider, which CSS layers to switch on - reads this, so a
+// fifth source costs one entry here and nothing else.
+const ART = new Set(['nowplaying', 'weekly', 'pinned', 'shuffle'])
+const SOURCES = new Set(['off', 'wash', ...ART])
 
 export const GROUND_OPTIONS = [
   { key: 'off', label: 'Off', sub: 'Flat, the way it was' },
   { key: 'wash', label: 'Theme wash', sub: 'A soft gradient in your color theme' },
   { key: 'nowplaying', label: 'Now playing', sub: 'Key art from whatever you played last' },
+  { key: 'weekly', label: 'Most played this week', sub: 'The game the week was actually about' },
+  { key: 'pinned', label: 'Pinned game', sub: 'One picture you chose, that does not move' },
   { key: 'shuffle', label: 'Shuffle', sub: 'A different game from your library each launch' },
 ]
+
+export const isArtGround = (v) => ART.has(v)
 
 export function getGround() {
   try {
@@ -41,6 +53,66 @@ export function getGround() {
   } catch {
     return 'off'
   }
+}
+
+// ---------------------------------------------------------------- the pin
+//
+// The title is stored alongside the id purely so Settings can name the pinned
+// game without fetching the library to look it up. It is a label, never the
+// match: the id is what pickGame resolves against, and a renamed row shows a
+// stale label for one launch rather than losing the picture.
+export function getPinnedGame() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(PIN_KEY) || 'null')
+    return raw && raw.master_id ? raw : null
+  } catch {
+    return null
+  }
+}
+
+export function setPinnedGame(game) {
+  const entry = game && game.master_id ? { master_id: game.master_id, title: game.title || '' } : null
+  try {
+    if (entry) localStorage.setItem(PIN_KEY, JSON.stringify(entry))
+    else localStorage.removeItem(PIN_KEY)
+  } catch {
+    /* storage unavailable - the pin just will not persist */
+  }
+  // A new pin is a different picture, so the remembered paint for this source is
+  // not about it any more. Dropping it is what stops the next launch flashing the
+  // old game's art for the frame before the new one resolves.
+  dropPaint('pinned')
+  if (getGround() === 'pinned') applyGround('pinned')
+  return entry
+}
+
+// ---------------------------------------------------------------- intensity
+//
+// The measured veil is a FLOOR, not a target: it is the least covering that still
+// clears 4.5:1 on the smallest type on screen. So the only safe direction is more
+// covered, and that is the whole control - 0 is the floor, 1 is VEIL_MAX. There is
+// no way to express "less than legible" in it, which is why it can be a taste
+// setting at all.
+export function getGroundIntensity() {
+  try {
+    const n = Number(localStorage.getItem(INTENSITY_KEY))
+    return Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0
+  } catch {
+    return 0
+  }
+}
+
+export function setGroundIntensity(t) {
+  const v = Math.min(1, Math.max(0, Number(t) || 0))
+  try {
+    localStorage.setItem(INTENSITY_KEY, String(v))
+  } catch {
+    /* storage unavailable - preference just will not persist */
+  }
+  // Repaint from the floor already on the page rather than re-measuring: the
+  // sample and the picture have not changed, only how much of it is wanted.
+  if (lastFloor != null) root().style.setProperty('--ground-veil-a', String(veilWith(lastFloor)))
+  return v
 }
 
 // ---------------------------------------------------------------- the veil
@@ -188,10 +260,58 @@ async function pickGame(kind) {
   const withArt = rows.filter((g) => g && g.igdb_id)
   if (!withArt.length) return null
   if (kind === 'shuffle') return withArt[Math.floor(Math.random() * withArt.length)]
+  // A pin names one row. If that row is gone from the library, or has no IGDB art,
+  // the answer is nothing at all - falling back to "most recent" would silently
+  // replace a picture the user explicitly chose with one they did not.
+  if (kind === 'pinned') {
+    const pin = getPinnedGame()
+    if (!pin) return null
+    return withArt.find((g) => String(g.master_id) === String(pin.master_id)) || null
+  }
+  if (kind === 'weekly') {
+    const top = await topOfWeek(withArt)
+    if (top) return top
+    // Nothing logged this week. The last thing played is the honest stand-in -
+    // it is the same question one window wider - and it means a quiet week shows
+    // a picture rather than dropping to the wash.
+  }
   const played = withArt.filter((g) => g.last_played)
   if (!played.length) return withArt[0]
   played.sort((a, b) => new Date(b.last_played) - new Date(a.last_played))
   return played[0]
+}
+
+// The game the last seven days were actually about, which is a different question
+// from "the last thing you touched": on a week spent bouncing between three games
+// the most recent row is the least characteristic of them.
+//
+// Deliberately NOT a new query. It reads through loadRecentActivity with the same
+// window Home already asks for, so on any launch that has opened Home the rows come
+// off disk and this costs nothing, and there is one definition of the activity read
+// rather than a second one that can drift from it. weekStats then does the rollup,
+// which is the same function Insights draws its week block from - a private
+// group-by here would be a second answer to a question the app already answers.
+async function topOfWeek(withArt) {
+  try {
+    const [{ loadRecentActivity }, { weekStats, WEEK_SPAN }] = await Promise.all([
+      import('./recentActivity.js'),
+      import('./playWeek.js'),
+    ])
+    const rows = await loadRecentActivity({ days: WEEK_SPAN * 2 })
+    const week = weekStats(rows || [], new Date(), WEEK_SPAN)
+    const byId = new Map(withArt.map((g) => [String(g.master_id), g]))
+    // byGame is already sorted by minutes, so the first row that is in the library
+    // AND has IGDB art is the answer. Walking it rather than taking [0] matters:
+    // 34 of 513 library rows have no igdb_id at all, and a week topped by one of
+    // them would otherwise resolve to no picture.
+    for (const g of week.byGame) {
+      const lib = byId.get(String(g.master_id))
+      if (lib) return lib
+    }
+    return null
+  } catch {
+    return null
+  }
 }
 
 // t_screenshot_med through the same-origin passthrough. Not images.igdb.com and
@@ -242,6 +362,16 @@ function writePaint(source, entry) {
   }
 }
 
+function dropPaint(source) {
+  try {
+    const all = readPaint()
+    delete all[source]
+    localStorage.setItem(PAINT_KEY, JSON.stringify(all))
+  } catch {
+    /* storage unavailable - nothing was remembered to forget */
+  }
+}
+
 /**
  * The picture this source should paint, resolved the slow way: library cache ->
  * /api/discover?ids= -> an /api/tint url.
@@ -266,14 +396,36 @@ async function measure(url) {
 
 const root = () => document.documentElement
 
-function clearArt() {
-  root().style.removeProperty('--ground-src')
-  root().style.removeProperty('--ground-veil-a')
+// The floor this paint was measured at, kept so the intensity slider can move the
+// veil without re-measuring the picture.
+let lastFloor = null
+
+const VEIL_CEIL = VEIL_MAX
+
+function veilWith(floor) {
+  const t = getGroundIntensity()
+  const a = floor + t * Math.max(0, VEIL_CEIL - floor)
+  return Math.round(Math.min(VEIL_CEIL, a) * 100) / 100
 }
 
-function paintArt(src, veil) {
-  root().style.setProperty('--ground-veil-a', String(veil))
+// `data-ground-art` is set by the paint, not by the preference, and that is the
+// point. The art layers used to be selected by naming each source in the
+// stylesheet, which meant that between choosing `nowplaying` and the picture
+// resolving - a network round trip on a cold launch - the veil painted over an
+// empty background: a page dimmed for no photograph. Keying the layers on the
+// paint makes that state unrepresentable, and adding a source stops touching CSS.
+function clearArt() {
+  root().removeAttribute('data-ground-art')
+  root().style.removeProperty('--ground-src')
+  root().style.removeProperty('--ground-veil-a')
+  lastFloor = null
+}
+
+function paintArt(src, floor) {
+  lastFloor = floor
+  root().style.setProperty('--ground-veil-a', String(veilWith(floor)))
   root().style.setProperty('--ground-src', `url("${src}")`)
+  root().setAttribute('data-ground-art', '')
 }
 
 const themeNow = () =>
@@ -324,7 +476,7 @@ export async function applyGround(value) {
   const v = SOURCES.has(value) ? value : 'off'
   const mine = ++token
   root().setAttribute('data-ground', v)
-  if (v === 'off' || v === 'wash') {
+  if (!ART.has(v)) {
     clearArt()
     return v
   }

@@ -773,6 +773,9 @@
    A sub-page is the settings shell again, one z-index up, sliding in over the
    root list from the same keyframes. Nothing here re-describes the page: this
    block is only the stacking and the two layouts the root list does not have. */
+/* The default second level. SubPage sets z-index inline from its position in the
+   stack, so a third level (Background -> Pin a game) needs no rule of its own;
+   this stays as the value a sub-page rendered without a depth would take. */
 .settings-sub {
   z-index: 211;
 }
@@ -793,6 +796,146 @@
   font-size: var(--t-cap);
   color: var(--muted);
   padding: 8px 2px 0;
+}
+
+/* ---------- The intensity slider ----------
+
+   A native <input type="range">, restyled rather than rebuilt. A custom track and
+   thumb would have to reimplement the keyboard behaviour, the drag, the value
+   announcement and the touch target that the platform control already has right,
+   and it would be the third slider in this app to do it.
+
+   The accent is the FILL, not the thumb, so the control reads left to right as
+   "how much" - which is what it means. */
+.settings-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 26px;
+  margin: 2px 0 0;
+  background: none;
+  cursor: pointer;
+}
+
+.settings-slider::-webkit-slider-runnable-track {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+
+.settings-slider::-moz-range-track {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+
+/* 22px, not the 14px this would look best at. The thumb IS the touch target on a
+   phone, and a 14px one is below every hit-target guideline there is; the visual
+   weight comes back down by making the track thin rather than the thumb small. */
+.settings-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  margin-top: -9px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.settings-slider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.settings-slider:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 999px;
+}
+
+/* The two ends, named. A slider with no labels is a slider whose left end you
+   have to discover by dragging it, and the left end here is the one claim worth
+   making: that it is measured rather than chosen. */
+.settings-scale {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 2px 0;
+  font-size: var(--t-cap);
+  color: var(--muted);
+}
+
+.settings-scale span:last-child {
+  text-align: right;
+}
+
+/* ---------- The pin picker ---------- */
+
+.pin-search {
+  margin: 0 12px 8px;
+}
+
+.pin-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 14px;
+  background: none;
+  border: 0;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.settings-group .pin-row + .pin-row {
+  border-top: 1px solid var(--line);
+}
+
+.pin-row:active {
+  background: var(--surface-2);
+}
+
+.pin-row.on {
+  background: var(--surface-2);
+}
+
+/* Two classes, deliberately. `.cover-sm` is 52x52 and is declared 700 lines below
+   this one, so a single-class rule here loses the cascade and the thumbnail comes
+   out square. */
+.cover.pin-cover {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 51px;
+  border-radius: var(--r-xs);
+}
+
+.pin-label {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--t-body);
+  line-height: 1.3;
+}
+
+.pin-sub {
+  display: block;
+  font-size: var(--t-cap);
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.pin-check {
+  flex: 0 0 auto;
+  color: var(--accent);
 }
 
 /* One paragraph under a list, explaining a behaviour the rows cannot show. Not a
@@ -911,11 +1054,11 @@ textarea {
    Fixed rather than absolute: it is a backdrop, not part of the scrolling page,
    and a 640px-wide .app on a desktop window still wants it edge to edge.
 
-   The veil's strength is set by lib/ground.js, per image, so that the brightest
-   part of the picture still clears 4.5:1 against --muted. It is not a taste
-   control and is not exposed: a heading over a photograph cannot be rescued by
-   choosing a text colour, so this is the only lever there is. The wash keeps a
-   fixed low value because a flat gradient has no bright part to measure. */
+   The veil's strength is set by lib/ground.js, per image, so that the darkest AND
+   brightest parts of the picture still clear 4.5:1 against --muted. That figure is
+   a FLOOR: the Settings slider may raise it and cannot lower it, so the setting is
+   taste and the contrast guarantee is not something a preference can lose. The
+   wash keeps a fixed low value because a flat gradient has no extreme to measure. */
 :root {
   --ground-veil-rgb: 18, 16, 14;
   --ground-veil-a: 0.6;
@@ -963,9 +1106,17 @@ textarea {
   opacity: 0.55;
 }
 
-/* The two picture sources. */
-:root[data-ground='nowplaying'] :is(.app, .settings-page)::before,
-:root[data-ground='shuffle'] :is(.app, .settings-page)::before {
+/* The picture sources - all four of them, and any fifth, because this is keyed on
+   the PAINT rather than on the preference.
+
+   Naming each source here is what the first version did, and it had a hole in it:
+   between choosing a picture source and the picture actually resolving (a network
+   round trip on a cold launch) the ::after below painted its veil over an empty
+   background, which is a page dimmed for no photograph. lib/ground.js sets
+   data-ground-art when it sets --ground-src and removes it when it clears it, so
+   the veil and the picture arrive and leave together and that state cannot be
+   expressed. Adding a source now costs nothing in this file. */
+:root[data-ground-art] :is(.app, .settings-page)::before {
   background-image: var(--ground-src, none);
   background-size: cover;
   background-position: center top;
@@ -978,8 +1129,7 @@ textarea {
 /* The veil is its own pseudo-element rather than a second background layer on
    the one above, because the blur must not apply to it: blurring a flat wash
    costs a full-screen filter pass and changes nothing. */
-:root[data-ground='nowplaying'] :is(.app, .settings-page)::after,
-:root[data-ground='shuffle'] :is(.app, .settings-page)::after {
+:root[data-ground-art] :is(.app, .settings-page)::after {
   content: '';
   position: fixed;
   inset: 0;
