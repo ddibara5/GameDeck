@@ -100,7 +100,7 @@ async function openInsights() {
 
 await page.goto(BASE, { waitUntil: 'networkidle' })
 await openInsights()
-await page.waitForSelector('.app-header-title', { timeout: 10000 })
+await page.waitForSelector('.brand-title', { timeout: 10000 })
 await page.waitForTimeout(700)
 
 const read = () =>
@@ -156,7 +156,7 @@ await page.screenshot({ path: 'repro/out/ins-toggled.png', fullPage: true })
 await page.reload({ waitUntil: 'networkidle' })
 await page.waitForTimeout(500)
 await openInsights()
-await page.waitForSelector('.app-header-title')
+await page.waitForSelector('.brand-title')
 await page.waitForTimeout(700)
 const reloaded = await read()
 

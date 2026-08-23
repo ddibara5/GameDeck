@@ -47,7 +47,12 @@ const ground = (theme) => `
       : 'rgba(18,16,14,.72), rgba(18,16,14,.56) 22%, rgba(18,16,14,.60)'}),
     linear-gradient(155deg, #100e0c 0%, #6f6a63 34%, #d8d2c8 52%, #4a453f 72%, #17140f 100%);
 }
-.app > * { position: relative; z-index: 1; }
+/* NOT the header. .app > * and .app-header have the same specificity and this
+   tag is injected last, so an unqualified rule replaced the header's sticky
+   position with relative: the bar scrolled away, never entered its .scrolled
+   state, and the target measured there reported "not reached" on the ground
+   runs only. It carries its own z-index (40) already. */
+.app > *:not(.app-header) { position: relative; z-index: 1; }
 `
 
 // [selector, label, where it sits, AA bar]
@@ -57,6 +62,11 @@ const TARGETS = [
   ['.showing-chip', 'filter chip', 'glass', AA_BODY],
   ['.lane-chip:not(.active)', 'lane chip', 'glass', AA_BODY],
   ['.page-title', 'the large page title', 'bare', AA_LARGE],
+  // The bar's permanent state once you have scrolled: 17px of --text on the
+  // glass, which is a surface the at-rest title never sits on. New with the
+  // one-row header, so it gets its own line rather than riding on the 34px
+  // measurement above.
+  ['.app-header.scrolled .brand-title', 'the scrolled title', 'glass', AA_BODY],
   ['.page-subtitle', 'the page subtitle', 'bare', AA_BODY],
   ['.showing-label', '"Showing"', 'bare', AA_BODY],
   ['.activity-group-label', 'Activity day label', 'bare', AA_BODY],
@@ -136,14 +146,23 @@ async function run(theme, withGround) {
       if (!(await page.locator(sel).first().isVisible().catch(() => false))) continue
       const info = await page.evaluate((s) => {
         const el = document.querySelector(s)
-        el.scrollIntoView({ block: 'center' })
+        if (!el) return null
+        // Only if it is actually off-screen. Calling this unconditionally
+        // scrolls the page to the top for anything sticky at the top - which
+        // for `.app-header.scrolled .brand-title` un-scrolls the page, drops
+        // the .scrolled class, and makes the very selector being measured stop
+        // matching between one evaluate and the next.
+        const r = el.getBoundingClientRect()
+        if (r.bottom < 0 || r.top > window.innerHeight) el.scrollIntoView({ block: 'center' })
         return { color: getComputedStyle(el).color.match(/\d+/g).slice(0, 3).map(Number) }
       }, sel)
+      if (!info) continue
       // Hide every target, screenshot this one's own box, put them back.
       const tag = await page.addStyleTag({ content: `${HIDE}{visibility:hidden !important}` })
       await page.waitForTimeout(90)
       const box = await page.evaluate((s) => {
         const el = document.querySelector(s)
+        if (!el) return null
         const r = el.getBoundingClientRect()
         const cs = getComputedStyle(el)
         // A pill's border curves a long way inside a 1px trim, so trimming one
@@ -155,6 +174,7 @@ async function run(theme, withGround) {
         return { x: Math.max(0, Math.round(r.x + pl)), y: Math.max(0, Math.round(r.y) + 2),
           width: Math.max(6, Math.round(r.width - pl - pr)), height: Math.max(6, Math.round(r.height) - 4) }
       }, sel)
+      if (!box) { await tag.evaluate((el) => el.remove()); continue }
       let worst = null
       try {
         const buf = await page.screenshot({ clip: box })
@@ -182,6 +202,22 @@ async function run(theme, withGround) {
   }
   await page.waitForTimeout(1400)
   await visit()
+  // Scrolled, so the header is glass and the title is at its 17px size. Done on
+  // Home and before anything else, so the at-rest 34px reading above is already
+  // recorded and this cannot overwrite it.
+  //
+  // The spacer is not cheating: this fixture's Home is four cards and does not
+  // reach the bottom of the viewport, so there is nothing to scroll and the
+  // header never enters the state being measured. Without it the target reported
+  // "not reached", which the harness prints rather than passing.
+  const spacer = await page.addStyleTag({ content: '.app-main::after { content: ""; display: block; height: 1200px }' })
+  await page.evaluate(() => window.scrollTo(0, 260))
+  await page.waitForTimeout(800)
+  await visit()
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await page.waitForTimeout(600)
+  await spacer.evaluate((el) => el.remove())
+  await page.waitForTimeout(300)
   for (const tab of ['Library', 'Activity', 'Discover', 'News']) {
     await page.locator('.tabbar-btn', { hasText: tab }).first().click()
     await page.waitForTimeout(1500)

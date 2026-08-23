@@ -213,26 +213,38 @@ const check = (name, pass, detail) => {
 }
 
 await page.goto(BASE, { waitUntil: 'networkidle' })
-await page.waitForSelector('.app-header-title', { timeout: 10000 })
+await page.waitForSelector('.brand-title', { timeout: 10000 })
 await page.waitForTimeout(900)
 
 /* ---------------------------------------------------------------- 1. lands */
 
 const home = await page.evaluate(() => ({
-  title: document.querySelector('.app-header-title')?.textContent.trim(),
-  // The large title came back on 22 Aug and took the heading with it, so the
-  // header copy is a stand-in again. Three halves to that, all asserted:
-  // exactly one h1, it is the large title, and the header's copy is NOT an h1.
+  title: document.querySelector('.brand-title')?.textContent.trim(),
+  // The bar and the large title merged into one row on 23 Aug, so there is one
+  // copy of the title and it lives in the header. Three halves to that, all
+  // asserted: exactly one h1, it IS in the header, and there is exactly one
+  // element carrying the title text - a second copy anywhere would be read out
+  // twice, which is what the old stand-in span had to be aria-hidden to avoid.
   h1s: [...document.querySelectorAll('h1')].map((e) => e.textContent.trim()),
   h1IsPageTitle: document.querySelector('h1.page-title') !== null,
-  headerCopyIsHeading: document.querySelector('.app-header h1') !== null,
-  // Rendered ONCE, by App, above <main> - not once per tab, which is the shape
-  // that let one of eight copies drift out of step.
-  pageTitles: document.querySelectorAll('.page-title').length,
-  standin: (() => {
-    const e = document.querySelector('.app-header-title')
-    if (!e) return null
-    return { opacity: getComputedStyle(e).opacity, hidden: e.getAttribute('aria-hidden') }
+  headingIsInHeader: document.querySelector('.app-header h1.page-title') !== null,
+  pageTitles: document.querySelectorAll('.brand-title').length,
+  // The lockup is the heading's button. Its accessible name has to be the tab
+  // name, not "Open menu": an aria-label on a descendant replaces the subtree,
+  // so labelling it would make the <h1> read "Open menu" to a screen reader.
+  lockup: (() => {
+    const b = document.querySelector('.app-header .brand-btn')
+    if (!b) return null
+    return {
+      label: b.getAttribute('aria-label'),
+      popup: b.getAttribute('aria-haspopup'),
+      text: b.textContent.trim(),
+      word: document.querySelectorAll('.app-header .brand-word').length,
+    }
+  })(),
+  titleSize: (() => {
+    const e = document.querySelector('.brand-title')
+    return e ? Math.round(parseFloat(getComputedStyle(e).fontSize)) : null
   })(),
   subtitle: document.querySelector('.page-subtitle')?.textContent.trim(),
   headerH: Math.round(document.querySelector('.app-header').getBoundingClientRect().height),
@@ -319,31 +331,61 @@ check('Home is the active tab', home.active === 'Home', home.active)
 
 /* ------------------------------------------------- the header carries it */
 
-// The large title is the heading again. Two live copies of the same words would
-// be read out twice, so the header's is a span and is aria-hidden while it is
-// invisible - that pairing is the assertion, not the h1 count on its own.
+// One heading, and it is in the bar. The second copy is what the old shape had
+// to work around: a span in the header, aria-hidden whenever it was invisible,
+// so the same words were not announced twice.
 check(
-  'exactly one heading, and it is the large title',
-  home.h1s.length === 1 && home.h1IsPageTitle && !home.headerCopyIsHeading,
-  `${home.h1s.join('|')}  headerIsH1=${home.headerCopyIsHeading}`
+  'exactly one heading, and it is in the header',
+  home.h1s.length === 1 && home.h1IsPageTitle && home.headingIsInHeader,
+  `${home.h1s.join('|')}  inHeader=${home.headingIsInHeader}`
 )
 check('the heading is the tab name', home.h1s[0] === 'Home', home.h1s[0])
-// One copy, from App, rather than one per tab.
-check('the large title is rendered exactly once', home.pageTitles === 1, String(home.pageTitles))
+check('the title exists exactly once', home.pageTitles === 1, String(home.pageTitles))
+// The heading's own button. aria-label MUST be absent here: it would replace the
+// subtree and the <h1> would read "Open menu".
 check(
-  'and the header copy is invisible and silent at the top of the page',
-  home.standin && home.standin.opacity === '0' && home.standin.hidden === 'true',
-  JSON.stringify(home.standin)
+  'the lockup is the heading and still says it opens a menu',
+  home.lockup && home.lockup.label === null && home.lockup.popup === 'menu' && home.lockup.text === 'Home',
+  JSON.stringify(home.lockup)
 )
+check('the wordmark is out of the header', home.lockup && home.lockup.word === 0, `${home.lockup?.word} .brand-word in the bar`)
+check('the title is at its large size at the top of the page', home.titleSize === 34, `${home.titleSize}px`)
 // The one part the header cannot carry. On Home it is the date.
 check('the subtitle survives', /^[A-Z][a-z]+day, /.test(home.subtitle || ''), home.subtitle)
-// The large title is back above the first card, so this is deliberately NOT the
-// 190 it was: that number locked the title being gone. 218 before the chips came
-// off, 210 after, 166 with the title in the header, and back around 250 now that
-// the 34px copy and its subtitle sit above the fold again. The assertion that
-// still means something is that the header itself did not grow.
-check('the first card clears the title block', home.firstCardTop !== null && home.firstCardTop < 290, String(home.firstCardTop))
-check('and the header is still 44px', home.headerH === 44, `${home.headerH}px`)
+// The bar and the large title are one row now, so the first card came up by 36px
+// and the bar went DOWN by 12: 44 to 56, because a 34px title in a 50px row puts
+// its box top exactly on iOS 26's y=90 fade line and 56 gives 3px of margin. Both
+// halves are asserted, because taking the 36 by shrinking something is the thing
+// this change was explicitly not allowed to do.
+check('the first card clears the header', home.firstCardTop !== null && home.firstCardTop < 254, String(home.firstCardTop))
+check('the bar carries a 34px title in 56px', home.headerH === 56, `${home.headerH}px`)
+// THE BAR DOES NOT MOVE. A sticky header is in the document flow, so a header
+// that shrank at the scroll threshold would shift everything below it by the
+// difference - with the threshold at scrollY > 4 that is a jump you can sit on
+// the edge of. Only the type changes. Asserted on the DOCUMENT position of a
+// card, which the viewport-relative rect cannot tell you.
+const beforeScroll = await page.evaluate(() => {
+  const e = document.querySelector('.app-main .chart-card, .app-main .hm-grid')
+  return { doc: Math.round(e.getBoundingClientRect().top + window.scrollY),
+    h: Math.round(document.querySelector('.app-header').getBoundingClientRect().height),
+    size: Math.round(parseFloat(getComputedStyle(document.querySelector('.brand-title')).fontSize)) }
+})
+await page.evaluate(() => window.scrollTo(0, 240))
+await page.waitForTimeout(700)
+const afterScroll = await page.evaluate(() => {
+  const e = document.querySelector('.app-main .chart-card, .app-main .hm-grid')
+  return { doc: Math.round(e.getBoundingClientRect().top + window.scrollY),
+    h: Math.round(document.querySelector('.app-header').getBoundingClientRect().height),
+    size: Math.round(parseFloat(getComputedStyle(document.querySelector('.brand-title')).fontSize)),
+    glass: getComputedStyle(document.querySelector('.app-header')).backdropFilter }
+})
+check('the title shrinks on scroll', afterScroll.size === 17 && beforeScroll.size === 34, `${beforeScroll.size} -> ${afterScroll.size}`)
+check('and the bar does not move the page under it', afterScroll.doc === beforeScroll.doc && afterScroll.h === beforeScroll.h,
+  `card ${beforeScroll.doc} -> ${afterScroll.doc}, bar ${beforeScroll.h} -> ${afterScroll.h}`)
+check('the scrolled bar is glass', /blur/.test(afterScroll.glass || ''), afterScroll.glass)
+await page.evaluate(() => window.scrollTo(0, 0))
+await page.waitForTimeout(600)
+
 check('Now playing renders with its arc', home.cardTitles.includes('Now playing') && home.arcs === 1, `arcs=${home.arcs}`)
 // One tile left in the catalog, so the run is a run of one and takes the whole
 // width. Asserted as a COLUMN COUNT rather than a pixel width: a half-width tile
@@ -581,7 +623,7 @@ await page.locator('.modal-backdrop').click({ position: { x: 8, y: 8 } })
 await page.waitForTimeout(700)
 const closed = await page.evaluate(() => ({
   backdrop: document.querySelectorAll('.modal-backdrop').length,
-  title: document.querySelector('.app-header-title')?.textContent.trim(),
+  title: document.querySelector('.brand-title')?.textContent.trim(),
 }))
 check('the sheet closes back to Home', closed.backdrop === 0 && closed.title === 'Home', JSON.stringify(closed))
 
@@ -636,7 +678,7 @@ await page.screenshot({ path: 'repro/out/wishlist-from-home.png', fullPage: true
 await page.locator('.wl-back').first().click()
 await page.waitForTimeout(700)
 const backHome = await page.evaluate(() => ({
-  title: document.querySelector('.app-header-title')?.textContent.trim(),
+  title: document.querySelector('.brand-title')?.textContent.trim(),
   wl: document.querySelectorAll('.wl-page').length,
 }))
 check('back from the Wishlist returns to Home', backHome.title === 'Home' && backHome.wl === 0, JSON.stringify(backHome))
@@ -703,7 +745,7 @@ await page.waitForTimeout(300)
 await page.locator('.wl-back').first().click()
 await page.waitForTimeout(700)
 const backHome2 = await page.evaluate(() => ({
-  title: document.querySelector('.app-header-title')?.textContent.trim(),
+  title: document.querySelector('.brand-title')?.textContent.trim(),
   wl: document.querySelectorAll('.wl-page').length,
 }))
 check('back from Out now returns to Home', backHome2.title === 'Home' && backHome2.wl === 0, JSON.stringify(backHome2))
@@ -806,7 +848,7 @@ check('unfolding clears the stored key', JSON.stringify(unfolded.stored) === '{}
 await page.getByRole('button', { name: /^Insights/ }).first().click()
 await page.waitForTimeout(900)
 const insights = await page.evaluate(() => ({
-  title: document.querySelector('.app-header-title')?.textContent.trim(),
+  title: document.querySelector('.brand-title')?.textContent.trim(),
   cardTitles: [...document.querySelectorAll('.chart-title')].map((e) => e.textContent.trim()),
   np: document.querySelectorAll('.np').length,
   arcs: document.querySelectorAll('.ins-arc').length,
@@ -844,7 +886,7 @@ await page.waitForTimeout(500)
 // wrong page and would have quietly proved nothing.
 await page.getByRole('button', { name: /^Home/ }).first().click()
 await page.waitForTimeout(700)
-const lightTitle = await page.evaluate(() => document.querySelector('.app-header-title')?.textContent.trim())
+const lightTitle = await page.evaluate(() => document.querySelector('.brand-title')?.textContent.trim())
 check('light shot is of Home', lightTitle === 'Home', lightTitle)
 // The bar's inactive label in LIGHT was the one thing on this screen below its
 // own dark-mode legibility: 5.01:1 measured off the rendered pixels against

@@ -197,12 +197,14 @@ console.log(`note   veil dark ${veils.dark}, light ${veils.light}`)
 // 2px trim, so "the closest pixel to the text" kept picking the ring and read
 // 2.75 about a surface that composites to rgb(26).
 const TARGETS = [
-  ['.page-title', 'the large page title', AA_LARGE],
+  // .page-title is the <h1> wrapper since the bar and the title merged; the
+  // words are on .brand-title inside it.
+  ['.brand-title', 'the large page title', AA_LARGE],
   ['.page-subtitle', 'the page subtitle', AA_BODY],
   ['.game-title', 'a Library row title', AA_BODY],
   ['.tabbar-btn:not(.active) >> nth=2', 'a tab bar label', AA_BODY],
 ]
-const HIDE = '.page-title,.page-subtitle,.game-title,.tabbar-btn'
+const HIDE = '.brand-title,.page-subtitle,.game-title,.tabbar-btn'
 
 for (const theme of ['dark', 'light']) {
   const { ctx, page } = await open(theme)
@@ -215,12 +217,18 @@ for (const theme of ['dark', 'light']) {
   await page.locator('.tabbar-btn', { hasText: 'Library' }).first().click()
   await page.waitForTimeout(1400)
 
-  for (const [sel, label, bar] of TARGETS) {
+  // One measurement, so the scrolled title below can reuse it rather than being
+  // a second copy of thirty lines that could drift from the first.
+  const measure = async (sel) => {
     const n = await page.locator(sel).count()
-    if (!n) { check(`${theme}: ${label} over the ground`, false, 'not rendered'); continue }
+    if (!n) return null
     const handle = await page.locator(sel).first().elementHandle()
     const color = await page.evaluate((el) => {
-      el.scrollIntoView({ block: 'center' })
+      // Only when it is genuinely off-screen. Unconditionally scrolling a
+      // sticky header into view scrolls the page back to the TOP, which drops
+      // .scrolled and makes the selector being measured stop matching.
+      const r = el.getBoundingClientRect()
+      if (r.bottom < 0 || r.top > window.innerHeight) el.scrollIntoView({ block: 'center' })
       return getComputedStyle(el).color.match(/\d+/g).slice(0, 3).map(Number)
     }, handle)
     const tag = await page.addStyleTag({ content: `${HIDE}{visibility:hidden !important}` })
@@ -253,9 +261,33 @@ for (const theme of ['dark', 'light']) {
       }, { d: buf.toString('base64'), c: color })
     } catch { /* off-screen */ }
     await tag.evaluate((el) => el.remove())
-    const r = worst ? ratio(color, worst) : 0
+    return worst ? ratio(color, worst) : 0
+  }
+
+  for (const [sel, label, bar] of TARGETS) {
+    const r = await measure(sel)
+    if (r == null) { check(`${theme}: ${label} over the ground`, false, 'not rendered'); continue }
     check(`${theme}: ${label} over the ground`, r >= bar, `${r.toFixed(2)} vs ${bar}`)
   }
+
+  // The bar's permanent state. Once scrolled it is 17px of --text on glass with
+  // BOTH the page content and the ground behind it, which is the only glass in
+  // the app that has content passing under it at all - .app-main reserves the
+  // tab bar's height as bottom padding, so nothing ever scrolls under that one.
+  // The spacer is not cheating: this fixture's Library is four games and does
+  // not fill the viewport, so there is nothing to scroll and the header never
+  // enters the state being measured. Without it the check reported "never
+  // entered the scrolled state", which is what it should say rather than
+  // passing on a measurement it never took.
+  const spacer = await page.addStyleTag({ content: '.app-main::after { content: ""; display: block; height: 1200px }' })
+  await page.evaluate(() => window.scrollTo(0, 300))
+  await page.waitForTimeout(900)
+  const scrolledTitle = await measure('.app-header.scrolled .brand-title')
+  await spacer.evaluate((el) => el.remove())
+  check(`${theme}: the scrolled title over the ground`,
+    scrolledTitle != null && scrolledTitle >= AA_BODY,
+    scrolledTitle == null ? 'never entered the scrolled state' : `${scrolledTitle.toFixed(2)} vs ${AA_BODY}`)
+
   await ctx.close()
 }
 
