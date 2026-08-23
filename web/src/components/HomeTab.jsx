@@ -162,11 +162,33 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
     // last Tuesday does not beat an hour last night.
     const played = events.filter((e) => num(e.minutes_delta) > 0)
     if (!played.length) return null
+
+    // WITHIN a day, the answer is the later session, not the longer one.
+    //
+    // Across days this already did the right thing. Inside one day it took
+    // whichever game logged more minutes, which is the opposite of the question
+    // the card asks: three hours of Persona in the morning beat forty minutes of
+    // Mortal Shell at night, and Home announced Persona while you were sitting in
+    // front of the other one.
+    //
+    // play_events carries a DAY and no time, so the tiebreak reads the game's own
+    // last_played instant instead - the same field the Library sorts on, already
+    // in BASE_COLUMNS, so no query changes. Minutes remain the last resort for a
+    // row whose game is missing from the library payload or carries no timestamp,
+    // which is the only state this can fall back to.
+    const playedAt = (e) => {
+      const g = gamesById.get(e.master_id)
+      const t = g && g.last_played ? Date.parse(g.last_played) : NaN
+      return Number.isFinite(t) ? t : null
+    }
     const latest = played.reduce((best, e) => {
       const d = daysBetween(eventDay(e), eventDay(best))
       if (d > 0) return e
-      if (d === 0 && num(e.minutes_delta) > num(best.minutes_delta)) return e
-      return best
+      if (d < 0) return best
+      const te = playedAt(e)
+      const tb = playedAt(best)
+      if (te != null && tb != null && te !== tb) return te > tb ? e : best
+      return num(e.minutes_delta) > num(best.minutes_delta) ? e : best
     }, played[0])
 
     const rows = events
