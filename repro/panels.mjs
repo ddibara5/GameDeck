@@ -91,6 +91,7 @@ const fy = await page.evaluate(() => {
   const rows = [...document.querySelectorAll('.fy-row-wrap')]
   if (rows.length < 3) return { count: rows.length }
   const s = getComputedStyle(rows[0])
+  const feed = getComputedStyle(document.querySelector('.fy-feed'))
   const cov = document.querySelector('.cover.fy-cov')
   const cr = cov ? cov.getBoundingClientRect() : null
   const heart = getComputedStyle(document.querySelector('.fy-row-wrap .wish-heart'))
@@ -100,6 +101,10 @@ const fy = await page.evaluate(() => {
     bg: s.backgroundColor,
     border: s.borderTopWidth,
     radius: parseFloat(s.borderTopLeftRadius),
+    feedBg: feed.backgroundColor,
+    feedBorder: feed.borderTopWidth,
+    feedRadius: parseFloat(feed.borderTopLeftRadius),
+    firstTopBorder: getComputedStyle(rows[0]).borderTopWidth,
     // A card is bordered on four sides. The old layout was bordered on ONE, and
     // only from the second row down: a divider, not a card. Reading borderTop
     // alone cannot tell those apart, which is how the first version of this
@@ -113,12 +118,28 @@ const fy = await page.evaluate(() => {
 })
 console.log('fy', JSON.stringify(fy))
 check('the For You feed rendered rows to measure', fy.count >= 3, fy.count)
-check('a pick sits on --surface', fy.bg === tokens.surface, `${fy.bg} vs ${tokens.surface}`)
-check('and carries the card hairline and radius', fy.border === '1px' && near(fy.radius, 18), `${fy.border} / ${fy.radius}px`)
-check('a pick is bordered on four sides, not divided by a hairline', fy.sides.every((w) => w === '1px'), fy.sides.join('/'))
+// THE SURFACE MOVED UP ONE LEVEL, and that is the whole of 23 Aug's change.
+//
+// The claim these three used to make was "every block of type has a surface
+// under it", and that is still the claim - it is just that ONE surface now
+// carries the whole feed instead of one per pick. A card round every row cut the
+// ground into a stripe every 10px and put twelve identical borders on a screen
+// whose job is to show titles. So the assertions are inverted rather than
+// deleted: the feed has the fill, the hairline and the radius, and a pick has
+// none of them and is divided from its neighbour by one pixel.
+check('the FEED sits on --surface', fy.feedBg === tokens.surface, `${fy.feedBg} vs ${tokens.surface}`)
+check('and carries the hairline and the radius', fy.feedBorder === '1px' && near(fy.feedRadius, 18), `${fy.feedBorder} / ${fy.feedRadius}px`)
+check('a pick has no fill of its own', fy.bg === 'rgba(0, 0, 0, 0)', fy.bg)
+// Divided, not bordered: the divider is BETWEEN rows, so the first row must not
+// carry one. Reading row[1] alone cannot tell a divider from a card - that is
+// the mistake the four-sided check was written to catch, kept and pointed the
+// other way.
+check('a pick is divided by a hairline, not bordered on four sides',
+  fy.sides[0] === '1px' && fy.sides.slice(1).every((w) => w === '0px'), fy.sides.join('/'))
+check('...and the first pick has no divider above it', fy.firstTopBorder === '0px', fy.firstTopBorder)
 check('the poster is 66x88', fy.cover && fy.cover[0] === 66 && fy.cover[1] === 88, JSON.stringify(fy.cover))
 check('the heart dropped its glass puck', fy.heartBg === 'rgba(0, 0, 0, 0)', fy.heartBg)
-check('cards are evenly spaced', fy.gap === 10 && fy.gap2 === 10, `${fy.gap} / ${fy.gap2}`)
+check('rows sit flush, with no ground showing between them', fy.gap === 0 && fy.gap2 === 0, `${fy.gap} / ${fy.gap2}`)
 
 const head = await page.evaluate(() => {
   const q = (s) => document.querySelector(s).getBoundingClientRect()

@@ -783,7 +783,7 @@ const drawer = await page.evaluate(() => ({
 // Three groups, not four. Settings was the whole App group and is pinned in the
 // footer now, out of the ordered list entirely.
 check('drawer groups in order', drawer.groups.join('|') === 'Your games|Explore|Shelves', drawer.groups.join('|'))
-check('drawer lists every destination', drawer.rows.length === 12, String(drawer.rows.length))
+check('drawer lists every destination', drawer.rows.length === 11, String(drawer.rows.length))
 check('wishlist sits under Explore', drawer.rows.some((r) => r.startsWith('Wishlist')), '')
 // The die left the header for the list. Explore is Discover, News, Wishlist,
 // Shuffle: four ways to find the next thing.
@@ -804,7 +804,7 @@ await page.screenshot({ path: 'repro/out/drawer-dark.png', fullPage: true })
 
 /* ------------------------------------------------ folding a drawer group */
 
-// Shelves holds four rows. Folding it has to take exactly those four out, keep
+// Shelves holds three rows. Folding it has to take exactly those three out, keep
 // every other row, say how many it is holding, and still be folded after a
 // reload. The count is asserted because a folded heading with no count is a dead
 // end: the rows are what say how many, and they are gone.
@@ -817,14 +817,14 @@ const folded = await page.evaluate(() => ({
   open: [...document.querySelectorAll('.drawer .menu-sec')].map((e) => e.getAttribute('aria-expanded')),
   stored: JSON.parse(localStorage.getItem('gamedeck_nav_v2') || '{}').collapsed,
 }))
-check('folding hides that group only', folded.rows.length === 8 && !folded.rows.some((r) => /^Backlog|^Playing|^Finished|^Abandoned/.test(r)), String(folded.rows.length))
+check('folding hides that group only', folded.rows.length === 8 && !folded.rows.some((r) => /^Backlog|^Playing|^Finished/.test(r)), String(folded.rows.length))
 check('the other groups are untouched', folded.rows.some((r) => /^Home/.test(r)) && folded.rows.some((r) => /^Wishlist/.test(r)) && folded.rows.some((r) => /^Shuffle/.test(r)), '')
-check('a folded heading says how many', folded.n === '4', folded.n)
+check('a folded heading says how many', folded.n === '3', folded.n)
 check('only that heading reports folded', folded.open.join(',') === 'true,true,false', folded.open.join(','))
 check('the fold is stored, not just drawn', JSON.stringify(folded.stored) === '{"shelves":true}', JSON.stringify(folded.stored))
 // The headings still print in the same order with a group shut, because the fold
 // hides rows and never touches the order.
-check('the order survives the fold', folded.groups.join('|') === 'Your games|Explore|Shelves4', folded.groups.join('|'))
+check('the order survives the fold', folded.groups.join('|') === 'Your games|Explore|Shelves3', folded.groups.join('|'))
 await page.screenshot({ path: 'repro/out/drawer-folded.png', fullPage: true })
 
 await page.reload({ waitUntil: 'networkidle' })
@@ -841,7 +841,7 @@ const unfolded = await page.evaluate(() => ({
   rows: document.querySelectorAll('.drawer .menu-item').length,
   stored: JSON.parse(localStorage.getItem('gamedeck_nav_v2') || '{}').collapsed,
 }))
-check('unfolding brings the rows back', unfolded.rows === 12, String(unfolded.rows))
+check('unfolding brings the rows back', unfolded.rows === 11, String(unfolded.rows))
 // Emptied rather than left holding `false`, so storage lists folded groups only.
 check('unfolding clears the stored key', JSON.stringify(unfolded.stored) === '{}', JSON.stringify(unfolded.stored))
 
@@ -929,13 +929,13 @@ const editor = await page.evaluate(() => ({
 }))
 check('drawer editor is titled Drawer', editor.title === 'Drawer', editor.title)
 check('drawer editor lists the same three groups', editor.secs.join('|') === 'Your games|Explore|Shelves', editor.secs.join('|'))
-check('drawer editor row count', editor.rows === 12, String(editor.rows))
+check('drawer editor row count', editor.rows === 11, String(editor.rows))
 // The whole point of the split: this editor cannot change bar membership, so it
 // has no switches at all. Every row states what it is instead.
 check('drawer editor has no switches', editor.toggles === 0, String(editor.toggles))
-// 11 of 12: Settings is an action rather than a destination with a kind, and it
+// 10 of 11: Settings is an action rather than a destination with a kind, and it
 // has nothing true to say in that column.
-check('every drawer row states what it is', editor.fixed.filter(Boolean).length === 11, editor.fixed.join(', '))
+check('every drawer row states what it is', editor.fixed.filter(Boolean).length === 10, editor.fixed.join(', '))
 check('the bar preview is not here', editor.prev === 0, String(editor.prev))
 check('Insights reads as drawer only', editor.fixed.includes('drawer only'), editor.fixed.join(', '))
 await page.screenshot({ path: 'repro/out/editor-drawer.png', fullPage: true })
