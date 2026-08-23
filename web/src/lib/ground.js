@@ -204,12 +204,62 @@ function artUrl(meta) {
   return `/api/tint?id=${encodeURIComponent(meta.backdropId)}&kind=${kind}`
 }
 
+// ---------------------------------------------------------------- remembering
+
+// WHY THIS EXISTS
+//
+// Measured at 420ms Supabase latency, three launches in a row with the ground on
+// `nowplaying`: launch one showed no art at all (the library cache is empty when
+// initGround runs, so it falls back to the wash), launch two painted at 927ms,
+// launch three at 437ms - and it stayed at 437 forever. The chain is read
+// IndexedDB, fetch /api/discover?ids=, fetch /api/tint, decode, sample a canvas,
+// compute the veil, set two properties, and every step of it produces the same
+// answer as the last launch on all but the launch where the picture changed.
+//
+// So the answer is written down. localStorage rather than IndexedDB precisely
+// because it is SYNCHRONOUS - an idb read is a promise, and a promise is already
+// a frame too late for a paint that is supposed to be there when the page is.
+// Keyed BY SOURCE rather than holding one entry, so switching from Now playing to
+// Shuffle and back does not throw away what was already measured for each. It is
+// two small objects; a single slot would make every source change cost a slow
+// launch for no saving worth having.
+const PAINT_KEY = 'gamedeck_ground_paint_v1'
+
+function readPaint() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(PAINT_KEY) || 'null')
+    return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}
+  } catch {
+    return {}
+  }
+}
+
+function writePaint(source, entry) {
+  try {
+    localStorage.setItem(PAINT_KEY, JSON.stringify({ ...readPaint(), [source]: entry }))
+  } catch {
+    /* storage unavailable - the ground goes back to resolving on every launch */
+  }
+}
+
+/**
+ * The picture this source should paint, resolved the slow way: library cache ->
+ * /api/discover?ids= -> an /api/tint url.
+ */
 async function resolveArt(kind) {
   const game = await pickGame(kind)
   if (!game) return null
   const { fetchGamesByIds } = await import('./discover.js')
   const byId = await fetchGamesByIds([game.igdb_id])
   return artUrl(byId && byId[game.igdb_id])
+}
+
+// Fetch, decode, sample, and size the veil. Null when the picture cannot be
+// measured, which is the only state in which art is not shown at all.
+async function measure(url) {
+  const img = await loadImage(url)
+  const ends = img ? extremesOf(img) : null
+  return ends == null ? null : veilFor(ends, readPalette())
 }
 
 // ---------------------------------------------------------------- applying
@@ -221,12 +271,54 @@ function clearArt() {
   root().style.removeProperty('--ground-veil-a')
 }
 
+function paintArt(src, veil) {
+  root().style.setProperty('--ground-veil-a', String(veil))
+  root().style.setProperty('--ground-src', `url("${src}")`)
+}
+
+const themeNow = () =>
+  document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'
+
+/**
+ * SHUFFLE IS DECIDED A LAUNCH AHEAD, and it has to be.
+ *
+ * Remembering the paint makes every other source instant, and a source that
+ * picks a new picture every launch is the one that could never use it. Painting
+ * the remembered picture and swapping to the new one a second later is not a
+ * shuffle, it is a flash. So the launch that shows picture N resolves AND
+ * measures N+1 and parks it; the next launch promotes it and paints on the first
+ * frame. Shuffle still changes every time the app opens - the choosing just
+ * happens while nobody is waiting.
+ *
+ * Failure is silent on purpose. The worst case is that the next launch resolves
+ * the slow way, which is what every launch used to do.
+ */
+async function parkNextShuffle() {
+  try {
+    const url = await resolveArt('shuffle')
+    if (!url) return
+    const veil = await measure(url)
+    if (veil == null) return
+    const now = readPaint().shuffle
+    if (now) writePaint('shuffle', { ...now, pending: { src: url, veil: { [themeNow()]: veil } } })
+  } catch {
+    /* next launch resolves it the slow way */
+  }
+}
+
 let token = 0
 
 /**
  * Put the ground on the page. Synchronous for `off` and `wash`, which need no
- * image and therefore no measurement; the two art sources resolve in the
- * background and paint when they land.
+ * image and therefore no measurement.
+ *
+ * For the two art sources the FIRST THING that happens is a paint off the
+ * remembered answer, before any await. Measured at 420ms latency, three launches
+ * in a row on `nowplaying`: launch one showed no art at all (the library cache is
+ * empty when initGround runs), launch two painted at 927ms, launch three at
+ * 437ms - and it stayed at 437 forever, because every launch redid a resolve that
+ * produced the same answer as the last one. Everything below the first paint is
+ * that resolve, running where nobody is waiting for it.
  */
 export async function applyGround(value) {
   const v = SOURCES.has(value) ? value : 'off'
@@ -236,10 +328,25 @@ export async function applyGround(value) {
     clearArt()
     return v
   }
-  // Held back until both the picture and its veil are known. Painting the art
-  // first and the veil a frame later is a flash of unveiled photograph directly
-  // under the type, which is the one state this whole feature exists to avoid.
-  clearArt()
+
+  const theme = themeNow()
+  const mem = readPaint()[v] || null
+
+  // Shuffle: promote the picture parked by the last launch. Both halves are
+  // required - a src with no veil for THIS theme cannot be painted, because a
+  // veil measured in the other theme is sized against the other theme's --muted
+  // and would be a photograph under the wrong cover.
+  if (v === 'shuffle' && mem && mem.pending && mem.pending.src && mem.pending.veil?.[theme]) {
+    paintArt(mem.pending.src, mem.pending.veil[theme])
+    writePaint(v, { src: mem.pending.src, veil: mem.pending.veil })
+    parkNextShuffle()
+    return v
+  }
+
+  const reuse = Boolean(mem && mem.src && mem.veil?.[theme])
+  if (reuse) paintArt(mem.src, mem.veil[theme])
+  else clearArt()
+
   const url = await resolveArt(v)
   if (mine !== token) return v
   // No art yet - a first launch, before the library has ever been fetched, has
@@ -247,20 +354,31 @@ export async function applyGround(value) {
   // pick, and the STORED preference is untouched, so the next launch tries again.
   // Without this the veil paints over nothing: a page dimmed for no picture.
   if (!url) {
-    root().setAttribute('data-ground', 'wash')
+    if (!reuse) root().setAttribute('data-ground', 'wash')
     return v
   }
-  const img = await loadImage(url)
+  // Nothing moved. The picture painted from memory IS the picture and this
+  // theme's veil was measured against it, so the DOM is not touched again.
+  if (reuse && mem.src === url) {
+    if (v === 'shuffle') parkNextShuffle()
+    return v
+  }
+
+  const veil = await measure(url)
   if (mine !== token) return v
-  const ends = img ? extremesOf(img) : null
-  if (ends == null) {
+  if (veil == null) {
     // No sample, so no claim about contrast: fall back to the wash rather than
-    // showing an unmeasured photograph.
-    root().setAttribute('data-ground', 'wash')
+    // show an unmeasured photograph. A remembered paint stays - it was measured
+    // once on a real sample and a failed re-read says nothing about it.
+    if (!reuse) root().setAttribute('data-ground', 'wash')
     return v
   }
-  root().style.setProperty('--ground-veil-a', String(veilFor(ends, readPalette())))
-  root().style.setProperty('--ground-src', `url("${url}")`)
+  paintArt(url, veil)
+  // The other theme's veil survives a repaint of this one: same picture, still
+  // true. Only a NEW picture drops it, which is why the merge is keyed on the url.
+  const keep = mem && mem.src === url ? mem.veil || {} : {}
+  writePaint(v, { src: url, veil: { ...keep, [theme]: veil } })
+  if (v === 'shuffle') parkNextShuffle()
   return v
 }
 

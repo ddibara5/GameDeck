@@ -6,11 +6,13 @@
 // - Icons and the manifest: NOT HANDLED AT ALL. They are fetched by iOS outside the
 //   page context, and a worker in that path can only serve something stale.
 // - Every OTHER same-origin file: network-first, since a stable url may change bytes.
-// - Game art AND news art (cross-origin): cache-first in a capped image cache, so
-//   covers, screenshots and story thumbnails load instantly on repeat views and work
-//   offline. Everything reaches this branch because it goes through wsrv.nl or
-//   images.igdb.com; a press CDN hotlinked directly would fall through the
-//   cross-origin bail below and never be cached at all, which is what News did.
+// - Game art, news art and the ground's key art: cache-first in a capped image cache,
+//   so covers, screenshots, story thumbnails and the background load instantly on
+//   repeat views and work offline. Cross-origin art reaches this branch because it
+//   goes through wsrv.nl or images.igdb.com; a press CDN hotlinked directly would
+//   fall through the cross-origin bail below and never be cached at all, which is
+//   what News did. /api/tint is same-origin and is here because it is an image
+//   keyed by an immutable IGDB id, not live data.
 // - Supabase / API calls: network-first, falling back to cache when offline.
 
 // Bumped to v4 to evict the v3 cache, which is holding stale icons and an old
@@ -47,8 +49,16 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// /api/tint is the one path under /api/ that is NOT live data: it takes an IGDB
+// image id and returns those exact bytes, so the answer for a given url can never
+// change. It was being refetched on every launch - 78kB of the ground's key art,
+// measured - purely because it shared a prefix with the endpoints that do change.
+function isTintImage(url) {
+  return url.origin === self.location.origin && url.pathname === '/api/tint';
+}
+
 function isApiOrSupabase(url) {
-  return url.pathname.startsWith('/api/') || url.hostname.endsWith('.supabase.co');
+  return (url.pathname.startsWith('/api/') && !isTintImage(url)) || url.hostname.endsWith('.supabase.co');
 }
 
 // Keep the image cache from growing without bound. cache.keys() returns entries in
@@ -68,11 +78,13 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
 
-  // Game art: cache-first with a capped cache. Covers/screenshots are served via
-  // the wsrv.nl image CDN (resized WebP); raw images.igdb.com is the fallback path.
+  // Art: cache-first with a capped cache. Covers/screenshots are served via the
+  // wsrv.nl image CDN (resized WebP); raw images.igdb.com is the fallback path;
+  // /api/tint is the same-origin passthrough the ground and the game sheet read
+  // through, and is immutable for a given image id.
   // Opaque responses (no-CORS <img> loads) are still storable and replayable from
   // the Cache API, so this works without any CORS changes.
-  if (url.hostname === 'images.igdb.com' || url.hostname === 'wsrv.nl') {
+  if (url.hostname === 'images.igdb.com' || url.hostname === 'wsrv.nl' || isTintImage(url)) {
     event.respondWith(
       caches.open(IMG_CACHE).then((cache) =>
         cache.match(request).then((cached) => {
