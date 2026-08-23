@@ -24,7 +24,7 @@
 // before first paint, and a static import would pull both into the entry bundle
 // for every launch, including the `off` and `wash` ones that never touch either.
 
-import { clampAccent } from './tint.js'
+import { clampAccent, artLogoRamp, artAmber } from './tint.js'
 import { getArtAccent } from './theme.js'
 
 const KEY = 'gamedeck_ground_v1'
@@ -544,10 +544,18 @@ function paintArt(src, floor, mean) {
 // arithmetic on three numbers - runs each time. Swept over all five palettes in
 // both themes, 360 hues, every saturation and lightness: the worst case the clamp
 // can produce is exactly 4.50:1.
+const LOGO_VARS = ['--logo-1', '--logo-2', '--logo-3', '--logo-4', '--logo-5', '--logo-6', '--logo-7']
+
+function clearAccent() {
+  root().style.removeProperty('--accent')
+  root().style.removeProperty('--amber')
+  for (const v of LOGO_VARS) root().style.removeProperty(v)
+  root().removeAttribute('data-accent-art')
+}
+
 function paintAccent() {
   if (!lastMean || !getArtAccent()) {
-    root().style.removeProperty('--accent')
-    root().removeAttribute('data-accent-art')
+    clearAccent()
     return
   }
   const cs = getComputedStyle(document.documentElement)
@@ -555,15 +563,36 @@ function paintAccent() {
     .map((k) => rgbOf(cs.getPropertyValue(k)))
     .filter(Boolean)
   const a = clampAccent(lastMean, themeNow(), grounds)
-  if (!a) {
-    root().style.removeProperty('--accent')
-    root().removeAttribute('data-accent-art')
+  const ramp = artLogoRamp(a)
+  if (!a || !ramp) {
+    clearAccent()
     return
   }
   root().style.setProperty('--accent', `rgb(${a[0]}, ${a[1]}, ${a[2]})`)
+  const amber = artAmber(a, rgbOf(cs.getPropertyValue('--text')))
+  if (amber) root().style.setProperty('--amber', `rgb(${amber[0]}, ${amber[1]}, ${amber[2]})`)
+  // EVERYTHING THE ART ACCENT OWNS IS SET INLINE, and that is the fix for a
+  // second bug rather than a style preference.
+  //
+  // The ramp and --amber used to be stylesheet rules on `:root[data-accent-art]`,
+  // at specificity 0,2,0. So is `:root[data-accent="slate"]`, which defines the
+  // same seven logo tokens and sits LATER in index.css - so it won, and Slate,
+  // Sage, Plum and Graphite silently kept their own ramp while the flag was on.
+  // `:root[data-accent="slate"][data-theme="light"]` is 0,3,0 and outranked the
+  // amber rule outright, in any source order. Four of the five palettes never
+  // had this feature, and nothing said so, because a token check reads what the
+  // stylesheet says rather than what the polygons are painted with.
+  // repro/logo.mjs reads the painted fills.
+  //
+  // An inline custom property outranks every rule at every specificity, so this
+  // cannot come back by someone adding a palette below the others.
+  for (let i = 0; i < LOGO_VARS.length; i += 1) {
+    const c = ramp[i]
+    root().style.setProperty(LOGO_VARS[i], `rgb(${c[0]}, ${c[1]}, ${c[2]})`)
+  }
   // The MARKER, not just the value. --accent is an inline custom property and a
-  // stylesheet cannot ask whether one is set, so anything that has to follow the
-  // art accent rather than the palette accent - the brand mark, --amber - needs
+  // stylesheet cannot ask whether one is set, so anything left in CSS that has
+  // to follow the art accent rather than the palette accent - --amber - needs
   // something selectable. This is it.
   root().setAttribute('data-accent-art', '')
 }

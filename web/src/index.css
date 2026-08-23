@@ -1190,39 +1190,6 @@ textarea {
    (#a89f92 against #6f665a and #8a8073), and it is the one grey in the app whose
    contrast is measured per theme. */
 
-/* ---------- The brand mark, when the accent comes from the artwork ----------
-
-   The lockup is seven flat polygons and it ALREADY follows the five palette
-   themes: --logo-1..7 are defined per accent and .gd-logo .lN reads them. The
-   inline fills in Brand.jsx are presentation attributes, which any author rule
-   outranks, so they are only the fallback if this stylesheet never loads.
-
-   So the art accent redefines the same seven tokens rather than adding a second
-   mechanism. The steps are the walnut ramp's own proportions, mixed toward black
-   in oklab, which keeps the hue and reproduces the shading, so the mark still
-   reads as a stack of slabs rather than as a silhouette.
-
-   Gated on data-accent-art, NOT on the accent value: --accent is an inline
-   custom property and a stylesheet cannot ask whether one is set.
-
-   --amber is the palette's second accent and it follows too, derived by mixing
-   the clamped accent toward --text. That direction is safe in both themes by
-   construction: --text is the far end from every ground, so anything mixed
-   towards it can only gain contrast, never lose it. */
-:root[data-accent-art] {
-  --amber: color-mix(in oklab, var(--accent) 72%, var(--text));
-}
-
-:root[data-accent-art] {
-  --logo-7: var(--accent);
-  --logo-6: color-mix(in oklab, var(--accent) 86%, #000);
-  --logo-5: color-mix(in oklab, var(--accent) 76%, #000);
-  --logo-4: color-mix(in oklab, var(--accent) 70%, #000);
-  --logo-3: color-mix(in oklab, var(--accent) 58%, #000);
-  --logo-2: color-mix(in oklab, var(--accent) 46%, #000);
-  --logo-1: color-mix(in oklab, var(--accent) 35%, #000);
-}
-
 /* ---------- Secondary type on the ground ----------
 
    The four selectors below are, empirically, the ONLY text in the app that sits
@@ -2638,6 +2605,19 @@ textarea {
   --text: #24262b; --muted: #6b6e76; --walnut: #464a52; --walnut-light: #646973;
   --accent: #59626f; --amber: #69707c;
 }
+
+/* The art accent's tokens - --accent, --amber and --logo-1..7 - are NOT in this
+   file. paintAccent in ground.js sets all nine inline, because a rule here
+   cannot win: `:root[data-accent-art]` is specificity 0,2,0 and every palette
+   block above is 0,2,0 or, in its light variant, 0,3,0, so the palettes
+   outranked it and four of the five silently ignored the whole feature. An
+   inline custom property cannot be outranked, and keeping the nine together in
+   one place is the point rather than a side effect. See artLogoRamp and
+   artAmber in tint.js for how they are derived.
+
+   `data-accent-art` stays as the marker: nothing in this file reads it today,
+   but it is the only way to ask from outside whether the accent came from a
+   picture, and repro/logo.mjs and repro/accent.mjs both do. */
 
 /* ============================================================
    Appearance controls

@@ -217,6 +217,142 @@ const contrastOf = (a, b) => {
  * reads as grey and the feature is invisible, above the ceiling a saturated key
  * art paints the whole app in neon.
  */
+/* ---------- The brand mark's ramp, from the picture ----------
+
+   The lockup is seven flat polygons whose fills are --logo-1..7, and it reads as
+   a stack of slabs only because those seven sit at seven separated LIGHTNESSES.
+   Measured off the five ramps the app ships, in oklab L:
+
+     walnut    0.334 0.402 0.479 0.565 0.599 0.666 0.784
+     slate     0.343 0.410 0.480 0.548 0.613 0.688 0.757
+     sage      0.379 0.452 0.527 0.600 0.669 0.747 0.823
+     plum      0.331 0.396 0.469 0.546 0.621 0.700 0.778
+     graphite  0.348 0.419 0.502 0.585 0.672 0.753 0.831
+
+   Five different hues, one band. So the band belongs to the MARK and the hue
+   belongs to the palette - and, here, to the picture.
+
+   The first version of this got that backwards. It derived the seven by mixing
+   the accent toward black at fixed percentages, which makes every slab a
+   fraction of whatever lightness the clamp happened to land on. In light mode
+   the clamp darkens the accent until it clears AA against a near-white ground,
+   so it lands around L 0.31, and 35% of that is 0.11. The whole mark rendered
+   below walnut's DARKEST slab: a black blob, which is exactly what it was
+   reported as. Mixing toward black also scales chroma by the same factor, so the
+   dark slabs lost their colour as well as their light.
+
+   This keeps the picture's HUE and SATURATION - the same two things clampAccent
+   preserves - and places each slab at the mark's own lightness instead. oklab L
+   is monotone in HSL lightness at fixed hue and saturation, so a bisection finds
+   the one HSL lightness that lands on each target. HSL is the search space on
+   purpose: every point in it is in gamut, so no clipping step is needed, and
+   chroma comes out with the natural mid-lightness peak the shipped ramps have
+   rather than a straight line.
+
+   Theme-independent, and that matches the shipped design rather than being an
+   oversight: the five palettes redefine --accent and --amber in their light
+   blocks and leave --logo-1..7 alone, so each palette has ONE ramp. It falls out
+   for free here, because clampAccent moves only lightness - the hue and the
+   saturation it hands back are the same in both themes. */
+const LOGO_L = [0.35, 0.42, 0.49, 0.57, 0.64, 0.71, 0.79]
+const LOGO_BISECT = 18
+
+const okChan = (c) => {
+  const x = c / 255
+  return x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4)
+}
+
+/** oklab lightness only - the forward direction, which is all the search needs. */
+function okLight([r, g, b]) {
+  const R = okChan(r)
+  const G = okChan(g)
+  const B = okChan(b)
+  const l = Math.cbrt(0.4122214708 * R + 0.5363325363 * G + 0.0514459929 * B)
+  const m = Math.cbrt(0.2119034982 * R + 0.6806995451 * G + 0.1073969566 * B)
+  const s = Math.cbrt(0.0883024619 * R + 0.2817188376 * G + 0.6299787005 * B)
+  return 0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s
+}
+
+function okChanBack(x) {
+  const v = x <= 0.0031308 ? x * 12.92 : 1.055 * Math.pow(x, 1 / 2.4) - 0.055
+  return Math.max(0, Math.min(255, Math.round(v * 255)))
+}
+
+/** Full oklab, both directions - only artAmber needs the round trip. */
+function toOklab([r, g, b]) {
+  const R = okChan(r)
+  const G = okChan(g)
+  const B = okChan(b)
+  const l = Math.cbrt(0.4122214708 * R + 0.5363325363 * G + 0.0514459929 * B)
+  const m = Math.cbrt(0.2119034982 * R + 0.6806995451 * G + 0.1073969566 * B)
+  const s = Math.cbrt(0.0883024619 * R + 0.2817188376 * G + 0.6299787005 * B)
+  return [
+    0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s,
+  ]
+}
+
+function fromOklab([L, A, B]) {
+  const l = (L + 0.3963377774 * A + 0.2158037573 * B) ** 3
+  const m = (L - 0.1055613458 * A - 0.0638541728 * B) ** 3
+  const s = (L - 0.0894841775 * A - 1.2914855480 * B) ** 3
+  return [
+    okChanBack(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
+    okChanBack(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
+    okChanBack(-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s),
+  ]
+}
+
+const AMBER_MIX = 0.72
+
+/**
+ * The palette's SECOND accent, when the first one came from artwork.
+ *
+ * The same mix index.css used to do - 72% of the accent, 28% of the body text
+ * colour, in oklab - moved into JS for the same reason the logo ramp was: as a
+ * stylesheet rule it was `:root[data-accent-art]` at specificity 0,2,0, and
+ * `:root[data-accent="slate"][data-theme="light"]` is 0,3,0, so the light theme
+ * of every non-default palette outranked it and kept its own amber. Source order
+ * could not fix that one. An inline custom property cannot be outranked at all,
+ * so everything the art accent owns is now set the same way, in one place.
+ *
+ * Mixing TOWARD --text is what keeps this safe to use as text, which it is in
+ * fifteen places. --text is the far end from every ground and the accent already
+ * clears AA in that same direction, so the mix sits between two colours on one
+ * side of the ground and can only gain contrast, never lose it.
+ *
+ * @param {number[]} accent the clamped accent
+ * @param {number[]} text the live --text, so this follows the theme
+ */
+export function artAmber(accent, text) {
+  if (!accent || !text) return null
+  const a = toOklab(accent)
+  const t = toOklab(text)
+  return fromOklab(a.map((v, i) => v * AMBER_MIX + t[i] * (1 - AMBER_MIX)))
+}
+
+/**
+ * The seven logo fills for an accent taken from artwork, darkest first.
+ *
+ * @param {number[]} rgb the CLAMPED accent, as clampAccent returns it
+ * @returns {number[][]|null} seven rgb triples, or null with no accent
+ */
+export function artLogoRamp(rgb) {
+  if (!rgb) return null
+  const [h, s] = rgbToHsl(rgb[0], rgb[1], rgb[2])
+  return LOGO_L.map((want) => {
+    let lo = 0
+    let hi = 1
+    for (let i = 0; i < LOGO_BISECT; i += 1) {
+      const mid = (lo + hi) / 2
+      if (okLight(hslToRgb(h, s, mid)) < want) lo = mid
+      else hi = mid
+    }
+    return hslToRgb(h, s, (lo + hi) / 2)
+  })
+}
+
 export function clampAccent(rgb, theme = 'dark', grounds = []) {
   if (!rgb || !grounds.length) return null
   const [h, s0, l0] = rgbToHsl(rgb[0], rgb[1], rgb[2])
