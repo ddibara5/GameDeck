@@ -10,6 +10,8 @@ import {
   setShelfSize,
   getListSize,
   setListSize,
+  getArtAccent,
+  setArtAccent,
 } from '../lib/theme.js'
 import {
   getGround,
@@ -20,6 +22,7 @@ import {
   setPinnedGame,
   getGroundIntensity,
   setGroundIntensity,
+  refreshArtAccent,
 } from '../lib/ground.js'
 import GamePinPicker from './GamePinPicker.jsx'
 import { useMountTransition } from '../lib/useMountTransition.js'
@@ -95,6 +98,7 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
   const [listSize, setListSizeState] = useState(() => getListSize())
   const [ground, setGroundState] = useState(() => getGround())
   const [pin, setPinState] = useState(() => getPinnedGame())
+  const [artAccent, setArtAccentState] = useState(() => getArtAccent())
   const [intensity, setIntensityState] = useState(() => getGroundIntensity())
   // The open sub-pages, outermost first. A single `sub` string was enough while
   // every second level was a leaf; Background now leads to a game picker, so the
@@ -282,12 +286,23 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
     if (!open) setStack([])
   }, [open])
 
+  // Both of these move the neutrals the art accent is clamped against, so both
+  // re-run the clamp. Without it, switching from Walnut to Slate leaves an accent
+  // solved against Walnut's --surface sitting on Slate's, and the guarantee this
+  // whole feature rests on is quietly no longer true.
   function changeTheme(pref) {
     setThemeState(setTheme(pref))
+    refreshArtAccent()
   }
 
   function changeAccent(key) {
     setAccentState(setAccent(key))
+    refreshArtAccent()
+  }
+
+  function changeArtAccent(on) {
+    setArtAccentState(setArtAccent(on))
+    refreshArtAccent()
   }
 
   function changeShelfSize(key) {
@@ -498,6 +513,25 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
             ))}
           </div>
         </Field>
+
+        {/* A flag over the palette, not a sixth swatch. The five palettes carry
+            tuned NEUTRALS as well as an accent and there is no artwork-derived
+            --bg or --surface, so this replaces one token and leaves the rest of
+            the theme alone. With no picture behind the app it simply has no
+            effect and the palette's own accent shows. */}
+        <div className="settings-group">
+          <MenuItem
+            glyph={ICONS.image}
+            label="Accent from the background"
+            sub={
+              isArtGround(ground)
+                ? 'Sampled from the picture, then darkened or lightened until it clears the contrast bar'
+                : 'Turn on a picture background to see it'
+            }
+            toggle={artAccent}
+            onClick={() => changeArtAccent(!artAccent)}
+          />
+        </div>
       </SubPage>
 
       {/* No preview swatch on these rows, because the page IS the preview: the

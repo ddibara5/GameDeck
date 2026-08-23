@@ -168,3 +168,73 @@ export async function coverLook(url, theme = 'dark') {
   const t = clampTint(await sampleImage(url), theme)
   return t ? `rgb(${t[0]}, ${t[1]}, ${t[2]})` : null
 }
+
+/* ---------------------------------------------------------------- the accent
+
+   clampTint solves the OPPOSITE problem to this one. There, the sampled colour
+   becomes a surface and text goes on top, so it is squeezed towards the theme's
+   background. An accent is used both ways at once - as a fill with knockout
+   --bg text on it (the tab pill, the segmented control's active chip, a primary
+   button) and as text on --surface (values, links, the progress arc) - so it has
+   to be FAR from the neutrals in both directions, not near them.
+
+   The bands are not constants here, and that is the whole difference from
+   clampTint. Every colour theme ships its own --bg / --surface / --surface-2,
+   and an art-derived accent sits on whichever one the user has selected, so a
+   band solved against one palette is wrong on the other four. This walks the
+   lightness away from the neutrals until the composite clears, against the
+   grounds READ OFF THE PAGE. It is the same shape as ground.js's veilFor and for
+   the same reason: inverting the sRGB curve is a page of algebra that would need
+   its own test, and 60 steps of a two-line loop is nothing on a once-per-load
+   path.
+
+   It cannot fail to terminate: dark walks up to 0.96 and light down to 0.06,
+   and both ends clear 4.5 against any neutral either theme ships. */
+const ACCENT_SAT = [0.22, 0.55]
+const ACCENT_STEP = 0.015
+const ACCENT_LIMIT = { dark: 0.96, light: 0.06 }
+const AA = 4.5
+
+const srgbC = (c) => {
+  const x = c / 255
+  return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4
+}
+const lumOf = ([r, g, b]) => 0.2126 * srgbC(r) + 0.7152 * srgbC(g) + 0.0722 * srgbC(b)
+const contrastOf = (a, b) => {
+  const x = lumOf(a)
+  const y = lumOf(b)
+  const hi = Math.max(x, y)
+  const lo = Math.min(x, y)
+  return (hi + 0.05) / (lo + 0.05)
+}
+
+/**
+ * Squeeze a sampled colour into an accent that clears AA against every ground it
+ * will touch. `grounds` is a list of rgb triples - the theme's --bg, --surface
+ * and --surface-2, resolved by the caller.
+ *
+ * Hue is kept exactly. Saturation is clamped: below the floor an art accent
+ * reads as grey and the feature is invisible, above the ceiling a saturated key
+ * art paints the whole app in neon.
+ */
+export function clampAccent(rgb, theme = 'dark', grounds = []) {
+  if (!rgb || !grounds.length) return null
+  const [h, s0, l0] = rgbToHsl(rgb[0], rgb[1], rgb[2])
+  // An achromatic sample has no hue to keep - forcing the saturation floor onto
+  // one invents a colour, exactly as it does in clampTint - so it stays neutral
+  // and only its lightness moves.
+  const s = s0 < ACHROMATIC ? 0 : clamp(s0, ACCENT_SAT[0], ACCENT_SAT[1])
+  const up = theme !== 'light'
+  const limit = up ? ACCENT_LIMIT.dark : ACCENT_LIMIT.light
+  const clears = (l) => {
+    const c = hslToRgb(h, s, l)
+    return grounds.every((g) => contrastOf(c, g) >= AA) ? c : null
+  }
+  // Start where the picture actually is, so a colour that already clears keeps
+  // its own lightness rather than being pushed to a band's edge.
+  for (let l = clamp(l0, 0.06, 0.96); up ? l <= limit : l >= limit; l += up ? ACCENT_STEP : -ACCENT_STEP) {
+    const hit = clears(l)
+    if (hit) return hit
+  }
+  return hslToRgb(h, s, limit)
+}

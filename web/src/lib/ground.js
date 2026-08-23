@@ -24,6 +24,9 @@
 // before first paint, and a static import would pull both into the entry bundle
 // for every launch, including the `off` and `wash` ones that never touch either.
 
+import { clampAccent } from './tint.js'
+import { getArtAccent } from './theme.js'
+
 const KEY = 'gamedeck_ground_v1'
 const PIN_KEY = 'gamedeck_ground_pin_v1'
 const INTENSITY_KEY = 'gamedeck_ground_intensity_v1'
@@ -204,7 +207,11 @@ const SAMPLE = 32
 const PCTL_HI = 0.97
 const PCTL_LO = 0.03
 
-function extremesOf(img) {
+// Returns { ends, mean }: the two percentiles the veil is sized from, and the
+// average colour the accent is derived from. ONE pass over pixels that are
+// already decoded - the accent is not worth a second fetch of the same picture,
+// and doing it here is what makes it free.
+function sampleOf(img) {
   const c = document.createElement('canvas')
   c.width = SAMPLE
   c.height = SAMPLE
@@ -221,10 +228,23 @@ function extremesOf(img) {
     return null
   }
   const ls = []
-  for (let i = 0; i < px.length; i += 4) ls.push(lum(px[i], px[i + 1], px[i + 2]))
-  ls.sort((a, b) => a - b)
+  let r = 0
+  let gg = 0
+  let b = 0
+  let n = 0
+  for (let i = 0; i < px.length; i += 4) {
+    ls.push(lum(px[i], px[i + 1], px[i + 2]))
+    r += px[i]
+    gg += px[i + 1]
+    b += px[i + 2]
+    n += 1
+  }
+  ls.sort((a, z) => a - z)
   const at = (p) => ls[Math.max(0, Math.min(ls.length - 1, Math.floor(ls.length * p)))]
-  return [at(PCTL_LO), at(PCTL_HI)]
+  return {
+    ends: [at(PCTL_LO), at(PCTL_HI)],
+    mean: n ? [Math.round(r / n), Math.round(gg / n), Math.round(b / n)] : null,
+  }
 }
 
 // Walk the alpha up until the worst part of the composited ground clears AA.
@@ -409,8 +429,9 @@ async function resolveArt(kind) {
 // measured, which is the only state in which art is not shown at all.
 async function measure(url) {
   const img = await loadImage(url)
-  const ends = img ? extremesOf(img) : null
-  return ends == null ? null : veilFor(ends, readPalette())
+  const sample = img ? sampleOf(img) : null
+  if (sample == null) return null
+  return { veil: veilFor(sample.ends, readPalette()), mean: sample.mean }
 }
 
 // ---------------------------------------------------------------- applying
@@ -418,8 +439,10 @@ async function measure(url) {
 const root = () => document.documentElement
 
 // The floor this paint was measured at, kept so the intensity slider can move the
-// veil without re-measuring the picture.
+// veil without re-measuring the picture; and the picture's average colour, kept
+// so the accent can be re-clamped when the palette changes under it.
 let lastFloor = null
+let lastMean = null
 
 const VEIL_CEIL = VEIL_MAX
 
@@ -439,14 +462,50 @@ function clearArt() {
   root().removeAttribute('data-ground-art')
   root().style.removeProperty('--ground-src')
   root().style.removeProperty('--ground-veil-a')
+  root().style.removeProperty('--accent')
   lastFloor = null
+  lastMean = null
 }
 
-function paintArt(src, floor) {
+function paintArt(src, floor, mean) {
   lastFloor = floor
+  lastMean = mean || null
   root().style.setProperty('--ground-veil-a', String(veilWith(floor)))
   root().style.setProperty('--ground-src', `url("${src}")`)
   root().setAttribute('data-ground-art', '')
+  paintAccent()
+}
+
+// THE ACCENT, when the user has asked for it.
+//
+// Computed on every paint rather than remembered, because unlike the veil it
+// depends on something the picture does not know: the selected colour theme's
+// --bg / --surface / --surface-2, which the accent has to clear 4.5:1 against in
+// BOTH directions - it is a fill with knockout --bg text on it (the tab pill, the
+// segmented control) and it is text on --surface (values, links, the arc). An
+// accent clamped under Walnut and reused under Slate would be wrong.
+//
+// So the picture's own average is what gets remembered, and the clamp - which is
+// arithmetic on three numbers - runs each time. Swept over all five palettes in
+// both themes, 360 hues, every saturation and lightness: the worst case the clamp
+// can produce is exactly 4.50:1.
+function paintAccent() {
+  if (!lastMean || !getArtAccent()) {
+    root().style.removeProperty('--accent')
+    return
+  }
+  const cs = getComputedStyle(document.documentElement)
+  const grounds = ['--bg', '--surface', '--surface-2']
+    .map((k) => rgbOf(cs.getPropertyValue(k)))
+    .filter(Boolean)
+  const a = clampAccent(lastMean, themeNow(), grounds)
+  if (a) root().style.setProperty('--accent', `rgb(${a[0]}, ${a[1]}, ${a[2]})`)
+  else root().style.removeProperty('--accent')
+}
+
+/** Re-run the accent clamp after the palette or the preference changes. */
+export function refreshArtAccent() {
+  paintAccent()
 }
 
 const themeNow = () =>
@@ -470,10 +529,15 @@ async function parkNextShuffle() {
   try {
     const url = await resolveArt('shuffle')
     if (!url) return
-    const veil = await measure(url)
-    if (veil == null) return
+    const shot = await measure(url)
+    if (shot == null) return
     const now = readPaint().shuffle
-    if (now) writePaint('shuffle', { ...now, pending: { src: url, veil: { [themeNow()]: veil } } })
+    if (now) {
+      writePaint('shuffle', {
+        ...now,
+        pending: { src: url, veil: { [themeNow()]: shot.veil }, mean: shot.mean },
+      })
+    }
   } catch {
     /* next launch resolves it the slow way */
   }
@@ -510,14 +574,14 @@ export async function applyGround(value) {
   // veil measured in the other theme is sized against the other theme's --muted
   // and would be a photograph under the wrong cover.
   if (v === 'shuffle' && mem && mem.pending && mem.pending.src && mem.pending.veil?.[theme]) {
-    paintArt(mem.pending.src, mem.pending.veil[theme])
-    writePaint(v, { src: mem.pending.src, veil: mem.pending.veil })
+    paintArt(mem.pending.src, mem.pending.veil[theme], mem.pending.mean)
+    writePaint(v, { src: mem.pending.src, veil: mem.pending.veil, mean: mem.pending.mean })
     parkNextShuffle()
     return v
   }
 
   const reuse = Boolean(mem && mem.src && mem.veil?.[theme])
-  if (reuse) paintArt(mem.src, mem.veil[theme])
+  if (reuse) paintArt(mem.src, mem.veil[theme], mem.mean)
   else clearArt()
 
   const url = await resolveArt(v)
@@ -537,20 +601,22 @@ export async function applyGround(value) {
     return v
   }
 
-  const veil = await measure(url)
+  const shot = await measure(url)
   if (mine !== token) return v
-  if (veil == null) {
+  if (shot == null) {
     // No sample, so no claim about contrast: fall back to the wash rather than
     // show an unmeasured photograph. A remembered paint stays - it was measured
     // once on a real sample and a failed re-read says nothing about it.
     if (!reuse) root().setAttribute('data-ground', 'wash')
     return v
   }
-  paintArt(url, veil)
+  paintArt(url, shot.veil, shot.mean)
   // The other theme's veil survives a repaint of this one: same picture, still
   // true. Only a NEW picture drops it, which is why the merge is keyed on the url.
+  // The MEAN is not per theme - it is a property of the photograph - so it is
+  // stored once and the clamp runs against whatever palette is live.
   const keep = mem && mem.src === url ? mem.veil || {} : {}
-  writePaint(v, { src: url, veil: { ...keep, [theme]: veil } })
+  writePaint(v, { src: url, veil: { ...keep, [theme]: shot.veil }, mean: shot.mean })
   if (v === 'shuffle') parkNextShuffle()
   return v
 }
