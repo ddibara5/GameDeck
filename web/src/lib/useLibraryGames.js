@@ -31,10 +31,33 @@ import { swr } from './idbCache.js'
 //   keywords
 //     - 234 kB, 31% of the whole payload, read only by the vibe chips and the
 //       shuffler. Now a sidecar: see fetchKeywords below.
+//
+// Removed 23 Aug 2026, same rule, re-measured against the live table:
+//   cover_small
+//     - 39 kB, the LARGEST string column in the payload: five times cover_igdb
+//       and four and a half times title. Every value is a 109x60 Exophase banner,
+//       which 64ebdec already stopped every surface from rendering, and it is now
+//       unreachable: cover_igdb is non-null on all 513 rows, and all four readers
+//       (GamePinPicker, ShufflePicker, GameSheet, libraryCover) take it only as a
+//       fallback behind that. A future row with no IGDB art now shows its initial
+//       rather than a banner cropped to 45x60 and scaled up 3.7x, which 64ebdec
+//       measured as the worse of the two.
+//       NOT removed from v_recent_activity, which is a different query: the
+//       Activity feed and the Insights week block read cover_small from THOSE
+//       rows and libraryCover still takes it as their fallback.
+//   updated_at
+//     - 13 kB, and grepped for: nothing in src/ reads it off a library row. The
+//       hits are userStatus.js WRITING its own updated_at to a different table.
+//       It looked like the makings of a conditional fetch and it is not: 500 of
+//       513 rows carry a stamp inside the last day, because the sync writes it on
+//       every row it touches whether or not the row changed. Making that stamp
+//       mean something is a sync-side change, not a client one.
+//
+// 52 kB of the payload, no reader that can be reached.
 const BASE_COLUMNS =
   'master_id, environment, title, platforms, earned_awards, total_awards, percent, ' +
-  'playtime_minutes, playtime_label, last_played, cover_small, ' +
-  'updated_at, length_minutes, genre, release_year, cover_igdb, igdb_id'
+  'playtime_minutes, playtime_label, last_played, ' +
+  'length_minutes, genre, release_year, cover_igdb, igdb_id'
 
 // igdb_id is in BASE_COLUMNS, not the optional tail: the shuffler joins library rows
 // to the Game Pass catalog on it, and without it every library game looks un-covered,

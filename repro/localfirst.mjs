@@ -172,6 +172,36 @@ check(
 )
 await cold.ctx.close()
 
+/* ---------- 4. the payload asks for nothing it cannot read ----------
+
+   Asserted on the REQUEST rather than by grepping the column constant, because
+   the constant is assembled from two pieces and there is a fallback select for
+   an older schema: the only thing that says what the app actually asks for is
+   the url that leaves it.
+
+   Both of these are 52 kB of a ~282 kB payload with no reachable reader:
+   cover_small is the largest string column in the table and is unreachable now
+   that cover_igdb is non-null on all 513 rows, and updated_at is never read off
+   a library row at all. */
+{
+  const seen = []
+  const probe = await open(browser, { slow: false, onReq: (u) => { if (/\/rest\/v1\/games/.test(u)) seen.push(u) } })
+  await probe.page.goto(BASE, { waitUntil: 'commit' })
+  await probe.page.waitForFunction(hasContent, { timeout: 30000 })
+  await probe.page.waitForTimeout(600)
+  const sel = decodeURIComponent((/[?&]select=([^&]*)/.exec(seen[0] || '') || [, ''])[1])
+  const cols = sel.split(',').map((c) => c.trim()).filter(Boolean)
+  check('the library select drops cover_small', !cols.includes('cover_small'), `${cols.length} columns`)
+  check('...and updated_at', !cols.includes('updated_at'), cols.join(' ').slice(0, 60))
+  // The guard on the other side of it: dropping a column the app DOES read would
+  // pass both checks above and break the shuffler, the News series match and the
+  // covers, silently.
+  const need = ['master_id', 'title', 'cover_igdb', 'igdb_id', 'last_played', 'franchises', 'platforms']
+  check('...and still asks for everything with a reader', need.every((c) => cols.includes(c)),
+    need.filter((c) => !cols.includes(c)).join(', ') || 'all present')
+  await probe.ctx.close()
+}
+
 await browser.close()
 console.log(`\n${pass}/${pass + fail} passed`)
 if (fail) console.log('failed:', failures.join(' | '))
