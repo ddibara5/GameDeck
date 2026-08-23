@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import DiscoverBrowse from './DiscoverBrowse.jsx'
 import DiscoverForYou from './DiscoverForYou.jsx'
 import DiscoverAsk from './DiscoverAsk.jsx'
+import { preloadMarkdown } from './ChatMessage.jsx'
 import './discover.css'
 
 // Discover is three modes behind a segmented control:
@@ -27,6 +28,19 @@ export default function DiscoverTab({ onCustomize }) {
     setSeedPrompt(bits.join(''))
     setSubTab('ask')
   }
+
+  // The markdown parser is a 35kB chunk of its own and only the assistant's
+  // replies render markdown, so it is fetched when Ask is SELECTED - not when
+  // DiscoverAsk mounts. All three sub-views stay mounted from the moment the tab
+  // opens (see below), so a preload on mount would have meant opening Browse
+  // fetched it too, which is the whole thing this was moving away from.
+  //
+  // Selection is early enough by a wide margin: a round trip to the assistant is
+  // orders of magnitude longer than a chunk off the same origin, and ChatMessage
+  // renders plain text if it somehow is not there yet.
+  useEffect(() => {
+    if (subTab === 'ask') preloadMarkdown()
+  }, [subTab])
 
   return (
     <div className="discover-page">
