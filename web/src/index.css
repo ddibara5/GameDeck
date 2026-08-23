@@ -1810,6 +1810,16 @@ textarea {
   color: #e0a9a9;
 }
 
+/* The reply for the frame or two before the markdown parser lands - it is its own
+   chunk now and is fetched when Ask is selected, so this is rarely seen and has
+   to be right when it is. pre-wrap because the reply's own line breaks are the
+   only structure it has until the parser arrives: collapsing them and then
+   restoring them a frame later is a visible reflow rather than a change of
+   typography, which is the whole thing a fallback is supposed to avoid. */
+.chat-md-plain {
+  white-space: pre-wrap;
+}
+
 .chat-bubble p {
   margin: 0 0 8px;
 }
