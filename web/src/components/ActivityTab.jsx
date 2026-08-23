@@ -125,7 +125,7 @@ export default function ActivityTab() {
           {grouped.map((group) => (
             <section key={group.label}>
               <div className="activity-group-label">{group.label}</div>
-              <div className="tl">
+              <div className="day-card">
                 {group.items.map((row, idx) => (
                   <ActivityRow
                     key={`${row.master_id}-${row.event_date}-${idx}`}
@@ -162,11 +162,10 @@ function ActivityRow({ row, game, onOpen }) {
   return (
     <button
       type="button"
-      className={`activity-row${continued ? ' cont' : ''}${game ? '' : ' flat'}`}
+      className={`activity-row${game ? '' : ' flat'}`}
       onClick={game ? () => onOpen(game) : undefined}
       aria-label={game ? `Open ${row.title}` : undefined}
     >
-      <span className="activity-node" />
       <Cover src={cover} title={row.title} size="sm" />
       <div className="activity-body">
         <div className="activity-head">

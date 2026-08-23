@@ -144,17 +144,21 @@ await page.locator('.tabbar-btn', { hasText: 'Activity' }).first().click()
 await page.waitForTimeout(1600)
 
 const act = await page.evaluate(() => {
-  const panels = [...document.querySelectorAll('.tl')]
+  const panels = [...document.querySelectorAll('.day-card')]
   if (panels.length < 3) return { count: panels.length }
   const s = getComputedStyle(panels[0])
   const labels = [...document.querySelectorAll('.activity-group-label')]
-  const node = document.querySelector('.activity-row:not(.cont) .activity-node')
+  const row = document.querySelector('.activity-row')
   return {
     count: panels.length,
     bg: s.backgroundColor,
     border: s.borderTopWidth,
     radius: parseFloat(s.borderTopLeftRadius),
-    nodeBg: node ? getComputedStyle(node).backgroundColor : 'no-node',
+    // The rail and the node were retired: 180 days of the feed is 1.08 rows per
+    // day, so the rail was a 45px stub with one dot on it twelve times. What is
+    // asserted now is that the gutter they held went back to the row.
+    nodes: document.querySelectorAll('.activity-node').length,
+    rowPadLeft: row ? Math.round(parseFloat(getComputedStyle(row).paddingLeft)) : null,
     labelToPanel: Math.round(panels[0].getBoundingClientRect().top - labels[0].getBoundingClientRect().bottom),
     panelToLabel: Math.round(labels[1].getBoundingClientRect().top - panels[0].getBoundingClientRect().bottom),
     labelToPanel2: Math.round(panels[1].getBoundingClientRect().top - labels[1].getBoundingClientRect().bottom),
@@ -165,9 +169,11 @@ console.log('act', JSON.stringify(act))
 check('the feed rendered day panels to measure', act.count >= 3, act.count)
 check('a day sits on --surface', act.bg === tokens.surface, `${act.bg} vs ${tokens.surface}`)
 check('and carries the card hairline and radius', act.border === '1px' && near(act.radius, 18), `${act.border} / ${act.radius}px`)
-// The node is a donut punched out of what it sits on. Its fill was --bg, which
-// on a panel is a dark hole rather than a gap.
-check('the node fill follows the panel, not the page', act.nodeBg === tokens.surface, `${act.nodeBg} vs surface ${tokens.surface} / bg ${tokens.bg}`)
+check('the spine is gone', act.nodes === 0, `${act.nodes} nodes`)
+// 32px was the gutter the rail and node lived in. A row that still reserved it
+// after they went would be the change half-done and would look identical to a
+// reader who never saw the dot.
+check('and the row got its gutter back', act.rowPadLeft === 14, `${act.rowPadLeft}px left padding`)
 check('the day rhythm is even', act.labelToPanel === act.labelToPanel2, `${act.labelToPanel} / ${act.labelToPanel2}`)
 check('a label sits closer to its own day than to the one above', act.labelToPanel < act.panelToLabel, `${act.labelToPanel} under vs ${act.panelToLabel} over`)
 
