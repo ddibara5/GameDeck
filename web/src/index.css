@@ -102,7 +102,14 @@
   --shadow: var(--e1);
 
   --tabbar-height: 90px;
-  --app-header-h: 44px;
+  /* 56, not the 44 it was. The bar now carries the page title at its full 34px
+     rather than a wordmark, and 56 is a FLOOR rather than a taste call: in a
+     standalone install iOS 26 fades everything above y=90 and --top-inset puts
+     the header's content box at y=85, so a 40px line box centred in a row of H
+     lands its top edge at 85 + (H - 40) / 2. H=50 puts it exactly on the line,
+     H=52 gives 1px, H=56 gives 3px. Do not shrink this to reclaim space and do
+     NOT reduce the +26 in --top-inset to make room. */
+  --app-header-h: 56px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
 
@@ -145,8 +152,6 @@
 .app-header {
   position: sticky;
   top: 0;
-  /* Containing block for .app-header-title, which is absolutely positioned so it
-     centres on the header rather than on the gap beside the lockup. */
   z-index: 40;
   box-sizing: border-box;
   height: calc(var(--app-header-h) + var(--top-inset));
@@ -212,69 +217,69 @@
   background: transparent;
 }
 
+/* --glass-chip, not --glass, and this is the ONE bar that needs the heavier
+   weight. Measured flat, no ground, dark: 17px of --text on --glass over the
+   Home feed scrolling underneath reads 3.66:1 against a 4.5 bar - the worst
+   pixel behind it composites to rgb(134,116,90), which is a cover blurred
+   through 0.34 alpha.
+   The tab bar carries the same material at 6.46:1 and is not in the same
+   position: .app-main reserves its height as bottom padding, so page content
+   physically cannot pass under it. The header is the only glass in the app with
+   arbitrary content behind it, and since the title merged into the bar it
+   carries type there permanently.
+   0.58 is not a new material either - it is the weight the filter chips already
+   use, for the same reason. */
 .app-header.scrolled {
-  background: var(--glass);
+  background: var(--glass-chip);
   border-bottom-color: var(--glass-line);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
   -webkit-backdrop-filter: var(--glass-blur);
   backdrop-filter: var(--glass-blur);
 }
 
-/* Two things cannot both own the top-left. Once the inline title appears, the
-   wordmark fades out and leaves the mark behind: at 390px the word and a title
-   like "Discover" or "Insights" collide outright. Opacity rather than display,
-   so nothing reflows and the swap reads as a crossfade. */
-.app-header .brand-word,
-.app-header .brand-caret {
-  transition: opacity var(--d-base) var(--ease-out);
-}
+/* The wordmark's crossfade is gone with the wordmark. It faded out on scroll
+   because the inline title needed the top-left and the two collided at 390px;
+   the header now renders the title INSTEAD of the word, so there is nothing to
+   fade and the caret stays - the menu it opens is always there. */
 
-.app-header.scrolled .brand-word,
-.app-header.scrolled .brand-caret {
-  opacity: 0;
-}
+/* The screen's real heading, and the only <h1> on the page - one copy, rendered
+   by App.jsx, rather than one per tab: eight copies across six files is what let
+   one of them drift last time.
 
-/* The large title's stand-in once it has scrolled off. Absolutely positioned so
-   it is centred on the header rather than on the space left between the brand
-   and the actions, and so adding it cannot shift either of them. */
-/* The large title's stand-in once it has scrolled off. Absolutely positioned so
-   it is centred on the header rather than on the space left between the brand
-   and the right edge, and so its appearing cannot shift the lockup. */
-.app-header-title {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  top: var(--top-inset);
-  height: var(--app-header-h);
-  display: flex;
-  align-items: center;
-  max-width: 58%;
-  font-size: var(--t-body);
-  font-weight: var(--w-semi);
-  letter-spacing: var(--t-body-tr);
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity var(--d-base) var(--ease-out);
-}
-
-.app-header.scrolled .app-header-title {
-  opacity: 1;
-}
-
-/* The screen's real heading, and the only <h1> on the page. Rendered once by
-   App.jsx above <main> rather than by each tab: eight copies across six files
-   is what let one of them drift last time. */
+   It is a WRAPPER now. It sits in the header and holds the lockup button, so all
+   of the type lives on .brand-title inside it; resetting the heading's own
+   defaults here keeps one place that decides how the title looks in either
+   state. */
 .page-title {
-  margin: 6px 0 2px;
-  padding: 0 16px;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  font: inherit;
+}
+
+/* Large at rest, the header's own size once scrolled. Only the type changes -
+   the BAR does not, deliberately. A sticky header that changes height is in the
+   document flow, so shrinking it at the scroll threshold shifts everything below
+   by the difference; with the threshold at scrollY > 4 that is a 12px jump you
+   can sit on the edge of. The row stays 56px and the title travels 34 -> 17
+   inside it. */
+.brand-title {
   font-size: var(--t-large);
   font-weight: var(--w-bold);
   letter-spacing: var(--t-large-tr);
+  line-height: 1.15;
   color: var(--text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: font-size var(--d-base) var(--ease-out),
+    letter-spacing var(--d-base) var(--ease-out);
+}
+
+.app-header.scrolled .brand-title {
+  font-size: var(--t-body);
+  letter-spacing: var(--t-body-tr);
 }
 
 .brand-btn {
@@ -294,18 +299,18 @@
   opacity: 0.7;
 }
 
-/* The lockup is the header again, with the large title below carrying the screen
-   name. 30px rather than the 23 it shrank to, and 30 is a CEILING, not a taste
-   call: in a standalone install iOS 26 fades everything above y=90, --top-inset
-   puts the header's content box at y=85, and a mark centred in a 43px row lands
-   its top edge at 85 + (43 - h) / 2. Measured against that floor:
+/* 30px, and the reason is iOS 26's scroll edge effect rather than taste: it
+   fades everything above y=90 in a standalone install, --top-inset puts the
+   header's content box at y=85, and a mark centred in a row of H lands its top
+   edge at 85 + (H - h) / 2. In the old 43px row that made 30 a hard CEILING -
+   34px landed exactly on y=90 and 38px painted into the band, reading as out of
+   focus while identical type further down the page was crisp.
 
-     23px -> y=95 (+5)    30px -> y=92 (+2)    34px -> y=90 (+0)    38px -> y=88 (IN THE BAND)
-
-   So 30 keeps 2px of margin and 34 has none. Anything larger paints into the
-   fade and reads as out of focus on device while identical type further down the
-   page is crisp. Do not grow this without re-measuring, and do NOT reduce the
-   +26px in --top-inset to make room. */
+   The row is 55px now (56 less the transparent border), so the same 30px mark
+   sits at y=97.5 and the ceiling is no longer what binds. It stays at 30 because
+   nothing asked for a bigger mark; if something does, re-measure rather than
+   assuming the old number still applies. Do NOT reduce the +26px in --top-inset
+   to make room. */
 .brand-mark {
   width: 28px;
   height: 30px;

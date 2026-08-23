@@ -165,28 +165,26 @@ export default function App() {
     // is how .app-main's bottom padding and the Discover chat page's height
     // calc reclaim the space without either of them learning about the setting.
     <div className={`app${nav.barShown ? '' : ' bar-off'}`}>
-      <header className={`app-header${scrolled ? ' scrolled' : ''}`}>
-        <Brand onOpen={() => setMenuOpen(true)} />
-        {/* The inline stand-in for the large title below, which fades in once
-            that title has scrolled away, so the header always answers "where am
-            I?" without costing the screen a permanent 34px.
+      {/* ONE ROW, not two. The bar and the large title were a 44px lockup saying
+          the app's name inside the app, above a 48px title saying what the
+          highlighted tab already says - 92px before the subtitle had even
+          started. They are the same row now: the mark, the tab name at its full
+          34px, and the caret, in a 56px bar that shrinks the name to 17px on
+          scroll. Nothing got smaller at rest; a row went away.
 
-            NOT the heading, and aria-hidden while invisible: .page-title below
-            is the real <h1>, and two live copies would be read out twice. */}
+          There is one <h1> and one copy of the title. The stand-in that used to
+          fade in when the large title scrolled off is gone with the second row,
+          because the title it stood in for never leaves now. */}
+      <header className={`app-header${scrolled ? ' scrolled' : ''}`}>
         {headerTitle ? (
-          <span className="app-header-title" aria-hidden={!scrolled}>
-            {headerTitle}
-          </span>
-        ) : null}
+          <h1 className="page-title">
+            <Brand onOpen={() => setMenuOpen(true)} label={headerTitle} />
+          </h1>
+        ) : (
+          <Brand onOpen={() => setMenuOpen(true)} />
+        )}
       </header>
       <main className="app-main">
-        {/* The large title, rendered ONCE here rather than by each of the six
-            tabs. That is the only real difference from the shape this had
-            before 8824716: eight copies of the same <h1> across six files were
-            what let one of them drift out of step with the others, and the
-            header already knows the tab's name. Overlays blank it for the same
-            reason they blank the header copy - they carry their own heading. */}
-        {headerTitle ? <h1 className="page-title">{headerTitle}</h1> : null}
         <Suspense fallback={null}>
           {activeTab === 'home' && (
             <HomeTab
