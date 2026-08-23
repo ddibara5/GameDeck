@@ -7,6 +7,7 @@ import TabBar from './components/TabBar.jsx'
 import { useNewsUnread } from './lib/news.js'
 import { useNavConfig, getNavConfig, visibleKeys, TAB_BY_KEY } from './lib/navConfig.js'
 import { overlaysOpen } from './lib/useEdgeBack.js'
+import { warmOnIdle } from './lib/warmChunks.js'
 import CustomizeRows from './components/CustomizeRows.jsx'
 import CustomizeNav from './components/CustomizeNav.jsx'
 import CustomizeBar from './components/CustomizeBar.jsx'
@@ -14,13 +15,29 @@ import CustomizeBar from './components/CustomizeBar.jsx'
 // Code-split each tab and the overlay views into their own chunk so the initial
 // bundle only carries the shell + the first (Library) tab. The service worker
 // cache-firsts the hashed chunks, so after the first visit each one loads instantly.
-const HomeTab = lazy(() => import('./components/HomeTab.jsx'))
-const LibraryTab = lazy(() => import('./components/LibraryTab.jsx'))
-const ActivityTab = lazy(() => import('./components/ActivityTab.jsx'))
-const InsightsTab = lazy(() => import('./components/InsightsTab.jsx'))
-const DiscoverTab = lazy(() => import('./components/DiscoverTab.jsx'))
-const NewsTab = lazy(() => import('./components/NewsTab.jsx'))
-const WishlistTab = lazy(() => import('./components/WishlistTab.jsx'))
+//
+// The tab loaders live in a map keyed by tab, and the lazy components are built
+// FROM that map, because lib/warmChunks.js prefetches the ones you have not opened
+// yet and it has to call the same specifier the renderer will. A prefetch written
+// against a second copy of `import('./components/NewsTab.jsx')` warms a chunk the
+// renderer then does not use, and nothing about the result would say so.
+const TAB_LOADERS = {
+  home: () => import('./components/HomeTab.jsx'),
+  library: () => import('./components/LibraryTab.jsx'),
+  activity: () => import('./components/ActivityTab.jsx'),
+  insights: () => import('./components/InsightsTab.jsx'),
+  discover: () => import('./components/DiscoverTab.jsx'),
+  news: () => import('./components/NewsTab.jsx'),
+  wishlist: () => import('./components/WishlistTab.jsx'),
+}
+
+const HomeTab = lazy(TAB_LOADERS.home)
+const LibraryTab = lazy(TAB_LOADERS.library)
+const ActivityTab = lazy(TAB_LOADERS.activity)
+const InsightsTab = lazy(TAB_LOADERS.insights)
+const DiscoverTab = lazy(TAB_LOADERS.discover)
+const NewsTab = lazy(TAB_LOADERS.news)
+const WishlistTab = lazy(TAB_LOADERS.wishlist)
 const ListView = lazy(() => import('./components/ListView.jsx'))
 const ShufflePicker = lazy(() => import('./components/ShufflePicker.jsx'))
 
@@ -101,6 +118,22 @@ export default function App() {
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // Fetch the code for the OTHER tabs in the bar once the page has loaded, one at
+  // a time on idle. Run once on mount and never re-run: the point is to spend the
+  // quiet minute after launch, and a dependency on the tab or the nav config would
+  // restart the queue every time either moved.
+  //
+  // The order is the bar's own order, minus the tab already on screen (its chunk
+  // is being fetched by the renderer, and asking twice is one wasted request).
+  // Tabs hidden from the bar are not warmed - a tab the user deliberately removed
+  // is the last one worth spending bandwidth on.
+  useEffect(() => {
+    const first = visibleKeys(getNavConfig())[0] || 'library'
+    const order = visibleKeys(getNavConfig()).filter((k) => k !== first && TAB_LOADERS[k])
+    return warmOnIdle(order.map((k) => TAB_LOADERS[k]))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
