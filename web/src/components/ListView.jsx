@@ -26,11 +26,6 @@ export const LIST_DEFS = {
     filter: (g, m) => effectiveStatus(g, m) === 'finished',
     empty: 'Games you’ve completed will show up here.',
   },
-  'status:abandoned': {
-    title: 'Abandoned',
-    filter: (g, m) => effectiveStatus(g, m) === 'abandoned',
-    empty: 'Games you’ve set aside will show up here.',
-  },
 }
 
 export default function ListView({ viewKey, onClose }) {

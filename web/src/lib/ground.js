@@ -414,10 +414,34 @@ function artUrl(meta) {
 // launch for no saving worth having.
 const PAINT_KEY = 'gamedeck_ground_paint_v1'
 
+// WHAT RULE THE REMEMBERED NUMBERS WERE MEASURED UNDER. Bump this whenever
+// anything that changes a measured value changes: the text the veil is sized
+// against, the percentiles, the sample size, the alpha step.
+//
+// This is not bookkeeping, it is the fix for a real and completely silent bug.
+// applyGround short-circuits when the remembered picture IS the picture it just
+// resolved - there is nothing to re-measure, and re-measuring on every launch is
+// exactly the 437ms the memory exists to avoid. So when 5d28502 changed the veil
+// from being sized against --muted to being sized against --text, every install
+// that already had a ground on kept its old number FOREVER. The new floor
+// reached new installs and nobody else, which is precisely what "the slider
+// still does not work" looked like from the outside.
+//
+// A stamp makes that class of mistake impossible to repeat: change the rule,
+// bump the number, and every remembered value is re-measured once on the next
+// launch. Entries from an older rule are dropped on read rather than migrated,
+// because the whole point is that their numbers cannot be trusted.
+const PAINT_RULE = 2
+
 function readPaint() {
   try {
     const raw = JSON.parse(localStorage.getItem(PAINT_KEY) || 'null')
-    return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {}
+    const out = {}
+    for (const [source, entry] of Object.entries(raw)) {
+      if (entry && typeof entry === 'object' && entry.rule === PAINT_RULE) out[source] = entry
+    }
+    return out
   } catch {
     return {}
   }
@@ -425,7 +449,10 @@ function readPaint() {
 
 function writePaint(source, entry) {
   try {
-    localStorage.setItem(PAINT_KEY, JSON.stringify({ ...readPaint(), [source]: entry }))
+    localStorage.setItem(
+      PAINT_KEY,
+      JSON.stringify({ ...readPaint(), [source]: { ...entry, rule: PAINT_RULE } }),
+    )
   } catch {
     /* storage unavailable - the ground goes back to resolving on every launch */
   }
@@ -520,6 +547,7 @@ function paintArt(src, floor, mean) {
 function paintAccent() {
   if (!lastMean || !getArtAccent()) {
     root().style.removeProperty('--accent')
+    root().removeAttribute('data-accent-art')
     return
   }
   const cs = getComputedStyle(document.documentElement)
@@ -527,8 +555,17 @@ function paintAccent() {
     .map((k) => rgbOf(cs.getPropertyValue(k)))
     .filter(Boolean)
   const a = clampAccent(lastMean, themeNow(), grounds)
-  if (a) root().style.setProperty('--accent', `rgb(${a[0]}, ${a[1]}, ${a[2]})`)
-  else root().style.removeProperty('--accent')
+  if (!a) {
+    root().style.removeProperty('--accent')
+    root().removeAttribute('data-accent-art')
+    return
+  }
+  root().style.setProperty('--accent', `rgb(${a[0]}, ${a[1]}, ${a[2]})`)
+  // The MARKER, not just the value. --accent is an inline custom property and a
+  // stylesheet cannot ask whether one is set, so anything that has to follow the
+  // art accent rather than the palette accent - the brand mark, --amber - needs
+  // something selectable. This is it.
+  root().setAttribute('data-accent-art', '')
 }
 
 /** Re-run the accent clamp after the palette or the preference changes. */

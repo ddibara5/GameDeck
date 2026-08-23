@@ -28,8 +28,14 @@ import NewsSheet from './NewsSheet.jsx'
 import DiscoverDetail from './DiscoverDetail.jsx'
 import GameDetail from './GameDetail.jsx'
 import Skeleton from './Skeleton.jsx'
-import usePullRefresh from '../lib/usePullRefresh.js'
 import './news.css'
+
+// Lifted out of usePullRefresh when the gesture was removed. The cooldown is a
+// property of the refresh, not of how it was started: within five minutes the
+// button reports instead of re-fetching.
+const COOLDOWN_KEY = 'gamedeck_news_refresh_at'
+const COOLDOWN_MS = 5 * 60 * 1000
+const NOTE_MS = 4000
 
 export default function NewsTab() {
   const [rows, setRows] = useState([])
@@ -113,7 +119,38 @@ export default function NewsTab() {
     [load],
   )
 
-  const pull = usePullRefresh({ onRefresh })
+  // TAP ONLY. The pull gesture is gone: on a tab whose content changes once a
+  // week it competed with ordinary scrolling for no benefit, and on iOS it
+  // fights the standalone overscroll. What is kept is the cooldown the gesture
+  // carried, because that is about the SERVICE and not about the input - a
+  // refresh inside five minutes reports rather than re-fetches.
+  const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState('')
+
+  const refreshNow = useCallback(async () => {
+    if (busy) return
+    setBusy(true)
+    setNote('')
+    let canTrigger = false
+    try {
+      canTrigger = Date.now() - (Number(sessionStorage.getItem(COOLDOWN_KEY)) || 0) > COOLDOWN_MS
+      if (canTrigger) sessionStorage.setItem(COOLDOWN_KEY, String(Date.now()))
+    } catch {
+      canTrigger = true
+    }
+    let result = ''
+    try {
+      result = (await onRefresh({ canTrigger })) || 'Up to date'
+    } catch {
+      result = 'Could not refresh'
+    }
+    if (!mountedRef.current) return
+    setBusy(false)
+    setNote(result)
+    setTimeout(() => {
+      if (mountedRef.current) setNote('')
+    }, NOTE_MS)
+  }, [busy, onRefresh])
 
   // A library game opens the owned sheet, which knows about playtime and
   // achievements. Anything else opens the discover sheet, which is the same
@@ -138,23 +175,16 @@ export default function NewsTab() {
   }
 
   return (
-    <div {...pull.handlers}>
-      <div className="news-pull" ref={pull.gutterRef}>
-        <span className="news-pull-inner">
-          <span className={`news-pull-spin${pull.phase === 'working' ? ' spinning' : ''}`} ref={pull.spinRef} />
-          <span className="news-pull-label" ref={pull.labelRef} />
-        </span>
-      </div>
-
+    <div>
       <div className="page-header">
         <p className="page-subtitle">This week in gaming, for your library.</p>
         {!loading && rows.length > 0 ? (
-          <button type="button" className="news-refresh-note" onClick={pull.refreshNow} disabled={pull.busy}>
+          <button type="button" className="news-refresh-note" onClick={refreshNow} disabled={busy}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 12a9 9 0 1 1-3-6.7L21 8" strokeLinecap="round" strokeLinejoin="round" />
               <path d="M21 3v5h-5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            {pull.busy ? 'Fetching new stories' : pull.note || 'Tap to refresh'}
+            {busy ? 'Fetching new stories' : note || 'Tap to refresh'}
           </button>
         ) : null}
       </div>

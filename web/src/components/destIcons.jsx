@@ -34,12 +34,6 @@ export const DEST_ICONS = {
       <path d="m8.5 12 2.5 2.5 4.5-5" />
     </>
   ),
-  abandoned: icon(
-    <>
-      <circle cx="12" cy="12" r="9" />
-      <path d="m15 9-6 6M9 9l6 6" />
-    </>
-  ),
   shuffle: icon(
     <>
       <rect x="3" y="3" width="18" height="18" rx="4" />

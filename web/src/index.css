@@ -342,7 +342,7 @@
 .brand-caret {
   width: 15px;
   height: 15px;
-  color: #6f665a;
+  color: var(--muted);
   flex: none;
   margin-left: 1px;
 }
@@ -369,8 +369,8 @@
   bottom: 0;
   width: min(86%, 340px);
   z-index: 201;
-  background: #1e1c1a;
-  border-right: 1px solid #3a352f;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
   box-shadow: 8px 0 40px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
@@ -450,7 +450,7 @@
   font-weight: var(--w-bold);
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: #8a8073;
+  color: var(--muted);
   padding: 0 12px 6px;
 }
 
@@ -510,11 +510,12 @@
 /* Where you are. A tint rather than a bolder label, because the drawer is read
    at a glance and weight alone is not enough at 15px. */
 .menu-item.here {
-  background: rgba(200, 169, 126, 0.14);
+  /* Derived, not a literal: this was a hardcoded walnut wash, so the current
+     row stayed brown under Slate, Sage, Plum and Graphite and under an art
+     accent. 14% of the accent over whatever is behind it works in both themes
+     and follows all six. */
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
   font-weight: var(--w-semi);
-}
-[data-theme="light"] .menu-item.here {
-  background: rgba(156, 116, 73, 0.12);
 }
 
 /* Same shape as Discover's "Customize rows" and Insights' "Customize cards",
@@ -561,7 +562,7 @@
 }
 
 .menu-item:active {
-  background: #26231f;
+  background: var(--surface-2);
 }
 
 .menu-item[disabled] {
@@ -597,7 +598,7 @@
 .menu-item .menu-chev {
   width: 16px;
   height: 16px;
-  color: #6f665a;
+  color: var(--muted);
   flex: none;
 }
 
@@ -651,7 +652,7 @@
 
 .menu-foot-n {
   padding: 9px 8px 0;
-  color: #6f665a;
+  color: var(--muted);
   font-size: var(--t-cap);
 }
 
@@ -818,18 +819,30 @@
   cursor: pointer;
 }
 
+/* The track is filled up to the thumb. `--fill` is set inline by SettingsPage
+   from the same number the input carries, because neither engine gives you a
+   ::-webkit-slider-progress you can rely on and a two-stop gradient is exact.
+   A hard colour stop, not a gradient ramp: this is a quantity, not a fade. */
 .settings-slider::-webkit-slider-runnable-track {
   height: 5px;
   border-radius: 999px;
-  background: var(--surface-2);
   border: 1px solid var(--line);
+  background: linear-gradient(
+    to right,
+    var(--accent) 0 var(--fill, 0%),
+    var(--surface-2) var(--fill, 0%) 100%
+  );
 }
 
 .settings-slider::-moz-range-track {
   height: 5px;
   border-radius: 999px;
-  background: var(--surface-2);
   border: 1px solid var(--line);
+  background: linear-gradient(
+    to right,
+    var(--accent) 0 var(--fill, 0%),
+    var(--surface-2) var(--fill, 0%) 100%
+  );
 }
 
 /* 22px, not the 14px this would look best at. The thumb IS the touch target on a
@@ -860,6 +873,26 @@
   outline: 2px solid var(--accent);
   outline-offset: 4px;
   border-radius: 999px;
+}
+
+/* The label and its live value on one line. */
+.settings-field-hd {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settings-field-hd .menu-accent-label {
+  padding-bottom: 6px;
+}
+
+.settings-field-value {
+  font-size: var(--t-cap);
+  font-weight: var(--w-semi);
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 /* The two ends, named. A slider with no labels is a slider whose left end you
@@ -1104,11 +1137,14 @@ textarea {
    lands under .app's own --bg. .settings-page already is one (fixed, z-index
    210); .app is given one only while a ground is on, so the default flat app
    keeps exactly the stacking it has always had. */
+/* .settings-page and .view-page are already fixed and z-indexed, so they are
+   stacking contexts and the -1 layer stays inside them. .app is not, and is
+   given one only while a ground is on. */
 :root:not([data-ground='off']) .app {
   z-index: 0;
 }
 
-:root:not([data-ground='off']) :is(.app, .settings-page)::before {
+:root:not([data-ground='off']) :is(.app, .settings-page, .view-page)::before {
   content: '';
   position: fixed;
   inset: 0;
@@ -1120,7 +1156,7 @@ textarea {
    is exact rather than measured. It reads --walnut, which every colour theme
    defines, so it follows Slate, Sage, Plum and Graphite without a second
    setting. */
-:root[data-ground='wash'] :is(.app, .settings-page)::before {
+:root[data-ground='wash'] :is(.app, .settings-page, .view-page)::before {
   background: radial-gradient(130% 90% at 22% -6%, var(--walnut), var(--bg) 72%);
   opacity: 0.55;
 }
@@ -1135,7 +1171,7 @@ textarea {
    data-ground-art when it sets --ground-src and removes it when it clears it, so
    the veil and the picture arrive and leave together and that state cannot be
    expressed. Adding a source now costs nothing in this file. */
-:root[data-ground-art] :is(.app, .settings-page)::before {
+:root[data-ground-art] :is(.app, .settings-page, .view-page)::before {
   background-image: var(--ground-src, none);
   background-size: cover;
   background-position: center top;
@@ -1143,6 +1179,48 @@ textarea {
   /* The blur samples from outside the box, so the layer is scaled up to keep the
      soft transparent edge a blur leaves off the screen. */
   transform: scale(1.16);
+}
+
+/* The drawer, the menu labels, the chevrons and the caret were hardcoded walnut
+   neutrals with a second hardcoded set for light mode, so Slate, Sage, Plum and
+   Graphite changed the app and left the drawer and every menu behind. They read
+   --surface / --surface-2 / --line / --muted now, which every palette already
+   defines, so all five themes reach them and the light-mode duplicates are gone
+   rather than maintained. --muted is also BRIGHTER than the greys it replaces
+   (#a89f92 against #6f665a and #8a8073), and it is the one grey in the app whose
+   contrast is measured per theme. */
+
+/* ---------- The brand mark, when the accent comes from the artwork ----------
+
+   The lockup is seven flat polygons and it ALREADY follows the five palette
+   themes: --logo-1..7 are defined per accent and .gd-logo .lN reads them. The
+   inline fills in Brand.jsx are presentation attributes, which any author rule
+   outranks, so they are only the fallback if this stylesheet never loads.
+
+   So the art accent redefines the same seven tokens rather than adding a second
+   mechanism. The steps are the walnut ramp's own proportions, mixed toward black
+   in oklab, which keeps the hue and reproduces the shading, so the mark still
+   reads as a stack of slabs rather than as a silhouette.
+
+   Gated on data-accent-art, NOT on the accent value: --accent is an inline
+   custom property and a stylesheet cannot ask whether one is set.
+
+   --amber is the palette's second accent and it follows too, derived by mixing
+   the clamped accent toward --text. That direction is safe in both themes by
+   construction: --text is the far end from every ground, so anything mixed
+   towards it can only gain contrast, never lose it. */
+:root[data-accent-art] {
+  --amber: color-mix(in oklab, var(--accent) 72%, var(--text));
+}
+
+:root[data-accent-art] {
+  --logo-7: var(--accent);
+  --logo-6: color-mix(in oklab, var(--accent) 86%, #000);
+  --logo-5: color-mix(in oklab, var(--accent) 76%, #000);
+  --logo-4: color-mix(in oklab, var(--accent) 70%, #000);
+  --logo-3: color-mix(in oklab, var(--accent) 58%, #000);
+  --logo-2: color-mix(in oklab, var(--accent) 46%, #000);
+  --logo-1: color-mix(in oklab, var(--accent) 35%, #000);
 }
 
 /* ---------- Secondary type on the ground ----------
@@ -1200,8 +1278,8 @@ textarea {
    has no veil - a radial gradient across a whole screen is the worst banding
    case in the app, worse than the blurred photograph, and it had nothing on top
    of it at all. Same layer, one of the two backgrounds. */
-:root[data-ground-art] :is(.app, .settings-page)::after,
-:root[data-ground='wash'] :is(.app, .settings-page)::after {
+:root[data-ground-art] :is(.app, .settings-page, .view-page)::after,
+:root[data-ground='wash'] :is(.app, .settings-page, .view-page)::after {
   content: '';
   position: fixed;
   inset: 0;
@@ -1216,7 +1294,7 @@ textarea {
    under the grain image on the same element rather than needing a third layer.
    There is no `opacity` anywhere in this pair: the veil's alpha is on the colour
    and the grain's is inside the tile, so neither can dim the other. */
-:root[data-ground-art] :is(.app, .settings-page)::after {
+:root[data-ground-art] :is(.app, .settings-page, .view-page)::after {
   background-color: rgba(var(--ground-veil-rgb), var(--ground-veil-a));
 }
 
@@ -1492,11 +1570,30 @@ textarea {
 
 /* ---------- Game list & cards ---------- */
 
+/* ONE SURFACE, not one per row.
+
+   Every row here is the same kind of thing, the list is sorted, and Library puts
+   a search field and a filter above it - which is exactly the case a card per
+   row is worst at. It also cut the ground into a stripe every 10px: eleven
+   slivers of photograph read as seams, not as a background.
+
+   So the LIST is the surface and the rows are rows, divided by a hairline. Same
+   iOS inset-grouped shape the Settings page and the drawer already use. Nothing
+   inside a row changed; eleven borders, eleven shadows and eleven radii went. */
 .game-list {
   display: flex;
   flex-direction: column;
-  padding: 4px 16px 16px;
-  gap: 10px;
+  margin: 4px 16px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* An empty list must not paint an empty slab. :empty is exact here because the
+   list either holds rows or holds nothing - the empty state is a sibling. */
+.game-list:empty {
+  display: none;
 }
 
 .show-more-row {
@@ -1526,15 +1623,20 @@ textarea {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  background: none;
+  border: none;
+  border-radius: 0;
   padding: 10px;
-  box-shadow: var(--shadow);
   cursor: pointer;
   min-height: 44px;
   text-align: left;
   width: 100%;
+}
+
+/* The divider is between rows, never above the first or below the last, so the
+   group's own rounded corners are the only edge the list has. */
+.game-list .game-card + .game-card {
+  border-top: 1px solid var(--line);
 }
 
 .game-card:active {
@@ -2380,11 +2482,6 @@ textarea {
   background: rgba(29, 158, 117, 0.12);
 }
 
-.status-badge.status-abandoned {
-  color: var(--muted);
-  border-color: var(--line);
-  background: var(--surface-2);
-}
 
 /* ============================================================
    Native control color scheme (selects, scrollbars, form fields)
@@ -2425,13 +2522,7 @@ textarea {
 }
 
 /* Hardcoded-color selectors that don't read from tokens */
-[data-theme="light"] .brand-caret { color: #b3a898; }
 [data-theme="light"] .drawer-scrim { background: rgba(40, 34, 28, 0.32); }
-[data-theme="light"] .drawer {
-  background: #f8f4ec;
-  border-right-color: #e3dacb;
-  box-shadow: 8px 0 40px rgba(60, 45, 30, 0.14);
-}
 /* Light mode swaps to each theme's LIGHT pair. Without this the picker drew a
    dark disc on a cream drawer - a heavy dark ring - around the dark-mode accent,
    which is not the colour light mode actually uses. The discs are close in tone
@@ -2447,10 +2538,6 @@ textarea {
   box-shadow: 0 0 0 2px var(--accent), inset 0 0 0 1px rgba(60, 45, 30, 0.14);
 }
 
-[data-theme="light"] .menu-sec-label { color: #9a8f7e; }
-[data-theme="light"] .menu-item:active { background: rgba(60, 45, 30, 0.05); }
-[data-theme="light"] .menu-item .menu-chev { color: #b3a898; }
-[data-theme="light"] .menu-foot-n { color: #9a8f7e; }
 [data-theme="light"] .chat-bubble.error { border-color: #d8a3a3; color: #b04a4a; }
 
 /* Tab bar + header glass, light mode: neutral near-white frosted (matches the

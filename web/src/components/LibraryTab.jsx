@@ -21,7 +21,6 @@ const STATUS_FILTERS = [
   { key: 'playing', label: 'Playing' },
   { key: 'backlog', label: 'Backlog' },
   { key: 'finished', label: 'Finished' },
-  { key: 'abandoned', label: 'Abandoned' },
 ]
 
 const SORT_OPTIONS = [

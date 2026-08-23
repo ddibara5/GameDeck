@@ -17,11 +17,26 @@
   margin: 20px 16px 10px;
 }
 
+/* One surface per week, hairline rows. The week heading above it is already the
+   grouping; a container round every story was a second, weaker claim about the
+   same relationship, and it striped the ground. Now the heading has something to
+   bound, so you can see where the week ends. */
 .news-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 0 16px 8px;
+  margin: 0 16px 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.news-list:empty {
+  display: none;
+}
+
+.news-list .news-row + .news-row {
+  border-top: 1px solid var(--line);
 }
 
 /* THE ROW.
@@ -62,10 +77,9 @@
   width: 100%;
   height: 108px;
   padding: 12px;
-  background: var(--surface);
+  background: none;
   border: none;
-  border-radius: 14px;
-  box-shadow: var(--e2);
+  border-radius: 0;
   text-align: left;
   color: inherit;
   font: inherit;
@@ -472,87 +486,6 @@
 
 .news-refresh-note:active {
   color: var(--accent);
-}
-
-/* Stop the browser's own overscroll running at the same time as this gesture.
-   Without it iOS rubber-bands the page while the gutter is also being dragged
-   and the two compound; on Chrome it also suppresses the native
-   pull-to-refresh, which would reload the whole PWA mid-pull. */
-.news-pull-host {
-  overscroll-behavior-y: contain;
-  touch-action: pan-y;
-}
-
-.news-pull {
-  height: 0;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  overflow: hidden;
-  transition: height var(--d-base) var(--ease-out);
-}
-
-/* While a finger is down the height must track it exactly, so the settle
-   transition is switched off for the duration of the drag and back on for the
-   release. Without this the gutter lags behind the finger. */
-.news-pull.dragging {
-  transition: none;
-}
-
-.news-pull-inner {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding-bottom: 9px;
-}
-
-.news-pull-label {
-  font-size: var(--t-cap);
-  font-weight: var(--w-semi);
-  color: var(--muted);
-}
-
-.news-pull.armed .news-pull-label {
-  color: var(--accent);
-}
-
-.news-pull-spin {
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  border: 2px solid var(--muted);
-  border-top-color: transparent;
-  flex: none;
-  opacity: 0;
-  transition: opacity var(--d-fast) ease;
-}
-
-.news-pull.on .news-pull-spin {
-  opacity: 1;
-}
-
-.news-pull.armed .news-pull-spin {
-  border-color: var(--accent);
-  border-top-color: transparent;
-}
-
-.news-pull-spin.spinning {
-  animation: news-pull-rot 0.7s linear infinite;
-}
-
-@keyframes news-pull-rot {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .news-pull {
-    transition: none;
-  }
-  .news-pull-spin.spinning {
-    animation: none;
-  }
 }
 
 .news-refresh-note[disabled] {

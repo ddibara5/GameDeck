@@ -46,7 +46,7 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpen
   // Live counts from the (session-cached) library and the status map, so a badge
   // and the list it opens can never disagree.
   const counts = useMemo(() => {
-    const c = { backlog: 0, playing: 0, finished: 0, abandoned: 0 }
+    const c = { backlog: 0, playing: 0, finished: 0 }
     for (const g of games) {
       if (!includeInLists(g, statusMap)) continue
       const s = effectiveStatus(g, statusMap)

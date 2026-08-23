@@ -62,7 +62,6 @@ export const DEST_CATALOG = [
   { key: 'backlog', label: 'Backlog', group: 'shelves', kind: 'list', viewKey: 'status:backlog', fixed: 'shelf' },
   { key: 'playing', label: 'Playing', group: 'shelves', kind: 'list', viewKey: 'status:playing', fixed: 'shelf' },
   { key: 'finished', label: 'Finished', group: 'shelves', kind: 'list', viewKey: 'status:finished', fixed: 'shelf' },
-  { key: 'abandoned', label: 'Abandoned', group: 'shelves', kind: 'list', viewKey: 'status:abandoned', fixed: 'shelf' },
 ]
 
 // Settings is deliberately NOT in the catalog. It used to be the whole `app`

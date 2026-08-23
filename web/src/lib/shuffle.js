@@ -44,8 +44,8 @@ const mins = (g) => Number(g && g.playtime_minutes) || 0
 export function inPlayPool(game, pool, statusOf) {
   const status = statusOf ? statusOf(game) : null
   if (pool === 'finished') return status === 'finished'
-  // Done is done. Finished and abandoned are excluded from every other pool.
-  if (status === 'finished' || status === 'abandoned') return false
+  // Done is done. Finished is excluded from every other pool.
+  if (status === 'finished') return false
   if (pool === 'never') return mins(game) === 0
   if (pool === 'barely') return mins(game) > 0 && mins(game) <= 120
   return true

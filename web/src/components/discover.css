@@ -670,19 +670,31 @@ button.shelf-head:active {
    divided by a hairline, which is the shape that breaks first if anything ever
    sits behind the page - a row of type with no surface under it. The gap does
    the dividing now, so the hairline between rows is gone. */
+/* One surface, hairline rows. Same change as .game-list, and for the same
+   reason: this feed was built explicitly as "a column of Library cards", so it
+   inherited the per-row container and the striped ground with it. */
 .fy-feed {
   display: flex;
   flex-direction: column;
-  padding: 4px 16px 16px;
-  gap: 10px;
-}
-
-.fy-row-wrap {
-  position: relative;
+  margin: 4px 16px 16px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.fy-feed:empty {
+  display: none;
+}
+
+/* The wrap stays - it is what the heart button is positioned against - but it
+   is no longer a card. */
+.fy-row-wrap {
+  position: relative;
+}
+
+.fy-feed .fy-row-wrap + .fy-row-wrap {
+  border-top: 1px solid var(--line);
 }
 
 /* The heart is a SIBLING of the row button, never inside it: a button inside a

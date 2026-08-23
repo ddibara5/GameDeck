@@ -6,7 +6,7 @@ import { effectiveStatus, STATUS_LABELS } from '../lib/userStatus.js'
 export default function GameCard({ game, onSelect, statusMap }) {
   const { label, color } = platformMeta(game.environment)
   const status = effectiveStatus(game, statusMap)
-  const showBadge = status === 'finished' || status === 'abandoned'
+  const showBadge = status === 'finished'
   // Completion = story progress (your playtime vs the game's length). Falls back to
   // achievements only for the handful of games with no known length (MMOs / no match).
   const len = Number(game.length_minutes) || 0

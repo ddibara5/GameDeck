@@ -1,5 +1,9 @@
 // Per-game status overrides (GameTrack-style).
-// Statuses: 'backlog' | 'playing' | 'finished' | 'abandoned'
+// Statuses: 'backlog' | 'playing' | 'finished'
+//
+// 'abandoned' was removed on 23 Aug 2026 at Dave's request. The live table held
+// ZERO rows carrying it, so nothing needed migrating; a stored value from an
+// older build simply matches no filter and renders no badge.
 // Achievement % is NOT completion; the user's status (manual, or derived) is the truth.
 //
 // STORAGE: Supabase `game_status` is the source of truth; localStorage is a cache.
@@ -21,12 +25,11 @@ const KEY = 'gamedeck_status_v1'
 // server wins, so clearing a status on one device is not resurrected by another.
 const MIGRATED_KEY = 'gamedeck_status_migrated_v1'
 
-export const STATUSES = ['backlog', 'playing', 'finished', 'abandoned']
+export const STATUSES = ['backlog', 'playing', 'finished']
 export const STATUS_LABELS = {
   backlog: 'Backlog',
   playing: 'Playing',
   finished: 'Finished',
-  abandoned: 'Abandoned',
 }
 
 function loadMap() {

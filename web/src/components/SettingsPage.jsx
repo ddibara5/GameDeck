@@ -576,9 +576,14 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
             the note under the page makes the measured-floor claim in full; a third
             grey paragraph between them said the same thing a third time. */}
         {isArtGround(ground) ? (
-          <Field label="Intensity">
+          <Field label="Intensity" value={intensity <= 0 ? 'Most picture' : `${Math.round(intensity * 100)}% quieter`}>
+            {/* --fill drives the accent portion of the track, so the control
+                reads as a QUANTITY rather than as a dot on a rail. A native
+                range gives you the thumb and the keyboard behaviour and no fill;
+                this is the one thing worth adding by hand. */}
             <input
               className="settings-slider"
+              style={{ '--fill': `${Math.round(intensity * 100)}%` }}
               type="range"
               min="0"
               max="1"
@@ -586,6 +591,7 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
               value={intensity}
               onChange={(e) => changeIntensity(e.target.value)}
               aria-label="Background intensity"
+              aria-valuetext={intensity <= 0 ? 'Most picture' : `${Math.round(intensity * 100)} percent quieter`}
             />
             <div className="settings-scale">
               <span>As much picture as is legible</span>
@@ -688,10 +694,17 @@ function SubPage({ open, depth = 0, title, onBack, children }) {
 
 // A labelled control, in the same margin as a settings card so a sub-page of
 // segmented controls lines up with a sub-page of rows.
-function Field({ label, hint, children }) {
+function Field({ label, hint, value, children }) {
   return (
     <div className="settings-field">
-      <div className="menu-accent-label">{label}</div>
+      {/* The label row carries a live readout when there is one. A slider whose
+          position is its only feedback makes you drag it to find out where it
+          was, and this one has a floor that moves per picture, so "0%" is a
+          genuinely useful thing to be able to read. */}
+      <div className="settings-field-hd">
+        <div className="menu-accent-label">{label}</div>
+        {value ? <div className="settings-field-value">{value}</div> : null}
+      </div>
       {children}
       {hint ? <div className="settings-field-hint">{hint}</div> : null}
     </div>
