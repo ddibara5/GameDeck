@@ -20,6 +20,12 @@ const GAME_TTL = 7 * 24 * 60 * 60 * 1000 // 7 days (per-game metadata barely mov
 // Results are cached in-memory per query so flipping between Browse and Ask, or
 // re-opening a rail, never re-hits the network within a session.
 const _cache = new Map()
+// A per-game memory layer above IndexedDB. The persisted cache removes repeat
+// network requests, but reading IndexedDB is still asynchronous and therefore
+// at least one render too late for a sheet that should open fully composed.
+// Values in this map can be read synchronously by GameSheet, while an in-flight
+// promise also deduplicates pointer-intent warming and the subsequent click.
+const _gameCache = new Map()
 
 export function buildQuery(params) {
   const qs = new URLSearchParams()
@@ -131,18 +137,35 @@ export async function fetchDiscoverLanes(keys, limit = 8, { onFresh, platform } 
 // static, so re-opening a sheet you've seen before resolves off disk with no
 // request at all. That is what stops the sheet from popping in its body a beat
 // after it slides up.
+export function peekGameById(igdbId) {
+  const hit = _gameCache.get(Number(igdbId))
+  return hit && typeof hit.then !== 'function' ? hit : null
+}
+
 export async function fetchGameById(igdbId) {
   const id = Number(igdbId)
   if (!id) return null
-  const { value } = await swr(
+  if (_gameCache.has(id)) return _gameCache.get(id)
+
+  const pending = swr(
     `discover:game:${id}`,
     async () => {
       const games = await fetchDiscover({ ids: id })
       return games[0] || null
     },
     { maxAge: GAME_TTL }
-  )
-  return value || null
+  ).then(({ value }) => value || null)
+
+  _gameCache.set(id, pending)
+  try {
+    const value = await pending
+    if (value) _gameCache.set(id, value)
+    else _gameCache.delete(id)
+    return value
+  } catch (error) {
+    _gameCache.delete(id)
+    throw error
+  }
 }
 
 // IGDB caps a by-id lookup at 20 ids per request (see the api/discover ids
@@ -172,7 +195,10 @@ export async function fetchGamesByIds(ids) {
   await Promise.all(
     list.map(async (id) => {
       const hit = await idbGet(`discover:game:${id}`)
-      if (hit && hit.value && Date.now() - hit.ts < GAME_TTL) out[id] = hit.value
+      if (hit && hit.value && Date.now() - hit.ts < GAME_TTL) {
+        out[id] = hit.value
+        _gameCache.set(id, hit.value)
+      }
       else missing.push(id)
     })
   )
@@ -186,6 +212,7 @@ export async function fetchGamesByIds(ids) {
   fetched.flat().forEach((g) => {
     if (g && g.id != null) {
       out[g.id] = g
+      _gameCache.set(Number(g.id), g)
       idbSet(`discover:game:${g.id}`, g)
     }
   })

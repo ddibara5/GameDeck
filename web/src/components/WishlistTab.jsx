@@ -5,6 +5,7 @@ import { useWishlist, removeFromWishlist, restoreToWishlist, reconcileWishlist }
 import { loadLibraryTitles } from '../lib/discover.js'
 import NextUp from './NextUp.jsx'
 import { relOf, effTs, isOut, byTitle, groupByRelease, groupByReleased, outChipOf, shortOf, MON, DAY } from '../lib/wishlistRelease.js'
+import { gameSheetWarmProps } from '../lib/gameSheetWarmIntent.js'
 import './wishlist.css'
 
 const SORT_KEY = 'gamedeck_wishlist_sort'
@@ -196,6 +197,7 @@ function SwipeRow({ r, onOpen, onRemove, scope }) {
         role="button"
         tabIndex={0}
         onClick={onFaceClick}
+        {...gameSheetWarmProps(r, 'wishlist')}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()
@@ -219,7 +221,7 @@ function GridCard({ r, onOpen, scope }) {
   const short = shortOf(rel)
   const cls = chipOf(rel, scope).cls
   return (
-    <button type="button" className="wl-gc" onClick={() => onOpen(r)}>
+    <button type="button" className="wl-gc" onClick={() => onOpen(r)} {...gameSheetWarmProps(r, 'wishlist')}>
       <div className="wl-gcov">
         <Cover src={r.cover} title={r.title} size="lg" className="wl-gcover" />
         <span className={`wl-gbadge ${cls}`}>{short}</span>

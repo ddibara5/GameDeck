@@ -14,6 +14,7 @@ import {
 import { weekStats, compactHm, bars, WEEK_SPAN } from '../lib/playWeek.js'
 import { useCardsConfig } from '../lib/insightsCards.js'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
+import { gameSheetWarmProps } from '../lib/gameSheetWarmIntent.js'
 import './insights.css'
 
 // Insights is the OVER TIME tab. Now playing, Coming up, Leaving Game Pass and
@@ -196,6 +197,7 @@ function WeekGames({ week, gamesById, onOpenGame }) {
               className={`wk-game${game ? '' : ' flat'}`}
               key={g.master_id}
               onClick={game ? () => onOpenGame(game) : undefined}
+              {...gameSheetWarmProps(game, 'owned')}
             >
               <Cover src={cover} title={g.title} size="sm" />
               <span className="wk-gb">

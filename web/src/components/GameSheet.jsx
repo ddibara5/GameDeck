@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Cover from './Cover.jsx'
 import { useDelayedClose } from '../lib/useDelayedClose.js'
@@ -16,8 +16,9 @@ import {
 } from '../lib/userStatus.js'
 import { useWishlist, toggleWishlist } from '../lib/wishlist.js'
 import { fetchGameById } from '../lib/discover.js'
-import { coverLook } from '../lib/tint.js'
+import { coverLook, peekCoverLook } from '../lib/tint.js'
 import { resolveTheme } from '../lib/theme.js'
+import { backdropUrl, peekGameSheetMedia, SHEET_ART_DEADLINE_MS } from '../lib/gameSheetWarm.js'
 import Lightbox from './Lightbox.jsx'
 import RankingReaction from './RankingReaction.jsx'
 import { getGameRankCache, loadGameRank, seedForReaction } from '../lib/ranking.js'
@@ -116,15 +117,22 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   const discoverHasMedia = Boolean(
     variant === 'discover' && game && (game.summary || (game.screenshots && game.screenshots.length))
   )
-  const [media, setMedia] = useState(discoverHasMedia ? game : null)
+  const initialMedia = discoverHasMedia ? game : peekGameSheetMedia(game, variant)
+  const [media, setMedia] = useState(initialMedia)
   // True while we are still waiting on the IGDB fetch, so the body can hold the
   // space that summary + screenshots + chips will need. Seeded by the useState
   // initialiser rather than an effect so the very first paint already reserves
   // the room; reserving it one render late would reintroduce the jump.
-  const [mediaPending, setMediaPending] = useState(() => !discoverHasMedia && Boolean(igdbId))
+  const [mediaPending, setMediaPending] = useState(() => !initialMedia && Boolean(igdbId))
   useEffect(() => {
     if (discoverHasMedia) {
       setMedia(game)
+      setMediaPending(false)
+      return undefined
+    }
+    const cached = peekGameSheetMedia(game, variant)
+    if (cached) {
+      setMedia(cached)
       setMediaPending(false)
       return undefined
     }
@@ -188,46 +196,53 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   //   fast  the cover, colour only. Already decoded and in cache because it is
   //         the image you just tapped, so the card is the right colour in ~80ms
   //         and no picture is encoded that nobody paints.
-  //   rich  the key art, colour AND backdrop, from one read. Arrives with the
-  //         IGDB media fetch for a library game, immediately for a Discover one
-  //         whose payload already carries it, and instantly on any second open
-  //         because that fetch is on disk for a week.
+  //   rich  the key art, colour AND backdrop, from one read. Intent handlers
+  //         warm it before the click; a session cache makes later opens fully
+  //         synchronous. A cold result only joins during the opening animation,
+  //         never as a late pop into a sheet that has already settled.
   //
   // `rich` wins whenever it exists rather than the two racing, so whichever
   // resolves first the pair on screen is never mismatched.
-  const [fast, setFast] = useState(null)
-  const [rich, setRich] = useState(null)
   const coverId = game ? coverImageId(game) : null
   const fastSrc = coverId ? `/api/tint?id=${encodeURIComponent(coverId)}&kind=cover` : null
   // The discover payload carries backdropId at open; a library row only learns
   // it from the media fetch. Same field either way, so this is one expression.
   const bdSrc = (() => {
     const from = (media && media.backdropId ? media : null) || (game && game.backdropId ? game : null)
-    if (!from) return null
-    return `/api/tint?id=${encodeURIComponent(from.backdropId)}&kind=${encodeURIComponent(from.backdropKind || 'screenshot')}`
+    return backdropUrl(from)
   })()
+  const theme = resolveTheme()
+  const openedAt = useRef(typeof performance !== 'undefined' ? performance.now() : Date.now())
+  const [fast, setFast] = useState(() => peekCoverLook(fastSrc, theme))
+  const [rich, setRich] = useState(() => peekCoverLook(bdSrc, theme))
 
   useEffect(() => {
     if (!fastSrc) { setFast(null); return undefined }
     let alive = true
     setFast(null)
-    coverLook(fastSrc, resolveTheme()).then((c) => {
+    const cached = peekCoverLook(fastSrc, theme)
+    if (cached) { setFast(cached); return undefined }
+    coverLook(fastSrc, theme).then((c) => {
       if (alive) setFast(c)
     })
     return () => { alive = false }
-  }, [fastSrc])
+  }, [fastSrc, theme])
 
   useEffect(() => {
     if (!bdSrc) { setRich(null); return undefined }
     let alive = true
-    setRich(null)
-    coverLook(bdSrc, resolveTheme()).then((c) => {
-      // Only promote once a colour actually came back. A read that failed means
-      // the picture will not paint either, so the card stays on the cover's.
-      if (alive && c) setRich(c)
+    const cached = peekCoverLook(bdSrc, theme)
+    setRich(cached)
+    if (cached) return () => { alive = false }
+    coverLook(bdSrc, theme).then((c) => {
+      // Artwork may join while the sheet itself is moving, but never pop into a
+      // settled sheet. A late result is still cached, so the next open starts
+      // with it on the first frame.
+      const now = typeof performance !== 'undefined' ? performance.now() : Date.now()
+      if (alive && c && now - openedAt.current <= SHEET_ART_DEADLINE_MS) setRich(c)
     })
     return () => { alive = false }
-  }, [bdSrc])
+  }, [bdSrc, theme])
 
   const tint = rich || fast
   // The <img> below is the same url the colour was sampled from, so painting it

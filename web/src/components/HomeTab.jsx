@@ -13,6 +13,7 @@ import { useHomeCards, CARD_BY_KEY } from '../lib/homeCards.js'
 import { platformMeta, minutesToHhm, parseDayOrInstant, libraryCover } from '../lib/format.js'
 import { loadRecentActivity } from '../lib/recentActivity.js'
 import { weekStats, WEEK_SPAN, startOfDay, daysBetween, dayKey, eventDay } from '../lib/playWeek.js'
+import { gameSheetWarmProps } from '../lib/gameSheetWarmIntent.js'
 import './insights.css'
 import './home.css'
 
@@ -465,6 +466,7 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
             className={`up-row as-btn${hot(w) ? ' soon' : ''}`}
             key={w.igdb_id}
             onClick={() => setWishOpen(w)}
+            {...gameSheetWarmProps(w, 'wishlist')}
           >
             {/* Art first, which is where every other row in this app puts it:
                 Now playing on this same screen, the Wishlist rows, the Library.
@@ -501,6 +503,7 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
             type="button"
             className={`np${nowPlaying.game ? '' : ' flat'}`}
             onClick={nowPlaying.game ? () => openGame(nowPlaying.game) : undefined}
+            {...gameSheetWarmProps(nowPlaying.game, 'owned')}
           >
             <Cover src={nowPlaying.cover} title={nowPlaying.title} size="sm" />
             <span className="np-b">

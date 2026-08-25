@@ -26,6 +26,21 @@
 // is a box average over the whole image - exactly what we want.
 const GRID = 8
 
+// Sampling forces the browser to decode the image. Keep that decoded result and
+// the derived CSS colour in memory so a warmed/reopened sheet can paint both on
+// its first render instead of repeating async image and canvas work.
+const SAMPLE_CACHE_MAX = 80
+const LOOK_CACHE_MAX = 160 // one entry per image + theme
+const sampleCache = new Map()
+const lookCache = new Map()
+
+function remember(map, key, value, max) {
+  map.delete(key)
+  map.set(key, value)
+  if (map.size > max) map.delete(map.keys().next().value)
+  return value
+}
+
 // Anything at or below this alpha is transparent padding, not art.
 const MIN_ALPHA = 200
 
@@ -112,7 +127,10 @@ export function clampTint(rgb, theme = 'dark') {
  * same fallback, which is the untinted surface the card had before.
  */
 export function sampleImage(url) {
-  return new Promise((resolve) => {
+  if (!url) return Promise.resolve(null)
+  if (sampleCache.has(url)) return sampleCache.get(url)
+
+  const pending = new Promise((resolve) => {
     if (!url || typeof document === 'undefined') return resolve(null)
     const img = new Image()
     img.crossOrigin = 'anonymous'
@@ -142,6 +160,12 @@ export function sampleImage(url) {
     // is true before onload would fire; calling it directly avoids a frame.
     if (img.complete && img.naturalWidth) img.onload()
   })
+  remember(sampleCache, url, pending, SAMPLE_CACHE_MAX)
+  pending.then((value) => {
+    // A transient failure should be retryable on the next intent/open.
+    if (!value && sampleCache.get(url) === pending) sampleCache.delete(url)
+  })
+  return pending
 }
 
 /**
@@ -164,9 +188,27 @@ export function sampleImage(url) {
  * ~40KB of base64 built on the main thread on every open. The backdrop is a
  * plain <img> now.
  */
-export async function coverLook(url, theme = 'dark') {
-  const t = clampTint(await sampleImage(url), theme)
-  return t ? `rgb(${t[0]}, ${t[1]}, ${t[2]})` : null
+export function peekCoverLook(url, theme = 'dark') {
+  const entry = lookCache.get(`${theme === 'light' ? 'light' : 'dark'}|${url}`)
+  return entry ? entry.value : null
+}
+
+export function coverLook(url, theme = 'dark') {
+  if (!url) return Promise.resolve(null)
+  const mode = theme === 'light' ? 'light' : 'dark'
+  const key = `${mode}|${url}`
+  const cached = lookCache.get(key)
+  if (cached) return cached.promise
+
+  const entry = { value: null, promise: null }
+  entry.promise = sampleImage(url).then((rgb) => {
+    const t = clampTint(rgb, mode)
+    entry.value = t ? `rgb(${t[0]}, ${t[1]}, ${t[2]})` : null
+    if (!entry.value && lookCache.get(key) === entry) lookCache.delete(key)
+    return entry.value
+  })
+  remember(lookCache, key, entry, LOOK_CACHE_MAX)
+  return entry.promise
 }
 
 /* ---------------------------------------------------------------- the accent

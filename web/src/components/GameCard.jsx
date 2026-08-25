@@ -2,6 +2,7 @@ import Cover from './Cover.jsx'
 import CompletionBar from './CompletionBar.jsx'
 import { platformMeta, libraryCover } from '../lib/format.js'
 import { effectiveStatus, STATUS_LABELS } from '../lib/userStatus.js'
+import { gameSheetWarmProps } from '../lib/gameSheetWarmIntent.js'
 
 export default function GameCard({ game, onSelect, statusMap }) {
   const { label, color } = platformMeta(game.environment)
@@ -14,7 +15,7 @@ export default function GameCard({ game, onSelect, statusMap }) {
     len > 0 ? Math.max(0, Math.min(100, Math.round(((game.playtime_minutes || 0) / len) * 100))) : null
 
   return (
-    <button type="button" className="game-card" onClick={() => onSelect(game)}>
+    <button type="button" className="game-card" onClick={() => onSelect(game)} {...gameSheetWarmProps(game, 'owned')}>
       <Cover
         src={libraryCover(game)}
         title={game.title}

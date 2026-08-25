@@ -7,6 +7,7 @@ import { fetchDiscoverLanes, loadLibraryTitles, normTitle } from '../lib/discove
 import { useWishlist } from '../lib/wishlist.js'
 import { useDiscoverPrefs, platformParam, platformLabel } from '../lib/discoverPrefs.js'
 import { useTasteLanes, NEW_LANE, laneReason, interleave } from '../lib/discoverLanes.js'
+import { gameSheetWarmProps } from '../lib/gameSheetWarmIntent.js'
 
 // The For You feed.
 //
@@ -128,7 +129,7 @@ export default function DiscoverForYou({ onAsk }) {
             const platforms = (g.platforms || []).slice(0, 3).join(', ')
             return (
               <div className="fy-row-wrap" key={g.id}>
-                <button type="button" className="fy-row" onClick={() => setSelected(g)}>
+                <button type="button" className="fy-row" onClick={() => setSelected(g)} {...gameSheetWarmProps(g, 'discover')}>
                   <Cover src={g.cover} title={g.name} size="sm" className="fy-cov" />
                   <span className="fy-body">
                     <span className="fy-name">{g.name}</span>

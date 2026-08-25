@@ -7,6 +7,7 @@ import { useLibraryGames } from '../lib/useLibraryGames.js'
 import { getRecentActivityCache, loadRecentActivity } from '../lib/recentActivity.js'
 import { eventDay, daysBetween } from '../lib/playWeek.js'
 import { formatRelativeDay, platformMeta, libraryCover } from '../lib/format.js'
+import { gameSheetWarmProps } from '../lib/gameSheetWarmIntent.js'
 import './activity.css'
 
 // How far back the feed reads. Deep enough to scroll for a while, still one small
@@ -172,6 +173,7 @@ function ActivityRow({ row, game, onOpen }) {
       className={`activity-row${game ? '' : ' flat'}`}
       onClick={game ? () => onOpen(game) : undefined}
       aria-label={game ? `Open ${row.title}` : undefined}
+      {...gameSheetWarmProps(game, 'owned')}
     >
       <Cover src={cover} title={row.title} size="sm" />
       <div className="activity-body">

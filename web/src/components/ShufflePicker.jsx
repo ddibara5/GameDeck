@@ -15,6 +15,7 @@ import { PLAY_POOLS, BUY_POOLS, LENGTH_STEPS, shuffle, shuffleId, eligible, topG
 import { availableVibes } from '../lib/vibes.js'
 import { useVibeKeywords } from '../lib/useLibraryGames.js'
 import { loadRankingScores } from '../lib/ranking.js'
+import { gameSheetWarmProps } from '../lib/gameSheetWarmIntent.js'
 import './shuffle.css'
 
 // Horizontal travel before a drag counts as a swipe rather than a stray finger.
@@ -344,7 +345,7 @@ export default function ShufflePicker({ open, onClose }) {
           onTouchCancel={onTouchEnd}
         >
           {pick ? (
-            <button type="button" className="shuffle-cover" onClick={openPick} aria-label={`Open ${titleOf(pick)}`}>
+            <button type="button" className="shuffle-cover" onClick={openPick} aria-label={`Open ${titleOf(pick)}`} {...gameSheetWarmProps(pick, mode === 'buy' ? 'wishlist' : 'owned')}>
               <Cover src={coverSrc(pick, mode)} title={titleOf(pick)} size="lg" />
             </button>
           ) : (
@@ -369,7 +370,7 @@ export default function ShufflePicker({ open, onClose }) {
                 {mode === 'buy' && gp ? <span className="shuffle-badge owned">Own it free</span> : null}
                 {pickStatus === 'finished' ? <span className="shuffle-badge owned">Finished</span> : null}
               </div>
-              <button type="button" className="shuffle-title-btn" onClick={openPick}>
+              <button type="button" className="shuffle-title-btn" onClick={openPick} {...gameSheetWarmProps(pick, mode === 'buy' ? 'wishlist' : 'owned')}>
                 <h3 className="shuffle-title">{titleOf(pick)}</h3>
               </button>
               <div className="shuffle-meta">

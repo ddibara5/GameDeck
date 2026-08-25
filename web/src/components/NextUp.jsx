@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import Cover from './Cover.jsx'
 import { relOf, effTs, isOut, shortOf, DAY } from '../lib/wishlistRelease.js'
+import { gameSheetWarmProps } from '../lib/gameSheetWarmIntent.js'
 
 // The nearest concrete upcoming releases, as countdown cards.
 //
@@ -40,7 +41,7 @@ export default function NextUp({ items, onOpen }) {
           const lab = near ? (days === 1 ? 'day away' : 'days away') : ''
           const title = r.title || r.name
           return (
-            <button type="button" key={r.igdb_id ?? r.id} className="wl-ncard" onClick={() => onOpen(r)}>
+            <button type="button" key={r.igdb_id ?? r.id} className="wl-ncard" onClick={() => onOpen(r)} {...gameSheetWarmProps(r, 'wishlist')}>
               <div className="wl-nart">
                 <Cover src={r.cover} title={title} size="sm" className="wl-ncover" />
                 <div className="wl-nover">
