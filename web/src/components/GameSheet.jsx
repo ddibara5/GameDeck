@@ -19,6 +19,9 @@ import { fetchGameById } from '../lib/discover.js'
 import { coverLook } from '../lib/tint.js'
 import { resolveTheme } from '../lib/theme.js'
 import Lightbox from './Lightbox.jsx'
+import RankingReaction from './RankingReaction.jsx'
+import { supabase } from '../lib/supabase.js'
+import { seedForReaction } from '../lib/ranking.js'
 import './gameSheet.css'
 
 // Holds the vertical space that the summary + screenshot strip + genre chips
@@ -79,6 +82,8 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   // deliberate one and there is no way back out of an override.
   const [status, setStatusState] = useState('backlog')
   const [pinned, setPinned] = useState(false)
+  const [rank, setRank] = useState(null)
+  const [reactionPrompt, setReactionPrompt] = useState(false)
 
   // achievements_url is no longer carried on library rows: it was 34 kB across
   // 513 of them to serve this single link, on a sheet that shows one game at a
@@ -88,6 +93,20 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
     if (!owned || !game) return
     setPinned(Boolean(explicitStatus(game)))
     setStatusState(effectiveStatus(game))
+  }, [owned, game])
+
+  useEffect(() => {
+    if (!owned || !game) return undefined
+    let alive = true
+    setRank(null)
+    setReactionPrompt(false)
+    supabase
+      .from('game_ranks')
+      .select('score,reaction,comparison_count')
+      .eq('master_id', Number(game.master_id))
+      .maybeSingle()
+      .then(({ data }) => { if (alive) setRank(data || null) })
+    return () => { alive = false }
   }, [owned, game])
 
   // IGDB media. Discover rail items already carry their summary + screenshots, so
@@ -313,6 +332,7 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
           </div>
         ) : null}
         {!owned && inLibrary ? <span className="in-library-badge sheet">In your library</span> : null}
+        {owned && rank ? <span className="rank-sheet-badge">My rank · {Math.round(rank.score)}</span> : null}
 
         {owned ? (
           <>
@@ -334,6 +354,7 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
                     setStatus(game.master_id, clearing ? null : s)
                     setPinned(!clearing)
                     setStatusState(clearing ? derivedStatus(game) : s)
+                    if (!clearing && s === 'finished' && !rank) setReactionPrompt(true)
                   }}
                 >
                   {STATUS_LABELS[s]}
@@ -345,6 +366,15 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
                 ? 'Set by you. Tap it again to clear.'
                 : 'Worked out from your playtime. Tap to set your own.'}
             </p>
+            {reactionPrompt ? (
+              <RankingReaction
+                masterId={game.master_id}
+                onSaved={(reaction) => {
+                  setRank({ score: seedForReaction(reaction), reaction, comparison_count: 0 })
+                  setReactionPrompt(false)
+                }}
+              />
+            ) : null}
           </>
         ) : (
           <div className="discover-actions">

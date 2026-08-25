@@ -8,10 +8,12 @@
     "predev": "npm run gen-icons",
     "gen-icons": "node scripts/gen-icons.cjs",
     "build": "npm run gen-icons && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test test/*.test.js"
   },
   "dependencies": {
-    "@supabase/postgrest-js": "^2.112.2",
+    "@supabase/auth-js": "2.112.4",
+    "@supabase/postgrest-js": "2.112.2",
     "marked": "^12.0.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

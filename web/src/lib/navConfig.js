@@ -26,8 +26,8 @@ const KEY = 'gamedeck_nav_v2'
 const EVENT = 'gd-nav-change'
 
 // At least this many tabs stay on the bar, so it never collapses to a single
-// destination. There are exactly five bar-eligible destinations and five is what
-// fits at 390px, so the ceiling is the catalog rather than a rule.
+// destination. Ranking is optional, so the catalog may be larger than the five
+// destinations that fit comfortably at 390px.
 export const MIN_VISIBLE = 2
 
 // Every destination the drawer can show, in default order.
@@ -62,6 +62,10 @@ export const DEST_CATALOG = [
   { key: 'backlog', label: 'Backlog', group: 'shelves', kind: 'list', viewKey: 'status:backlog', fixed: 'shelf' },
   { key: 'playing', label: 'Playing', group: 'shelves', kind: 'list', viewKey: 'status:playing', fixed: 'shelf' },
   { key: 'finished', label: 'Finished', group: 'shelves', kind: 'list', viewKey: 'status:finished', fixed: 'shelf' },
+  // My Ranking is a full destination, not a filter. It lives at the end of the
+  // left shelf by default and is eligible for the bottom bar, but starts off the
+  // bar so adding it never crowds an existing five-tab layout.
+  { key: 'rankings', label: 'Rankings', group: 'shelves', kind: 'tab', sub: 'Your explicit game order' },
 ]
 
 // Settings is deliberately NOT in the catalog. It used to be the whole `app`
@@ -97,8 +101,8 @@ export const BAR_BY_KEY = BAR_CATALOG.reduce((m, d) => ((m[d.key] = d), m), {})
 
 const DEFAULT_ORDER = DEST_CATALOG.map((d) => d.key)
 const DEFAULT_BAR = BAR_CATALOG.map((d) => d.key)
-// All five, because there are exactly five and five fit.
-const DEFAULT_ENABLED = DEFAULT_BAR.reduce((m, k) => ((m[k] = true), m), {})
+// Keep the existing five-tab default; Ranking is available but opt-in.
+const DEFAULT_ENABLED = DEFAULT_BAR.reduce((m, k) => ((m[k] = k !== 'rankings'), m), {})
 const DEFAULT_LABELS = true
 // The bar is a shortcut, and a shortcut you can put away. Off hides the strip
 // and gives the page back its full height; every destination the bar carried is

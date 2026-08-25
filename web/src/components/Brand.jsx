@@ -33,14 +33,8 @@ const CARET = (
  * that print their own heading get.
  */
 export default function Brand({ onOpen, label }) {
-  return (
-    <button
-      type="button"
-      className="brand-btn"
-      onClick={onOpen}
-      aria-label={label ? undefined : 'Open menu'}
-      aria-haspopup="menu"
-    >
+  const content = (
+    <>
       {MARK}
       {label ? (
         <span className="brand-title">{label}</span>
@@ -49,7 +43,21 @@ export default function Brand({ onOpen, label }) {
           Game<b>Deck</b>
         </span>
       )}
-      {CARET}
+      {onOpen ? CARET : null}
+    </>
+  )
+
+  if (!onOpen) return <div className="brand-btn brand-static">{content}</div>
+
+  return (
+    <button
+      type="button"
+      className="brand-btn"
+      onClick={onOpen}
+      aria-label={label ? undefined : 'Open menu'}
+      aria-haspopup="menu"
+    >
+      {content}
     </button>
   )
 }

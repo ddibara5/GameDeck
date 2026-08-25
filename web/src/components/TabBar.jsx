@@ -49,6 +49,12 @@ export const TAB_ICONS = {
       <path d="M6.5 9h6M6.5 12h6M6.5 15h4" strokeLinecap="round" />
     </svg>
   ),
+  rankings: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 20V10h4v10M10 20V5h4v15M15 20v-7h4v7" />
+      <path d="M3 20h18" />
+    </svg>
+  ),
 }
 
 export default function TabBar({ tabs, active, onChange, badges, showLabels = true }) {

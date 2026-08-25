@@ -1,39 +1,51 @@
-// Minimal shared-secret for the /api/chat endpoint, stored on-device.
-// NOT shipped in the JS bundle: the user enters it once and it lives in
-// localStorage. It gates the one endpoint that spends money (the recommender);
-// every other tab reads Supabase directly under read-only RLS and needs no secret.
+import { useEffect, useState } from 'react'
+import { OWNER_EMAIL, supabase } from './supabase.js'
 
-const KEY = 'gamedeck_app_key_v1'
-
-export function getAppKey() {
-  try {
-    return localStorage.getItem(KEY) || null
-  } catch {
-    return null
-  }
+export function isOwnerSession(session) {
+  return session?.user?.email?.toLowerCase() === OWNER_EMAIL
 }
 
-export function setAppKey(value) {
-  try {
-    if (value) localStorage.setItem(KEY, value)
-    else localStorage.removeItem(KEY)
-  } catch {
-    /* storage unavailable */
-  }
+export function useAppSession() {
+  const [state, setState] = useState({ loading: true, session: null })
+
+  useEffect(() => {
+    let alive = true
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (!alive) return
+      if (error) console.error('GameDeck auth session read failed', error)
+      setState({ loading: false, session: isOwnerSession(data?.session) ? data.session : null })
+    })
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (alive) setState({ loading: false, session: isOwnerSession(session) ? session : null })
+    })
+    return () => {
+      alive = false
+      listener.subscription.unsubscribe()
+    }
+  }, [])
+
+  return state
 }
 
-// Prompt once for the access key, store it, return it (or null if cancelled).
-export function promptForKey() {
-  let entered = null
-  try {
-    entered = window.prompt('Enter your GameDeck access key to use Discover:')
-  } catch {
-    entered = null
-  }
-  entered = entered && entered.trim()
-  if (entered) {
-    setAppKey(entered)
-    return entered
-  }
-  return null
+export function sendMagicLink() {
+  return supabase.auth.signInWithOtp({
+    email: OWNER_EMAIL,
+    options: {
+      shouldCreateUser: true,
+      emailRedirectTo: window.location.origin,
+    },
+  })
+}
+
+export async function signOut() {
+  await supabase.auth.signOut()
+}
+
+export async function authFetch(input, init = {}) {
+  const { data, error } = await supabase.auth.getSession()
+  const token = data?.session?.access_token
+  if (error || !token) throw new Error('Your GameDeck session has expired. Sign in again.')
+  const headers = new Headers(init.headers || {})
+  headers.set('Authorization', `Bearer ${token}`)
+  return fetch(input, { ...init, headers })
 }

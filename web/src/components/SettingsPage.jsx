@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase.js'
-import { getAppKey, setAppKey, promptForKey } from '../lib/appAuth.js'
+import { OWNER_EMAIL, supabase } from '../lib/supabase.js'
+import { authFetch, signOut } from '../lib/appAuth.js'
 import {
   getTheme,
   setTheme,
@@ -91,7 +91,6 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
   const [latestPlay, setLatestPlay] = useState(null)
   const [sourceSync, setSourceSync] = useState({})
   const [version, setVersion] = useState(null)
-  const [keySet, setKeySet] = useState(() => Boolean(getAppKey()))
   const [theme, setThemeState] = useState(() => getTheme())
   const [accent, setAccentState] = useState(() => getAccent())
   const [shelfSize, setShelfSizeState] = useState(() => getShelfSize())
@@ -245,7 +244,7 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
     setSyncNote('Starting a sync')
     let res
     try {
-      res = await fetch('/api/sync', { method: 'POST' })
+      res = await authFetch('/api/sync', { method: 'POST' })
     } catch {
       setSyncing(false)
       setSyncNote('Could not reach the sync service.')
@@ -328,17 +327,6 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
     // picker appears to have done nothing.
     if (getGround() !== 'pinned') setGroundState(setGround('pinned'))
     pop()
-  }
-
-  function toggleKey() {
-    if (getAppKey()) {
-      if (!window.confirm('Forget the Discover access key on this device? You will be asked for it next time you open Discover.')) return
-      setAppKey(null)
-      setKeySet(false)
-    } else {
-      const k = promptForKey()
-      if (k) setKeySet(true)
-    }
   }
 
   if (!mounted) return null
@@ -453,11 +441,11 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
           <div className="settings-group">
             <MenuItem
               glyph={ICONS.key}
-              label="Device access"
-              sub={keySet ? 'Access key saved on this device' : 'No access key on this device'}
-              value={keySet ? 'Forget' : 'Enter'}
+              label="Signed in"
+              sub={OWNER_EMAIL}
+              value="Sign out"
               valueAccent
-              onClick={toggleKey}
+              onClick={() => signOut()}
               chevron={false}
             />
             <MenuItem

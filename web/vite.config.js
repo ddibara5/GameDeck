@@ -8,7 +8,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         /**
-         * React and postgrest-js get their own chunks, and the reason is deploy
+         * React and the Supabase auth/PostgREST pair get their own chunks, and the reason is deploy
          * cost rather than launch cost.
          *
          * Everything used to land in one 232.5kB entry chunk whose name carries a
@@ -16,10 +16,10 @@ export default defineConfig({
          * React. Measured on a real build:
          *
          *   vendor-react  141.8kB  (45.4kB gz)  changes when React does
-         *   vendor-db      16.3kB  ( 5.1kB gz)  changes when postgrest-js does
+         *   vendor-db     119.2kB  (29.5kB gz)  changes when Supabase does
          *   app entry      75.3kB  (24.2kB gz)  changes when you deploy
          *
-         * A deploy goes from 74.3kB gzipped to 24.2kB. It costs one extra request
+         * The auth cost is isolated from ordinary app deploys. It costs one extra request
          * on a genuinely cold launch and nothing at all after that, because
          * sw.js cache-firsts /assets/* and a chunk whose name did not change is
          * never fetched twice.

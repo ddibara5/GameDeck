@@ -114,16 +114,25 @@ export function matchesFilters(game, f, gamePass) {
 
 // Weighting, not filtering. A boosted game is likelier to come up; nothing is
 // ever excluded by it, and the reason is always shown on the result.
-export function weightFor(item, { mode, gamePass, boost }) {
-  if (!boost) return { weight: 1, reason: null }
+export function weightFor(item, { mode, gamePass, boost, personalRanks }) {
+  let weight = 1
+  let reason = null
+  if (mode === 'play' && personalRanks) {
+    const score = Number(personalRanks.get(Number(item.master_id)))
+    if (Number.isFinite(score)) {
+      weight *= Math.max(0.8, Math.min(1.2, 1 + (score - 1500) / 750))
+      if (score >= 1575) reason = 'high in My Ranking'
+    }
+  }
+  if (!boost) return { weight, reason }
   const gp = gamePass && gamePass.get(Number(item.igdb_id))
-  if (!gp) return { weight: 1, reason: null }
+  if (!gp) return { weight, reason }
   if (mode === 'buy') {
     // The best outcome of "what should I buy" is finding out you need not buy it.
-    return { weight: 0.25, reason: 'Game Pass already covers it' }
+    return { weight: weight * 0.25, reason: 'Game Pass already covers it' }
   }
-  if (gp.leaving_soon) return { weight: 4, reason: 'leaving Game Pass soon' }
-  return { weight: 1.5, reason: 'on Game Pass' }
+  if (gp.leaving_soon) return { weight: weight * 4, reason: 'leaving Game Pass soon' }
+  return { weight: weight * 1.5, reason: reason || 'on Game Pass' }
 }
 
 // `rand` is injectable so the distribution can be tested deterministically.
@@ -151,7 +160,7 @@ export function eligible({ items, mode, pool, filters, gamePass, statusOf }) {
 
 // The whole selection, end to end. Returns the pick plus everything the "why"
 // line needs, so the UI never has to recompute the reasoning it displays.
-export function shuffle({ items, mode, pool, filters, gamePass, exclude, boost, rand, statusOf }) {
+export function shuffle({ items, mode, pool, filters, gamePass, personalRanks, exclude, boost, rand, statusOf }) {
   const pooled = eligible({ items, mode, pool, filters, gamePass, statusOf })
   let pickable = pooled
   if (exclude != null && pickable.length > 1) {
@@ -160,7 +169,7 @@ export function shuffle({ items, mode, pool, filters, gamePass, exclude, boost, 
   }
   if (!pickable.length) return { pick: null, poolSize: pooled.length, reason: null }
 
-  const weighted = pickable.map((it) => weightFor(it, { mode, gamePass, boost }))
+  const weighted = pickable.map((it) => weightFor(it, { mode, gamePass, boost, personalRanks }))
   const pick = weightedPick(pickable, weighted.map((w) => w.weight), rand)
   const idx = pickable.indexOf(pick)
   return {

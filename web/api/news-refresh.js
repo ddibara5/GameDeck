@@ -20,39 +20,19 @@
 //   N8N_REFRESH_TOKEN            - shared secret sent as the x-refresh-token
 //                                  header (the same one api/sync.js uses)
 
+import { requireOwner } from './_auth.js';
+
 export default async function handler(req, res) {
   // Trim defensively: a stray space or newline pasted into the env value would
   // otherwise make the URL invalid or point at the wrong path.
   const url = (process.env.N8N_NEWS_REFRESH_WEBHOOK_URL || '').trim();
   const token = (process.env.N8N_REFRESH_TOKEN || '').trim();
 
-  // Non-secret diagnostic: GET reports what this function is configured to
-  // call, without ever exposing the token.
-  if (req.method === 'GET') {
-    let urlHost = null;
-    let urlPath = null;
-    let urlParseError = null;
-    try {
-      const u = new URL(url);
-      urlHost = u.host;
-      urlPath = u.pathname;
-    } catch (e) {
-      urlParseError = String((e && e.message) || e);
-    }
-    res.status(200).json({
-      configured: Boolean(url),
-      urlHost,
-      urlPath,
-      urlParseError,
-      tokenSet: Boolean(token),
-    });
-    return;
-  }
-
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
     return;
   }
+  if (!(await requireOwner(req, res))) return;
 
   if (!url) {
     // Not wired up yet - fail soft. The News tab treats any non-2xx as "could
@@ -88,6 +68,7 @@ export default async function handler(req, res) {
     // Surface exactly what n8n replied so failures are diagnosable.
     res.status(502).json({ status: 'trigger-failed', upstream: r.status, detail: bodyText.slice(0, 300) });
   } catch (err) {
+    console.error(JSON.stringify({ event: 'news_refresh_failed', error: String((err && err.message) || err) }));
     res.status(500).json({ error: 'Server error', detail: String((err && err.message) || err) });
   }
 }

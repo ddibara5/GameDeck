@@ -60,15 +60,19 @@ const PROBE_TTL = 24 * 60 * 60 * 1000
 // than lifetime totals: a library's all-time top is a decade of history, and
 // what you have been playing lately is what a discovery feed should look like.
 async function fetchTasteProbe() {
-  const { data, error } = await supabase
-    .from('games')
-    .select('title, keywords, playtime_minutes, last_played')
-    .gte('playtime_minutes', 120)
-    .not('last_played', 'is', null)
-    .order('last_played', { ascending: false })
-    .limit(60)
-  if (error) throw new Error(error.message || 'Taste probe failed')
-  return data || []
+  const [gameRes, rankRes] = await Promise.all([
+    supabase
+      .from('games')
+      .select('master_id, title, keywords, playtime_minutes, last_played')
+      .gte('playtime_minutes', 120)
+      .not('last_played', 'is', null)
+      .order('last_played', { ascending: false })
+      .limit(60),
+    supabase.from('game_ranks').select('master_id, score, reaction'),
+  ])
+  if (gameRes.error) throw new Error(gameRes.error.message || 'Taste probe failed')
+  const ranks = new Map((rankRes.data || []).map((row) => [String(row.master_id), row]))
+  return (gameRes.data || []).map((row) => ({ ...row, personalRank: ranks.get(String(row.master_id)) || null }))
 }
 
 // Rank the catalog against the probe. A lane needs at least two games behind it,
@@ -84,8 +88,13 @@ export function rankLanes(rows) {
       const kw = (r && r.keywords) || []
       if (!lane.terms.some((t) => kw.indexOf(t) >= 0)) continue
       count += 1
-      minutes += Number(r.playtime_minutes) || 0
-      if (!top || (Number(r.playtime_minutes) || 0) > (Number(top.playtime_minutes) || 0)) top = r
+      // Explicit ranking nudges a lane without replacing the play evidence. A
+      // 1650 favorite is worth 1.3x its minutes, a 1350 "not for me" is worth
+      // 0.7x. Unranked games stay exactly 1x.
+      const rankWeight = r.personalRank ? Math.max(0.7, Math.min(1.3, 1 + (Number(r.personalRank.score) - 1500) / 500)) : 1
+      const weightedMinutes = (Number(r.playtime_minutes) || 0) * rankWeight
+      minutes += weightedMinutes
+      if (!top || weightedMinutes > (Number(top.weightedMinutes) || 0)) top = { ...r, weightedMinutes }
     }
     if (count >= 2) out.push({ ...lane, minutes, count, exemplar: top ? top.title : null })
   }

@@ -7,40 +7,19 @@
 //   N8N_REFRESH_WEBHOOK_URL - production webhook URL of the "Refresh Trigger" workflow
 //   N8N_REFRESH_TOKEN       - shared secret sent as the x-refresh-token header
 
+import { requireOwner } from './_auth.js';
+
 export default async function handler(req, res) {
   // Trim defensively: a stray space/newline pasted into the env value would
   // otherwise make the URL invalid or point at the wrong path.
   const url = (process.env.N8N_REFRESH_WEBHOOK_URL || '').trim();
   const token = (process.env.N8N_REFRESH_TOKEN || '').trim();
 
-  // Non-secret diagnostic: GET reports what this function is configured to call,
-  // without ever exposing the token. Handy for verifying the env values.
-  if (req.method === 'GET') {
-    let urlHost = null;
-    let urlPath = null;
-    let urlParseError = null;
-    try {
-      const u = new URL(url);
-      urlHost = u.host;
-      urlPath = u.pathname;
-    } catch (e) {
-      urlParseError = String((e && e.message) || e);
-    }
-    res.status(200).json({
-      configured: Boolean(url),
-      urlHost,
-      urlPath,
-      urlParseError,
-      tokenSet: Boolean(token),
-      appSecretSet: Boolean(process.env.GAMEDECK_APP_SECRET),
-    });
-    return;
-  }
-
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
     return;
   }
+  if (!(await requireOwner(req, res))) return;
 
   if (!url) {
     // Feature not wired up yet - fail soft so the button shows a friendly note.
@@ -74,6 +53,7 @@ export default async function handler(req, res) {
     // Surface exactly what n8n replied so failures are diagnosable.
     res.status(502).json({ status: 'trigger-failed', upstream: r.status, detail: bodyText.slice(0, 300) });
   } catch (err) {
+    console.error(JSON.stringify({ event: 'sync_trigger_failed', error: String((err && err.message) || err) }));
     res.status(500).json({ error: 'Server error', detail: String((err && err.message) || err) });
   }
 }

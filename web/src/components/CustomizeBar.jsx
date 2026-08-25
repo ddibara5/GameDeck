@@ -33,9 +33,9 @@ const resetBarConfig = () => {
   return { order: c.bar, enabled: c.enabled }
 }
 
-// Two is the fewest a bar can carry and still be a bar. There is no ceiling: the
-// catalog holds exactly five bar-eligible destinations and five is what fits, so
-// the ceiling is the catalog rather than a rule to enforce.
+// Two is the fewest a bar can carry and still be a bar. There is no hard ceiling:
+// Ranking is an optional sixth shortcut, and the preview makes the density
+// tradeoff visible before the user keeps it.
 const lockOff = (key, enabled) => Object.values(enabled).filter(Boolean).length <= MIN_VISIBLE
 
 export default function CustomizeBar({ open, onClose }) {

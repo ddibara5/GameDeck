@@ -4,13 +4,15 @@
 //
 // Required env vars (set in Vercel project settings):
 //   ANTHROPIC_API_KEY   - your Anthropic API key (server-side only)
-//   SUPABASE_URL        - https://YOUR-PROJECT.supabase.co
-//   SUPABASE_ANON_KEY   - the public anon key (read-only; RLS allows SELECT)
+//   VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY - publishable client config
 // Optional:
 //   CLAUDE_MODEL        - defaults to claude-haiku-4-5
-//   GAMEDECK_APP_SECRET - if set, callers must send header `x-gamedeck-key` matching it
+//   GAMEDECK_ALLOWED_EMAIL - defaults to the single GameDeck owner
 
-const MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-5';
+import { clientIp, requireOwner } from './_auth.js';
+import { rateLimit } from './_rateLimit.js';
+
+const MODEL = process.env.CLAUDE_MODEL || 'claude-haiku-4-5';
 
 const SYSTEM_PROMPT = `You are GameDeck, a sharp gaming concierge and recommender for one person, Dave.
 Your default job is to recommend NEW games Dave does NOT already own, worth playing next. His library (below) is CONTEXT, not the menu: use it two ways - (1) as his taste profile, and (2) as a do-not-recommend list, so you never suggest a game he already owns unless he explicitly asks for one. Use web search to find current, real information (new and upcoming releases, what is on Game Pass now, review reception, how long a game is, rough price).
@@ -42,16 +44,23 @@ FINAL CHECK before you send - re-read each pick and fix any that fail:
 3. Are all stats (hours, completion, ownership, "you played X") taken only from the data below, with nothing invented?
 Fix any failing pick before you answer.`;
 
-async function loadCatalog() {
-  const base = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_ANON_KEY;
+async function loadCatalog(req) {
+  const base = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
   if (!base || !key) throw new Error('Supabase env vars are not configured.');
 
-  const cols = 'title,environment,percent,playtime_minutes,earned_awards,total_awards,last_played,status';
+  const cols = 'master_id,title,environment,percent,playtime_minutes,earned_awards,total_awards,last_played,status';
   const url = `${base}/rest/v1/games?select=${cols}&order=last_played.desc.nullslast&limit=5000`;
-  const res = await fetch(url, { headers: { apikey: key, Authorization: `Bearer ${key}` } });
+  const rankUrl = `${base}/rest/v1/game_ranks?select=master_id,score,reaction,comparison_count`;
+  const headers = { apikey: key, Authorization: req.headers.authorization };
+  const [res, rankRes] = await Promise.all([
+    fetch(url, { headers }),
+    fetch(rankUrl, { headers }),
+  ]);
   if (!res.ok) throw new Error(`Supabase read failed: ${res.status}`);
   const rows = await res.json();
+  const rankRows = rankRes.ok ? await rankRes.json() : [];
+  const ranks = new Map(rankRows.map((r) => [String(r.master_id), r]));
 
   const plat = { xbox: 'Xbox', psn: 'PS', steam: 'Steam' };
   let backlogCount = 0;
@@ -61,8 +70,10 @@ async function loadCatalog() {
     const pct = Math.round(g.percent || 0);
     const unplayed = !g.last_played && (g.playtime_minutes || 0) === 0;
     if (unplayed) backlogCount++;
+    const rank = ranks.get(String(g.master_id));
     const tag = unplayed ? ' | UNPLAYED' : '';
-    return `${g.title} | ${plat[g.environment] || g.environment} | ${pct}% | ${h}h | ach ${g.earned_awards || 0}/${g.total_awards || 0} | last ${yr}${tag}`;
+    const personalRank = rank ? ` | MY-RANK ${Math.round(rank.score)} (${rank.reaction}, ${rank.comparison_count} comparisons)` : '';
+    return `${g.title} | ${plat[g.environment] || g.environment} | ${pct}% | ${h}h | ach ${g.earned_awards || 0}/${g.total_awards || 0} | last ${yr}${tag}${personalRank}`;
   });
 
   const header = `Dave's library: ${rows.length} games, of which ${backlogCount} are owned but NEVER played (his backlog, tagged UNPLAYED). Format: Title | Platform | Completion% | Hours | Achievements | LastPlayed(YYYY-MM) | UNPLAYED(only if never played)`;
@@ -75,12 +86,12 @@ export default async function handler(req, res) {
     return;
   }
 
-  // Optional shared-secret guard for this (paid) endpoint. If GAMEDECK_APP_SECRET is
-  // set in the Vercel project, every request must send a matching x-gamedeck-key header.
-  // If unset, the endpoint stays open, so deploying this never breaks the app until you opt in.
-  const APP_SECRET = process.env.GAMEDECK_APP_SECRET;
-  if (APP_SECRET && req.headers['x-gamedeck-key'] !== APP_SECRET) {
-    res.status(401).json({ error: 'Unauthorized' });
+  const user = await requireOwner(req, res);
+  if (!user) return;
+  const quota = rateLimit(`chat:${user.id}:${clientIp(req)}`, { limit: 12, windowMs: 10 * 60 * 1000 });
+  if (!quota.allowed) {
+    res.setHeader('Retry-After', String(quota.retryAfter));
+    res.status(429).json({ error: 'Too many requests. Try again shortly.' });
     return;
   }
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -94,14 +105,18 @@ export default async function handler(req, res) {
     const clean = messages
       .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
       .slice(-16) // keep the last 16 turns
-      .map((m) => ({ role: m.role, content: m.content }));
+      .map((m) => ({ role: m.role, content: m.content.trim() }));
 
     if (clean.length === 0 || clean[clean.length - 1].role !== 'user') {
       res.status(400).json({ error: 'messages must end with a user turn' });
       return;
     }
+    if (clean.some((m) => m.content.length > 4000) || clean.reduce((n, m) => n + m.content.length, 0) > 16000) {
+      res.status(413).json({ error: 'Conversation is too long. Start a new chat or shorten the message.' });
+      return;
+    }
 
-    const catalog = await loadCatalog();
+    const catalog = await loadCatalog(req);
 
     const requestBody = {
       model: MODEL,
@@ -173,6 +188,7 @@ export default async function handler(req, res) {
 
     res.status(200).json({ reply: reply || 'No reply.' });
   } catch (err) {
+    console.error(JSON.stringify({ event: 'chat_failed', error: String(err && err.message || err) }));
     res.status(500).json({ error: 'Server error', detail: String(err && err.message || err) });
   }
 }

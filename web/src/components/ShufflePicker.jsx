@@ -15,6 +15,7 @@ import { PLAY_POOLS, BUY_POOLS, LENGTH_STEPS, shuffle, shuffleId, eligible, topG
 import { availableVibes } from '../lib/vibes.js'
 import { useVibeKeywords } from '../lib/useLibraryGames.js'
 import './shuffle.css'
+import { supabase } from '../lib/supabase.js'
 
 // Horizontal travel before a drag counts as a swipe rather than a stray finger.
 const SWIPE_PX = 56
@@ -38,6 +39,7 @@ export default function ShufflePicker({ open, onClose }) {
   const { items: wishItems } = useWishlist()
   const statusMap = useStatusMap()
   const [gamePass, setGamePass] = useState(null)
+  const [personalRanks, setPersonalRanks] = useState(new Map())
 
   // Buy opens first, so the initial pool must be a BUY pool - 'never' belongs to
   // the play side and would leave the pool row with nothing selected.
@@ -74,6 +76,15 @@ export default function ShufflePicker({ open, onClose }) {
     return () => {
       alive = false
     }
+  }, [])
+
+  useEffect(() => {
+    let alive = true
+    supabase.from('game_ranks').select('master_id,score').then(({ data }) => {
+      if (!alive) return
+      setPersonalRanks(new Map((data || []).map((row) => [Number(row.master_id), Number(row.score)])))
+    })
+    return () => { alive = false }
   }, [])
 
   // Wishlist rows carry title/cover/year and nothing else, so Buy mode had no
@@ -144,7 +155,7 @@ export default function ShufflePicker({ open, onClose }) {
     const d = deck.current
     const current = d.at >= 0 ? d.list[d.at] : null
     const outcome = shuffle({
-      items, mode, pool, filters, gamePass, statusOf,
+      items, mode, pool, filters, gamePass, personalRanks, statusOf,
       exclude: !reset && current && current.pick ? shuffleId(current.pick, mode) : null,
       boost,
     })

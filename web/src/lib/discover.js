@@ -3,6 +3,7 @@
 // user's own library titles (so we can badge games already owned).
 
 import { supabase } from './supabase.js'
+import { authFetch } from './appAuth.js'
 import { swr, idbGet, idbSet } from './idbCache.js'
 
 // How long a persisted payload is served without even asking the network.
@@ -32,7 +33,7 @@ export async function fetchDiscover(params) {
   const key = buildQuery(params)
   if (_cache.has(key)) return _cache.get(key)
 
-  const res = await fetch(`/api/discover?${key}`)
+  const res = await authFetch(`/api/discover?${key}`)
   if (!res.ok) throw new Error(`Discover request failed (${res.status})`)
   const data = await res.json()
   const games = Array.isArray(data.games) ? data.games : []
@@ -62,7 +63,7 @@ function homeFilterParams(filters) {
 
 async function fetchHomeNetwork(list, limit, params) {
   const qs = new URLSearchParams({ home: list.join(','), limit: String(limit), ...params })
-  const res = await fetch(`/api/discover?${qs.toString()}`)
+  const res = await authFetch(`/api/discover?${qs.toString()}`)
   if (!res.ok) throw new Error(`Discover home failed (${res.status})`)
   const data = await res.json()
   return data && data.rails && typeof data.rails === 'object' ? data.rails : {}
@@ -101,7 +102,7 @@ const LANE_TTL = 30 * 60 * 1000
 async function fetchLanesNetwork(list, limit, platform) {
   const qs = new URLSearchParams({ lanes: list.join(','), limit: String(limit) })
   if (platform && platform !== 'all') qs.set('platform', platform)
-  const res = await fetch(`/api/discover?${qs.toString()}`)
+  const res = await authFetch(`/api/discover?${qs.toString()}`)
   if (!res.ok) throw new Error(`Discover lanes failed (${res.status})`)
   const data = await res.json()
   return data && data.lanes && typeof data.lanes === 'object' ? data.lanes : {}

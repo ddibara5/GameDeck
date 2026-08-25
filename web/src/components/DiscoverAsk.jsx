@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import ChatMessage from './ChatMessage.jsx'
-import { getAppKey, promptForKey } from '../lib/appAuth.js'
+import { authFetch } from '../lib/appAuth.js'
 
 const SUGGESTIONS = [
   'New releases for my taste',
@@ -136,22 +136,16 @@ export default function DiscoverAsk({ seedPrompt, onSeedConsumed }) {
 
     try {
       const postChat = () => {
-        const key = getAppKey()
-        return fetch('/api/chat', {
+        return authFetch('/api/chat', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...(key ? { 'x-gamedeck-key': key } : {}),
           },
           body: JSON.stringify({ messages: nextMessages }),
         })
       }
 
-      let res = await postChat()
-      if (res.status === 401) {
-        const entered = promptForKey()
-        if (entered) res = await postChat()
-      }
+      const res = await postChat()
 
       if (!res.ok) throw new Error(`Request failed (${res.status})`)
 

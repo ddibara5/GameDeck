@@ -11,6 +11,9 @@ import { warmOnIdle } from './lib/warmChunks.js'
 import CustomizeRows from './components/CustomizeRows.jsx'
 import CustomizeNav from './components/CustomizeNav.jsx'
 import CustomizeBar from './components/CustomizeBar.jsx'
+import AuthGate from './components/AuthGate.jsx'
+import { useAppSession } from './lib/appAuth.js'
+import AppErrorBoundary from './components/AppErrorBoundary.jsx'
 
 // Code-split each tab and the overlay views into their own chunk so the initial
 // bundle only carries the shell + the first (Library) tab. The service worker
@@ -29,6 +32,7 @@ const TAB_LOADERS = {
   discover: () => import('./components/DiscoverTab.jsx'),
   news: () => import('./components/NewsTab.jsx'),
   wishlist: () => import('./components/WishlistTab.jsx'),
+  rankings: () => import('./components/RankingsTab.jsx'),
 }
 
 const HomeTab = lazy(TAB_LOADERS.home)
@@ -38,6 +42,7 @@ const InsightsTab = lazy(TAB_LOADERS.insights)
 const DiscoverTab = lazy(TAB_LOADERS.discover)
 const NewsTab = lazy(TAB_LOADERS.news)
 const WishlistTab = lazy(TAB_LOADERS.wishlist)
+const RankingsTab = lazy(TAB_LOADERS.rankings)
 const ListView = lazy(() => import('./components/ListView.jsx'))
 const ShufflePicker = lazy(() => import('./components/ShufflePicker.jsx'))
 
@@ -49,6 +54,13 @@ const CLOSE_DX = 60
 const VIEW_EXIT_MS = 220
 
 export default function App() {
+  const { loading, session } = useAppSession()
+  if (loading) return <div className="auth-loading" role="status">Opening GameDeck…</div>
+  if (!session) return <AuthGate />
+  return <AppErrorBoundary><GameDeckApp /></AppErrorBoundary>
+}
+
+function GameDeckApp() {
   // Open on whatever tab is leftmost in the saved layout (not always Library), so
   // reordering the tab bar also changes the landing tab.
   const [activeTab, setActiveTab] = useState(() => visibleKeys(getNavConfig())[0] || 'library')
@@ -233,6 +245,7 @@ export default function App() {
           {activeTab === 'insights' && <InsightsTab />}
           {activeTab === 'discover' && <DiscoverTab onCustomize={() => setCustomizeOpen(true)} />}
           {activeTab === 'news' && <NewsTab />}
+          {activeTab === 'rankings' && <RankingsTab />}
         </Suspense>
       </main>
       {view ? (

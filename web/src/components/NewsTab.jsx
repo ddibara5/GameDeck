@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { authFetch } from '../lib/appAuth.js'
 import {
   fetchNews,
   groupByWeek,
@@ -105,7 +106,7 @@ export default function NewsTab() {
       // gesture for two minutes.
       if (canTrigger) {
         try {
-          await fetch('/api/news-refresh', { method: 'POST' })
+          await authFetch('/api/news-refresh', { method: 'POST' })
         } catch {
           // Offline, or the route is not deployed yet. Re-reading the table is
           // still the useful half of a refresh, so carry on.

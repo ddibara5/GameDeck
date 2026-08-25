@@ -1,6 +1,7 @@
 // Vercel serverless function - GameDeck "Discover" catalog proxy.
 // Talks to IGDB (via Twitch app credentials) so the client never sees the secret.
-// Read-only game metadata; no per-request cost, so this endpoint is left ungated.
+// Read-only game metadata, but Twitch/IGDB quotas are still finite. Every request
+// is authenticated as the GameDeck owner and rate-limited before a token is used.
 //
 // Required env vars (Vercel project settings):
 //   TWITCH_CLIENT_ID       - your Twitch application's Client ID
@@ -13,6 +14,9 @@
 //   /api/discover?genre=role-playing-rpg&platform=xbox&year=2024&sort=rating&page=0
 //   add &status=released|upcoming to constrain by availability (release date vs now)
 //   add &debug=1 to see the generated IGDB query in the response
+
+import { clientIp, requireOwner } from './_auth.js';
+import { rateLimit } from './_rateLimit.js';
 
 const IGDB = 'https://api.igdb.com/v4';
 const IMG = (id, size) => (id ? `https://images.igdb.com/igdb/image/upload/t_${size}/${id}.jpg` : null);
@@ -414,8 +418,21 @@ export default async function handler(req, res) {
     res.status(405).json({ error: 'Method not allowed' });
     return;
   }
+  const user = await requireOwner(req, res);
+  if (!user) return;
+  const quota = rateLimit(`discover:${user.id}:${clientIp(req)}`, { limit: 120, windowMs: 10 * 60 * 1000 });
+  if (!quota.allowed) {
+    res.setHeader('Retry-After', String(quota.retryAfter));
+    res.status(429).json({ error: 'Too many catalog requests. Try again shortly.' });
+    return;
+  }
   try {
     const q = req.query || {};
+    const queryChars = Object.values(q).reduce((n, value) => n + String(value || '').length, 0);
+    if (queryChars > 1200) {
+      res.status(413).json({ error: 'Query is too long.' });
+      return;
+    }
 
     // Taxonomy lookup, for adding entries to PRESETS. PRESETS filters by IGDB id,
     // and a guessed id fails silently in the worst way: the query still succeeds
@@ -645,6 +662,7 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=1800');
     res.status(200).json({ games: windowed.map(normalize) });
   } catch (err) {
+    console.error(JSON.stringify({ event: 'discover_failed', error: String((err && err.message) || err) }));
     res.status(500).json({ error: 'Discover failed', detail: String((err && err.message) || err) });
   }
 }

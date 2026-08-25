@@ -4,11 +4,11 @@ A live, self-updating database of my full Exophase game library (Xbox + PSN + St
 
 ## How it works
 
-Every 6 hours, an **n8n Cloud** workflow pulls my library and play history from the Exophase API. Each request is routed through a self-hosted **FlareSolverr** instance (headless Chromium) that clears Exophase's Cloudflare challenge - datacenter IPs get 403'd hitting the API directly. Parsed results are upserted into **Supabase** (Postgres): the live library, a per-day play-history log, and a run heartbeat.
+Every 6 hours, **n8n Cloud** pulls the library and play history from the platform APIs, with a private token-gated fallback proxy where needed. Parsed results are upserted into **Supabase** (Postgres): the live library, a per-day play-history log, and a run heartbeat.
 
 A second n8n workflow enriches each game with **genre, release year, story length, and cover art from IGDB**.
 
-The **React PWA on Vercel** reads the library straight from Supabase. Its Discover tab calls a serverless function that runs **Claude (Haiku) with web search** to recommend what to play next, grounded in the games I own.
+The **React PWA on Vercel** uses passwordless owner sign-in and reads through Supabase RLS. Its Discover tab calls an authenticated serverless function that runs **Claude (Haiku) with web search** to recommend what to play next, grounded in the games I own and my explicit ranking.
 
 ```
 Exophase API ──6h──> n8n Cloud ──> FlareSolverr (Oracle VM)  [Cloudflare cleared]
