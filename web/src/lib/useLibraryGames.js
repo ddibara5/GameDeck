@@ -143,15 +143,32 @@ export function useAchievementsUrl(masterId, fallback) {
       return undefined
     }
     let alive = true
-    supabase
-      .from('games')
-      .select('achievements_url')
-      .eq('master_id', masterId)
-      .maybeSingle()
-      .then(({ data }) => {
-        const next = (data && data.achievements_url) || null
-        urlCache.set(key, next)
-        if (alive) setUrl(next)
+    swr(
+      `library:achievements:${key}`,
+      async () => {
+        const { data } = await supabase
+          .from('games')
+          .select('achievements_url')
+          .eq('master_id', masterId)
+          .maybeSingle()
+        // `false` is persisted; null means "do not cache" to swr(). Remembering
+        // that a game has no link avoids repeating the same lookup on every open.
+        return (data && data.achievements_url) || false
+      },
+      {
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        onFresh: (value) => {
+          const next = value || null
+          urlCache.set(key, next)
+          if (alive) setUrl(next)
+        },
+      },
+    )
+      .then(({ value }) => {
+        // A background refresh can beat the stale return from swr(). Keep the
+        // fresher value already promoted by the callback when that happens.
+        if (!urlCache.has(key)) urlCache.set(key, value || null)
+        if (alive) setUrl(urlCache.get(key))
       })
       // A missing link just means no link is rendered. Nothing to surface.
       .catch(() => {})

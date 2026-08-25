@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { authFetch } from '../lib/appAuth.js'
 import {
-  fetchNews,
+  getNewsCache,
+  loadNews,
   groupByWeek,
   dedupeSources,
   buildLibraryIndex,
@@ -39,8 +40,9 @@ const COOLDOWN_MS = 5 * 60 * 1000
 const NOTE_MS = 4000
 
 export default function NewsTab() {
-  const [rows, setRows] = useState([])
-  const [loading, setLoading] = useState(true)
+  const cachedRows = getNewsCache()
+  const [rows, setRows] = useState(() => cachedRows || [])
+  const [loading, setLoading] = useState(() => !cachedRows)
   const [gamepassIds, setGamepassIds] = useState(null)
   const [openGame, setOpenGame] = useState(null)
   // The story whose sheet is up. { item, rel } rather than an id, because the
@@ -55,8 +57,13 @@ export default function NewsTab() {
   const [sort, setSortState] = useState(getNewsSort)
   const chooseSort = (v) => setSortState(setNewsSort(v))
 
-  const load = useCallback(async () => {
-    const data = await fetchNews()
+  const load = useCallback(async (force = false) => {
+    const apply = (data) => {
+      if (!mountedRef.current) return
+      setRows(data)
+      markNewsSeen(newestStamp(data))
+    }
+    const data = await loadNews(force, apply)
     if (!mountedRef.current) return data
     setRows(data)
     // Seen is tracked by the newest created_at rather than the week, because a
@@ -68,7 +75,7 @@ export default function NewsTab() {
   useEffect(() => {
     mountedRef.current = true
     ;(async () => {
-      setLoading(true)
+      if (!cachedRows) setLoading(true)
       await load()
       if (mountedRef.current) setLoading(false)
     })()
@@ -112,7 +119,7 @@ export default function NewsTab() {
           // still the useful half of a refresh, so carry on.
         }
       }
-      const data = await load()
+      const data = await load(true)
       const gained = data.length - before
       if (gained > 0) return `${gained} new ${gained === 1 ? 'story' : 'stories'}`
       return canTrigger ? 'Checking for new stories' : 'Up to date'

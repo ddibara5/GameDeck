@@ -14,8 +14,8 @@ import { useStatusMap, effectiveStatus } from '../lib/userStatus.js'
 import { PLAY_POOLS, BUY_POOLS, LENGTH_STEPS, shuffle, shuffleId, eligible, topGenres } from '../lib/shuffle.js'
 import { availableVibes } from '../lib/vibes.js'
 import { useVibeKeywords } from '../lib/useLibraryGames.js'
+import { loadRankingScores } from '../lib/ranking.js'
 import './shuffle.css'
-import { supabase } from '../lib/supabase.js'
 
 // Horizontal travel before a drag counts as a swipe rather than a stray finger.
 const SWIPE_PX = 56
@@ -80,7 +80,7 @@ export default function ShufflePicker({ open, onClose }) {
 
   useEffect(() => {
     let alive = true
-    supabase.from('game_ranks').select('master_id,score').then(({ data }) => {
+    loadRankingScores().then((data) => {
       if (!alive) return
       setPersonalRanks(new Map((data || []).map((row) => [Number(row.master_id), Number(row.score)])))
     })
