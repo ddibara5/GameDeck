@@ -1,3 +1,9 @@
+## Current standing authorization
+
+For GameDeck, after I approve implementation or say “proceed,” automatically commit and push the tested change to `main` through the n8n workflow. Do not request separate push approval.
+
+---
+
 > **SUPERSEDED - historical reference only.**
 > GameDeck is now fully cloud (n8n Cloud + Oracle VM + Supabase + Vercel), with no Mac
 > dependency. This file documents the original local-Mac bring-up, which was retired (see
