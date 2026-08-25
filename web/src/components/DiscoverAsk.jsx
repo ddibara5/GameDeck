@@ -3,10 +3,10 @@ import ChatMessage from './ChatMessage.jsx'
 import { authFetch } from '../lib/appAuth.js'
 
 const SUGGESTIONS = [
-  'New releases for my taste',
-  'Hidden gems not in my library',
-  'New on Game Pass for me',
-  'Upcoming games to watch',
+  "A shorter game I'll love",
+  'Hidden gems like my top-ranked games',
+  "What's new on my platforms?",
+  'Upcoming games that fit my taste',
 ]
 
 const STORAGE_KEY = 'gamedeck_chats_v1'
@@ -269,7 +269,7 @@ export default function DiscoverAsk({ seedPrompt, onSeedConsumed }) {
           {!hasStarted && (
             <>
               <div className="chat-intro">
-                <p className="page-subtitle">Find your next game: new releases and hidden gems, picked from your taste.</p>
+                <p className="page-subtitle">Recommendations use your library, recent play, platforms, wishlist, and My Ranking.</p>
               </div>
               <div className="chat-suggestions">
                 {SUGGESTIONS.map((s) => (

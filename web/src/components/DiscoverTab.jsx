@@ -1,98 +1,167 @@
-import { useEffect, useState } from 'react'
-import DiscoverBrowse from './DiscoverBrowse.jsx'
+import { lazy, Suspense, useState } from 'react'
 import DiscoverForYou from './DiscoverForYou.jsx'
-import DiscoverAsk from './DiscoverAsk.jsx'
 import { preloadMarkdown } from './ChatMessage.jsx'
 import './discover.css'
 
-// Discover is three modes behind a segmented control:
-//   For you - a vertical feed of unowned, on-platform games, each row carrying
-//             the reason it is there (see DiscoverForYou)
-//   Browse  - the filterable IGDB catalog (rails, presets, search, detail
-//             sheets), UNCHANGED
-//   Ask     - the AI game-picker chat, unchanged
-//
-// For you leads, because it is the answer to "what should I play" and Browse is
-// the answer to "show me the storefront", and the first question is the one
-// this tab is opened for. Browse is not replaced or reduced: the feed narrows
-// hard by design, and the wider catalog has to stay one tap away or the
-// narrowing becomes a cage.
-export default function DiscoverTab({ onCustomize }) {
-  const [subTab, setSubTab] = useState('foryou')
-  const [seedPrompt, setSeedPrompt] = useState(null)
+const MODE_KEY = 'gamedeck_discover_mode_v1'
 
-  function askAbout(game) {
-    const bits = [`What can you tell me about "${game.name}"`]
-    if (game.year) bits.push(` (${game.year})`)
-    bits.push('? Would it fit my taste, and is it on Game Pass?')
-    setSeedPrompt(bits.join(''))
-    setSubTab('ask')
+const loadDiscoverBrowse = () => import('./DiscoverBrowse.jsx')
+const loadDiscoverAsk = () => import('./DiscoverAsk.jsx')
+const DiscoverBrowse = lazy(loadDiscoverBrowse)
+const DiscoverAsk = lazy(loadDiscoverAsk)
+
+function initialMode() {
+  try {
+    return sessionStorage.getItem(MODE_KEY) === 'browse' ? 'browse' : 'foryou'
+  } catch {
+    return 'foryou'
+  }
+}
+
+export default function DiscoverTab({ onCustomize }) {
+  const [mode, setMode] = useState(initialMode)
+  const [visited, setVisited] = useState(() => new Set([mode]))
+  const [askOpen, setAskOpen] = useState(false)
+  const [seedPrompt, setSeedPrompt] = useState(null)
+  const [filterToken, setFilterToken] = useState(0)
+
+  function selectMode(next) {
+    if (next === 'browse') loadDiscoverBrowse()
+    setMode(next)
+    setVisited((current) => {
+      if (current.has(next)) return current
+      const updated = new Set(current)
+      updated.add(next)
+      return updated
+    })
+    try {
+      sessionStorage.setItem(MODE_KEY, next)
+    } catch {
+      // Storage can be unavailable in private or embedded browsing contexts.
+    }
   }
 
-  // The markdown parser is a 35kB chunk of its own and only the assistant's
-  // replies render markdown, so it is fetched when Ask is SELECTED - not when
-  // DiscoverAsk mounts. All three sub-views stay mounted from the moment the tab
-  // opens (see below), so a preload on mount would have meant opening Browse
-  // fetched it too, which is the whole thing this was moving away from.
-  //
-  // Selection is early enough by a wide margin: a round trip to the assistant is
-  // orders of magnitude longer than a chunk off the same origin, and ChatMessage
-  // renders plain text if it somehow is not there yet.
-  useEffect(() => {
-    if (subTab === 'ask') preloadMarkdown()
-  }, [subTab])
+  function warmAsk() {
+    loadDiscoverAsk()
+    preloadMarkdown()
+  }
+
+  function openAsk() {
+    warmAsk()
+    setSeedPrompt(null)
+    setAskOpen(true)
+  }
+
+  function askAbout(game) {
+    warmAsk()
+    setSeedPrompt(`Would I like ${game.name || game.title}? Explain why it fits my taste and what I should know before playing.`)
+    setAskOpen(true)
+  }
+
+  function tuneForYou() {
+    selectMode('browse')
+    setFilterToken((value) => value + 1)
+  }
+
+  function handleTabKey(event) {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+    event.preventDefault()
+    const next = mode === 'foryou' ? 'browse' : 'foryou'
+    selectMode(next)
+    document.getElementById(`discover-tab-${next}`)?.focus()
+  }
 
   return (
     <div className="discover-page">
-      <div className="discover-topbar">
-        <div className="page-header">
-          <p className="page-subtitle">New releases, and games picked against your library.</p>
-        </div>
-        <div className="seg discover-seg" role="tablist" aria-label="Discover mode">
+      <div className="discover-base" hidden={askOpen}>
+        <div className="discover-topbar">
+          <div className="seg discover-seg" role="tablist" aria-label="Discover views" onKeyDown={handleTabKey}>
+            <button
+              id="discover-tab-foryou"
+              type="button"
+              role="tab"
+              aria-selected={mode === 'foryou'}
+              aria-controls="discover-panel-foryou"
+              tabIndex={mode === 'foryou' ? 0 : -1}
+              className={`seg-btn${mode === 'foryou' ? ' active' : ''}`}
+              onClick={() => selectMode('foryou')}
+            >
+              For You
+            </button>
+            <button
+              id="discover-tab-browse"
+              type="button"
+              role="tab"
+              aria-selected={mode === 'browse'}
+              aria-controls="discover-panel-browse"
+              tabIndex={mode === 'browse' ? 0 : -1}
+              className={`seg-btn${mode === 'browse' ? ' active' : ''}`}
+              onPointerDown={loadDiscoverBrowse}
+              onFocus={loadDiscoverBrowse}
+              onClick={() => selectMode('browse')}
+            >
+              Browse
+            </button>
+          </div>
+
           <button
             type="button"
-            role="tab"
-            aria-selected={subTab === 'foryou'}
-            className={`seg-btn${subTab === 'foryou' ? ' active' : ''}`}
-            onClick={() => setSubTab('foryou')}
+            className="discover-ask-button"
+            onPointerDown={warmAsk}
+            onFocus={warmAsk}
+            onClick={openAsk}
           >
-            For you
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={subTab === 'browse'}
-            className={`seg-btn${subTab === 'browse' ? ' active' : ''}`}
-            onClick={() => setSubTab('browse')}
-          >
-            Browse
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={subTab === 'ask'}
-            className={`seg-btn${subTab === 'ask' ? ' active' : ''}`}
-            onClick={() => setSubTab('ask')}
-          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3l1.2 4.1L17 9l-3.8 1.9L12 15l-1.2-4.1L7 9l3.8-1.9L12 3Z" />
+              <path d="m18.5 15 .7 2.3 2.3.7-2.3.7-.7 2.3-.7-2.3-2.3-.7 2.3-.7.7-2.3Z" />
+            </svg>
             Ask AI
           </button>
         </div>
+
+        {visited.has('foryou') ? (
+          <div
+            id="discover-panel-foryou"
+            role="tabpanel"
+            aria-labelledby="discover-tab-foryou"
+            hidden={mode !== 'foryou'}
+          >
+            <DiscoverForYou onAsk={askAbout} onTune={tuneForYou} />
+          </div>
+        ) : null}
+
+        {visited.has('browse') ? (
+          <div
+            id="discover-panel-browse"
+            role="tabpanel"
+            aria-labelledby="discover-tab-browse"
+            hidden={mode !== 'browse'}
+          >
+            <Suspense fallback={<div className="discover-view-loading">Loading Browse…</div>}>
+              <DiscoverBrowse onAsk={askAbout} onCustomize={onCustomize} openFiltersToken={filterToken} />
+            </Suspense>
+          </div>
+        ) : null}
       </div>
 
-      {/* All three stay mounted so chat history / scroll survive tab flips; only
-          one shows. */}
-      <div className={`discover-view${subTab === 'foryou' ? '' : ' off'}`}>
-        <DiscoverForYou onAsk={askAbout} />
-      </div>
-      <div className={`discover-view${subTab === 'browse' ? '' : ' off'}`}>
-        <DiscoverBrowse onAsk={askAbout} onCustomize={onCustomize} />
-      </div>
-      {/* `fill` on this one only: the Ask view is a fixed-height column with its
-          composer pinned to the bottom, and it now takes that height from the
-          flex column rather than from a subtraction. */}
-      <div className={`discover-view fill${subTab === 'ask' ? '' : ' off'}`}>
-        <DiscoverAsk seedPrompt={seedPrompt} onSeedConsumed={() => setSeedPrompt(null)} />
-      </div>
+      {askOpen ? (
+        <div className="discover-ask-view" role="dialog" aria-modal="true" aria-label="Ask GameDeck">
+          <div className="discover-ask-header">
+            <button type="button" className="discover-ask-back" aria-label="Back to Discover" onClick={() => setAskOpen(false)}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path d="m15 18-6-6 6-6" />
+              </svg>
+            </button>
+            <div className="discover-ask-titles">
+              <strong>Ask GameDeck</strong>
+              <span>Personalized to your library and ranking</span>
+            </div>
+          </div>
+          <Suspense fallback={<div className="discover-ask-loading">Starting Ask AI…</div>}>
+            <DiscoverAsk seedPrompt={seedPrompt} onSeedConsumed={() => setSeedPrompt(null)} />
+          </Suspense>
+        </div>
+      ) : null}
     </div>
   )
 }

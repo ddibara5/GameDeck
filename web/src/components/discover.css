@@ -1,22 +1,12 @@
 /* ============================================================
-   Discover 2.0 - Browse + Ask
+   Discover 2.0 - For You + Browse + Ask
    Reuses the app's global tokens (--bg/--surface/--line/--accent...)
    so everything follows dark/light automatically. Only new elements
    are defined here; cards, shelves and sheets reuse global classes.
    ============================================================ */
 
-/* The large title and the Browse/Ask switch stack rather than sharing a row, so
-   the title matches every other tab. The height stays a single declared number
-   because the Ask view's chat pane is sized by subtracting it from the viewport;
-   letting this box grow freely would push the composer off the bottom. */
-/* The bar is a FIXED height because .chat-page below subtracts it to compute
-   its own; the two move together, so re-measure the composed gaps if anything
-   in here changes size. 116 was 40px taller than its contents, and centring
-   them in it spent that slack above the subtitle and below the control: the
-   same .page-title -> .page-subtitle pair measured 2px apart on Activity and
-   16px apart here. */
 .discover-page {
-  --disc-topbar-h: 88px;
+  --disc-topbar-h: 60px;
   position: relative;
   flex: 1;
   min-height: 0;
@@ -24,44 +14,125 @@
   flex-direction: column;
 }
 
-/* One of the three sub-views, all mounted so chat history and scroll survive a
-   flip. Only the Ask view fills: For you and Browse are taller than the viewport
-   and must size to their content, so giving all three `flex: 1` would let the
-   two scrolling ones be squeezed instead. */
-.discover-view.fill {
+.discover-base,
+.discover-ask-view {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
 }
 
-/* Last, so it beats .fill's display at equal specificity. */
-.discover-view.off {
+.discover-base[hidden] {
   display: none;
 }
 
-/* Transparent, not --bg: this bar is in flow, so nothing passes behind it, and
-   repainting the page colour would punch a band out of the ground. */
 .discover-topbar {
   height: var(--disc-topbar-h);
   box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: var(--space-1);
-  padding: 0 0 var(--space-3);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 7px var(--screen-gutter) 9px;
   border-bottom: 0;
   background: transparent;
 }
 
 .discover-seg {
-  flex: none;
-  align-self: stretch;
-  margin: 0 var(--screen-gutter);
+  min-width: 0;
+  height: 44px;
+  margin: 0;
 }
 
-/* The Ask view's height is whatever is left in the column now, so the top bar's
-   own height no longer has to be subtracted here as well as reserved above. */
+.discover-ask-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: var(--accent);
+  color: var(--bg);
+  font-size: var(--t-foot);
+  font-weight: var(--w-bold);
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+.discover-ask-button svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.discover-ask-view {
+  overflow: hidden;
+}
+
+.discover-ask-header {
+  flex: 0 0 auto;
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  padding: 0 var(--screen-gutter) 0 8px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.discover-ask-back {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.discover-ask-back svg {
+  width: 22px;
+  height: 22px;
+}
+
+.discover-ask-titles {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.discover-ask-titles strong {
+  font-size: var(--t-sub);
+}
+
+.discover-ask-titles span {
+  color: var(--muted);
+  font-size: var(--t-cap2);
+}
+
+.discover-ask-loading {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: var(--t-foot);
+}
+
+.discover-view-loading {
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: var(--t-foot);
+}
 
 .chat-actions-row {
   display: flex;
@@ -624,6 +695,49 @@ button.shelf-head:active {
   padding-bottom: 8px;
 }
 
+.fy-scope-row {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 2px var(--screen-gutter);
+  color: var(--muted);
+  font-size: var(--t-cap2);
+}
+
+.fy-scope-row button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: var(--t-cap);
+  font-weight: var(--w-semi);
+  cursor: pointer;
+}
+
+.fy-profile-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 3px var(--screen-gutter) 4px;
+  color: color-mix(in oklab, var(--accent) 86%, var(--text));
+  font-size: var(--t-cap2);
+}
+
+.fy-profile-note svg {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .lane-chips {
   display: flex;
   gap: 6px;
@@ -644,7 +758,8 @@ button.shelf-head:active {
   background: var(--glass-chip);
   border: 1px solid var(--glass-line);
   border-radius: var(--r-pill);
-  padding: 6px 12px;
+  min-height: 44px;
+  padding: 0 14px;
   white-space: nowrap;
   cursor: pointer;
 }
@@ -662,7 +777,7 @@ button.shelf-head:active {
 .fy-feed {
   display: flex;
   flex-direction: column;
-  margin: var(--space-1) var(--screen-gutter) var(--space-5);
+  margin: 0 var(--screen-gutter) var(--space-5);
   background: transparent;
   border: 0;
   border-radius: 0;
@@ -693,7 +808,8 @@ button.shelf-head:active {
      55px, and flex-start left all of that slack under the last line. */
   align-items: center;
   width: 100%;
-  padding: 10px 38px 10px 0;
+  min-height: 108px;
+  padding: 10px 44px 10px 0;
   background: none;
   border: none;
   text-align: left;
@@ -721,8 +837,7 @@ button.shelf-head:active {
 /* Every line clamps. A feed is scanned down the left edge, and one three-line
    title puts the row below it out of rhythm. */
 .fy-name,
-.fy-meta,
-.fy-why {
+.fy-meta {
   display: block;
   white-space: nowrap;
   overflow: hidden;
@@ -748,11 +863,15 @@ button.shelf-head:active {
 /* The reason is metadata, not another control or container. Accent and spacing
    distinguish it without drawing a pill inside every row. */
 .fy-why {
-  display: inline-block;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
   max-width: 100%;
   margin-top: 6px;
-  font-size: var(--t-cap2);
-  color: var(--accent);
+  font-size: var(--t-cap);
+  line-height: 1.3;
+  color: color-mix(in oklab, var(--accent) 84%, var(--text));
   border: 0;
   border-radius: 0;
   padding: 0;
@@ -767,12 +886,25 @@ button.shelf-head:active {
 .fy-row-wrap .wish-heart {
   position: absolute;
   top: 50%;
-  right: 8px;
+  right: -4px;
   transform: translateY(-50%);
-  width: 30px;
-  height: 30px;
+  width: 44px;
+  height: 44px;
   background: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   color: var(--muted);
+}
+
+.fy-partial-note {
+  margin: calc(-1 * var(--space-3)) var(--screen-gutter) var(--space-5);
+  color: var(--muted);
+  font-size: var(--t-cap2);
+  text-align: center;
+}
+
+[data-theme="light"] .fy-scope-row button,
+[data-theme="light"] .fy-profile-note,
+[data-theme="light"] .fy-why {
+  color: var(--walnut);
 }

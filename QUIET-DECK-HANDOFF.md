@@ -4,8 +4,8 @@
 
 Quiet Deck is complete and visually approved as of August 25, 2026. The signed-off
 visual checkpoint is commit `5752412` (`Flatten Quiet Deck tab lists`). The
-game-sheet performance checkpoint is commit `53a8dc1` (`Optimize game sheet
-backdrop loading`) on `main`. Production is deployed at
+global-background checkpoint is commit `1595f6d` (`Replace game-art backgrounds
+with muted gradients`) on `main`. Production is deployed at
 <https://gamedeck-kappa.vercel.app>.
 
 This was a presentation and app-shell refresh. It did not remove or redesign the
@@ -137,6 +137,35 @@ request, decode, cache, or contrast override. Existing Now Playing, Most Played,
 Pinned Game, and Shuffle background preferences migrate to Soft wash; retired
 pin, intensity, paint, and artwork-accent settings are cleared.
 
+## Discover hierarchy and personalization
+
+Discover has two destinations and one action:
+
+- **For You** is the new-session landing page.
+- **Browse** remains the complete searchable and filterable catalog.
+- **Ask AI** is a separate, persistent Discover action rather than a third tab.
+  Contextual Ask AI actions in game sheets open the same conversation surface.
+
+The selected For You/Browse destination is remembered for the current app
+session. A destination mounts only after its first visit, then stays mounted
+while Discover remains open. Opening For You therefore no longer downloads or
+starts Browse's hidden catalog work. Browse and Ask AI ship as separate lazy
+chunks warmed from pointer-down or focus.
+
+For You combines implicit and explicit taste evidence. Recent playtime is
+recency-weighted and logarithmically scaled so an old marathon cannot dominate.
+My Ranking reactions provide direction, Elo refines that direction as comparison
+confidence grows, and `not_for_me` contributes no positive taste evidence.
+Ranking remains bounded; it changes taste-lane order and plain-language reasons
+such as “Because you loved…”, but no hidden score is shown to the user.
+
+Candidate releases are balanced on freshness and confidence-weighted catalog
+quality before taste lanes are interleaved. Taste lanes lead the generic New lane
+so a duplicate keeps its specific personalized reason. New releases start loading
+in parallel with the taste probe, partial lane failures are distinguished from a
+true empty feed, selected platforms are shown first, and ranking changes invalidate
+the taste profile immediately.
+
 ## Implementation history
 
 - `8ab4ce6` — implemented the Phase 1 shell foundation.
@@ -149,9 +178,11 @@ pin, intensity, paint, and artwork-accent settings are cleared.
   and popup loading without changing the approved visual system.
 - `53a8dc1` — optimized game-sheet backdrop loading and established the current
   performance checkpoint before the global-background refresh.
-- The global-background refresh retired full-app game art in favor of four
-  synchronous, palette-aware treatments. Use the next `main` commit after this
-  checkpoint as its deployment baseline.
+- `1595f6d` — retired full-app game art in favor of four synchronous,
+  palette-aware background treatments.
+- The Discover refresh established the two-destination hierarchy, elevated Ask
+  AI, deferred hidden Browse work, and connected My Ranking to For You. Use the
+  next `main` commit after `1595f6d` as its deployment baseline.
 
 ## Post-approval performance hardening
 
@@ -180,9 +211,11 @@ all 13 automated Node tests passing. Its Vercel deployment was READY, production
 returned HTTP 200, and the deployed tree matched the reviewed source exactly.
 Dave reviewed that update, including the game-sheet behavior, and approved it.
 
-The subsequent global-background refresh has a successful local production build
-with 143 transformed modules and all 16 automated Node tests passing. Installed-
-app visual QA of the new gradient choices is the remaining authenticated check.
+The subsequent global-background refresh completed with 143 transformed modules
+and all 16 automated Node tests passing. The Discover hierarchy and
+personalization refresh completes with 144 transformed modules and all 22
+automated Node tests passing. Installed-app visual QA remains the authoritative
+check for the new Discover header, Ask AI transition, and For You density.
 
 The connected cloud browser could verify the public production shell only up to
 the expected owner sign-in screen. Treat Dave's installed-iPhone approval as the

@@ -13,6 +13,8 @@ export {
 const STATE_KEY = 'ranking:state'
 const SCORES_KEY = 'ranking:scores'
 const GAME_KEY = (id) => `ranking:game:${id}`
+const DISCOVER_TASTE_KEY = 'discover:tasteProbe'
+const RANKING_EVENT = 'gd-ranking-change'
 
 let stateCache = null
 let stateInflight = null
@@ -138,6 +140,12 @@ function invalidateRankingCaches(masterId) {
   scoresCache = null
   idbDel(STATE_KEY)
   idbDel(SCORES_KEY)
+  // For You uses reactions and Elo as bounded taste evidence. A ranking action
+  // should be visible on the next feed render, not after its 24-hour profile TTL.
+  const clearTaste = idbDel(DISCOVER_TASTE_KEY)
+  if (typeof window !== 'undefined') {
+    clearTaste.finally(() => window.dispatchEvent(new Event(RANKING_EVENT)))
+  }
   if (masterId != null) {
     gameCache.delete(String(masterId))
     idbDel(GAME_KEY(Number(masterId)))

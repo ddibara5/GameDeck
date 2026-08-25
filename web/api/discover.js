@@ -584,20 +584,24 @@ export default async function handler(req, res) {
                     ...laneExtra,
                   ]
                 : null;
-          if (!where) return [k, []];
+          if (!where) return [k, [], false];
           const body = `${GAME_FIELDS}; where ${where.join(' & ')}; sort first_release_date desc; limit ${laneLimit}; offset 0;`;
           try {
             const rows = await igdb('games', body);
-            return [k, (rows || []).map(normalize)];
+            return [k, (rows || []).map(normalize), false];
           } catch {
-            return [k, []];
+            return [k, [], true];
           }
         })
       );
       const out = {};
-      pairs.forEach(([k, v]) => (out[k] = v));
+      const failedKeys = [];
+      pairs.forEach(([k, v, failed]) => {
+        out[k] = v;
+        if (failed) failedKeys.push(k);
+      });
       res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=1800');
-      res.status(200).json({ lanes: out });
+      res.status(200).json({ lanes: out, failedKeys });
       return;
     }
 

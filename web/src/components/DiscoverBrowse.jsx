@@ -123,11 +123,15 @@ function ShelfSkeleton({ label }) {
   )
 }
 
-export default function DiscoverBrowse({ onAsk, onCustomize }) {
+export default function DiscoverBrowse({ onAsk, onCustomize, openFiltersToken = 0 }) {
   const [query, setQuery] = useState('')
   const [preset, setPreset] = useState(null)
   const [filters, setFilters] = useState(DEFAULT_FILTERS)
   const [showFilters, setShowFilters] = useState(false)
+
+  useEffect(() => {
+    if (openFiltersToken > 0) setShowFilters(true)
+  }, [openFiltersToken])
 
   const [rails, setRails] = useState({}) // key -> games[]; a key is undefined until its batch resolves
 

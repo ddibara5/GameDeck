@@ -111,7 +111,10 @@ async function fetchLanesNetwork(list, limit, platform) {
   const res = await authFetch(`/api/discover?${qs.toString()}`)
   if (!res.ok) throw new Error(`Discover lanes failed (${res.status})`)
   const data = await res.json()
-  return data && data.lanes && typeof data.lanes === 'object' ? data.lanes : {}
+  const lanes = data && data.lanes && typeof data.lanes === 'object' ? data.lanes : {}
+  const failedKeys = Array.isArray(data?.failedKeys) ? data.failedKeys.filter((key) => list.includes(key)) : []
+  if (failedKeys.length === list.length) throw new Error('Discover lanes are temporarily unavailable')
+  return { lanes, failedKeys }
 }
 
 export async function fetchDiscoverLanes(keys, limit = 8, { onFresh, platform } = {}) {
@@ -121,13 +124,13 @@ export async function fetchDiscoverLanes(keys, limit = 8, { onFresh, platform } 
   // selection is for the home rails: without it, turning a platform chip on
   // would be answered off disk with the narrower set.
   const cacheKey = `${list.join(',')}|${limit}|${platform || 'all'}`
-  const { value } = await swr(`discover:lanes:${cacheKey}`, () => fetchLanesNetwork(list, limit, platform), {
+  const { value } = await swr(`discover:lanes:v2:${cacheKey}`, () => fetchLanesNetwork(list, limit, platform), {
     maxAge: LANE_TTL,
-    onFresh: (lanes) => {
-      if (onFresh) onFresh(lanes)
+    onFresh: (result) => {
+      if (onFresh) onFresh(result)
     },
   })
-  return value
+  return value || { lanes: {}, failedKeys: [] }
 }
 
 // Fetch a single IGDB game by its id (normalized shape), for the game sheet to
