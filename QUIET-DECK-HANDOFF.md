@@ -3,8 +3,10 @@
 ## Status
 
 Quiet Deck is complete and visually approved as of August 25, 2026. The signed-off
-production checkpoint is commit `5752412` (`Flatten Quiet Deck tab lists`) on
-`main`, deployed at <https://gamedeck-kappa.vercel.app>.
+visual checkpoint is commit `5752412` (`Flatten Quiet Deck tab lists`). The
+current deployed application-code baseline is commit `53a8dc1` (`Optimize game
+sheet backdrop loading`) on `main`, deployed at
+<https://gamedeck-kappa.vercel.app>.
 
 This was a presentation and app-shell refresh. It did not remove or redesign the
 product's content, data model, recommendation logic, rankings logic, or n8n data
@@ -123,11 +125,38 @@ is an interaction requirement, not leftover decorative tiling.
 - `8489375` — refined Phase 3 overlays, navigation, and the full-slot bottom-bar
   lens; this is the immediate rollback point before the final list flattening.
 - `5752412` — flattened the approved lists and completed Phase 4.
+- `b82a548` — cached tab data and warmed interactive views to reduce repeat tab
+  and popup loading without changing the approved visual system.
+- `53a8dc1` — optimized game-sheet backdrop loading and established the current
+  production baseline.
 
-The last build ran successfully with 142 transformed modules. All 10 automated
-Node tests passed. The final Vercel deployment was READY and production served
-the updated CSS. Dave then completed visual QA in the installed app and approved
-the result without further changes.
+## Post-approval performance hardening
+
+Two performance passes followed the visual sign-off. They deliberately preserved
+the approved Quiet Deck layout and styling:
+
+- Tab data is cached, lazy tab chunks are retained, and likely destinations are
+  warmed during idle time so repeat navigation does not wait on avoidable work.
+- Game artwork is preloaded from hover, focus, pointer-down, and other warm-intent
+  entry points across Library, Discover, Wishlist, Home, Activity, Insights,
+  rail lists, and Shuffle.
+- Per-game metadata, image sampling, and decoded tint results use in-memory caches
+  above the persistent IndexedDB cache, allowing warmed and reopened sheets to
+  seed synchronously.
+- The old forced 240ms hero-image fade was removed. Artwork may join only during
+  the sheet's 240ms opening animation. If it is not ready by then, that opening
+  remains tint-only; a late image is cached for the next open instead of appearing
+  after the sheet has settled.
+
+This timing behavior is intentional. Do not reintroduce a delayed backdrop pop-in
+to make a cold image visible on the first open. The tint-only fallback is the
+preferred experience when artwork cannot be ready within the opening animation.
+
+The current production build completed with 144 transformed modules, and all 13
+automated Node tests passed. The Vercel deployment was READY, production returned
+HTTP 200, and the deployed tree matched the reviewed source exactly. Dave then
+reviewed the updated app, including the game-sheet behavior, and approved it
+without further changes.
 
 The connected cloud browser could verify the public production shell only up to
 the expected owner sign-in screen. Treat Dave's installed-iPhone approval as the
@@ -141,11 +170,17 @@ authoritative authenticated visual check.
    the repository head.
 3. Preserve the canvas-versus-surface decisions unless Dave explicitly requests a
    new design change.
-4. For a small reviewed increment, use the documented n8n GitHub bridge to make a
+4. Preserve the performance contract: lazy tab chunks, idle warming, persistent
+   and in-memory caches, warm-intent artwork preloading, and tint-only game-sheet
+   fallback when cold artwork misses the opening animation.
+5. For a small reviewed increment, use the documented n8n GitHub bridge to make a
    focused commit to `main`, then verify the exact tree and Vercel production
    deployment. Use a branch for broader or higher-risk work.
-5. Do not modify GameDeck data, ingestion, AI, news, or sync workflows for a
+6. Do not modify GameDeck data, ingestion, AI, news, or sync workflows for a
    frontend-only change unless inspection shows that the change truly requires it.
-6. After any shell or layout change, recheck installed-iPhone safe areas, custom
+7. After any shell or layout change, recheck installed-iPhone safe areas, custom
    backgrounds, reduced motion, navigation persistence, scroll locking, overlays,
    and service-worker update behavior.
+8. After popup or cache changes, compare cold and repeat game-sheet opens, verify
+   both pointer and mobile-tap paths, and recheck reduced-motion, offline, and
+   service-worker behavior.
