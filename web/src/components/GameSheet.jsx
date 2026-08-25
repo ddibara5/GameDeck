@@ -291,7 +291,7 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
         aria-label={title}
         style={{
           transform: closing ? 'translateY(110%)' : dragY ? `translateY(${dragY}px)` : undefined,
-          transition: dragging ? 'none' : 'transform 0.2s ease',
+          transition: dragging ? 'none' : 'transform var(--d-base) var(--ease-out)',
           // Falls back to --surface in the stylesheet until (or unless) a tint
           // resolves, so a game with no cover, or a CDN that will not send CORS
           // headers, gets exactly the card it had before.

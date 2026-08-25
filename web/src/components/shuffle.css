@@ -96,18 +96,19 @@
   gap: 8px;
   flex: none;
 }
-/* The filter button is the shared one from index.css; it is 44px there, which is
-   taller than this header's 34px close button, so it is scaled to match. */
+/* Keep the header controls visually quiet, but preserve a full phone-sized hit
+   target. The old 34px override made the two most important escape controls
+   materially harder to reach than the rest of the app. */
 .shuffle-top-actions .filter-btn {
   position: relative;
   overflow: visible;
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--r-sm);
 }
 .shuffle-x {
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -126,8 +127,8 @@
 
 .shuffle-mode {
   display: flex;
-  background: var(--bg);
-  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 76%, transparent);
+  border: 1px solid var(--line-soft);
   border-radius: var(--r-sm);
   padding: 3px;
   margin-bottom: 10px;
@@ -151,8 +152,8 @@
 .shuffle-seg {
   display: flex;
   gap: 4px;
-  background: var(--bg);
-  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 76%, transparent);
+  border: 1px solid var(--line-soft);
   border-radius: var(--r-sm);
   padding: 4px;
   margin-bottom: 9px;
@@ -292,11 +293,8 @@
 /* Every pick states its own reasoning. A bad pick should be debuggable at a
    glance rather than feeling arbitrary. */
 .shuffle-why {
-  background: var(--bg);
-  border: 1px solid var(--line);
   border-left: 2px solid var(--accent);
-  border-radius: 0 var(--r-xs) var(--r-xs) 0;
-  padding: 8px 10px;
+  padding: var(--space-1) 0 var(--space-1) var(--space-3);
   margin: 0;
   font-size: var(--t-cap);
   color: var(--muted);
@@ -319,7 +317,7 @@
   font-size: var(--t-foot);
   font-weight: var(--w-semi);
   cursor: pointer;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-soft);
   background: var(--surface-2);
   color: var(--text);
   -webkit-tap-highlight-color: transparent;

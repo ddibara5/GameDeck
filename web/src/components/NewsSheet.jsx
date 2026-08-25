@@ -70,7 +70,7 @@ export default function NewsSheet({ item, rel, onClose, onOpenGame }) {
         aria-label={item.title}
         style={{
           transform: closing ? 'translateY(110%)' : dragY ? `translateY(${dragY}px)` : undefined,
-          transition: dragging ? 'none' : 'transform 0.2s ease',
+          transition: dragging ? 'none' : 'transform var(--d-base) var(--ease-out)',
         }}
       >
         {/* The ART IS PART OF THE DRAG ZONE, exactly as the cover is on the game

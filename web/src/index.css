@@ -395,9 +395,11 @@
   bottom: 0;
   width: min(86%, 340px);
   z-index: 201;
-  background: var(--surface);
-  border-right: 1px solid var(--line);
-  box-shadow: 8px 0 40px rgba(0, 0, 0, 0.5);
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  border-right: 1px solid var(--glass-line);
+  box-shadow: 10px 0 42px rgba(0, 0, 0, 0.38);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -430,8 +432,8 @@
 }
 
 .drawer-head {
-  padding: calc(18px + var(--top-inset)) 20px 16px;
-  border-bottom: 1px solid var(--line);
+  padding: calc(var(--space-4) + var(--top-inset)) var(--screen-gutter) var(--space-3);
+  border-bottom: 1px solid var(--line-soft);
 }
 
 .drawer-brand {
@@ -468,7 +470,7 @@
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 8px 8px 4px;
+  padding: var(--space-2) var(--space-2) var(--space-1);
 }
 
 .menu-sec-label {
@@ -555,8 +557,8 @@
   margin: 14px 8px 8px;
   padding: 12px;
   border-radius: var(--r-sm);
-  border: 1px solid var(--line);
-  background: none;
+  border: 1px solid var(--line-soft);
+  background: color-mix(in srgb, var(--surface-2) 72%, transparent);
   color: var(--accent);
   font-size: var(--t-sub);
   font-weight: var(--w-semi);
@@ -576,6 +578,7 @@
   align-items: center;
   gap: 12px;
   width: 100%;
+  min-height: 48px;
   padding: 12px;
   border-radius: var(--r-sm);
   border: none;
@@ -641,8 +644,9 @@
 
 .menu-foot {
   margin-top: auto;
-  padding: 10px 12px calc(14px + var(--safe-bottom));
-  border-top: 1px solid var(--line);
+  padding: var(--space-2) var(--space-3) calc(var(--space-3) + var(--safe-bottom));
+  border-top: 1px solid var(--line-soft);
+  background: color-mix(in srgb, var(--surface) 76%, transparent);
 }
 
 /* Two equal halves rather than a row that reflows: the labels are short and
@@ -650,7 +654,11 @@
 .menu-foot-acts {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--surface-2) 72%, transparent);
 }
 
 .menu-fb {
@@ -658,9 +666,10 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  padding: 11px 8px;
-  border-radius: var(--r-sm);
-  border: 1px solid var(--line);
+  min-height: 44px;
+  padding: var(--space-2);
+  border-radius: 0;
+  border: none;
   background: none;
   color: var(--text);
   font-size: var(--t-cap);
@@ -668,6 +677,7 @@
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
+.menu-fb + .menu-fb { border-left: 1px solid var(--line-soft); }
 .menu-fb:active { background: var(--surface-2); }
 .menu-fb-i {
   width: 17px;
@@ -722,7 +732,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: calc(var(--top-inset) + 12px) 16px 14px;
+  padding: calc(var(--top-inset) + var(--space-3)) var(--screen-gutter) var(--space-3);
   border-bottom: 1px solid var(--glass-line);
   background: var(--glass);
 }
@@ -765,17 +775,17 @@
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
-  padding: 6px 0 calc(var(--safe-bottom) + 28px);
+  padding: var(--space-2) 0 calc(var(--safe-bottom) + var(--space-6));
 }
 
 .settings-section {
-  padding: 8px 0 6px;
+  padding: var(--space-2) 0 var(--space-1);
 }
 
 .settings-group {
-  margin: 0 12px;
-  background: var(--surface);
-  border: 1px solid var(--line);
+  margin: 0 var(--screen-gutter);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  border: 1px solid var(--line-soft);
   border-radius: var(--r-sm);
   overflow: hidden;
 }
@@ -792,7 +802,7 @@
 }
 
 .settings-group .menu-item + .menu-item {
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--line-soft);
 }
 
 /* ---------- Settings sub-pages ----------
@@ -812,10 +822,10 @@
   margin-top: 8px;
 }
 
-/* A labelled control rather than a row. Same 12px gutter as a card, so a
+/* A labelled control rather than a row. Same shared gutter as a card, so a
    sub-page of segmented controls and a sub-page of rows share one left edge. */
 .settings-field {
-  margin: 0 12px;
+  margin: 0 var(--screen-gutter);
   padding: 14px 0 2px;
 }
 
@@ -940,7 +950,7 @@
 /* ---------- The pin picker ---------- */
 
 .pin-search {
-  margin: 0 12px 8px;
+  margin: 0 var(--screen-gutter) var(--space-2);
 }
 
 .pin-row {
@@ -1017,6 +1027,10 @@
   .modal-backdrop.closing,
   .modal-sheet {
     animation: none;
+  }
+
+  .modal-sheet {
+    transition: none !important;
   }
 }
 
@@ -1315,6 +1329,7 @@ textarea {
   bottom: calc(var(--safe-bottom) + var(--space-3));
   width: min(calc(100% - var(--space-6)), 608px);
   display: flex;
+  min-height: 62px;
   gap: 0;
   padding: 0;
   border-radius: var(--r-pill);
@@ -1360,7 +1375,7 @@ textarea {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  min-height: 52px;
+  min-height: 60px;
   padding: 8px var(--space-1);
   border-radius: var(--r-pill);
   background: none;
@@ -1809,12 +1824,12 @@ textarea {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(10, 9, 8, 0.6);
+  background: rgba(10, 9, 8, 0.54);
   display: flex;
   align-items: flex-end;
   justify-content: center;
   z-index: 100;
-  animation: fade-in var(--overlay-out) ease;
+  animation: fade-in var(--overlay-in) ease;
 }
 
 .modal-backdrop.closing {
@@ -1843,12 +1858,14 @@ textarea {
   width: 100%;
   max-width: 640px;
   max-height: 88vh;
+  max-height: min(90dvh, calc(100dvh - var(--top-inset) - var(--space-3)));
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   background: var(--surface);
   border-radius: var(--r-lg) var(--r-lg) 0 0;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--glass-line);
+  box-shadow: 0 -12px 42px rgba(0, 0, 0, 0.3);
   padding: 16px 20px calc(24px + var(--safe-bottom));
   animation: slide-up var(--overlay-out) var(--enter-ease);
 }
@@ -1866,7 +1883,7 @@ textarea {
   width: 40px;
   height: 4px;
   border-radius: var(--r-pill);
-  background: var(--line);
+  background: color-mix(in srgb, var(--muted) 52%, transparent);
   margin: 0 auto 14px;
 }
 
@@ -2764,8 +2781,8 @@ textarea {
   width: 44px;
   height: 44px;
   border-radius: var(--r-sm);
-  border: 1px solid var(--line);
-  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
   color: var(--muted);
   display: flex;
   align-items: center;
@@ -2803,7 +2820,7 @@ textarea {
   min-height: 38px;
   padding: 0 13px;
   border-radius: var(--r-pill);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-soft);
   background: var(--surface-2);
   color: var(--muted);
   font-size: var(--t-foot);
@@ -2828,7 +2845,7 @@ textarea {
   flex: 1;
   min-height: 44px;
   border-radius: var(--r-sm);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-soft);
   background: var(--surface-2);
   color: var(--text);
   font-size: var(--t-sub);

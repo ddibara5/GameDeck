@@ -411,12 +411,20 @@ button.shelf-head:active {
   to { transform: translateX(100%); }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .rail-page,
+  .rail-page.closing {
+    animation: none;
+  }
+}
+
 .rail-head {
   display: flex;
   align-items: center;
   gap: 6px;
   padding: calc(var(--top-inset) + 8px) 10px 8px 4px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--glass-line);
+  background: var(--glass);
   flex: 0 0 auto;
 }
 .rail-back {
@@ -458,8 +466,8 @@ button.shelf-head:active {
   font-size: var(--t-cap);
   font-weight: var(--w-semi);
   color: var(--accent);
-  border: 1px solid var(--line);
-  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  background: var(--glass-chip);
   border-radius: var(--r-pill);
   padding: 7px 12px;
   cursor: pointer;

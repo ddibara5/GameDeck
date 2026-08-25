@@ -72,8 +72,8 @@
   position: absolute;
   top: calc(10px + var(--top-inset, 0px));
   right: 12px;
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -95,8 +95,8 @@
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -147,5 +147,10 @@
 @media (prefers-reduced-motion: reduce) {
   .lb {
     animation: none;
+  }
+
+  .shot-btn .shot,
+  .lb-nav {
+    transition: none;
   }
 }

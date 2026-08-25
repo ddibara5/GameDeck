@@ -254,6 +254,10 @@ const home = await page.evaluate(() => ({
   })(),
   tabs: [...document.querySelectorAll('.tabbar-btn')].map((b) => b.textContent.trim()),
   active: document.querySelector('.tabbar-btn.active')?.textContent.trim(),
+  barHeight: (() => {
+    const bar = document.querySelector('.tabbar')
+    return bar ? Math.round(bar.getBoundingClientRect().height) : null
+  })(),
   lens: (() => {
     const bar = document.querySelector('.tabbar')
     const lens = document.querySelector('.tabbar-lens')
@@ -324,6 +328,7 @@ check('lands on Home', home.title === 'Home', home.title)
 check('Quiet Deck bar is home/library/discover/activity', home.tabs.join('|') === 'Home|Library|Discover|Activity', home.tabs.join('|'))
 check('the glass lens fills one complete tab slot', home.lens && home.lens.widthDelta <= 1, JSON.stringify(home.lens))
 check('the Home lens reaches the bar edges', home.lens && home.lens.leftGap <= 2 && home.lens.topGap <= 2 && home.lens.bottomGap <= 2, JSON.stringify(home.lens))
+check('the bottom bar keeps its original overall thickness', home.barHeight >= 61 && home.barHeight <= 63, `${home.barHeight}px`)
 // The Home mark is HomeDeck's, path for path. Asserted as the exact strings
 // rather than "has three paths", because the decision here is not "a house with
 // a door", it is "the same house the other app opens on". A redraw that still
@@ -796,6 +801,8 @@ const drawer = await page.evaluate(() => ({
   })(),
   folds: document.querySelectorAll('.drawer .menu-sec').length,
   open: [...document.querySelectorAll('.drawer .menu-sec')].map((e) => e.getAttribute('aria-expanded')),
+  rowMin: Math.min(...[...document.querySelectorAll('.drawer .menu-item')].map((e) => e.getBoundingClientRect().height)),
+  footMin: Math.min(...[...document.querySelectorAll('.menu-fb')].map((e) => e.getBoundingClientRect().height)),
 }))
 // Three groups, not four. Settings was the whole App group and is pinned in the
 // footer now, out of the ordered list entirely.
@@ -819,6 +826,7 @@ check('current tab is marked', /^Home/.test(drawer.here || ''), drawer.here)
 check('Settings and Customize are pinned', drawer.foot.join('|') === 'Settings|Customize', drawer.foot.join('|'))
 check('the pinned pair sits outside the scroll', drawer.footVisible, JSON.stringify(drawer.foot))
 check('every group heading folds', drawer.folds === 3 && drawer.open.join('') === 'truetruetrue', `${drawer.folds} / ${drawer.open.join(',')}`)
+check('drawer rows keep phone-sized targets', drawer.rowMin >= 44 && drawer.footMin >= 44, `rows=${drawer.rowMin} footer=${drawer.footMin}`)
 await page.screenshot({ path: 'repro/out/drawer-dark.png', fullPage: true })
 
 /* ------------------------------------------------ folding a drawer group */
