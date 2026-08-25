@@ -58,8 +58,15 @@ export const TAB_ICONS = {
 }
 
 export default function TabBar({ tabs, active, onChange, badges, showLabels = true }) {
+  const activeIndex = tabs.indexOf(active)
+
   return (
-    <nav className={`tabbar${showLabels ? '' : ' icons-only'}`} aria-label="Main navigation">
+    <nav
+      className={`tabbar${showLabels ? '' : ' icons-only'}${activeIndex >= 0 ? ' has-active' : ''}`}
+      aria-label="Main navigation"
+      style={{ '--tab-count': Math.max(1, tabs.length), '--active-index': Math.max(0, activeIndex) }}
+    >
+      <span className="tabbar-lens" aria-hidden="true" />
       {tabs.map((tab) => {
         const meta = TAB_BY_KEY[tab]
         if (!meta) return null

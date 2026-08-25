@@ -48,16 +48,16 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 4px;
-  padding: 0 0 10px;
-  border-bottom: 1px solid var(--line);
+  gap: var(--space-1);
+  padding: 0 0 var(--space-3);
+  border-bottom: 0;
   background: transparent;
 }
 
 .discover-seg {
   flex: none;
   align-self: stretch;
-  margin: 0 16px;
+  margin: 0 var(--screen-gutter);
 }
 
 /* The Ask view's height is whatever is left in the column now, so the top bar's
@@ -81,7 +81,7 @@
 .discover-searchbar {
   display: flex;
   gap: 8px;
-  padding: 12px 16px 10px;
+  padding: var(--space-3) var(--screen-gutter) var(--space-2);
 }
 
 .discover-searchbar .search-input {
@@ -95,7 +95,7 @@
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  padding: 0 16px 12px;
+  padding: 0 var(--screen-gutter) var(--space-3);
   -webkit-overflow-scrolling: touch;
 }
 
@@ -115,9 +115,9 @@
 }
 
 .preset-chip.active {
-  color: var(--bg);
-  background: var(--accent);
-  border-color: var(--accent);
+  color: var(--text);
+  background: var(--surface-2);
+  border-color: var(--line-soft);
 }
 
 /* ---------- Browse: results ---------- */
@@ -659,9 +659,9 @@ button.shelf-head:active {
 }
 
 .lane-chip.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--bg);
+  background: var(--surface-2);
+  border-color: var(--line-soft);
+  color: var(--accent);
   font-weight: var(--w-semi);
 }
 
@@ -676,9 +676,9 @@ button.shelf-head:active {
 .fy-feed {
   display: flex;
   flex-direction: column;
-  margin: 4px 16px 16px;
+  margin: var(--space-1) var(--screen-gutter) var(--space-5);
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-soft);
   border-radius: var(--radius);
   overflow: hidden;
 }
@@ -694,7 +694,7 @@ button.shelf-head:active {
 }
 
 .fy-feed .fy-row-wrap + .fy-row-wrap {
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--line-soft);
 }
 
 /* The heart is a SIBLING of the row button, never inside it: a button inside a

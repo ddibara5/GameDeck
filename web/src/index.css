@@ -3,6 +3,7 @@
   --surface: #232120;
   --surface-2: #2b2825;
   --line: #38332e;
+  --line-soft: color-mix(in srgb, var(--line) 72%, transparent);
   --text: #ece7df;
   --muted: #a89f92;
   --walnut: #6f4e37;
@@ -1314,15 +1315,41 @@ textarea {
   bottom: calc(var(--safe-bottom) + var(--space-3));
   width: min(calc(100% - var(--space-6)), 608px);
   display: flex;
-  gap: var(--space-1);
-  padding: var(--space-1);
+  gap: 0;
+  padding: 0;
   border-radius: var(--r-pill);
   background: var(--glass);
   border: 1px solid var(--glass-line);
   box-shadow: var(--e-nav);
   -webkit-backdrop-filter: var(--glass-blur);
   backdrop-filter: var(--glass-blur);
+  overflow: hidden;
+  isolation: isolate;
   z-index: 50;
+}
+
+/* One continuous lens moves through the glass instead of drawing a smaller
+   capsule inside each button. Its footprint is the full tab slot, clipped by
+   the bar at the ends, so Home and Activity inherit the bar's outer curve. */
+.tabbar-lens {
+  position: absolute;
+  z-index: 0;
+  top: 1px;
+  bottom: 1px;
+  left: 0;
+  width: calc(100% / var(--tab-count));
+  border-radius: var(--r-pill);
+  transform: translateX(calc(var(--active-index) * 100%));
+  background: rgba(245, 240, 232, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 1px 8px rgba(0, 0, 0, 0.12);
+  transition: transform var(--d-base) var(--ease-out);
+  pointer-events: none;
+}
+
+.tabbar:not(.has-active) .tabbar-lens {
+  opacity: 0;
 }
 
 .tabbar-btn {
@@ -1334,7 +1361,7 @@ textarea {
   justify-content: center;
   gap: 2px;
   min-height: 52px;
-  padding: 7px var(--space-1);
+  padding: 8px var(--space-1);
   border-radius: var(--r-pill);
   background: none;
   border: none;
@@ -1355,22 +1382,11 @@ textarea {
 
 .tabbar-btn > * {
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 .tabbar-btn.active {
   color: #ece7df;
-}
-
-/* Restrained active capsule, inset so the glass bar remains the dominant layer. */
-.tabbar-btn.active::before {
-  content: "";
-  position: absolute;
-  inset: 2px 3px;
-  border-radius: var(--r-pill);
-  background: rgba(245, 240, 232, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  z-index: 0;
 }
 
 .tabbar-btn.active .tabbar-icon {
@@ -1385,7 +1401,7 @@ textarea {
 @media (prefers-reduced-motion: reduce) {
   .tabbar-btn,
   .tabbar-btn:active,
-  .tabbar-btn.active::before,
+  .tabbar-lens,
   .tabbar-btn.active .tabbar-icon {
     transition: color var(--d-fast) var(--ease-out);
     transform: none;
@@ -1413,7 +1429,7 @@ textarea {
    descriptive ones are taglines and could go, but that is an editing decision
    rather than a layout one. */
 .page-header {
-  padding: 0 16px 10px;
+  padding: 0 var(--screen-gutter) var(--space-3);
 }
 
 .page-subtitle {
@@ -1433,9 +1449,9 @@ textarea {
 /* Library search + filters scroll away with the list; only the app header stays
    fixed. This block is IN FLOW despite the name, so nothing passes behind it. */
 .library-sticky {
-  background: var(--glass);
-  padding: 12px 16px 10px;
-  border-bottom: 1px solid var(--glass-line);
+  background: transparent;
+  padding: 0 var(--screen-gutter) var(--space-3);
+  border-bottom: 0;
 }
 
 .search-input {
@@ -1513,17 +1529,26 @@ textarea {
 .stats-strip {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  padding: 14px 16px;
+  gap: 0;
+  margin: var(--space-3) var(--screen-gutter);
+  padding: 0;
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  overflow: hidden;
 }
 
 .stat-cell {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 10px 8px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: var(--space-3) var(--space-2);
   text-align: center;
-  box-shadow: var(--shadow);
+  box-shadow: none;
+}
+
+.stat-cell + .stat-cell {
+  border-left: 1px solid var(--line-soft);
 }
 
 .stat-value {
@@ -1557,9 +1582,9 @@ textarea {
 .game-list {
   display: flex;
   flex-direction: column;
-  margin: 4px 16px 16px;
+  margin: 0 var(--screen-gutter) var(--space-5);
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-soft);
   border-radius: var(--radius);
   overflow: hidden;
 }
@@ -1610,7 +1635,7 @@ textarea {
 /* The divider is between rows, never above the first or below the last, so the
    group's own rounded corners are the only edge the list has. */
 .game-list .game-card + .game-card {
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--line-soft);
 }
 
 .game-card:active {
@@ -2299,19 +2324,19 @@ textarea {
 
 .chart-card {
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-soft);
   border-radius: var(--radius);
-  padding: 14px 16px;
-  margin: 12px 16px;
-  box-shadow: var(--shadow);
+  padding: var(--space-4);
+  margin: var(--space-3) var(--screen-gutter);
+  box-shadow: none;
 }
 
 .chart-title {
-  font-size: var(--t-foot);
-  font-weight: var(--w-bold);
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: var(--t-sub);
+  font-weight: var(--w-semi);
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: 0;
   margin: 0 0 12px;
 }
 
@@ -2540,10 +2565,11 @@ textarea {
    icons take it too, since they stroke with currentColor. */
 [data-theme="light"] .tabbar-btn { color: #4f4a42; }
 [data-theme="light"] .tabbar-btn.active { color: #232020; }
-[data-theme="light"] .tabbar-btn.active::before {
+[data-theme="light"] .tabbar-lens {
   background: rgba(255, 255, 255, 0.46);
   border-color: rgba(40, 38, 36, 0.08);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 1px 8px rgba(60, 45, 30, 0.08);
 }
 [data-theme="light"] .status-badge.status-finished {
   color: #0f7a58;
@@ -2639,8 +2665,8 @@ textarea {
 .seg {
   display: flex;
   gap: 4px;
-  background: var(--glass);
-  border: 1px solid var(--glass-line);
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
   border-radius: var(--r-sm);
   padding: 4px;
 }
@@ -2661,8 +2687,9 @@ textarea {
 }
 
 .seg-btn.active {
-  background: var(--accent);
-  color: var(--bg);
+  background: var(--surface-2);
+  color: var(--text);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 /* Color theme (accent) swatch picker */

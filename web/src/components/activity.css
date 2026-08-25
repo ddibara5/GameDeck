@@ -10,7 +10,7 @@
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  margin: 14px 16px 6px;
+  margin: var(--space-5) var(--screen-gutter) var(--space-2);
 }
 
 /* ---------------------------------------------------------------- day cards */
@@ -26,12 +26,12 @@
    whatever the background turns out to be. */
 .day-card {
   position: relative;
-  margin: 0 12px 10px;
+  margin: 0 var(--screen-gutter) var(--space-4);
   padding: 4px 0;
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-soft);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  box-shadow: none;
 }
 
 /* THE RAIL AND THE NODE ARE GONE, and the 18px of gutter they held with them.
@@ -59,7 +59,7 @@
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.activity-row + .activity-row { border-top: 1px solid var(--line); }
+.activity-row + .activity-row { border-top: 1px solid var(--line-soft); }
 .activity-row:active { background: rgba(255, 255, 255, 0.03); }
 [data-theme='light'] .activity-row:active { background: rgba(0, 0, 0, 0.03); }
 /* A row whose game is no longer in the library has nothing to open. It still

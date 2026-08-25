@@ -8,8 +8,8 @@
 .hm-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  padding: 12px 16px 0;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--screen-gutter) 0;
 }
 
 /* One tile with nothing to pair with takes the whole width. Same min-height, so
@@ -99,9 +99,9 @@
   min-height: 96px;
   padding: 12px;
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-soft);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  box-shadow: none;
   color: inherit;
 }
 .hm-tile:active { background: var(--surface-2); }

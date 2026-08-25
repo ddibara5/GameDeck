@@ -188,7 +188,7 @@
   gap: 13px;
   padding: 10px 16px;
   background: var(--bg);
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--line-soft);
   cursor: pointer;
   will-change: transform;
 }
@@ -311,7 +311,7 @@
   flex: none;
   display: flex;
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-soft);
   border-radius: var(--r-pill);
   padding: 3px;
   gap: 2px;
@@ -527,7 +527,7 @@
   width: 128px;
   text-align: left;
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-soft);
   border-radius: var(--radius);
   overflow: hidden;
   padding: 0;

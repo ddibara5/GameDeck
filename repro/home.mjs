@@ -254,6 +254,21 @@ const home = await page.evaluate(() => ({
   })(),
   tabs: [...document.querySelectorAll('.tabbar-btn')].map((b) => b.textContent.trim()),
   active: document.querySelector('.tabbar-btn.active')?.textContent.trim(),
+  lens: (() => {
+    const bar = document.querySelector('.tabbar')
+    const lens = document.querySelector('.tabbar-lens')
+    const first = document.querySelector('.tabbar-btn')
+    if (!bar || !lens || !first) return null
+    const b = bar.getBoundingClientRect()
+    const l = lens.getBoundingClientRect()
+    const f = first.getBoundingClientRect()
+    return {
+      widthDelta: Math.round(Math.abs(l.width - f.width) * 10) / 10,
+      leftGap: Math.round(Math.abs(l.left - b.left) * 10) / 10,
+      topGap: Math.round(Math.abs(l.top - b.top) * 10) / 10,
+      bottomGap: Math.round(Math.abs(b.bottom - l.bottom) * 10) / 10,
+    }
+  })(),
   cardTitles: [...document.querySelectorAll('.chart-title')].map((e) => e.textContent.trim()),
   tiles: [...document.querySelectorAll('.hm-tile')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
   gpRows: [...document.querySelectorAll('[data-card="leaving_gp"] .up-row')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
@@ -307,6 +322,8 @@ const home = await page.evaluate(() => ({
 
 check('lands on Home', home.title === 'Home', home.title)
 check('Quiet Deck bar is home/library/discover/activity', home.tabs.join('|') === 'Home|Library|Discover|Activity', home.tabs.join('|'))
+check('the glass lens fills one complete tab slot', home.lens && home.lens.widthDelta <= 1, JSON.stringify(home.lens))
+check('the Home lens reaches the bar edges', home.lens && home.lens.leftGap <= 2 && home.lens.topGap <= 2 && home.lens.bottomGap <= 2, JSON.stringify(home.lens))
 // The Home mark is HomeDeck's, path for path. Asserted as the exact strings
 // rather than "has three paths", because the decision here is not "a house with
 // a door", it is "the same house the other app opens on". A redraw that still

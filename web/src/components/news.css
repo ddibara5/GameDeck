@@ -14,7 +14,7 @@
   font-weight: var(--w-semi);
   color: var(--text);
   letter-spacing: var(--t-body-tr);
-  margin: 20px 16px 10px;
+  margin: var(--space-5) var(--screen-gutter) var(--space-2);
 }
 
 /* One surface per week, hairline rows. The week heading above it is already the
@@ -24,10 +24,10 @@
 .news-list {
   display: flex;
   flex-direction: column;
-  margin: 0 16px 8px;
+  margin: 0 var(--screen-gutter) var(--space-3);
   background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
   overflow: hidden;
 }
 
@@ -36,7 +36,7 @@
 }
 
 .news-list .news-row + .news-row {
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--line-soft);
 }
 
 /* THE ROW.
@@ -560,7 +560,7 @@
    cannot see is indistinguishable from a broken sort. Margin matches the
    16px gutter every list on this tab uses. */
 .news-seg {
-  margin: 0 16px 14px;
+  margin: 0 var(--screen-gutter) var(--space-4);
 }
 
 /* ---------------------------------------------------------------------------
