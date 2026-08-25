@@ -1,5 +1,5 @@
 /**
- * repro/panels.mjs - the For You card and the Activity day panel, against the
+ * repro/panels.mjs - the canvas lists and Activity day groups, against the
  * BUILT app.
  *
  * Two claims, and neither is "the class is there". Both are about the COMPOSED
@@ -7,8 +7,8 @@
  * actually sees between two blocks. Every number below differs from the value
  * written in the stylesheet, which is the reason the CSS is not the assertion.
  *
- * Run against BOTH builds. Against the commit before this one, the surface
- * checks fail because the rows have no background at all and the node is --bg.
+ * Run against BOTH builds. Against the previous build, the canvas checks fail
+ * because each homogeneous list still carries an opaque rounded outer slab.
  *
  * Run: PW_CHROME=... BASE=http://127.0.0.1:4173 node repro/panels.mjs
  */
@@ -69,19 +69,38 @@ await page.route('**/api/**', (r) => {
 })
 await page.goto(BASE, { waitUntil: 'networkidle' })
 
-const tokens = await page.evaluate(() => {
-  const cs = getComputedStyle(document.documentElement)
-  const norm = (v) => {
-    const d = document.createElement('div')
-    d.style.color = v.trim()
-    document.body.appendChild(d)
-    const out = getComputedStyle(d).color
-    d.remove()
-    return out
+/* ----------------------------------------------------------- Library */
+await page.locator('.tabbar-btn', { hasText: 'Library' }).first().click()
+await page.waitForTimeout(1200)
+
+const library = await page.evaluate(() => {
+  const listNode = document.querySelector('.game-list')
+  const rows = [...document.querySelectorAll('.game-list .game-card')]
+  if (!listNode || rows.length < 3) return { count: rows.length }
+  const list = getComputedStyle(listNode)
+  const row = getComputedStyle(rows[0])
+  const second = getComputedStyle(rows[1])
+  return {
+    count: rows.length,
+    listBg: list.backgroundColor,
+    listBorder: list.borderTopWidth,
+    listRadius: parseFloat(list.borderTopLeftRadius),
+    listLeft: Math.round(listNode.getBoundingClientRect().left),
+    rowBg: row.backgroundColor,
+    rowPadLeft: Math.round(parseFloat(row.paddingLeft)),
+    firstTopBorder: row.borderTopWidth,
+    secondSides: ['Top', 'Right', 'Bottom', 'Left'].map((k) => second['border' + k + 'Width']),
   }
-  return { surface: norm(cs.getPropertyValue('--surface')), bg: norm(cs.getPropertyValue('--bg')) }
 })
-console.log('tokens', JSON.stringify(tokens))
+console.log('library', JSON.stringify(library))
+check('the Library rendered rows to measure', library.count >= 3, library.count)
+check('the Library list sits directly on the canvas', library.listBg === 'rgba(0, 0, 0, 0)', library.listBg)
+check('and has no outer hairline or radius', library.listBorder === '0px' && library.listRadius === 0, `${library.listBorder} / ${library.listRadius}px`)
+check('the list supplies the 16px gutter and rows add no inset', library.listLeft === 16 && library.rowPadLeft === 0, `left=${library.listLeft}px row=${library.rowPadLeft}px`)
+check('Library rows are transparent', library.rowBg === 'rgba(0, 0, 0, 0)', library.rowBg)
+check('Library rows use only between-row dividers',
+  library.firstTopBorder === '0px' && library.secondSides[0] === '1px' && library.secondSides.slice(1).every((w) => w === '0px'),
+  `${library.firstTopBorder} / ${library.secondSides.join('/')}`)
 
 /* ---------------------------------------------- Discover / For you */
 await page.locator('.tabbar-btn', { hasText: 'Discover' }).first().click()
@@ -118,17 +137,10 @@ const fy = await page.evaluate(() => {
 })
 console.log('fy', JSON.stringify(fy))
 check('the For You feed rendered rows to measure', fy.count >= 3, fy.count)
-// THE SURFACE MOVED UP ONE LEVEL, and that is the whole of 23 Aug's change.
-//
-// The claim these three used to make was "every block of type has a surface
-// under it", and that is still the claim - it is just that ONE surface now
-// carries the whole feed instead of one per pick. A card round every row cut the
-// ground into a stripe every 10px and put twelve identical borders on a screen
-// whose job is to show titles. So the assertions are inverted rather than
-// deleted: the feed has the fill, the hairline and the radius, and a pick has
-// none of them and is divided from its neighbour by one pixel.
-check('the FEED sits on --surface', fy.feedBg === tokens.surface, `${fy.feedBg} vs ${tokens.surface}`)
-check('and carries the hairline and the radius', fy.feedBorder === '1px' && near(fy.feedRadius, 18), `${fy.feedBorder} / ${fy.feedRadius}px`)
+// The page and lane controls already establish this as one feed. The outer slab
+// is gone; rows retain only their between-row separator.
+check('the For You feed sits directly on the canvas', fy.feedBg === 'rgba(0, 0, 0, 0)', fy.feedBg)
+check('and has no outer hairline or radius', fy.feedBorder === '0px' && fy.feedRadius === 0, `${fy.feedBorder} / ${fy.feedRadius}px`)
 check('a pick has no fill of its own', fy.bg === 'rgba(0, 0, 0, 0)', fy.bg)
 // Divided, not bordered: the divider is BETWEEN rows, so the first row must not
 // carry one. Reading row[1] alone cannot tell a divider from a card - that is
@@ -180,6 +192,7 @@ const act = await page.evaluate(() => {
     // asserted now is that the gutter they held went back to the row.
     nodes: document.querySelectorAll('.activity-node').length,
     rowPadLeft: row ? Math.round(parseFloat(getComputedStyle(row).paddingLeft)) : null,
+    panelLeft: Math.round(panels[0].getBoundingClientRect().left),
     labelToPanel: Math.round(panels[0].getBoundingClientRect().top - labels[0].getBoundingClientRect().bottom),
     panelToLabel: Math.round(labels[1].getBoundingClientRect().top - panels[0].getBoundingClientRect().bottom),
     labelToPanel2: Math.round(panels[1].getBoundingClientRect().top - labels[1].getBoundingClientRect().bottom),
@@ -188,13 +201,10 @@ const act = await page.evaluate(() => {
 })
 console.log('act', JSON.stringify(act))
 check('the feed rendered day panels to measure', act.count >= 3, act.count)
-check('a day sits on --surface', act.bg === tokens.surface, `${act.bg} vs ${tokens.surface}`)
-check('and carries the card hairline and radius', act.border === '1px' && near(act.radius, 18), `${act.border} / ${act.radius}px`)
+check('a day group sits directly on the canvas', act.bg === 'rgba(0, 0, 0, 0)', act.bg)
+check('and has no outer hairline or radius', act.border === '0px' && act.radius === 0, `${act.border} / ${act.radius}px`)
 check('the spine is gone', act.nodes === 0, `${act.nodes} nodes`)
-// 32px was the gutter the rail and node lived in. A row that still reserved it
-// after they went would be the change half-done and would look identical to a
-// reader who never saw the dot.
-check('and the row got its gutter back', act.rowPadLeft === 14, `${act.rowPadLeft}px left padding`)
+check('the group itself supplies the 16px screen gutter', act.panelLeft === 16 && act.rowPadLeft === 0, `left=${act.panelLeft}px row=${act.rowPadLeft}px`)
 check('the day rhythm is even', act.labelToPanel === act.labelToPanel2, `${act.labelToPanel} / ${act.labelToPanel2}`)
 check('a label sits closer to its own day than to the one above', act.labelToPanel < act.panelToLabel, `${act.labelToPanel} under vs ${act.panelToLabel} over`)
 

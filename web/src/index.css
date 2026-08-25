@@ -1236,11 +1236,12 @@ textarea {
 
 /* ---------- Secondary type on the ground ----------
 
-   The four selectors below are, empirically, the ONLY text in the app that sits
-   directly on the ground. Walked across all five tabs, matching every run of
-   --muted text and asking what is painted between it and the ground: 109 of 123
-   runs are on an opaque card - a game card, a day card, a chart card, a Home
-   tile - and cannot see the ground at all. These fourteen can.
+   Quiet Deck's homogeneous lists now sit directly on the canvas. Their muted
+   metadata therefore joins the titles, subtitles and labels that can see a
+   user-selected picture. On a flat or wash ground the normal muted hierarchy
+   stays intact; on artwork it is promoted to --text so the measured veil keeps
+   every direct-content label readable without turning the picture back into an
+   opaque card.
 
    They were the reason the veil sat at 0.74-0.84: it was covering the whole
    photograph to hold 13px grey text at 4.5:1. Promoting them to --text while a
@@ -1276,7 +1277,10 @@ textarea {
    0,3,0, so without the exclusion this rule would win and paint the knockout in
    --text on an accent pill. Verified as a measurement, not by counting: the
    composited check on the segmented control is in repro/accent.mjs. */
-:root[data-ground-art] :is(.page-subtitle, .activity-group-label, .showing-label, .empty-state),
+:root[data-ground-art] :is(.page-subtitle, .activity-group-label, .showing-label, .empty-state,
+  .platform-row, .game-meta-row, .activity-detail, .activity-mins .u, .arc-txt,
+  .fy-meta, .news-row-time, .news-row-heat, .news-week-count,
+  .rank-row-copy span, .rank-score),
 :root[data-ground-art] :is(.lane-chip, .seg-btn):not(.active) {
   color: var(--text);
 }
@@ -1584,24 +1588,18 @@ textarea {
 
 /* ---------- Game list & cards ---------- */
 
-/* ONE SURFACE, not one per row.
-
-   Every row here is the same kind of thing, the list is sorted, and Library puts
-   a search field and a filter above it - which is exactly the case a card per
-   row is worst at. It also cut the ground into a stripe every 10px: eleven
-   slivers of photograph read as seams, not as a background.
-
-   So the LIST is the surface and the rows are rows, divided by a hairline. Same
-   iOS inset-grouped shape the Settings page and the drawer already use. Nothing
-   inside a row changed; eleven borders, eleven shadows and eleven radii went. */
+/* Canvas list: rows are already grouped by the page, its search and its sort.
+   A second rounded slab around the whole result set adds no information, so the
+   content sits directly on the app ground and restrained inset dividers carry
+   the scanning rhythm. */
 .game-list {
   display: flex;
   flex-direction: column;
   margin: 0 var(--screen-gutter) var(--space-5);
-  background: var(--surface);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius);
-  overflow: hidden;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
 }
 
 /* An empty list must not paint an empty slab. :empty is exact here because the
@@ -1640,21 +1638,20 @@ textarea {
   background: none;
   border: none;
   border-radius: 0;
-  padding: 10px;
+  padding: 10px 0;
   cursor: pointer;
   min-height: 44px;
   text-align: left;
   width: 100%;
 }
 
-/* The divider is between rows, never above the first or below the last, so the
-   group's own rounded corners are the only edge the list has. */
+/* The divider is between rows, never above the first or below the last. */
 .game-list .game-card + .game-card {
   border-top: 1px solid var(--line-soft);
 }
 
 .game-card:active {
-  background: var(--surface-2);
+  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
 }
 
 .game-card-body {
@@ -1776,10 +1773,14 @@ textarea {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 10px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 10px 0;
+}
+
+.game-list .skeleton-card + .skeleton-card {
+  border-top: 1px solid var(--line-soft);
 }
 
 .skeleton-cover {

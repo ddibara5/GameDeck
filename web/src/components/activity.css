@@ -13,24 +13,18 @@
   margin: var(--space-5) var(--screen-gutter) var(--space-2);
 }
 
-/* ---------------------------------------------------------------- day cards */
+/* ---------------------------------------------------------------- day groups */
 
-/* A day group is a card, on the same surface and radius as a Library row.
-   Called .day-card and not .tl because there is no longer a timeline in it:
-   see below.
-
-   The card itself is not cosmetic. Every row here is type on the page with
-   nothing behind it - measured on a real background with no surface, the title
-   reads 3.3:1 and the 11px arc caption 1.3:1. On this card both come back to
-   13.0 and 6.1, and because the fill is opaque those numbers do not move
-   whatever the background turns out to be. */
+/* The date label already establishes each group, so the old rounded day slab
+   repeated the same hierarchy. Keep the grouping in the DOM and the dividers
+   between multiple sessions, but let the rows share the continuous canvas. */
 .day-card {
   position: relative;
   margin: 0 var(--screen-gutter) var(--space-4);
-  padding: 4px 0;
-  background: var(--surface);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius);
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
   box-shadow: none;
 }
 
@@ -50,7 +44,7 @@
   display: flex;
   gap: 11px;
   width: 100%;
-  padding: 9px 14px;
+  padding: 9px 0;
   text-align: left;
   border: none;
   background: none;

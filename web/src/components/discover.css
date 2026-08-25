@@ -673,22 +673,17 @@ button.shelf-head:active {
   font-weight: var(--w-semi);
 }
 
-/* The feed is a column of cards, the same card a Library row is: same surface,
-   same hairline, same radius, same elevation. It was flat rows on the page
-   divided by a hairline, which is the shape that breaks first if anything ever
-   sits behind the page - a row of type with no surface under it. The gap does
-   the dividing now, so the hairline between rows is gone. */
-/* One surface, hairline rows. Same change as .game-list, and for the same
-   reason: this feed was built explicitly as "a column of Library cards", so it
-   inherited the per-row container and the striped ground with it. */
+/* One continuous canvas, hairline rows. The feed label and lane controls already
+   provide its context; the rounded outer slab was a second container around a
+   homogeneous list. */
 .fy-feed {
   display: flex;
   flex-direction: column;
   margin: var(--space-1) var(--screen-gutter) var(--space-5);
-  background: var(--surface);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius);
-  overflow: hidden;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
 }
 
 .fy-feed:empty {
@@ -715,7 +710,7 @@ button.shelf-head:active {
      55px, and flex-start left all of that slack under the last line. */
   align-items: center;
   width: 100%;
-  padding: 10px 44px 10px 10px;
+  padding: 10px 38px 10px 0;
   background: none;
   border: none;
   text-align: left;
@@ -767,25 +762,25 @@ button.shelf-head:active {
   font-weight: var(--w-semi);
 }
 
-/* The reason, and the whole argument for this layout. It is an inline-flex
-   rather than a block so the pill is the width of its words. */
+/* The reason is metadata, not another control or container. Accent and spacing
+   distinguish it without drawing a pill inside every row. */
 .fy-why {
   display: inline-block;
   max-width: 100%;
   margin-top: 6px;
   font-size: var(--t-cap2);
   color: var(--accent);
-  border: 1px solid var(--line);
-  border-radius: var(--r-pill);
-  padding: 3px 9px;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
 }
 
 .fy-why.wished {
   color: var(--amber);
 }
 
-/* On a card the heart is not floating over artwork any more, so it drops the
-   glass puck the base rule gives it and reads as a plain control. */
+/* In a list row the heart is not floating over artwork, so it drops the glass
+   puck the base rule gives it and reads as a plain control. */
 .fy-row-wrap .wish-heart {
   position: absolute;
   top: 50%;
