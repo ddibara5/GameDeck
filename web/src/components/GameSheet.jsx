@@ -20,8 +20,7 @@ import { coverLook } from '../lib/tint.js'
 import { resolveTheme } from '../lib/theme.js'
 import Lightbox from './Lightbox.jsx'
 import RankingReaction from './RankingReaction.jsx'
-import { supabase } from '../lib/supabase.js'
-import { seedForReaction } from '../lib/ranking.js'
+import { getGameRankCache, loadGameRank, seedForReaction } from '../lib/ranking.js'
 import './gameSheet.css'
 
 // Holds the vertical space that the summary + screenshot strip + genre chips
@@ -82,7 +81,7 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   // deliberate one and there is no way back out of an override.
   const [status, setStatusState] = useState('backlog')
   const [pinned, setPinned] = useState(false)
-  const [rank, setRank] = useState(null)
+  const [rank, setRank] = useState(() => (owned && game ? getGameRankCache(game.master_id) || null : null))
   const [reactionPrompt, setReactionPrompt] = useState(false)
 
   // achievements_url is no longer carried on library rows: it was 34 kB across
@@ -98,14 +97,14 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   useEffect(() => {
     if (!owned || !game) return undefined
     let alive = true
-    setRank(null)
     setReactionPrompt(false)
-    supabase
-      .from('game_ranks')
-      .select('score,reaction,comparison_count')
-      .eq('master_id', Number(game.master_id))
-      .maybeSingle()
-      .then(({ data }) => { if (alive) setRank(data || null) })
+    const cached = getGameRankCache(game.master_id)
+    setRank(cached === undefined ? null : cached)
+    loadGameRank(game.master_id, (fresh) => {
+      if (alive) setRank(fresh)
+    }).then((data) => {
+      if (alive) setRank(data || null)
+    }).catch(() => {})
     return () => { alive = false }
   }, [owned, game])
 
@@ -131,20 +130,23 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
     }
     let alive = true
     let t = null
+    const openedAt = typeof performance !== 'undefined' ? performance.now() : Date.now()
     setMedia(null)
     setMediaPending(Boolean(igdbId))
     if (igdbId) {
       fetchGameById(igdbId)
         .then((m) => {
           if (!alive) return
-          // Swap in after the ~200ms open animation settles. The skeleton above
-          // already holds the space, so this is only belt-and-braces: any small
-          // residual difference in height lands after the slide, not during it.
+          // Swap in once the ~200ms open animation has settled. This is a
+          // DEADLINE from sheet open, not 240ms added after the network: a slow
+          // response that arrives after the slide should paint immediately.
+          const now = typeof performance !== 'undefined' ? performance.now() : Date.now()
+          const remaining = Math.max(0, 240 - (now - openedAt))
           t = setTimeout(() => {
             if (!alive) return
             setMedia(m)
             setMediaPending(false)
-          }, 240)
+          }, remaining)
         })
         .catch(() => {
           // Fetch failed: drop the placeholder rather than shimmer forever.

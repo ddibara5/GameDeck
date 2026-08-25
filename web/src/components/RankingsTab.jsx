@@ -6,6 +6,7 @@ import { useLibraryGames } from '../lib/useLibraryGames.js'
 import { explicitStatus, useStatusMap } from '../lib/userStatus.js'
 import {
   chooseComparisonPair,
+  getRankingStateCache,
   isRankingEligible,
   loadRankingState,
   recordComparison,
@@ -44,18 +45,19 @@ function CompareCard({ game, onPick, disabled }) {
 }
 
 export default function RankingsTab() {
+  const cachedState = getRankingStateCache()
   const [section, setSection] = useState('ranking')
   const { games, loading: gamesLoading } = useLibraryGames()
   const statuses = useStatusMap()
-  const [state, setState] = useState({ ranks: [], comparisons: [] })
-  const [loading, setLoading] = useState(true)
+  const [state, setState] = useState(() => cachedState || { ranks: [], comparisons: [] })
+  const [loading, setLoading] = useState(() => !cachedState)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
-  const refresh = async () => {
+  const refresh = async (force = false) => {
     setError('')
     try {
-      setState(await loadRankingState())
+      setState(await loadRankingState(force, setState))
     } catch (err) {
       setError(err.message || 'Could not load your ranking.')
     } finally {
@@ -84,7 +86,7 @@ export default function RankingsTab() {
     setError('')
     try {
       await recordComparison(pair[0].master_id, pair[1].master_id, result)
-      await refresh()
+      await refresh(true)
     } catch (err) {
       setError(err.message || 'Could not save that comparison.')
     } finally {

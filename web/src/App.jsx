@@ -43,8 +43,18 @@ const DiscoverTab = lazy(TAB_LOADERS.discover)
 const NewsTab = lazy(TAB_LOADERS.news)
 const WishlistTab = lazy(TAB_LOADERS.wishlist)
 const RankingsTab = lazy(TAB_LOADERS.rankings)
-const ListView = lazy(() => import('./components/ListView.jsx'))
-const ShufflePicker = lazy(() => import('./components/ShufflePicker.jsx'))
+const VIEW_LOADERS = {
+  list: () => import('./components/ListView.jsx'),
+  wishlist: TAB_LOADERS.wishlist,
+  shuffle: () => import('./components/ShufflePicker.jsx'),
+}
+const ListView = lazy(VIEW_LOADERS.list)
+const ShufflePicker = lazy(VIEW_LOADERS.shuffle)
+
+const warmLoader = (loader) => {
+  if (!loader) return
+  Promise.resolve().then(loader).catch(() => {})
+}
 
 // Drawer edge-swipe: open with a swipe in from the left edge, close with a left swipe.
 const EDGE_PX = 24
@@ -133,6 +143,17 @@ function GameDeckApp() {
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
+
+  // Opening the drawer is intent: the next tap is likely to be Wishlist, a
+  // status list or Shuffle. Warm those small chunks during the drawer animation
+  // so their first open does not wait on a request. These are not launch work and
+  // hidden tabs remain excluded from the ordinary idle queue.
+  useEffect(() => {
+    if (!menuOpen) return
+    warmLoader(VIEW_LOADERS.wishlist)
+    warmLoader(VIEW_LOADERS.list)
+    warmLoader(VIEW_LOADERS.shuffle)
+  }, [menuOpen])
 
   // Fetch the code for the OTHER tabs in the bar once the page has loaded, one at
   // a time on idle. Run once on mount and never re-run: the point is to spend the
@@ -275,6 +296,7 @@ function GameDeckApp() {
             closeView()
             setActiveTab(t)
           }}
+          onWarm={(t) => warmLoader(TAB_LOADERS[t])}
           tabs={visibleTabs}
           showLabels={nav.labels}
           badges={{ news: newsUnread }}
@@ -293,6 +315,7 @@ function GameDeckApp() {
           closeView()
           setActiveTab(t)
         }}
+        onWarmTab={(t) => warmLoader(TAB_LOADERS[t])}
       />
       <Suspense fallback={null}>
         {shuffleOpen ? <ShufflePicker open onClose={() => setShuffleOpen(false)} /> : null}

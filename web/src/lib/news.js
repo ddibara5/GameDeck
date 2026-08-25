@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from './supabase.js'
 import { normTitle } from './discover.js'
 import { igdbCover } from './format.js'
+import { idbSet, swr } from './idbCache.js'
 
 // Keep roughly the last four weeks. week_of is a DATE (Monday of the digest week).
 const WEEKS_KEPT = 4
@@ -21,8 +22,12 @@ const BASE_SELECT =
 // game_* columns are added by a later migration. Select them when present; fall
 // back to the base columns if the migration hasn't run yet, so the tab never breaks.
 const FULL_SELECT = `${BASE_SELECT}, game_name, game_igdb_id, game_cover`
+const NEWS_CACHE_KEY = 'news:rows'
 
-export async function fetchNews() {
+let newsCache = null
+let newsInflight = null
+
+async function fetchNewsNetwork() {
   const cutoff = new Date()
   cutoff.setDate(cutoff.getDate() - WEEKS_KEPT * 7)
   const cutoffIso = cutoff.toISOString().slice(0, 10) // YYYY-MM-DD
@@ -44,7 +49,7 @@ export async function fetchNews() {
     ;({ data, error } = await run(BASE_SELECT))
   }
 
-  if (error) return []
+  if (error) throw new Error(error.message || 'News request failed')
   return (data || []).map((r) => ({
     id: r.id,
     weekOf: r.week_of,
@@ -61,6 +66,41 @@ export async function fetchNews() {
     gameIgdbId: r.game_igdb_id || null,
     gameCover: r.game_cover || null,
   }))
+}
+
+export function getNewsCache() {
+  return newsCache
+}
+
+// News changes on a scheduled refresh, not while someone moves between tabs.
+// Paint the last digest from disk, refresh it once in the background on the
+// first News visit, and keep the session copy for every return after that.
+export async function loadNews(force = false, onFresh) {
+  if (newsCache && !force) return newsCache
+  if (force) {
+    const rows = await fetchNewsNetwork().catch(() => newsCache || [])
+    newsCache = rows
+    idbSet(NEWS_CACHE_KEY, rows)
+    return rows
+  }
+  if (newsInflight) return newsInflight
+
+  newsInflight = swr(NEWS_CACHE_KEY, fetchNewsNetwork, {
+    maxAge: 0,
+    onFresh: (rows) => {
+      newsCache = rows || []
+      if (onFresh) onFresh(newsCache)
+    },
+  })
+    .then(({ value }) => {
+      if (!newsCache) newsCache = value || []
+      return newsCache
+    })
+    .catch(() => newsCache || [])
+    .finally(() => {
+      newsInflight = null
+    })
+  return newsInflight
 }
 
 // sources is jsonb: [{ name, url }]. Guard against nulls / bad shapes and fall

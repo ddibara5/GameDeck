@@ -10,6 +10,23 @@ import { parseDayOrInstant } from './format.js'
 // Library ended up with two drifting column lists.
 export const ACTIVITY_VIEW = 'v_recent_activity'
 
+const activityCache = new Map()
+const activityInflight = new Map()
+let activityStartCache
+let activityStartInflight = null
+
+function activityKey({ days, limit }) {
+  return `activity:${days}:${limit || 'all'}`
+}
+
+export function getRecentActivityCache(options) {
+  return activityCache.get(activityKey(options)) || null
+}
+
+export function getActivityStartCache() {
+  return activityStartCache === undefined ? null : activityStartCache
+}
+
 // Ordering is event_date DESC, so `limit` truncates the OLDEST rows. Anything that
 // depends on recent rows being complete is therefore safe; anything that depends on
 // the FULL window being complete must pass a limit above the expected row count.
@@ -31,18 +48,42 @@ export async function fetchRecentActivity({ days, limit }) {
 // and a cache keyed only on the table would serve Insights' fortnight to Home's
 // week. maxAge 0: play events arrive daily, so a cached list is always shown
 // AND always refreshed.
-export async function loadRecentActivity({ days, limit }, onFresh) {
-  const key = `activity:${days}:${limit || 'all'}`
-  const { value } = await swr(
+export async function loadRecentActivity({ days, limit }, onFresh, { throwOnError = false } = {}) {
+  const options = { days, limit }
+  const key = activityKey(options)
+  if (activityCache.has(key)) return activityCache.get(key)
+  if (activityInflight.has(key)) return activityInflight.get(key)
+
+  const request = swr(
     key,
     async () => {
-      const { data, error } = await fetchRecentActivity({ days, limit })
+      const { data, error } = await fetchRecentActivity(options)
       if (error) throw new Error(error.message || 'Activity request failed')
       return data || []
     },
-    { maxAge: 0, onFresh },
-  ).catch(() => ({ value: [] }))
-  return value || []
+    {
+      maxAge: 0,
+      onFresh: (rows) => {
+        const next = rows || []
+        activityCache.set(key, next)
+        if (onFresh) onFresh(next)
+      },
+    },
+  )
+    .then(({ value }) => {
+      const next = value || []
+      if (!activityCache.has(key)) activityCache.set(key, next)
+      return activityCache.get(key)
+    })
+    .catch((error) => {
+      if (activityCache.has(key)) return activityCache.get(key)
+      if (throwOnError) throw error
+      return []
+    })
+    .finally(() => activityInflight.delete(key))
+
+  activityInflight.set(key, request)
+  return request
 }
 
 // The earliest day the activity history holds, used to decide whether a
@@ -57,4 +98,29 @@ export async function fetchActivityStart() {
     .limit(1)
   const first = data && data[0] && data[0].event_date
   return first ? parseDayOrInstant(first) : null
+}
+
+// The earliest activity date changes only when history is backfilled. Persist it
+// and refresh once per app session instead of making Insights wait on a separate
+// one-row request every time the tab is revisited.
+export async function loadActivityStart(onFresh) {
+  if (activityStartCache !== undefined) return activityStartCache
+  if (activityStartInflight) return activityStartInflight
+
+  activityStartInflight = swr('activity:start', fetchActivityStart, {
+    maxAge: 24 * 60 * 60 * 1000,
+    onFresh: (value) => {
+      activityStartCache = value || null
+      if (onFresh) onFresh(activityStartCache)
+    },
+  })
+    .then(({ value }) => {
+      if (activityStartCache === undefined) activityStartCache = value || null
+      return activityStartCache
+    })
+    .catch(() => null)
+    .finally(() => {
+      activityStartInflight = null
+    })
+  return activityStartInflight
 }

@@ -24,7 +24,7 @@ import { DEST_ICONS } from './destIcons.jsx'
 // Group headings are printed as the list is walked, not by grouping it first,
 // because the order belongs to the user: drag a row somewhere else and its
 // heading follows it there. Same rule as the editor, so the two always agree.
-export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpenTab, onOpenSettings, onShuffle, onCustomize, activeTab }) {
+export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpenTab, onWarmTab, onOpenSettings, onShuffle, onCustomize, activeTab }) {
   const { items: wishItems } = useWishlist()
   const { games } = useLibraryGames()
   const statusMap = useStatusMap()
@@ -143,7 +143,13 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpen
                   </button>
                 ) : null}
                 {folded ? null : (
-                <button type="button" className={`menu-item${here ? ' here' : ''}`} onClick={() => activate(dest)}>
+                <button
+                  type="button"
+                  className={`menu-item${here ? ' here' : ''}`}
+                  onPointerDown={() => dest.kind === 'tab' && onWarmTab && onWarmTab(dest.key)}
+                  onFocus={() => dest.kind === 'tab' && onWarmTab && onWarmTab(dest.key)}
+                  onClick={() => activate(dest)}
+                >
                   {cloneElement(DEST_ICONS[key] || DEST_ICONS.home, { className: 'menu-icon' })}
                   <span className="menu-label">{dest.label}</span>
                   {count != null ? (

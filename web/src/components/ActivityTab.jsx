@@ -4,7 +4,7 @@ import Hhm from './Hhm.jsx'
 import GameDetail from './GameDetail.jsx'
 import Skeleton from './Skeleton.jsx'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
-import { fetchRecentActivity } from '../lib/recentActivity.js'
+import { getRecentActivityCache, loadRecentActivity } from '../lib/recentActivity.js'
 import { eventDay, daysBetween } from '../lib/playWeek.js'
 import { formatRelativeDay, platformMeta, libraryCover } from '../lib/format.js'
 import './activity.css'
@@ -46,8 +46,9 @@ export function annotate(rows) {
 }
 
 export default function ActivityTab() {
-  const [events, setEvents] = useState([])
-  const [loading, setLoading] = useState(true)
+  const cachedEvents = getRecentActivityCache({ days: WINDOW_DAYS, limit: MAX_ROWS })
+  const [events, setEvents] = useState(() => cachedEvents || [])
+  const [loading, setLoading] = useState(() => !cachedEvents)
   const [error, setError] = useState(null)
   const [selected, setSelected] = useState(null)
   const mountedRef = useRef(true)
@@ -62,20 +63,26 @@ export default function ActivityTab() {
   }, [games])
 
   async function loadEvents() {
-    const { data, error: err } = await fetchRecentActivity({ days: WINDOW_DAYS, limit: MAX_ROWS })
-
-    if (!mountedRef.current) return
-    if (err) setError(err.message)
-    else {
-      setEvents(data || [])
+    try {
+      const rows = await loadRecentActivity(
+        { days: WINDOW_DAYS, limit: MAX_ROWS },
+        (fresh) => {
+          if (mountedRef.current) setEvents(fresh)
+        },
+        { throwOnError: true },
+      )
+      if (!mountedRef.current) return
+      setEvents(rows || [])
       setError(null)
+    } catch (err) {
+      if (mountedRef.current) setError(err.message)
     }
   }
 
   useEffect(() => {
     mountedRef.current = true
     ;(async () => {
-      setLoading(true)
+      if (!cachedEvents) setLoading(true)
       await loadEvents()
       if (mountedRef.current) setLoading(false)
     })()

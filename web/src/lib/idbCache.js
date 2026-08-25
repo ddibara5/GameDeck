@@ -36,6 +36,12 @@ const DB_VERSION = 1
 const SCHEMA = 'v2'
 
 let _dbPromise = null
+// One network refresh per logical cache key. Several tab components can mount in
+// the same tick (Home + drawer, or Home followed quickly by Insights) and each
+// can legitimately ask SWR for the same payload. IndexedDB reads are async, so a
+// caller-local `inflight` flag cannot stop both of them reaching the fetcher.
+// Keeping the refresh here makes deduplication a property of the cache itself.
+const _revalidations = new Map()
 
 function openDb() {
   if (_dbPromise) return _dbPromise
@@ -150,13 +156,20 @@ export function idbDel(key) {
 export async function swr(key, fetcher, { maxAge = 0, onFresh } = {}) {
   const hit = await idbGet(key)
 
-  const revalidate = () =>
-    Promise.resolve()
+  const revalidate = () => {
+    if (_revalidations.has(key)) return _revalidations.get(key)
+    const request = Promise.resolve()
       .then(fetcher)
       .then((fresh) => {
         if (fresh !== undefined && fresh !== null) idbSet(key, fresh)
         return fresh
       })
+      .finally(() => {
+        if (_revalidations.get(key) === request) _revalidations.delete(key)
+      })
+    _revalidations.set(key, request)
+    return request
+  }
 
   if (hit) {
     // maxAge <= 0 means "always revalidate", said outright rather than left to

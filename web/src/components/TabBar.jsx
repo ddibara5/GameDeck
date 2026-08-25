@@ -57,7 +57,7 @@ export const TAB_ICONS = {
   ),
 }
 
-export default function TabBar({ tabs, active, onChange, badges, showLabels = true }) {
+export default function TabBar({ tabs, active, onChange, onWarm, badges, showLabels = true }) {
   const activeIndex = tabs.indexOf(active)
 
   return (
@@ -77,6 +77,8 @@ export default function TabBar({ tabs, active, onChange, badges, showLabels = tr
             key={tab}
             type="button"
             className={`tabbar-btn${isActive ? ' active' : ''}`}
+            onPointerDown={() => onWarm && onWarm(tab)}
+            onFocus={() => onWarm && onWarm(tab)}
             onClick={() => onChange(tab)}
             aria-current={isActive ? 'page' : undefined}
             aria-label={showLabels ? undefined : meta.label}

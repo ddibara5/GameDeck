@@ -1,14 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
-import { supabase } from '../lib/supabase.js'
 import Skeleton from './Skeleton.jsx'
 import Cover from './Cover.jsx'
 import Hhm from './Hhm.jsx'
 import GameDetail from './GameDetail.jsx'
 import CustomizeCards from './CustomizeCards.jsx'
 import { minutesToHhm, libraryCover } from '../lib/format.js'
-import { fetchRecentActivity, fetchActivityStart } from '../lib/recentActivity.js'
+import {
+  getActivityStartCache,
+  getRecentActivityCache,
+  loadActivityStart,
+  loadRecentActivity,
+} from '../lib/recentActivity.js'
 import { weekStats, compactHm, bars, WEEK_SPAN } from '../lib/playWeek.js'
 import { useCardsConfig } from '../lib/insightsCards.js'
+import { useLibraryGames } from '../lib/useLibraryGames.js'
 import './insights.css'
 
 // Insights is the OVER TIME tab. Now playing, Coming up, Leaving Game Pass and
@@ -214,48 +219,47 @@ function WeekGames({ week, gamesById, onOpenGame }) {
 
 /* ------------------------------------------------------------------- main */
 
-// master_id and cover_small are NOT optional extras. gamesById is keyed on
-// master_id, and without it every key was `undefined`: the week's game rows never
-// matched a library row and were rendered flat and untappable, silently, since
-// the column list was trimmed. total_awards and igdb_id left with the pace and
-// Game Pass cards when those moved to Home; release_year left with the vintage
-// histogram before them.
-const GAME_COLUMNS =
-  'master_id, title, environment, genre, percent, playtime_minutes, earned_awards, last_played, cover_small, cover_igdb'
-
 // Two windows of activity, so the week block can compare against the one before
 // it, and so the progress arc has something to draw.
 const ACTIVITY_DAYS = WEEK_SPAN * 2
 
 export default function InsightsTab() {
-  const [games, setGames] = useState([])
-  const [events, setEvents] = useState([])
-  const [activityStart, setActivityStart] = useState(null)
+  // Reuse the local-first library payload already held by the rest of the app.
+  // Insights' former private SELECT duplicated the largest launch request and
+  // waited for it again on every tab return.
+  const { games, loading: gamesLoading } = useLibraryGames()
+  const cachedEvents = getRecentActivityCache({ days: ACTIVITY_DAYS })
+  const [events, setEvents] = useState(() => cachedEvents || [])
+  const [activityStart, setActivityStart] = useState(() => getActivityStartCache())
   const [selected, setSelected] = useState(null)
   const [customizeOpen, setCustomizeOpen] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const [activityLoading, setActivityLoading] = useState(() => !cachedEvents)
   const cards = useCardsConfig()
 
   useEffect(() => {
     let cancelled = false
     async function load() {
-      setLoading(true)
-      const [lib, act, start] = await Promise.all([
-        supabase.from('games').select(GAME_COLUMNS),
-        fetchRecentActivity({ days: ACTIVITY_DAYS }),
-        fetchActivityStart(),
+      if (!cachedEvents) setActivityLoading(true)
+      const [act, start] = await Promise.all([
+        loadRecentActivity({ days: ACTIVITY_DAYS }, (fresh) => {
+          if (!cancelled) setEvents(fresh)
+        }),
+        loadActivityStart((fresh) => {
+          if (!cancelled) setActivityStart(fresh)
+        }),
       ])
       if (cancelled) return
-      setGames(lib.data || [])
-      setEvents(act.data || [])
+      setEvents(act || [])
       setActivityStart(start)
-      setLoading(false)
+      setActivityLoading(false)
     }
     load()
     return () => {
       cancelled = true
     }
   }, [])
+
+  const loading = gamesLoading || activityLoading
 
   const week = useMemo(() => weekStats(events, new Date(), WEEK_SPAN, activityStart), [events, activityStart])
   const gamesById = useMemo(() => new Map(games.map((g) => [g.master_id, g])), [games])
@@ -427,4 +431,3 @@ export default function InsightsTab() {
     </div>
   )
 }
-
