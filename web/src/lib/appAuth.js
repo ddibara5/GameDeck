@@ -27,14 +27,27 @@ export function useAppSession() {
   return state
 }
 
-export function sendMagicLink() {
+export function sendEmailCode() {
   return supabase.auth.signInWithOtp({
     email: OWNER_EMAIL,
     options: {
-      shouldCreateUser: true,
-      emailRedirectTo: window.location.origin,
+      shouldCreateUser: false,
     },
   })
+}
+
+export function verifyEmailCode(token) {
+  return supabase.auth.verifyOtp({
+    email: OWNER_EMAIL,
+    token,
+    type: 'email',
+  })
+}
+
+export function isEmailRateLimitError(error) {
+  return error?.status === 429
+    || error?.code === 'over_email_send_rate_limit'
+    || /rate limit/i.test(error?.message || '')
 }
 
 export async function signOut() {
