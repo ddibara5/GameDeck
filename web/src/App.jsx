@@ -16,7 +16,7 @@ import { useAppSession } from './lib/appAuth.js'
 import AppErrorBoundary from './components/AppErrorBoundary.jsx'
 
 // Code-split each tab and the overlay views into their own chunk so the initial
-// bundle only carries the shell + the first (Library) tab. The service worker
+// bundle only carries the shell + the first (Home, by default) tab. The service worker
 // cache-firsts the hashed chunks, so after the first visit each one loads instantly.
 //
 // The tab loaders live in a map keyed by tab, and the lazy components are built
@@ -63,7 +63,7 @@ export default function App() {
 function GameDeckApp() {
   // Open on whatever tab is leftmost in the saved layout (not always Library), so
   // reordering the tab bar also changes the landing tab.
-  const [activeTab, setActiveTab] = useState(() => visibleKeys(getNavConfig())[0] || 'library')
+  const [activeTab, setActiveTab] = useState(() => visibleKeys(getNavConfig())[0] || 'home')
   const [menuOpen, setMenuOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [customizeOpen, setCustomizeOpen] = useState(false)
@@ -126,7 +126,9 @@ function GameDeckApp() {
   }, [visibleKey])
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 4)
+    // A little hysteresis keeps iOS rubber-band/one-pixel scroll noise from
+    // flashing the glass state while the page is visually still at rest.
+    const onScroll = () => setScrolled(window.scrollY > 8)
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
@@ -142,7 +144,7 @@ function GameDeckApp() {
   // Tabs hidden from the bar are not warmed - a tab the user deliberately removed
   // is the last one worth spending bandwidth on.
   useEffect(() => {
-    const first = visibleKeys(getNavConfig())[0] || 'library'
+    const first = visibleKeys(getNavConfig())[0] || 'home'
     const order = visibleKeys(getNavConfig()).filter((k) => k !== first && TAB_LOADERS[k])
     return warmOnIdle(order.map((k) => TAB_LOADERS[k]))
     // eslint-disable-next-line react-hooks/exhaustive-deps

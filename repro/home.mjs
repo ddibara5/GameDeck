@@ -306,7 +306,7 @@ const home = await page.evaluate(() => ({
 }))
 
 check('lands on Home', home.title === 'Home', home.title)
-check('bar is home/library/activity/discover/news', home.tabs.join('|') === 'Home|Library|Activity|Discover|News', home.tabs.join('|'))
+check('Quiet Deck bar is home/library/discover/activity', home.tabs.join('|') === 'Home|Library|Discover|Activity', home.tabs.join('|'))
 // The Home mark is HomeDeck's, path for path. Asserted as the exact strings
 // rather than "has three paths", because the decision here is not "a house with
 // a door", it is "the same house the other app opens on". A redraw that still
@@ -785,6 +785,8 @@ const drawer = await page.evaluate(() => ({
 check('drawer groups in order', drawer.groups.join('|') === 'Your games|Explore|Shelves', drawer.groups.join('|'))
 check('drawer lists every destination', drawer.rows.length === 11, String(drawer.rows.length))
 check('wishlist sits under Explore', drawer.rows.some((r) => r.startsWith('Wishlist')), '')
+check('News stays available in the drawer', drawer.rows.some((r) => r.startsWith('News')), drawer.rows.join(' // '))
+check('Rankings stays available in the drawer', drawer.rows.some((r) => r.startsWith('Rankings')), drawer.rows.join(' // '))
 // The die left the header for the list. Explore is Discover, News, Wishlist,
 // Shuffle: four ways to find the next thing.
 check('Shuffle sits under Explore', drawer.rows.some((r) => r.startsWith('Shuffle')), drawer.rows.join(' // '))
@@ -968,21 +970,21 @@ const barEd = await page.evaluate(() => ({
   secs: document.querySelectorAll('.cz-sec').length,
 }))
 check('bar editor is titled Bottom bar', barEd.title === 'Bottom bar', barEd.title)
-// Five bar-eligible destinations, plus the Show labels row in the footer.
-check('bar editor lists five tabs', barEd.rows.length === 6 && barEd.rows[5] === 'Show labels', barEd.rows.join(', '))
+// Six bar-eligible destinations, plus the Show labels row in the footer.
+check('bar editor lists six tabs', barEd.rows.length === 7 && barEd.rows[6] === 'Show labels', barEd.rows.join(', '))
 check('Insights is not offered for the bar', !barEd.rows.includes('Insights'), barEd.rows.join(', '))
-check('bar editor has a switch per tab plus labels', barEd.toggles === 6, String(barEd.toggles))
+check('bar editor has a switch per tab plus labels', barEd.toggles === 7, String(barEd.toggles))
 check('bar editor has no group headings', barEd.secs === 0, String(barEd.secs))
-check('preview shows the five tabs', barEd.prevTabs.join('|') === 'Home|Library|Activity|Discover|News', barEd.prevTabs.join('|'))
+check('preview shows the Quiet Deck four', barEd.prevTabs.join('|') === 'Home|Library|Discover|Activity', barEd.prevTabs.join('|'))
 check('preview bar is not fixed to the window', barEd.prevFixed === 'static', barEd.prevFixed)
 await page.screenshot({ path: 'repro/out/editor-bar.png', fullPage: true })
 
 // The two orders are independent: moving a tab on the bar must not move it in
-// the drawer. Drag News (last) above Library (second) and read both surfaces.
+// the drawer. Drag Activity above Library and read both surfaces.
 const rowBox = async (i) => (await page.locator('.cz-row').nth(i).boundingBox())
-const newsRow = await rowBox(4)
+const activityRow = await rowBox(3)
 const libRow = await rowBox(1)
-await page.mouse.move(newsRow.x + 20, newsRow.y + newsRow.height / 2)
+await page.mouse.move(activityRow.x + 20, activityRow.y + activityRow.height / 2)
 await page.mouse.down()
 await page.mouse.move(libRow.x + 20, libRow.y + 4, { steps: 12 })
 await page.mouse.up()
@@ -992,9 +994,9 @@ const afterDrag = await page.evaluate(() => ({
   prevTabs: [...document.querySelectorAll('.cz-prev .tabbar-btn')].map((e) => e.textContent.trim()),
   stored: JSON.parse(localStorage.getItem('gamedeck_nav_v2') || '{}'),
 }))
-check('drag reorders the bar', afterDrag.rows[1] === 'News', afterDrag.rows.join(', '))
-check('the preview follows the drag', afterDrag.prevTabs[1] === 'News', afterDrag.prevTabs.join('|'))
-check('the bar order is stored separately', Array.isArray(afterDrag.stored.bar) && afterDrag.stored.bar[1] === 'news', JSON.stringify(afterDrag.stored.bar))
+check('drag reorders the bar', afterDrag.rows[1] === 'Activity', afterDrag.rows.join(', '))
+check('the preview follows the drag', afterDrag.prevTabs[1] === 'Activity', afterDrag.prevTabs.join('|'))
+check('the bar order is stored separately', Array.isArray(afterDrag.stored.bar) && afterDrag.stored.bar[1] === 'activity', JSON.stringify(afterDrag.stored.bar))
 check('the DRAWER order is untouched',
   afterDrag.stored.order.slice(0, 4).join('|') === 'home|library|activity|insights',
   afterDrag.stored.order.join('|'))
@@ -1006,7 +1008,7 @@ await page.locator('.settings-back').last().click()
 await page.waitForTimeout(500)
 
 const liveBar = await page.evaluate(() => [...document.querySelectorAll('.tabbar-btn')].map((e) => e.textContent.trim()))
-check('the real bar picked up the new order', liveBar[1] === 'News', liveBar.join('|'))
+check('the real bar picked up the new order', liveBar[1] === 'Activity', liveBar.join('|'))
 
 /* ---------------------------------------------------------------- verdict */
 

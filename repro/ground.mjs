@@ -104,6 +104,13 @@ async function open(theme, opts = {}) {
     try {
       localStorage.setItem('gamedeck_theme_v1', t)
       if (g) localStorage.setItem('gamedeck_ground_v1', g)
+      // Preserve an existing user's saved five-tab v2 layout. Quiet Deck only
+      // changes the no-storage default; it does not rewrite this profile.
+      localStorage.setItem('gamedeck_nav_v2', JSON.stringify({
+        bar: ['home', 'library', 'activity', 'discover', 'news'],
+        enabled: { home: true, library: true, activity: true, discover: true, news: true },
+        barShown: true,
+      }))
     } catch { /* ignore */ }
   }, { t: theme, g: opts.ground || null })
   await page.goto(BASE, { waitUntil: 'networkidle' })

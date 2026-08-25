@@ -16,7 +16,8 @@ import {
 // picture of one, so it cannot drift from what ships. It is here and not in the
 // drawer editor because the bar is a SPATIAL thing: five icons across 390px is
 // the actual constraint, and reading a vertical list to predict a horizontal
-// strip is work the screen can do for you.
+// strip is work the screen can do for you. Quiet Deck starts with four, while
+// the editor still makes every eligible destination available.
 //
 // These three are module level on purpose. CustomizeList re-syncs from storage
 // whenever `getConfig`'s identity changes, so an inline arrow here would re-read

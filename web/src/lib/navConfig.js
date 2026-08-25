@@ -100,9 +100,23 @@ export const BAR_CATALOG = DEST_CATALOG.filter((d) => isBarTab(d.key))
 export const BAR_BY_KEY = BAR_CATALOG.reduce((m, d) => ((m[d.key] = d), m), {})
 
 const DEFAULT_ORDER = DEST_CATALOG.map((d) => d.key)
-const DEFAULT_BAR = BAR_CATALOG.map((d) => d.key)
-// Keep the existing five-tab default; Ranking is available but opt-in.
-const DEFAULT_ENABLED = DEFAULT_BAR.reduce((m, k) => ((m[k] = k !== 'rankings'), m), {})
+
+// Quiet Deck's new-install default. Keep this separate from catalog order: the
+// drawer remains grouped around the content model, while the bar is an ergonomic
+// shortcut ordered for the thumb. News and Rankings remain eligible and stay in
+// the editor, but start in the drawer.
+//
+// Deliberately keep the existing gamedeck_nav_v2 key. A profile with saved v2
+// state continues through the savedBar/savedEnabled paths below byte-for-byte;
+// only a profile with no saved navigation (or an explicit Reset) receives this
+// default. Bumping the key would overwrite every existing user's choices.
+const QUIET_DEFAULT_BAR = ['home', 'library', 'discover', 'activity']
+const DEFAULT_BAR = [
+  ...QUIET_DEFAULT_BAR,
+  ...BAR_CATALOG.map((d) => d.key).filter((key) => !QUIET_DEFAULT_BAR.includes(key)),
+]
+const DEFAULT_ENABLED_KEYS = new Set(['home', 'library', 'discover', 'activity'])
+const DEFAULT_ENABLED = DEFAULT_BAR.reduce((m, k) => ((m[k] = DEFAULT_ENABLED_KEYS.has(k)), m), {})
 const DEFAULT_LABELS = true
 // The bar is a shortcut, and a shortcut you can put away. Off hides the strip
 // and gives the page back its full height; every destination the bar carried is

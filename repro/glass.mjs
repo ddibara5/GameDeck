@@ -131,7 +131,16 @@ async function run(theme, withGround) {
   await page.route('**images.igdb.com/**', (r) => r.abort())
   await page.route('**wsrv.nl/**', (r) => r.abort())
   await page.addInitScript((t) => {
-    try { localStorage.setItem('gamedeck_theme', JSON.stringify(t)) } catch {}
+    try {
+      localStorage.setItem('gamedeck_theme', JSON.stringify(t))
+      // A saved v2 profile from before Quiet Deck keeps its five-tab bar. This
+      // both preserves News coverage here and guards the migration contract.
+      localStorage.setItem('gamedeck_nav_v2', JSON.stringify({
+        bar: ['home', 'library', 'activity', 'discover', 'news'],
+        enabled: { home: true, library: true, activity: true, discover: true, news: true },
+        barShown: true,
+      }))
+    } catch {}
   }, theme)
   await page.goto(BASE, { waitUntil: 'networkidle' })
   await page.evaluate((t) => document.documentElement.setAttribute('data-theme', t), theme)

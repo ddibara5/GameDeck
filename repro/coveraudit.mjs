@@ -61,6 +61,17 @@ const asked = []
 for (const pat of ['**images.igdb.com/**', '**m.exophase.com/**', '**wsrv.nl/**']) {
   await page.route(pat, (r) => { asked.push(r.request().url()); return r.fulfill({ status: 200, contentType: 'image/png', body: PNG }) })
 }
+await page.addInitScript(() => {
+  try {
+    // Cover coverage still visits News through an existing saved layout. The
+    // Phase 1 default migration must leave this v2 preference untouched.
+    localStorage.setItem('gamedeck_nav_v2', JSON.stringify({
+      bar: ['home', 'library', 'activity', 'discover', 'news'],
+      enabled: { home: true, library: true, activity: true, discover: true, news: true },
+      barShown: true,
+    }))
+  } catch { /* ignore */ }
+})
 await page.goto(BASE, { waitUntil: 'domcontentloaded' })
 
 const SRC_SIZE = { t_cover_small: 90, t_cover_big: 264, t_720p: 540, t_1080p: 1080, exophase: 45 }
