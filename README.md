@@ -44,4 +44,5 @@ Everything runs in the cloud with no local dependency.
 - `n8n/` - exported workflow definitions (Exophase sync, IGDB enrichment)
 - `supabase/` - database schema
 - `deploy/` - legacy local Docker stack (superseded by n8n Cloud + the Oracle VM)
-- `GAMEDECK-CLOUD-HANDOFF.md` - full architecture, resource IDs, operations, and how to edit this repo from an agent (GitHub write bridge)
+- `GAMEDECK-CLOUD-HANDOFF.md` - cloud architecture, security/operations guidance, and the agent GitHub publishing bridge (sensitive resource IDs stay outside the public repo)
+- `QUIET-DECK-HANDOFF.md` - approved UI baseline, navigation persistence, phase history, and final mobile visual-QA state

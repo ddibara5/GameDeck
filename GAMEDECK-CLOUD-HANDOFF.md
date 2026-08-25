@@ -1,5 +1,8 @@
 # GameDeck cloud handoff
 
+For the approved Quiet Deck UI baseline, phase history, and installed-PWA review
+state, also read `QUIET-DECK-HANDOFF.md` before changing presentation or navigation.
+
 This public document intentionally contains no project references, workflow IDs,
 credential IDs, host addresses, tokens, account identifiers, or recovery-key
 locations. Keep the operational inventory in the team's private password manager
