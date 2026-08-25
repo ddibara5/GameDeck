@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import Brand from './Brand.jsx'
 import { OWNER_EMAIL } from '../lib/supabase.js'
-import { isEmailRateLimitError, sendEmailCode, verifyEmailCode } from '../lib/appAuth.js'
+import { isEmailRateLimitError, sendSignInEmail, verifyCopiedSignInLink } from '../lib/appAuth.js'
 import './rankings.css'
 
 export default function AuthGate() {
   const [step, setStep] = useState('request')
   const [busy, setBusy] = useState(false)
-  const [code, setCode] = useState('')
+  const [signInLink, setSignInLink] = useState('')
   const [cooldown, setCooldown] = useState(0)
   const [tone, setTone] = useState('status')
   const [message, setMessage] = useState('')
@@ -20,41 +20,66 @@ export default function AuthGate() {
     return () => window.clearInterval(timer)
   }, [cooldown])
 
-  const requestCode = async () => {
+  const requestLink = async () => {
     setBusy(true)
     setTone('status')
     setMessage('')
-    const { error } = await sendEmailCode()
+    const { error } = await sendSignInEmail()
     setBusy(false)
     if (error) {
       setTone('error')
       setMessage(isEmailRateLimitError(error)
-        ? 'Too many sign-in emails were requested. Use the latest code, or try again in about an hour.'
-        : (error.message || 'Could not send the sign-in code.'))
+        ? 'Too many sign-in emails were requested. Use the latest unused link, or try again in about an hour.'
+        : (error.message || 'Could not send the sign-in link.'))
       return
     }
     setStep('verify')
     setCooldown(60)
-    setMessage(`Enter the six-digit code sent to ${OWNER_EMAIL}.`)
+    setMessage(`Long-press the sign-in button in the email to copy its link. Do not open it in Safari.`)
   }
 
-  const submitCode = async (event) => {
-    event.preventDefault()
-    const token = code.replace(/\D/g, '')
-    if (token.length !== 6) {
+  const verifyLink = async (link) => {
+    if (!link.trim()) {
       setTone('error')
-      setMessage('Enter the six-digit code from the email.')
+      setMessage('Copy the sign-in link from the email, then paste it here.')
       return
     }
 
     setBusy(true)
     setTone('status')
     setMessage('Signing in…')
-    const { error } = await verifyEmailCode(token)
+    let error
+    try {
+      const result = await verifyCopiedSignInLink(link)
+      error = result.error
+    } catch (caught) {
+      error = caught
+    }
     setBusy(false)
     if (error) {
       setTone('error')
-      setMessage(error.message || 'That code is invalid or expired. Request a new code and try again.')
+      setMessage(error.message || 'That link is invalid or expired. Request a new link and try again.')
+    }
+  }
+
+  const submitLink = (event) => {
+    event.preventDefault()
+    verifyLink(signInLink)
+  }
+
+  const pasteLink = async () => {
+    if (!navigator.clipboard?.readText) {
+      setTone('error')
+      setMessage('Paste the copied link into the field below.')
+      return
+    }
+    try {
+      const copied = await navigator.clipboard.readText()
+      setSignInLink(copied)
+      await verifyLink(copied)
+    } catch {
+      setTone('error')
+      setMessage('Clipboard access was blocked. Paste the copied link into the field below.')
     }
   }
 
@@ -65,34 +90,36 @@ export default function AuthGate() {
         <p className="auth-kicker">Private game library</p>
         <h1 id="auth-title">Sign in to GameDeck</h1>
         <p className="auth-copy">
-          Your play history, wishlist, and rankings are personal. A one-time email code keeps them private without another password to manage.
+          Your play history, wishlist, and rankings are personal. A passwordless email link keeps them private without another password to manage.
         </p>
         <div className="auth-email" aria-label="Authorized email">{OWNER_EMAIL}</div>
         {step === 'request' ? (
-          <button type="button" className="auth-button" disabled={busy} onClick={requestCode}>
-            {busy ? 'Sending…' : 'Email me a sign-in code'}
+          <button type="button" className="auth-button" disabled={busy} onClick={requestLink}>
+            {busy ? 'Sending…' : 'Email me a sign-in link'}
           </button>
         ) : (
-          <form className="auth-form" onSubmit={submitCode}>
-            <label className="auth-code-label" htmlFor="auth-code">Six-digit code</label>
-            <input
-              id="auth-code"
-              className="auth-code"
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              enterKeyHint="done"
-              maxLength="6"
-              pattern="[0-9]{6}"
-              value={code}
-              onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
-              autoFocus
-            />
-            <button type="submit" className="auth-button" disabled={busy || code.length !== 6}>
-              {busy ? 'Signing in…' : 'Sign in'}
+          <form className="auth-form" onSubmit={submitLink}>
+            <button type="button" className="auth-button" disabled={busy} onClick={pasteLink}>
+              {busy ? 'Signing in…' : 'Paste copied link & sign in'}
             </button>
-            <button type="button" className="auth-secondary" disabled={busy || cooldown > 0} onClick={requestCode}>
-              {cooldown > 0 ? `Send another code in ${cooldown}s` : 'Send another code'}
+            <label className="auth-link-label" htmlFor="auth-link">Or paste the link here</label>
+            <input
+              id="auth-link"
+              className="auth-link-input"
+              type="url"
+              inputMode="url"
+              autoComplete="off"
+              enterKeyHint="go"
+              placeholder="https://…"
+              value={signInLink}
+              onChange={(event) => setSignInLink(event.target.value)}
+              spellCheck="false"
+            />
+            <button type="submit" className="auth-secondary auth-secondary-strong" disabled={busy || !signInLink.trim()}>
+              Sign in with pasted link
+            </button>
+            <button type="button" className="auth-secondary" disabled={busy || cooldown > 0} onClick={requestLink}>
+              {cooldown > 0 ? `Send another link in ${cooldown}s` : 'Send another link'}
             </button>
           </form>
         )}

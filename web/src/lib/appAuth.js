@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { OWNER_EMAIL, supabase } from './supabase.js'
+import { parseSupabaseEmailLink } from './authLink.js'
 
 export function isOwnerSession(session) {
   return session?.user?.email?.toLowerCase() === OWNER_EMAIL
@@ -27,21 +28,18 @@ export function useAppSession() {
   return state
 }
 
-export function sendEmailCode() {
+export function sendSignInEmail() {
   return supabase.auth.signInWithOtp({
     email: OWNER_EMAIL,
     options: {
       shouldCreateUser: false,
+      emailRedirectTo: window.location.origin,
     },
   })
 }
 
-export function verifyEmailCode(token) {
-  return supabase.auth.verifyOtp({
-    email: OWNER_EMAIL,
-    token,
-    type: 'email',
-  })
+export function verifyCopiedSignInLink(link) {
+  return supabase.auth.verifyOtp(parseSupabaseEmailLink(link))
 }
 
 export function isEmailRateLimitError(error) {
