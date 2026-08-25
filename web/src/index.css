@@ -811,8 +811,7 @@
    root list from the same keyframes. Nothing here re-describes the page: this
    block is only the stacking and the two layouts the root list does not have. */
 /* The default second level. SubPage sets z-index inline from its position in the
-   stack, so a third level (Background -> Pin a game) needs no rule of its own;
-   this stays as the value a sub-page rendered without a depth would take. */
+   stack, so later nested settings can reuse the same navigation model. */
 .settings-sub {
   z-index: 211;
 }
@@ -835,176 +834,71 @@
   padding: 8px 2px 0;
 }
 
-/* ---------- The intensity slider ----------
+/* ---------- Background preset swatches ----------
 
-   A native <input type="range">, restyled rather than rebuilt. A custom track and
-   thumb would have to reimplement the keyboard behaviour, the drag, the value
-   announcement and the touch target that the platform control already has right,
-   and it would be the third slider in this app to do it.
-
-   The accent is the FILL, not the thumb, so the control reads left to right as
-   "how much" - which is what it means. */
-.settings-slider {
-  -webkit-appearance: none;
-  appearance: none;
-  display: block;
-  width: 100%;
-  height: 26px;
-  margin: 2px 0 0;
-  background: none;
-  cursor: pointer;
+   The Settings page is still the full-size live preview. These small samples
+   make the deliberately subtle presets distinguishable before a tap without
+   introducing a second color picker or a thumbnail-heavy gallery. */
+.ground-swatch {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
-/* The track is filled up to the thumb. `--fill` is set inline by SettingsPage
-   from the same number the input carries, because neither engine gives you a
-   ::-webkit-slider-progress you can rely on and a two-stop gradient is exact.
-   A hard colour stop, not a gradient ramp: this is a quantity, not a fade. */
-.settings-slider::-webkit-slider-runnable-track {
-  height: 5px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
+.ground-swatch-off {
+  background: var(--bg);
+}
+
+.ground-swatch-wash {
+  background: radial-gradient(130% 95% at 18% -10%, var(--walnut), var(--bg) 72%);
+}
+
+.ground-swatch-glow {
+  background:
+    radial-gradient(80% 75% at 8% 0%, color-mix(in oklab, var(--walnut-light) 48%, transparent), transparent 74%),
+    radial-gradient(85% 80% at 100% 100%, color-mix(in oklab, var(--accent) 30%, transparent), transparent 76%),
+    var(--bg);
+}
+
+.ground-swatch-horizon {
   background: linear-gradient(
-    to right,
-    var(--accent) 0 var(--fill, 0%),
-    var(--surface-2) var(--fill, 0%) 100%
+    165deg,
+    color-mix(in oklab, var(--walnut) 32%, var(--bg)) 0%,
+    var(--bg) 52%,
+    color-mix(in oklab, var(--surface-2) 76%, var(--bg)) 100%
   );
 }
 
-.settings-slider::-moz-range-track {
-  height: 5px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: linear-gradient(
-    to right,
-    var(--accent) 0 var(--fill, 0%),
-    var(--surface-2) var(--fill, 0%) 100%
-  );
-}
-
-/* 22px, not the 14px this would look best at. The thumb IS the touch target on a
-   phone, and a 14px one is below every hit-target guideline there is; the visual
-   weight comes back down by making the track thin rather than the thumb small. */
-.settings-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 22px;
-  height: 22px;
-  margin-top: -9px;
+.ground-swatch-check {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
+  display: grid;
+  place-items: center;
   background: var(--accent);
-  border: 2px solid var(--bg);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  color: var(--bg);
+  font-size: 11px;
+  font-weight: var(--w-bold);
+  line-height: 1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
 }
 
-.settings-slider::-moz-range-thumb {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--accent);
-  border: 2px solid var(--bg);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
-}
-
-.settings-slider:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 4px;
-  border-radius: 999px;
-}
-
-/* The label and its live value on one line. */
+/* A consistent label row above appearance controls. */
 .settings-field-hd {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
 }
 
 .settings-field-hd .menu-accent-label {
   padding-bottom: 6px;
-}
-
-.settings-field-value {
-  font-size: var(--t-cap);
-  font-weight: var(--w-semi);
-  color: var(--accent);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-/* The two ends, named. A slider with no labels is a slider whose left end you
-   have to discover by dragging it, and the left end here is the one claim worth
-   making: that it is measured rather than chosen. */
-.settings-scale {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 6px 2px 0;
-  font-size: var(--t-cap);
-  color: var(--muted);
-}
-
-.settings-scale span:last-child {
-  text-align: right;
-}
-
-/* ---------- The pin picker ---------- */
-
-.pin-search {
-  margin: 0 var(--screen-gutter) var(--space-2);
-}
-
-.pin-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 8px 14px;
-  background: none;
-  border: 0;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.settings-group .pin-row + .pin-row {
-  border-top: 1px solid var(--line);
-}
-
-.pin-row:active {
-  background: var(--surface-2);
-}
-
-.pin-row.on {
-  background: var(--surface-2);
-}
-
-/* Two classes, deliberately. `.cover-sm` is 52x52 and is declared 700 lines below
-   this one, so a single-class rule here loses the cascade and the thumbnail comes
-   out square. */
-.cover.pin-cover {
-  flex: 0 0 auto;
-  width: 38px;
-  height: 51px;
-  border-radius: var(--r-xs);
-}
-
-.pin-label {
-  flex: 1;
-  min-width: 0;
-  font-size: var(--t-body);
-  line-height: 1.3;
-}
-
-.pin-sub {
-  display: block;
-  font-size: var(--t-cap);
-  color: var(--muted);
-  margin-top: 2px;
-}
-
-.pin-check {
-  flex: 0 0 auto;
-  color: var(--accent);
 }
 
 /* One paragraph under a list, explaining a behaviour the rows cannot show. Not a
@@ -1123,44 +1017,22 @@ textarea {
 }
 
 /* ---------- The ground ----------
-   What sits behind every tab. --bg stays the flat colour the chips and knockouts
-   are painted in; the ground is a layer ON TOP of it and BELOW everything else,
-   which is what lets it be a setting without touching one of the 20 other rules
-   that read --bg.
+   A fixed, palette-aware layer behind every tab. --bg remains the solid color
+   used by chips and knockout text; the preset is painted above it and below app
+   content, so every existing surface can keep using the same tokens.
 
    Fixed rather than absolute: it is a backdrop, not part of the scrolling page,
-   and a 640px-wide .app on a desktop window still wants it edge to edge.
-
-   The veil's strength is set by lib/ground.js, per image, so that the darkest AND
-   brightest parts of the picture still clear 4.5:1 against --muted. That figure is
-   a FLOOR: the Settings slider may raise it and cannot lower it, so the setting is
-   taste and the contrast guarantee is not something a preference can lose. The
-   wash keeps a fixed low value because a flat gradient has no extreme to measure. */
+   and a 640px-wide .app on a desktop window still wants it edge to edge. */
 :root {
-  --ground-veil-rgb: 18, 16, 14;
-  --ground-veil-a: 0.6;
-
-  /* GRAIN, because a flat veil over a blurred photograph bands on an OLED.
-     Wide smooth gradients are exactly what 8-bit colour handles worst, and both
-     ground layers are one: a 13px blur of a photograph, and a radial wash. The
-     noise dithers the step so the eye stops resolving the contour.
+  /* Wide smooth gradients band on an OLED. A tiny monochrome noise tile dithers
+     the steps without reading as texture or changing the selected palette.
 
      One inline SVG tile rather than a PNG: it is 300 bytes in the stylesheet
      instead of a request, it is resolution independent, and the browser
      rasterises the 140px tile once. feColorMatrix saturate 0 is not optional -
      feTurbulence generates each channel independently, so without it the noise
-     is coloured confetti rather than grain.
-
-     The strength is baked into the tile's own opacity rather than applied with
-     `opacity` on the layer, because the veil shares that layer and halving the
-     veil to dim the grain would undo the contrast measurement. At 0.04 over a
-     mid grey the noise moves the composite by roughly +/-5 of the 255 levels -
-     an 8-bit step is one level, so it is comfortably enough to dither a contour
-     and still reads as paper rather than as an effect. */
-  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-}
-:root[data-theme='light'] {
-  --ground-veil-rgb: 244, 240, 233;
+     is colored confetti rather than grain. */
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.028'/%3E%3C/svg%3E");
 }
 
 /* Full-screen overlays carry their own copy of the ground rather than letting
@@ -1196,33 +1068,42 @@ textarea {
   pointer-events: none;
 }
 
-/* The wash is the safe one: a flat gradient has no bright pixel, so its contrast
-   is exact rather than measured. It reads --walnut, which every colour theme
-   defines, so it follows Slate, Sage, Plum and Graphite without a second
-   setting. */
+/* One asymmetric bloom. This is the existing Theme wash, softened and retained
+   as the migration target for every retired artwork background. */
 :root[data-ground='wash'] :is(.app, .settings-page, .view-page)::before {
-  background: radial-gradient(130% 90% at 22% -6%, var(--walnut), var(--bg) 72%);
-  opacity: 0.55;
+  background: radial-gradient(
+    130% 92% at 18% -8%,
+    color-mix(in oklab, var(--walnut) 52%, var(--bg)) 0%,
+    var(--bg) 72%
+  );
 }
 
-/* The picture sources - all four of them, and any fifth, because this is keyed on
-   the PAINT rather than on the preference.
+/* Two broad color pools stay near opposite corners so the center remains calm
+   under the title and primary list content. */
+:root[data-ground='glow'] :is(.app, .settings-page, .view-page)::before {
+  background:
+    radial-gradient(
+      82% 68% at 5% -4%,
+      color-mix(in oklab, var(--walnut-light) 30%, transparent) 0%,
+      transparent 74%
+    ),
+    radial-gradient(
+      88% 74% at 104% 102%,
+      color-mix(in oklab, var(--accent) 18%, transparent) 0%,
+      transparent 76%
+    ),
+    var(--bg);
+}
 
-   Naming each source here is what the first version did, and it had a hole in it:
-   between choosing a picture source and the picture actually resolving (a network
-   round trip on a cold launch) the ::after below painted its veil over an empty
-   background, which is a page dimmed for no photograph. lib/ground.js sets
-   data-ground-art when it sets --ground-src and removes it when it clears it, so
-   the veil and the picture arrive and leave together and that state cannot be
-   expressed. Adding a source now costs nothing in this file. */
-:root[data-ground-art] :is(.app, .settings-page, .view-page)::before {
-  background-image: var(--ground-src, none);
-  background-size: cover;
-  background-position: center top;
-  filter: blur(13px) saturate(1.2);
-  /* The blur samples from outside the box, so the layer is scaled up to keep the
-     soft transparent edge a blur leaves off the screen. */
-  transform: scale(1.16);
+/* A gentle atmospheric shift rather than a visible band. The middle returns to
+   the base canvas before the lower neutral arrives, preserving list hierarchy. */
+:root[data-ground='horizon'] :is(.app, .settings-page, .view-page)::before {
+  background: linear-gradient(
+    165deg,
+    color-mix(in oklab, var(--walnut) 24%, var(--bg)) 0%,
+    var(--bg) 50%,
+    color-mix(in oklab, var(--surface-2) 70%, var(--bg)) 100%
+  );
 }
 
 /* The drawer, the menu labels, the chevrons and the caret were hardcoded walnut
@@ -1234,67 +1115,8 @@ textarea {
    (#a89f92 against #6f665a and #8a8073), and it is the one grey in the app whose
    contrast is measured per theme. */
 
-/* ---------- Secondary type on the ground ----------
-
-   Quiet Deck's homogeneous lists now sit directly on the canvas. Their muted
-   metadata therefore joins the titles, subtitles and labels that can see a
-   user-selected picture. On a flat or wash ground the normal muted hierarchy
-   stays intact; on artwork it is promoted to --text so the measured veil keeps
-   every direct-content label readable without turning the picture back into an
-   opaque card.
-
-   They were the reason the veil sat at 0.74-0.84: it was covering the whole
-   photograph to hold 13px grey text at 4.5:1. Promoting them to --text while a
-   picture is on costs nothing anyone will miss - the muted/primary hierarchy is
-   carried by size and weight here as much as by colour, and it is still intact
-   on the flat and wash grounds - and it lets the veil be sized against --text
-   instead. Measured on realistic key art, dark: the floor goes 0.74 to 0.38, so
-   the picture goes from 26% visible to 62%.
-
-   The guarantee gets STRONGER, not weaker. These labels move from sitting at
-   exactly the 4.5:1 the veil was solved for to sitting comfortably past it, and
-   repro/ground.mjs now finds every run of on-ground text by walking the DOM
-   rather than by naming five of them, so a new label dropped here in --muted
-   fails the harness instead of quietly lowering the bar.
-
-   .lane-chip and .seg-btn are in the list even though they are not on the BARE
-   ground - they are on glass, and glass is not cover: the picture reads straight
-   through 0.34 and 0.58 alpha. The walk found .lane-chip at 3.35:1 dark and
-   2.96:1 light, a real AA failure that the four hand-picked targets had never
-   looked at. Both are safe to promote because their selected state is carried by
-   an ACCENT FILL, not by the label colour, so the distinction survives.
-
-   .tabbar-btn is deliberately NOT here, and it is the one --muted run left with
-   the ground behind it. Its selected state IS a colour (#ece7df against
-   --muted), and --text is close enough to #ece7df that promoting the inactive
-   labels would leave the 0.16 pill doing all the work. It measures 4.63:1 dark
-   and 5.45:1 light against the harness's deliberately hostile picture, and the
-   walk now measures it on every run, so a regression is caught rather than
-   assumed away. */
-/* `:not(.active)` on the two chips is load-bearing. `.lane-chip.active` and
-   `.seg-btn.active` set `color: var(--bg)` for the knockout on their accent
-   fill, at specificity 0,2,0 - and `:root[data-ground-art] :is(.lane-chip)` is
-   0,3,0, so without the exclusion this rule would win and paint the knockout in
-   --text on an accent pill. Verified as a measurement, not by counting: the
-   composited check on the segmented control is in repro/accent.mjs. */
-:root[data-ground-art] :is(.page-subtitle, .activity-group-label, .showing-label, .empty-state,
-  .platform-row, .game-meta-row, .activity-detail, .activity-mins .u, .arc-txt,
-  .fy-meta, .news-row-time, .news-row-heat, .news-week-count,
-  .rank-row-copy span, .rank-score),
-:root[data-ground-art] :is(.lane-chip, .seg-btn):not(.active) {
-  color: var(--text);
-}
-
-/* The veil is its own pseudo-element rather than a second background layer on
-   the one above, because the blur must not apply to it: blurring a flat wash
-   costs a full-screen filter pass and changes nothing.
-
-   It carries the grain as well, and the WASH gets this layer too even though it
-   has no veil - a radial gradient across a whole screen is the worst banding
-   case in the app, worse than the blurred photograph, and it had nothing on top
-   of it at all. Same layer, one of the two backgrounds. */
-:root[data-ground-art] :is(.app, .settings-page, .view-page)::after,
-:root[data-ground='wash'] :is(.app, .settings-page, .view-page)::after {
+/* All three gradients share the same low-cost dither layer. */
+:root:not([data-ground='off']) :is(.app, .settings-page, .view-page)::after {
   content: '';
   position: fixed;
   inset: 0;
@@ -1303,14 +1125,6 @@ textarea {
   background-image: var(--grain);
   background-repeat: repeat;
   background-size: 140px 140px;
-}
-
-/* The veil itself is art-only, and it is a background COLOR so it composites
-   under the grain image on the same element rather than needing a third layer.
-   There is no `opacity` anywhere in this pair: the veil's alpha is on the colour
-   and the grain's is inside the tile, so neither can dim the other. */
-:root[data-ground-art] :is(.app, .settings-page, .view-page)::after {
-  background-color: rgba(var(--ground-veil-rgb), var(--ground-veil-a));
 }
 
 /* Bottom bar switched off in Settings. One variable, set on the app root, so
@@ -2659,19 +2473,6 @@ textarea {
   --accent: #59626f; --amber: #69707c;
 }
 
-/* The art accent's tokens - --accent, --amber and --logo-1..7 - are NOT in this
-   file. paintAccent in ground.js sets all nine inline, because a rule here
-   cannot win: `:root[data-accent-art]` is specificity 0,2,0 and every palette
-   block above is 0,2,0 or, in its light variant, 0,3,0, so the palettes
-   outranked it and four of the five silently ignored the whole feature. An
-   inline custom property cannot be outranked, and keeping the nine together in
-   one place is the point rather than a side effect. See artLogoRamp and
-   artAmber in tint.js for how they are derived.
-
-   `data-accent-art` stays as the marker: nothing in this file reads it today,
-   but it is the only way to ask from outside whether the accent came from a
-   picture, and repro/logo.mjs and repro/accent.mjs both do. */
-
 /* ============================================================
    Appearance controls
    ============================================================
@@ -2911,21 +2712,13 @@ textarea {
    translucent chrome over moving content is hard to read. The app answers
    prefers-reduced-motion in three places and had never answered this one.
 
-   The response is the honest one rather than the literal one. Literal would be
-   "remove the blur", which leaves the same 34%-alpha fill over a photograph and
-   makes it WORSE - the blur is what stops the picture competing with the text.
-   So both go: the material becomes the page's own opaque surface, and the filter
-   goes with it, because a backdrop-filter behind an opaque fill is a full-screen
-   compositing pass that changes nothing.
+   The response makes translucent chrome opaque and removes its now-redundant
+   filter, preserving readability while avoiding an unnecessary compositing pass.
 
    Both selectors, deliberately. `--glass` is redefined at :root[data-theme=
    "light"] further up, which outranks a bare :root here no matter where this
    block sits, so light mode would have kept its translucent material while dark
-   mode went opaque.
-
-   The ground's own veil is NOT set here: it is an inline style written by
-   lib/ground.js, which a stylesheet cannot outrank. ground.js reads the same
-   media query and puts a floor under the intensity slider instead. */
+   mode went opaque. */
 @media (prefers-reduced-transparency: reduce) {
   :root,
   :root[data-theme='light'] {

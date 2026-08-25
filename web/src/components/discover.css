@@ -594,23 +594,6 @@ button.shelf-head:active {
   color: var(--walnut);
 }
 
-/* OPAQUE over a picture, rather than promoted to --text like the other chips.
-   This one's ink is --accent (--walnut in light) and that colour is the point:
-   it is what marks these as the filters currently ON. Repainting it as body text
-   would fix the contrast by deleting the signal.
-
-   So the chip gets a surface instead. Measured by the DOM walk in
-   repro/ground.mjs: 3.23:1 in light over the ground, because 0.58 alpha glass
-   does not stop a photograph - it only dims it. On --surface-2 the picture is
-   behind the chip rather than inside it, and the colour keeps its job.
-
-   It stays glass on the flat and wash grounds, which is where the material was
-   chosen and where nothing is passing behind it. */
-:root[data-ground-art] .showing-chip {
-  background: var(--surface-2);
-  border-color: var(--line);
-}
-
 .showing-clear {
   margin-left: auto;
   background: none;

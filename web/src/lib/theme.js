@@ -35,43 +35,6 @@ export function setAccent(name) {
   return a
 }
 
-// TAKE THE ACCENT FROM THE PICTURE, on top of whichever palette is selected.
-//
-// A sixth swatch would have been the obvious shape and it is the wrong one: the
-// five palettes carry tuned NEUTRALS as well as an accent, and there is no
-// artwork-derived version of --bg and --surface. So this is a flag over a
-// palette rather than a palette: the neutrals stay whichever theme you chose,
-// and only --accent is replaced.
-//
-// It is applied by lib/ground.js, not here, because the colour comes from the
-// picture that module already fetches, decodes and samples for the veil. Doing
-// it there costs one extra average over pixels that are already in memory;
-// doing it here would mean a second fetch and a second decode of the same image.
-//
-// Nothing switches off when there is no picture: the flag simply has no effect
-// and the palette's own accent shows, which is also what happens with the
-// ground off, on a first launch, and on a picture that cannot be sampled.
-const ART_ACCENT_KEY = 'gamedeck_accent_art_v1'
-
-export function getArtAccent() {
-  try {
-    return localStorage.getItem(ART_ACCENT_KEY) === '1'
-  } catch {
-    return false
-  }
-}
-
-export function setArtAccent(on) {
-  const v = Boolean(on)
-  try {
-    localStorage.setItem(ART_ACCENT_KEY, v ? '1' : '0')
-  } catch {
-    /* storage unavailable - preference just won't persist */
-  }
-  return v
-}
-
-
 // Card sizing. Shelf = poster width on every horizontal rail (Continue Playing,
 // Discover shelves, wishlist, Game Pass). List = Library / Discover list-row
 // thumbnail + title. Applied via data-shelf / data-list on <html>; the actual

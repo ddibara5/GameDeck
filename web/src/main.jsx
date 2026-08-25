@@ -8,9 +8,7 @@ import './cardSize.css'
 
 // Apply the saved theme (and keep 'system' synced to the OS) before first paint.
 initTheme()
-// The ground goes on in the same pass. `off` and `wash` are synchronous; the two
-// art sources resolve from the library cache and paint when they land, which is
-// why this is not awaited.
+// The palette-aware ground goes on synchronously in the same first-paint pass.
 initGround()
 
 ReactDOM.createRoot(document.getElementById('root')).render(

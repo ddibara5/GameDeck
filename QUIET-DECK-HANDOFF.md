@@ -4,8 +4,8 @@
 
 Quiet Deck is complete and visually approved as of August 25, 2026. The signed-off
 visual checkpoint is commit `5752412` (`Flatten Quiet Deck tab lists`). The
-current deployed application-code baseline is commit `53a8dc1` (`Optimize game
-sheet backdrop loading`) on `main`, deployed at
+game-sheet performance checkpoint is commit `53a8dc1` (`Optimize game sheet
+backdrop loading`) on `main`. Production is deployed at
 <https://gamedeck-kappa.vercel.app>.
 
 This was a presentation and app-shell refresh. It did not remove or redesign the
@@ -117,6 +117,26 @@ Wishlist list rows remain canvas-colored rather than transparent because the row
 face must mask the destructive red swipe action until the user reveals it. This
 is an interaction requirement, not leftover decorative tiling.
 
+## Global background direction
+
+Full-app game artwork was retired after the canvas-level lists were approved.
+Even with blur, adaptive veils, and measured contrast, a large game image still
+competed with cover thumbnails and titles. Contextual artwork remains in game
+sheets, where it supports the selected game rather than the entire library.
+
+Settings now offers four synchronous, palette-aware backgrounds:
+
+- **Flat** — the solid theme canvas.
+- **Soft wash** — one restrained asymmetric color bloom.
+- **Ambient glow** — two broad muted color pools near opposite corners.
+- **Horizon** — a gentle top-to-bottom atmospheric shift.
+
+All three gradients follow the selected Walnut, Slate, Sage, Plum, or Graphite
+palette, include subtle local grain to prevent OLED banding, and require no image
+request, decode, cache, or contrast override. Existing Now Playing, Most Played,
+Pinned Game, and Shuffle background preferences migrate to Soft wash; retired
+pin, intensity, paint, and artwork-accent settings are cleared.
+
 ## Implementation history
 
 - `8ab4ce6` — implemented the Phase 1 shell foundation.
@@ -128,7 +148,10 @@ is an interaction requirement, not leftover decorative tiling.
 - `b82a548` — cached tab data and warmed interactive views to reduce repeat tab
   and popup loading without changing the approved visual system.
 - `53a8dc1` — optimized game-sheet backdrop loading and established the current
-  production baseline.
+  performance checkpoint before the global-background refresh.
+- The global-background refresh retired full-app game art in favor of four
+  synchronous, palette-aware treatments. Use the next `main` commit after this
+  checkpoint as its deployment baseline.
 
 ## Post-approval performance hardening
 
@@ -152,11 +175,14 @@ This timing behavior is intentional. Do not reintroduce a delayed backdrop pop-i
 to make a cold image visible on the first open. The tint-only fallback is the
 preferred experience when artwork cannot be ready within the opening animation.
 
-The current production build completed with 144 transformed modules, and all 13
-automated Node tests passed. The Vercel deployment was READY, production returned
-HTTP 200, and the deployed tree matched the reviewed source exactly. Dave then
-reviewed the updated app, including the game-sheet behavior, and approved it
-without further changes.
+The game-sheet performance baseline completed with 144 transformed modules and
+all 13 automated Node tests passing. Its Vercel deployment was READY, production
+returned HTTP 200, and the deployed tree matched the reviewed source exactly.
+Dave reviewed that update, including the game-sheet behavior, and approved it.
+
+The subsequent global-background refresh has a successful local production build
+with 143 transformed modules and all 16 automated Node tests passing. Installed-
+app visual QA of the new gradient choices is the remaining authenticated check.
 
 The connected cloud browser could verify the public production shell only up to
 the expected owner sign-in screen. Treat Dave's installed-iPhone approval as the
@@ -178,9 +204,9 @@ authoritative authenticated visual check.
    deployment. Use a branch for broader or higher-risk work.
 6. Do not modify GameDeck data, ingestion, AI, news, or sync workflows for a
    frontend-only change unless inspection shows that the change truly requires it.
-7. After any shell or layout change, recheck installed-iPhone safe areas, custom
-   backgrounds, reduced motion, navigation persistence, scroll locking, overlays,
-   and service-worker update behavior.
+7. After any shell or layout change, recheck installed-iPhone safe areas, all four
+   palette-aware backgrounds in light and dark mode, reduced motion, navigation
+   persistence, scroll locking, overlays, and service-worker update behavior.
 8. After popup or cache changes, compare cold and repeat game-sheet opens, verify
    both pointer and mobile-tap paths, and recheck reduced-motion, offline, and
    service-worker behavior.

@@ -10,21 +10,12 @@ import {
   setShelfSize,
   getListSize,
   setListSize,
-  getArtAccent,
-  setArtAccent,
 } from '../lib/theme.js'
 import {
   getGround,
   setGround,
   GROUND_OPTIONS,
-  isArtGround,
-  getPinnedGame,
-  setPinnedGame,
-  getGroundIntensity,
-  setGroundIntensity,
-  refreshArtAccent,
 } from '../lib/ground.js'
-import GamePinPicker from './GamePinPicker.jsx'
 import { useMountTransition } from '../lib/useMountTransition.js'
 import { lockScroll } from '../lib/scrollLock.js'
 import { MenuItem, ICONS, relTime } from './menuUI.jsx'
@@ -96,13 +87,8 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
   const [shelfSize, setShelfSizeState] = useState(() => getShelfSize())
   const [listSize, setListSizeState] = useState(() => getListSize())
   const [ground, setGroundState] = useState(() => getGround())
-  const [pin, setPinState] = useState(() => getPinnedGame())
-  const [artAccent, setArtAccentState] = useState(() => getArtAccent())
-  const [intensity, setIntensityState] = useState(() => getGroundIntensity())
-  // The open sub-pages, outermost first. A single `sub` string was enough while
-  // every second level was a leaf; Background now leads to a game picker, so the
-  // page has a third level and the thing Escape and the back-swipe do is POP, not
-  // clear. A stack says that once and every level after this one is free.
+  // The open sub-pages, outermost first. Escape and the back-swipe pop one level
+  // rather than dismissing Settings, and the stack keeps that behavior uniform.
   const [stack, setStack] = useState([])
   const push = (name) => setStack((s) => (s.includes(name) ? s : [...s, name]))
   const pop = () => setStack((s) => s.slice(0, -1))
@@ -285,23 +271,12 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
     if (!open) setStack([])
   }, [open])
 
-  // Both of these move the neutrals the art accent is clamped against, so both
-  // re-run the clamp. Without it, switching from Walnut to Slate leaves an accent
-  // solved against Walnut's --surface sitting on Slate's, and the guarantee this
-  // whole feature rests on is quietly no longer true.
   function changeTheme(pref) {
     setThemeState(setTheme(pref))
-    refreshArtAccent()
   }
 
   function changeAccent(key) {
     setAccentState(setAccent(key))
-    refreshArtAccent()
-  }
-
-  function changeArtAccent(on) {
-    setArtAccentState(setArtAccent(on))
-    refreshArtAccent()
   }
 
   function changeShelfSize(key) {
@@ -314,19 +289,6 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
 
   function changeGround(key) {
     setGroundState(setGround(key))
-  }
-
-  function changeIntensity(t) {
-    setIntensityState(setGroundIntensity(t))
-  }
-
-  function changePin(game) {
-    setPinState(setPinnedGame(game))
-    // Choosing a picture is choosing the source. Landing back on a Background page
-    // still reading "Now playing" after picking a game is the version where the
-    // picker appears to have done nothing.
-    if (getGround() !== 'pinned') setGroundState(setGround('pinned'))
-    pop()
   }
 
   if (!mounted) return null
@@ -502,105 +464,32 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
           </div>
         </Field>
 
-        {/* A flag over the palette, not a sixth swatch. The five palettes carry
-            tuned NEUTRALS as well as an accent and there is no artwork-derived
-            --bg or --surface, so this replaces one token and leaves the rest of
-            the theme alone. With no picture behind the app it simply has no
-            effect and the palette's own accent shows. */}
-        <div className="settings-group">
-          <MenuItem
-            glyph={ICONS.image}
-            label="Accent from the background"
-            sub={
-              isArtGround(ground)
-                ? 'Sampled from the picture, then darkened or lightened until it clears the contrast bar'
-                : 'Turn on a picture background to see it'
-            }
-            toggle={artAccent}
-            onClick={() => changeArtAccent(!artAccent)}
-          />
-        </div>
       </SubPage>
 
-      {/* No preview swatch on these rows, because the page IS the preview: the
-          settings overlay paints the ground itself (see index.css), so tapping a
-          source changes the screen you are standing on. A 40px thumbnail of the
-          same thing would be a worse copy of what is already behind it. */}
+      {/* The page remains the full-size live preview, while the swatches make the
+          four deliberately subtle styles scannable before the user taps them. */}
       <SubPage open={stack.includes('background')} depth={depthOf('background')} title="Background" onBack={pop}>
         <div className="settings-group">
           {GROUND_OPTIONS.map((opt) => (
             <MenuItem
               key={opt.key}
-              glyph={ground === opt.key ? ICONS.check : ICONS.dot}
+              glyph={
+                <span className={`ground-swatch ground-swatch-${opt.key}`} aria-hidden="true">
+                  {ground === opt.key ? <span className="ground-swatch-check">✓</span> : null}
+                </span>
+              }
               label={opt.label}
-              // The pinned row carries the game instead of its description once
-              // there is one, because at that point the description is the row
-              // above it and the game is the thing you came here to check.
-              sub={opt.key === 'pinned' && pin ? pin.title || 'A game you chose' : opt.sub}
+              sub={opt.sub}
               onClick={() => changeGround(opt.key)}
               chevron={false}
             />
           ))}
         </div>
 
-        {/* Only under `pinned`, because it is the only source whose picture is a
-            choice. Offering it under the other three would imply they can be
-            overridden, and then the override would silently do nothing. */}
-        {ground === 'pinned' ? (
-          <div className="settings-group">
-            <MenuItem
-              glyph={ICONS.star}
-              label={pin ? 'Change game' : 'Choose a game'}
-              sub={pin ? pin.title : 'Nothing pinned yet, so the background stays flat'}
-              onClick={() => push('pin')}
-            />
-          </div>
-        ) : null}
-
-        {/* The slider is only meaningful over a photograph: the wash has no
-            picture to show more or less of, and `off` has no layer at all.
-
-            No `hint` on the Field. The scale below the track names both ends and
-            the note under the page makes the measured-floor claim in full; a third
-            grey paragraph between them said the same thing a third time. */}
-        {isArtGround(ground) ? (
-          <Field label="Intensity" value={intensity <= 0 ? 'Most picture' : `${Math.round(intensity * 100)}% quieter`}>
-            {/* --fill drives the accent portion of the track, so the control
-                reads as a QUANTITY rather than as a dot on a rail. A native
-                range gives you the thumb and the keyboard behaviour and no fill;
-                this is the one thing worth adding by hand. */}
-            <input
-              className="settings-slider"
-              style={{ '--fill': `${Math.round(intensity * 100)}%` }}
-              type="range"
-              min="0"
-              max="1"
-              step="0.05"
-              value={intensity}
-              onChange={(e) => changeIntensity(e.target.value)}
-              aria-label="Background intensity"
-              aria-valuetext={intensity <= 0 ? 'Most picture' : `${Math.round(intensity * 100)} percent quieter`}
-            />
-            <div className="settings-scale">
-              <span>As much picture as is legible</span>
-              <span>Quieter</span>
-            </div>
-          </Field>
-        ) : null}
-
         <p className="settings-note">
-          Over key art the background darkens itself until the smallest text on screen still
-          clears the contrast bar, so how much of the picture shows depends on the picture. The
-          slider starts at that measured point and only ever covers more, so no setting here can
-          make the text unreadable.
+          Background colors follow your selected theme. Each preset is tuned to stay quiet behind
+          game covers, titles, and lists.
         </p>
-      </SubPage>
-
-      {/* Third level, over Background. Mounted only while it is open, because it
-          reads the whole library and Settings should not pay for that to show a
-          list of five appearance rows. */}
-      <SubPage open={stack.includes('pin')} depth={depthOf('pin')} title="Pin a game" onBack={pop}>
-        <GamePinPicker pinnedId={pin ? pin.master_id : null} onPick={changePin} />
       </SubPage>
 
       <SubPage open={stack.includes('sources')} depth={depthOf('sources')} title="Sources" onBack={pop}>
@@ -682,16 +571,11 @@ function SubPage({ open, depth = 0, title, onBack, children }) {
 
 // A labelled control, in the same margin as a settings card so a sub-page of
 // segmented controls lines up with a sub-page of rows.
-function Field({ label, hint, value, children }) {
+function Field({ label, hint, children }) {
   return (
     <div className="settings-field">
-      {/* The label row carries a live readout when there is one. A slider whose
-          position is its only feedback makes you drag it to find out where it
-          was, and this one has a floor that moves per picture, so "0%" is a
-          genuinely useful thing to be able to read. */}
       <div className="settings-field-hd">
         <div className="menu-accent-label">{label}</div>
-        {value ? <div className="settings-field-value">{value}</div> : null}
       </div>
       {children}
       {hint ? <div className="settings-field-hint">{hint}</div> : null}

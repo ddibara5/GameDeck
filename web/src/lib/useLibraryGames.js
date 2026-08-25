@@ -37,9 +37,9 @@ import { swr } from './idbCache.js'
 //     - 39 kB, the LARGEST string column in the payload: five times cover_igdb
 //       and four and a half times title. Every value is a 109x60 Exophase banner,
 //       which 64ebdec already stopped every surface from rendering, and it is now
-//       unreachable: cover_igdb is non-null on all 513 rows, and all four readers
-//       (GamePinPicker, ShufflePicker, GameSheet, libraryCover) take it only as a
-//       fallback behind that. A future row with no IGDB art now shows its initial
+//       unreachable: cover_igdb is non-null on all 513 rows, and the remaining
+//       readers (ShufflePicker, GameSheet, libraryCover) take it only as a fallback
+//       behind that. A future row with no IGDB art now shows its initial
 //       rather than a banner cropped to 45x60 and scaled up 3.7x, which 64ebdec
 //       measured as the worse of the two.
 //       NOT removed from v_recent_activity, which is a different query: the
