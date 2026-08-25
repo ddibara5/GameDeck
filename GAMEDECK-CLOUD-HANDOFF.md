@@ -37,6 +37,30 @@ procedures:
 5. Rotate a compromised secret in its provider, then update only the dependent
    Vercel or n8n credential and redeploy/retest.
 
+## Git publishing bridge
+
+The connected GitHub app may be able to read this repository while still being
+unable to create refs. In that case, use the inactive n8n GitHub bridge through
+the authenticated n8n connectors; do not fall back to editing `main`.
+
+1. Run `GameDeck | GitHub - Create branch (Codex bridge)` manually through the
+   n8n official connector with webhook input `{ branch, sourceBranch }`.
+   `sourceBranch` defaults to `main`, and the workflow refuses to create `main`.
+2. Build and test locally on a branch with the same name.
+3. Run `GameDeck | GitHub - Commit to branch (Codex bridge)` manually with
+   `{ branch, message, files }`. Each file accepts repo-relative `path` plus raw
+   UTF-8 `text`, base64 `content`, strict `patches`, or a fetchable `url`.
+4. Confirm the execution succeeded and the branch head moved. Vercel is linked
+   directly to this GitHub repository, so the branch commit should create the
+   preview deployment; inspect that deployment before merging.
+
+Both bridge workflows are intentionally inactive but available to the n8n MCP
+connectors. Execute their drafts in `manual` mode. Never publish their webhook
+triggers: the webhooks themselves are not an authentication boundary. The commit
+workflow blocks `main` unless the caller explicitly passes `allowMain: true`.
+The legacy delete bridge remains hard-coded to `main`; do not use it for isolated
+branch work.
+
 ## Database changes
 
 All new database changes belong in `supabase/migrations/`. Apply migrations with
