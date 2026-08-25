@@ -41,7 +41,17 @@ procedures:
 
 The connected GitHub app may be able to read this repository while still being
 unable to create refs. In that case, use the inactive n8n GitHub bridge through
-the authenticated n8n connectors; do not fall back to editing `main`.
+the authenticated n8n connectors.
+
+For small, locally validated UI increments, Dave's preferred review path is a
+single focused commit to `main` so the installed PWA receives the Vercel
+production deployment. Re-read the current `main` ref, build and test locally,
+then run `GameDeck | GitHub - Commit to branch (Codex bridge)` manually with
+`{ branch: "main", allowMain: true, message, files }`. Confirm the resulting Git
+tree and the READY production deployment. Roll back with a new revert commit or
+the previous Vercel production deployment; do not rewrite `main` history.
+
+Use an isolated branch for broader or higher-risk work:
 
 1. Run `GameDeck | GitHub - Create branch (Codex bridge)` manually through the
    n8n official connector with webhook input `{ branch, sourceBranch }`.
@@ -50,6 +60,7 @@ the authenticated n8n connectors; do not fall back to editing `main`.
 3. Run `GameDeck | GitHub - Commit to branch (Codex bridge)` manually with
    `{ branch, message, files }`. Each file accepts repo-relative `path` plus raw
    UTF-8 `text`, base64 `content`, strict `patches`, or a fetchable `url`.
+   Never put raw UTF-8 in `content`; that field is decoded as base64.
 4. Confirm the execution succeeded and the branch head moved. Vercel is linked
    directly to this GitHub repository, so the branch commit should create the
    preview deployment; inspect that deployment before merging.
