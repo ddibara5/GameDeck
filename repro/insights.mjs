@@ -4,8 +4,8 @@
  * Updated 20 Aug 2026: Now playing, Pace, Coming up, Leaving Game Pass and the
  * week strip MOVED to the Home tab, so the assertions about them moved with them
  * into repro/home.mjs. What is left here is what Insights still owns (the week
- * chart, what you played, the lifetime cards), plus the deletion checks, plus the
- * proof that the moved cards are GONE rather than duplicated.
+ * overview, time split, recent momentum and milestones), plus the proof that
+ * lifetime cards and the moved Home cards are gone rather than duplicated.
  *
  * Fixtures are the real rows, copied out of Supabase, so the assertions are about
  * what the tab renders on Dave's actual data rather than on numbers invented to
@@ -112,6 +112,10 @@ const read = () =>
       stripValues: text('.stat-value'),
       pending: text('.wk-pend'),
       deltas: text('.wk-delta'),
+      period: text('.ins-period button'),
+      monthBuckets: document.querySelectorAll('.month-col').length,
+      momentum: text('.momentum-grid b'),
+      milestones: text('.milestone-copy b'),
       npTitle: (document.querySelector('.np-t') || {}).textContent || null,
       npAch: text('.np-s').find((t) => /of \d+ achievements/.test(t)) || null,
       kv: text('.np-kv .v'),
@@ -131,6 +135,11 @@ const read = () =>
 const before = await read()
 await page.screenshot({ path: 'repro/out/ins-default.png', fullPage: true })
 
+await page.getByRole('button', { name: '30 days' }).click()
+await page.waitForTimeout(250)
+const month = await read()
+await page.getByRole('button', { name: '7 days' }).click()
+
 // --- open the editor -------------------------------------------------------
 await page.getByRole('button', { name: /customize cards/i }).click()
 await page.waitForSelector('.cz-row')
@@ -143,9 +152,8 @@ const sheet = await page.evaluate(() => ({
 }))
 await page.screenshot({ path: 'repro/out/ins-customize.png', fullPage: true })
 
-// Turn a lifetime card on, and a short-term one off.
-await page.getByRole('switch', { name: /show hall of fame/i }).click()
-await page.getByRole('switch', { name: /hide what you played this week/i }).click()
+// Turn one recent card off.
+await page.getByRole('switch', { name: /hide recent milestones/i }).click()
 const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('gamedeck_insights_cards_v1')))
 await page.getByRole('button', { name: 'Back' }).click()
 await page.waitForTimeout(500)
@@ -166,10 +174,10 @@ const bad = []
 const want = (cond, msg) => { if (!cond) bad.push(msg) }
 
 console.log('default card titles:', before.titles)
-console.log('strip values      :', before.stripValues)
-console.log('now playing       :', before.npTitle, '|', before.npAch, '|', before.kv)
-console.log('pace              :', before.paceBig, `${before.pipsOn}/${before.pips} pips`)
-console.log('coming up / gp    :', before.upRows)
+console.log('period options    :', before.period)
+console.log('month buckets     :', month.monthBuckets)
+console.log('momentum          :', before.momentum)
+console.log('milestones        :', before.milestones)
 console.log('week pending      :', before.pending, 'deltas:', before.deltas)
 console.log('sheet             :', sheet.rows, 'rows,', sheet.on, 'on,', sheet.off, 'off; headings', sheet.headings)
 console.log('after toggle      :', after.titles)
@@ -183,21 +191,24 @@ want(before.npTitle === null, 'Now playing moved to Home, still rendering ' + be
 want(before.arcs === 0, 'the completion arc moved to Home with Now playing')
 want(before.pips === 0, 'Pace moved to Home, ' + before.pips + ' pips still here')
 want(before.upRows.length === 0, 'Coming up / Leaving Game Pass moved to Home, ' + before.upRows.length + ' rows still here')
-want(before.titles.includes('Last 7 days'), 'Insights lost its week chart: ' + before.titles)
+want(before.titles.includes('Your week'), 'Insights lost its 7-day overview: ' + before.titles)
+want(before.titles.includes('Where your time went'), 'Insights lost its time split: ' + before.titles)
+want(before.titles.includes('Recent momentum'), 'Insights lost momentum: ' + before.titles)
 want(before.pending.length === 1, 'week card should hold the comparison, got ' + JSON.stringify(before.pending))
 want(before.deltas.length === 0, 'week card must NOT print a delta over an uncovered window')
-want(!before.titles.includes('Hall of fame'), 'lifetime cards should be off by default')
+want(before.period.join('|') === '7 days|30 days', 'period options wrong: ' + before.period)
+want(month.titles.includes('Your month') && month.monthBuckets === 4, '30-day view did not render four buckets')
+want(!before.body.includes('Hall of fame') && !before.body.includes('Library snapshot'), 'retired lifetime cards still render')
 want(before.donut === 0 && before.legend === 0, 'donut markup still present')
 want(!before.svgLabels.includes('Hours by platform'), 'donut chart still rendered')
 want(!before.svgLabels.some((l) => /scatter/i.test(l || '')), 'genre scatter still rendered')
 want(!before.svgLabels.some((l) => /release year/i.test(l || '')), 'vintage histogram still rendered')
-want(sheet.rows === 7, 'editor should list 7 cards, got ' + sheet.rows)
-want(sheet.on === 2 && sheet.off === 5, `editor should start 2 on / 5 off, got ${sheet.on}/${sheet.off}`)
-want(sheet.headings.join('|') === 'This week|Lifetime', 'group headings wrong: ' + sheet.headings)
-want(after.titles.includes('Hall of fame'), 'toggling Hall of fame on did not render it')
-want(!after.titles.includes('What you played this week'), 'toggling What you played off did not remove it')
-want(stored && stored.enabled && stored.enabled.hall === true && stored.enabled.week_games === false, 'config not persisted: ' + JSON.stringify(stored && stored.enabled))
-want(reloaded.titles.includes('Hall of fame') && !reloaded.titles.includes('What you played this week'), 'layout did not survive a reload')
+want(sheet.rows === 4, 'editor should list 4 cards, got ' + sheet.rows)
+want(sheet.on === 4 && sheet.off === 0, `editor should start 4 on / 0 off, got ${sheet.on}/${sheet.off}`)
+want(sheet.headings.join('|') === 'Recent play', 'group headings wrong: ' + sheet.headings)
+want(!after.body.includes('Recent milestones'), 'toggling Recent milestones off did not remove it')
+want(stored && stored.enabled && stored.enabled.milestones === false, 'config not persisted: ' + JSON.stringify(stored && stored.enabled))
+want(!reloaded.body.includes('Recent milestones'), 'layout did not survive a reload')
 if (failures.length) bad.push('page failures: ' + failures.slice(0, 4).join(' | '))
 
 if (bad.length) {
@@ -205,4 +216,4 @@ if (bad.length) {
   bad.forEach((b) => console.error('  - ' + b))
   process.exit(1)
 }
-console.log('\nPASS: default layout, new cards, deletions, toggle, persistence')
+console.log('\nPASS: recent layout, period switch, retired cards, toggle, persistence')

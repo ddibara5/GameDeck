@@ -2,8 +2,7 @@ import CustomizeList from './CustomizeList.jsx'
 import { CARD_BY_KEY, GROUP_LABEL, getCardsConfig, setCardsConfig, resetCardsConfig } from '../lib/insightsCards.js'
 
 // Insights' card editor. Same component as Discover's, one catalog different.
-// It passes groupLabel because this list mixes short-term and lifetime cards and
-// a flat list of twelve reads as undifferentiated.
+// It passes the group label so the editor states the page's recent-play scope.
 export default function CustomizeCards({ open, onClose }) {
   return (
     <CustomizeList

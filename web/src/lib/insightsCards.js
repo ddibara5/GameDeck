@@ -7,44 +7,32 @@ import { useEffect, useState } from 'react'
 const KEY = 'gamedeck_insights_cards_v1'
 const EVENT = 'gd-insights-cards-change'
 
-// group is presentation only: the editor prints one heading per group so the
-// short-term cards do not read as a flat list with lifetime ones mixed in.
-//
-// Everything lifetime is still HERE and still works, it just starts hidden,
-// because a number that is the same next Tuesday does not earn a place above the
-// fold. Nothing was deleted for being long term; three charts were deleted for
-// being unreadable or redundant, which is a different judgement and is recorded
-// in the commit that removed them.
+// Insights is recent by definition now. Lifetime snapshots were removed rather
+// than left as disabled catalog clutter: a number that is the same next Tuesday
+// does not earn a permanent analytics card. The four remaining cards explain a
+// rolling period, where it went, what changed, and which milestones happened.
 //
 // Five keys left on 20 Aug 2026 (week_totals, now_playing, pace, coming_up,
 // leaving_gp) for the Home tab's own catalog in homeCards.js. They are MOVED,
 // not copied. A saved layout that still names them drops them silently on the
 // next read, which is what reconcile-on-read is for.
 export const CARD_CATALOG = [
-  { key: 'week_chart', group: 'short', label: 'Last 7 days', sub: 'Hours per day, and the streak' },
-  { key: 'week_games', group: 'short', label: 'What you played this week' },
-  { key: 'lifetime', group: 'life', label: 'Lifetime totals', sub: 'Hours, achievements, median, backlog' },
-  { key: 'completion', group: 'life', label: 'Completion distribution' },
-  { key: 'funnel', group: 'life', label: 'Starter to Finisher' },
-  { key: 'most_played', group: 'life', label: 'Most played' },
-  { key: 'hall', group: 'life', label: 'Hall of fame' },
+  { key: 'week_chart', group: 'recent', label: 'Play overview', sub: '7- or 30-day total, chart and comparison' },
+  { key: 'week_games', group: 'recent', label: 'Where your time went', sub: 'Share, progress and achievements by game' },
+  { key: 'momentum', group: 'recent', label: 'Recent momentum', sub: 'Progress, rotation, finishes and longest run' },
+  { key: 'milestones', group: 'recent', label: 'Recent milestones', sub: 'Meaningful changes from tracked activity' },
 ]
 
 export const CARD_BY_KEY = CARD_CATALOG.reduce((m, c) => ((m[c.key] = c), m), {})
 
 export const GROUP_LABEL = {
-  short: 'This week',
-  life: 'Lifetime',
+  recent: 'Recent play',
 }
 
 const DEFAULT_ORDER = CARD_CATALOG.map((c) => c.key)
-// Short term on, lifetime off. Any card missing from this map defaults to off,
-// so a card added to the catalog later arrives hidden rather than appearing
-// unannounced on a layout the user has already arranged.
-const DEFAULT_ENABLED = CARD_CATALOG.reduce(
-  (m, c) => ((m[c.key] = c.group === 'short'), m),
-  {}
-)
+// Every remaining card earns a default place. Existing saved layouts keep their
+// choices for the two surviving keys; the two new recent cards arrive enabled.
+const DEFAULT_ENABLED = CARD_CATALOG.reduce((map, card) => ((map[card.key] = true), map), {})
 
 function load() {
   let stored = null

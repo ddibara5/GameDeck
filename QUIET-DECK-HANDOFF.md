@@ -166,6 +166,36 @@ in parallel with the taste probe, partial lane failures are distinguished from a
 true empty feed, selected platforms are shown first, and ranking changes invalidate
 the taste profile immediately.
 
+## Insights: recent play over lifetime totals
+
+Insights now answers what has changed lately instead of repeating library totals
+that become stale. The five retired lifetime cards (library snapshot, completion
+breakdown, journey funnel, most played, and hall of fame) are no longer available
+in card customization. Existing saved preferences reconcile automatically to the
+four current cards: Play overview, Where your time went, Recent momentum, and
+Recent milestones.
+
+The top control switches the play overview and time split between rolling 7-day
+and 30-day windows. Seven days stays daily; 30 days uses four chronological
+buckets. Where your time went reports true share of the selected period. Progress
+gain and completions are only shown when activity history contains a real reading
+before the period; missing history remains an unknown baseline rather than being
+treated as zero. Prior-period deltas follow the same rule and wait until two full
+windows are covered.
+
+Recent momentum is a stable 30-day summary of progress gained, completed games,
+games played, active days, and the longest run. Recent milestones contains only
+events supported by the activity feed, currently completions, meaningful progress,
+and achievements. The 90-day genre/platform mix remains deferred until the event
+history is mature enough to say something useful.
+
+Home now labels the Insights doorway **Recent play** and shows a prior-week delta
+only when the history covers it. Now Playing is deliberately simpler: last played,
+platform/genre, one completion rail, optional recent gain, weekly time, and total
+time. The duplicate achievement-heavy stat row and decorative progress arc were
+removed. These changes use the existing `v_recent_activity` view and a 60-day
+cached window; no database migration or new production dependency is required.
+
 ## Implementation history
 
 - `8ab4ce6` — implemented the Phase 1 shell foundation.
@@ -180,9 +210,10 @@ the taste profile immediately.
   performance checkpoint before the global-background refresh.
 - `1595f6d` — retired full-app game art in favor of four synchronous,
   palette-aware background treatments.
-- The Discover refresh established the two-destination hierarchy, elevated Ask
-  AI, deferred hidden Browse work, and connected My Ranking to For You. Use the
-  next `main` commit after `1595f6d` as its deployment baseline.
+- `27e1da8` — established the two-destination Discover hierarchy, elevated Ask
+  AI, deferred hidden Browse work, and connected My Ranking to For You.
+- The Insights recent-play refresh is the next `main` checkpoint after the
+  Discover change.
 
 ## Post-approval performance hardening
 
@@ -213,9 +244,13 @@ Dave reviewed that update, including the game-sheet behavior, and approved it.
 
 The subsequent global-background refresh completed with 143 transformed modules
 and all 16 automated Node tests passing. The Discover hierarchy and
-personalization refresh completes with 144 transformed modules and all 22
-automated Node tests passing. Installed-app visual QA remains the authoritative
-check for the new Discover header, Ask AI transition, and For You density.
+personalization refresh completed with 144 transformed modules and all 22
+automated Node tests passing. The Insights recent-play refresh completes with 145
+transformed modules and all 27 automated Node tests passing; the live 60-day
+activity read and required columns were also verified against the production
+Supabase project. Installed-app visual QA remains the authoritative check for the
+new Discover header, Ask AI transition, For You density, and recent-play card
+density.
 
 The connected cloud browser could verify the public production shell only up to
 the expected owner sign-in screen. Treat Dave's installed-iPhone approval as the

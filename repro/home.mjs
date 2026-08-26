@@ -280,6 +280,7 @@ const home = await page.evaluate(() => ({
   gpExpand: document.querySelector('[data-card="leaving_gp"] .hm-expand')?.textContent.replace(/\s+/g, ' ').trim() || null,
   banners: document.querySelectorAll('.hm-banner').length,
   arcs: document.querySelectorAll('.ins-arc').length,
+  npSummary: [...document.querySelectorAll('.np-summary span')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
   // Scoped to the two release cards. Leaving Game Pass uses .up-row too since
   // 21 Aug, so an unscoped count silently became a sum of three cards.
   upRows: [...document.querySelectorAll('[data-card="coming_up"] .up-row, [data-card="recently_released"] .up-row')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
@@ -408,12 +409,12 @@ check('the scrolled bar is glass', /blur/.test(afterScroll.glass || ''), afterSc
 await page.evaluate(() => window.scrollTo(0, 0))
 await page.waitForTimeout(600)
 
-check('Now playing renders with its arc', home.cardTitles.includes('Now playing') && home.arcs === 1, `arcs=${home.arcs}`)
+check('Now playing uses the simplified summary', home.cardTitles.includes('Now playing') && home.arcs === 0 && home.npSummary.length === 2, `arcs=${home.arcs} summary=${home.npSummary.join('|')}`)
 // One tile left in the catalog, so the run is a run of one and takes the whole
 // width. Asserted as a COLUMN COUNT rather than a pixel width: a half-width tile
 // in a two-column grid and a full-width one in a one-column grid can measure the
 // same on a narrow phone, and the rule is about the grid, not the pixels.
-check('This week is the only tile', home.tiles.length === 1 && /This week/.test(home.tiles[0]), home.tiles.join(' // '))
+check('Recent play is the only tile', home.tiles.length === 1 && /Recent play/.test(home.tiles[0]), home.tiles.join(' // '))
 check('a solo tile takes the full width', home.soloGrids === 1 && home.gridCols === 1, `solo=${home.soloGrids} cols=${home.gridCols}`)
 
 /* --------------------------------------------- the week tile's seven bars */
@@ -780,7 +781,7 @@ await page.locator('.customize-btn').click()
 await page.waitForTimeout(600)
 const czCards = await page.evaluate(() => [...document.querySelectorAll('.cz-rl b')].map((e) => e.textContent.trim()))
 check('the editor offers five cards', czCards.length === 5, String(czCards.length))
-check('the editor offers the right five', czCards.join('|') === 'Now playing|This week|Leaving Game Pass|Coming up|Recently released', czCards.join('|'))
+check('the editor offers the right five', czCards.join('|') === 'Now playing|Recent play|Leaving Game Pass|Coming up|Recently released', czCards.join('|'))
 await page.locator('.settings-back').first().click()
 await page.waitForTimeout(600)
 
@@ -886,7 +887,7 @@ check('Insights still opens', insights.title === 'Insights', insights.title)
 check('Now playing left Insights', insights.np === 0 && insights.arcs === 0, `np=${insights.np} arcs=${insights.arcs}`)
 check('Coming up and Leaving GP left Insights', insights.upRows === 0, String(insights.upRows))
 check('the week strip left Insights', insights.strips === 0, String(insights.strips))
-check('Insights keeps its week chart', insights.cardTitles.some((t) => /Last 7 days/.test(t)), insights.cardTitles.join(', '))
+check('Insights keeps its recent overview', insights.cardTitles.some((t) => /Your week/.test(t)), insights.cardTitles.join(', '))
 await page.screenshot({ path: 'repro/out/insights-dark.png', fullPage: true })
 
 /* --------------------------------------------------------------- 4. backlog */

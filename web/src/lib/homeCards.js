@@ -20,7 +20,7 @@ const EVENT = 'gd-home-cards-change'
 // names them drops them on the next read, which is what reconcile-on-read is for.
 export const CARD_CATALOG = [
   { key: 'now_playing', form: 'full', label: 'Now playing', sub: 'The game in progress, with its arc' },
-  { key: 'week', form: 'tile', label: 'This week', sub: 'Hours, days played, achievements' },
+  { key: 'week', form: 'tile', label: 'Recent play', sub: 'This week and change versus the prior week' },
   { key: 'leaving_gp', form: 'full', label: 'Leaving Game Pass', sub: 'Started games on the way out' },
   { key: 'coming_up', form: 'full', label: 'Coming up', sub: 'Wishlist releases with a date' },
   { key: 'recently_released', form: 'full', label: 'Recently released', sub: 'Wishlist games that are out and unowned' },

@@ -11,7 +11,7 @@ import { useWishlist } from '../lib/wishlist.js'
 import { normTitle } from '../lib/discover.js'
 import { useHomeCards, CARD_BY_KEY } from '../lib/homeCards.js'
 import { platformMeta, minutesToHhm, parseDayOrInstant, libraryCover } from '../lib/format.js'
-import { loadRecentActivity } from '../lib/recentActivity.js'
+import { getActivityStartCache, loadActivityStart, loadRecentActivity } from '../lib/recentActivity.js'
 import { weekStats, WEEK_SPAN, startOfDay, daysBetween, dayKey, eventDay } from '../lib/playWeek.js'
 import { gameSheetWarmProps } from '../lib/gameSheetWarmIntent.js'
 import './insights.css'
@@ -38,8 +38,8 @@ const SHORT_GENRE = {
 }
 const shortGenre = (g) => SHORT_GENRE[g] || g
 
-// Two windows of activity: one for the week block, one before it so the arc has
-// something to draw.
+// Two windows of activity: one for the week block and one before it so an honest
+// prior-period comparison can be shown when history covers the full range.
 const ACTIVITY_DAYS = WEEK_SPAN * 2
 
 // How far ahead Coming up looks. Beyond this a release is not news yet.
@@ -65,30 +65,6 @@ const RELEASE_MAX = 4
 // came off Home with Pick up next; the number is a judgement, not a measurement.
 const GP_MIN_RATING = 70
 
-/* ------------------------------------------------------------- progress arc */
-
-// Completion over the recorded window for the game in progress. A plain
-// polyline, not a chart component: one series, no axes, no interaction.
-function Arc({ points }) {
-  const W = 300, PAD = 8
-  const top = 10, base = 48
-  const max = Math.max(5, ...points.map((p) => p.pct))
-  const step = points.length > 1 ? (W - 2 * PAD) / (points.length - 1) : 0
-  const X = (i) => PAD + i * step
-  const Y = (p) => base - (p / max) * (base - top)
-  const d = points.map((p, i) => `${X(i)},${Y(p.pct)}`).join(' ')
-  const last = points[points.length - 1]
-  return (
-    <svg className="ins-arc" viewBox="0 0 300 62" role="img" aria-label="Completion over the recorded window">
-      <line x1={PAD} y1={base} x2={W - PAD} y2={base} stroke="var(--line)" strokeWidth="1" />
-      <polyline fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" points={d} />
-      <circle cx={X(points.length - 1)} cy={Y(last.pct)} r="3" fill="var(--accent)" />
-      <text x={PAD} y="60" fontSize="8" fill="var(--muted)">{points[0].label} · {Math.round(points[0].pct)}%</text>
-      <text x={W - PAD} y="60" fontSize="8" fill="var(--muted)" textAnchor="end">{last.label} · {Math.round(last.pct)}%</text>
-    </svg>
-  )
-}
-
 const CHEV = (
   <svg className="hm-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M9 6l6 6-6 6" />
@@ -104,6 +80,7 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
   // sheet wants, so a Coming up row can open the sheet the Wishlist page opens.
   const { items: wishItems } = useWishlist()
   const [events, setEvents] = useState([])
+  const [activityStart, setActivityStart] = useState(() => getActivityStartCache())
   const [leavingRows, setLeavingRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
@@ -130,6 +107,11 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
     // window's rows. So the callback is authoritative once it has fired.
     let freshEvents = false
     let freshLeaving = false
+    loadActivityStart((start) => {
+      if (!cancelled) setActivityStart(start)
+    }).then((start) => {
+      if (!cancelled) setActivityStart(start)
+    })
     async function load() {
       const [act, gp] = await Promise.all([
         loadRecentActivity({ days: ACTIVITY_DAYS }, (rows) => {
@@ -154,7 +136,7 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
     }
   }, [])
 
-  const week = useMemo(() => weekStats(events, new Date(), WEEK_SPAN), [events])
+  const week = useMemo(() => weekStats(events, new Date(), WEEK_SPAN, activityStart), [events, activityStart])
   const gamesById = useMemo(() => new Map(games.map((g) => [g.master_id, g])), [games])
 
   const nowPlaying = useMemo(() => {
@@ -198,33 +180,19 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
     if (!rows.length) return null
 
     const game = gamesById.get(latest.master_id) || null
-    const first = rows[0]
     const last = rows[rows.length - 1]
-
-    // Carry the last known reading across days with no row, so the line is flat
-    // where nothing happened rather than sloping between two points a week apart.
-    const points = []
-    let cursor = 0
-    const from = eventDay(first)
-    const spanDays = daysBetween(eventDay(last), from)
-    let held = num(first.percent_after)
-    for (let i = 0; i <= spanDays; i++) {
-      const day = new Date(startOfDay(from).getTime() + i * 86400000)
-      const key = dayKey(day)
-      while (cursor < rows.length && dayKey(eventDay(rows[cursor])) === key) {
-        held = num(rows[cursor].percent_after)
-        cursor += 1
-      }
-      points.push({ pct: held, label: day.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) })
-    }
-
-    const mine = events.filter((e) => e.master_id === latest.master_id)
 
     // Completion as of the last reading BEFORE the week, so the gain shown beside
     // "this week" really is this week's.
     const weekStart = new Date(startOfDay(new Date()).getTime() - (WEEK_SPAN - 1) * 86400000)
     const beforeWeek = rows.filter((r) => eventDay(r) < weekStart)
-    const weekBasePct = beforeWeek.length ? num(beforeWeek[beforeWeek.length - 1].percent_after) : num(first.percent_after)
+    // Without a pre-week reading the gain is unknown. Anchor to the first visible
+    // reading so the UI reports zero rather than manufacturing a start at 0%.
+    const weekBasePct = beforeWeek.length ? num(beforeWeek[beforeWeek.length - 1].percent_after) : num(rows[0].percent_after)
+    const weekGame = week.byGame.find((row) => row.master_id === latest.master_id) || null
+    const earned = num(last.earned_awards_after)
+    const total = num(last.total_awards) || (game ? num(game.total_awards) : 0)
+    const percent = total > 0 ? (earned / total) * 100 : num(last.percent_after)
 
     return {
       master_id: latest.master_id,
@@ -234,15 +202,10 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
       genre: game ? shortGenre(game.genre) : null,
       game,
       lastDay: eventDay(latest),
-      percent: num(last.percent_after),
-      percentWeekGain: num(last.percent_after) - weekBasePct,
-      earned: num(last.earned_awards_after),
-      total: num(last.total_awards) || (game ? num(game.total_awards) : 0),
+      percent,
+      percentWeekGain: Math.max(0, num(last.percent_after) - weekBasePct),
       minutesTotal: game ? num(game.playtime_minutes) : 0,
-      achWindow: mine.reduce((s, e) => s + num(e.achievements_delta), 0),
-      achWeek: (week.byGame.find((g) => g.master_id === latest.master_id) || {}).achievements || 0,
-      windowDays: spanDays + 1,
-      points,
+      minutesWeek: weekGame ? weekGame.minutes : 0,
     }
   }, [events, gamesById, week])
 
@@ -498,7 +461,7 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
     now_playing: () =>
       nowPlaying ? (
         <div className="chart-card" key="now_playing">
-          <h2 className="chart-title">Now playing</h2>
+          <div className="np-head"><h2 className="chart-title">Now playing</h2><span>{relativeDayLabel(nowPlaying.lastDay)}</span></div>
           <button
             type="button"
             className={`np${nowPlaying.game ? '' : ' flat'}`}
@@ -511,48 +474,40 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
               <span className="np-s">
                 {platformMeta(nowPlaying.environment).label}
                 {nowPlaying.genre ? ` · ${nowPlaying.genre}` : ''}
-                {` · ${relativeDayLabel(nowPlaying.lastDay)}`}
               </span>
-              {nowPlaying.total > 0 ? (
+              {nowPlaying.percent > 0 ? (
                 <>
                   <span className="np-track">
-                    <span className="np-fill" style={{ width: `${Math.round((nowPlaying.earned / nowPlaying.total) * 100)}%` }} />
+                    <span className="np-fill" style={{ width: `${Math.min(100, Math.round(nowPlaying.percent))}%` }} />
                   </span>
-                  <span className="np-s">{nowPlaying.earned} of {nowPlaying.total} achievements</span>
+                  <span className="np-progress-meta">
+                    <span>{Math.round(nowPlaying.percent)}% complete</span>
+                    {nowPlaying.percentWeekGain > 0 ? <b>+{Math.round(nowPlaying.percentWeekGain)}% this week</b> : null}
+                  </span>
                 </>
               ) : null}
             </span>
+            {CHEV}
           </button>
-          <div className="np-kv">
-            <div>
-              <span className="k">This week</span>
-              <span className="v">{nowPlaying.achWeek > 0 ? `+${nowPlaying.achWeek}` : '0'} <small>ach</small></span>
-            </div>
-            <div>
-              <span className="k">Completion</span>
-              <span className="v">
-                {Math.round(nowPlaying.percent)}%
-                {nowPlaying.percentWeekGain > 0 ? <small>+{Math.round(nowPlaying.percentWeekGain)}</small> : null}
-              </span>
-            </div>
-            <div>
-              <span className="k">On the clock</span>
-              <span className="v">{minutesToHhm(nowPlaying.minutesTotal)}</span>
-            </div>
+          <div className="np-summary">
+            <span><b>{minutesToHhm(nowPlaying.minutesWeek)}</b> this week</span>
+            <i />
+            <span><b>{minutesToHhm(nowPlaying.minutesTotal)}</b> total</span>
           </div>
-          {nowPlaying.points.length > 1 ? <Arc points={nowPlaying.points} /> : null}
         </div>
       ) : null,
 
     week: () => (
       <button type="button" className="hm-tile" key="week" onClick={() => onOpenTab && onOpenTab('insights')}>
-        <span className="hm-th"><span className="hm-tk">This week</span>{CHEV}</span>
+        <span className="hm-th"><span className="hm-tk">Recent play</span>{CHEV}</span>
         <span className="hm-wrow">
           <span className="hm-wl">
             <span className="hm-tv">{minutesToHhm(week.minutes)}</span>
             <span className="hm-ts">
               {week.activeDays} of {week.span} days
-              {week.achievements > 0 ? ` · +${week.achievements} ach` : ''}
+              {week.hasPrev
+                ? ` · ${week.minutes - week.prevMinutes >= 0 ? '↑' : '↓'} ${minutesToHhm(Math.abs(week.minutes - week.prevMinutes))}`
+                : week.achievements > 0 ? ` · +${week.achievements} ach` : ''}
             </span>
           </span>
           {/* aria-hidden: the tile's own text already says the total and the day
