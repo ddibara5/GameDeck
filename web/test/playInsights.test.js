@@ -36,10 +36,9 @@ test('progress requires a pre-period baseline', () => {
     row({ master_id: 2, title: 'Known Start', percent_after: 18 }),
   ], NOW, 7)
   const unknown = result.byGame.find((game) => game.master_id === 1)
-  const started = result.byGame.find((game) => game.master_id === 2)
+  const known = result.byGame.find((game) => game.master_id === 2)
   assert.equal(unknown.progressGain, null)
-  assert.equal(started.progressGain, 18)
-  assert.equal(started.progressGain, 18)
+  assert.equal(known.progressGain, 18)
 })
 
 test('progress and completion use the last reading before the period', () => {
