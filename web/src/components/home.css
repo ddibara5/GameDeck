@@ -207,6 +207,68 @@
 }
 .up-tt { display: block; }
 
+/* One timeline card replaces two nearly identical release cards. The category
+   labels carry direction; each side keeps the existing row and sheet behavior. */
+.hm-release-watch .hm-head {
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+.hm-head-title,
+.hm-head-sub { display: block; }
+.hm-head-sub {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: var(--t-cap);
+  font-weight: var(--w-med);
+  letter-spacing: normal;
+  text-transform: none;
+}
+.hm-release-group { padding-top: 11px; }
+.hm-release-group + .hm-release-group {
+  margin-top: 5px;
+  border-top: 1px solid var(--line-soft);
+}
+.hm-release-label {
+  margin-bottom: 1px;
+  color: var(--muted);
+  font-size: var(--t-cap2);
+  font-weight: var(--w-bold);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.hm-release-label.upcoming { color: var(--accent); }
+.hm-release-label.out { color: color-mix(in srgb, var(--xbox) 58%, var(--text)); }
+.hm-release-group .up-row { border-bottom: none; }
+.hm-release-group .up-when { width: 58px; }
+
+/* Leaving Game Pass is an episodic exception, not a second feed. Keep its most
+   relevant row in the Home scan while avoiding another full dashboard module. */
+.hm-gp-alert {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 64px;
+  margin: var(--space-3) var(--screen-gutter) 0;
+  padding: 10px 13px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.hm-gp-alert:active { background: var(--surface-2); }
+.hm-gp-copy { flex: 1; min-width: 0; }
+.hm-gp-title,
+.hm-gp-sub {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hm-gp-title { font-size: var(--t-foot); font-weight: var(--w-bold); }
+.hm-gp-sub { margin-top: 3px; color: var(--muted); font-size: var(--t-cap); }
+
 /* --------------------------------------------------------- card headings */
 
 .hm-head {

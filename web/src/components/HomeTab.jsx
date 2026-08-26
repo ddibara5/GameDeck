@@ -22,9 +22,9 @@ import './home.css'
 // next Tuesday belongs on Insights, which is why the lifetime cards are not here
 // and why this page ends on the customize button rather than scrolling forever.
 //
-// Now playing, Coming up, Leaving Game Pass and the week totals MOVED here from
-// Insights rather than being copied: their catalog keys are gone from
-// insightsCards.js, so nothing renders twice.
+// Now playing, Release watch, Leaving Game Pass and the week totals live here,
+// not on Insights, so the landing page stays a current snapshot rather than a
+// second analytics page.
 
 const num = (v) => Number(v) || 0
 
@@ -50,13 +50,9 @@ const COMING_UP_DAYS = 60
 // than two windows chosen separately.
 const RECENT_DAYS = 60
 
-// Rows shown before the card is expanded, and the ceiling once it is. Two keeps
-// both release cards on the same screen as the rest of Home; four is as many as
-// either has ever had inside its window, so "show more" never leads to a fifth
-// that is quietly dropped.
-// Three cards use these now, not two: Coming up, Recently released and Leaving
-// Game Pass all preview two and open to four.
-const RELEASE_PREVIEW = 2
+// The release watch card shows one item on either side of today. The full release
+// timeline owns the rest. Leaving Game Pass keeps a four-row relevance pool but
+// Home only renders its strongest item as a compact urgency alert.
 const RELEASE_MAX = 4
 
 // The floor for a Game Pass title you do NOT own. Ungated, the leaving window
@@ -86,10 +82,6 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
   const [selected, setSelected] = useState(null)
   const [wishOpen, setWishOpen] = useState(null)
   const [gpOpen, setGpOpen] = useState(null)
-  // Which release cards are showing all four rather than the first two. Kept in
-  // component state and not in localStorage on purpose: it is a look-at-it-now
-  // gesture, not a layout preference, and Customize cards is where layout lives.
-  const [expanded, setExpanded] = useState({})
   const [customizeOpen, setCustomizeOpen] = useState(false)
   const cards = useHomeCards()
 
@@ -356,102 +348,31 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
       ? openGame(g)
       : setGpOpen({ id: g.igdb_id, name: g.title, cover: g.cover, year: g.year, rating: g.rating })
 
-  // Preview two, open to four. Extracted the moment a THIRD card wanted it:
-  // Leaving Game Pass cannot reuse releaseCard, because its rows are a badge and
-  // a subtitle rather than a day column, but the control underneath them is the
-  // same control and should not be a third copy of the same fourteen lines.
-  //
-  // Renders nothing when there is nothing behind it. A control that expands
-  // nothing is worse than no control.
-  const moreToggle = (key, total) => {
-    const open = expanded[key]
-    const rest = total - RELEASE_PREVIEW
-    if (rest <= 0) return null
+  const releaseRow = (w, direction) => {
+    const upcoming = direction === 'upcoming'
     return (
       <button
         type="button"
-        className={`hm-expand${open ? ' open' : ''}`}
-        aria-expanded={open}
-        onClick={() => setExpanded((e) => ({ ...e, [key]: !open }))}
+        className={`up-row as-btn${w.days <= 7 ? ' soon' : ''}`}
+        key={`${direction}-${w.igdb_id}`}
+        onClick={() => setWishOpen(w)}
+        {...gameSheetWarmProps(w, 'wishlist')}
       >
-        {open ? 'Show less' : `Show ${rest} more`}
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M6 9l6 6 6-6" />
-        </svg>
+        <Cover src={w.cover} title={w.title} size="sm" className="up-cov" />
+        <span className="up-t">
+          <span className="up-tt">{w.title}</span>
+          <span className="up-d">
+            {upcoming ? '' : 'Released '}
+            {w.day.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+          </span>
+        </span>
+        <span className="up-when">
+          <span className="up-n">{w.days === 0 ? 'Out' : w.days}</span>
+          <span className="up-u">
+            {upcoming ? (w.days === 0 ? 'today' : w.days === 1 ? 'day' : 'days') : w.days === 1 ? 'day ago' : 'days ago'}
+          </span>
+        </span>
       </button>
-    )
-  }
-
-  // Coming up and Recently released are one card with the clock pointing either
-  // way: same rows, same chevron to the wishlist, same expand. Written once,
-  // because this codebase has already paid twice for a second copy that drifts.
-  const releaseCard = ({ key, title, sub, rows, unit, hot, to, toLabel }) => {
-    const shown = expanded[key] ? rows : rows.slice(0, RELEASE_PREVIEW)
-    // data-card so the harness can address one release card rather than counting
-    // .up-row across both and hoping the sum means something.
-    return (
-      <div className="chart-card" data-card={key} key={key}>
-        <div className="hm-head">
-          {/* The whole heading is the target, not the mark at the end of it. A
-              34px chevron was a fine thing to look at and a poor thing to hit
-              next to 200px of heading that did the same job and did nothing.
-              The button is INSIDE the h2 rather than around it: a button may
-              contain phrasing content, and an h2 is not phrasing content, so
-              the other nesting is invalid and costs the card its heading.
-
-              Each card names its own destination, because the two are not the
-              same list read twice. Coming up leads to the wishlist, which opens
-              on This month and runs forward. Recently released led there too,
-              and that was wrong: its rows land in the Out now SECTION, which
-              sorts below every future month, quarter and year, so the card sent
-              you to a page whose last row was the thing you tapped for. */}
-          <h2 className="chart-title">
-            <button
-              type="button"
-              className="hm-head-btn"
-              // The visible text has to be IN the accessible name, or a voice
-              // control user saying "tap Coming up" hits nothing. So the label
-              // is the heading plus where it goes, not just where it goes.
-              aria-label={`${title}, ${toLabel}`}
-              onClick={() => onOpenList && onOpenList(to)}
-            >
-              {title}
-              <span className="hm-more" aria-hidden="true">
-                {CHEV}
-              </span>
-            </button>
-          </h2>
-        </div>
-        <div className="ins-sub">{sub}</div>
-        {shown.map((w) => (
-          <button
-            type="button"
-            className={`up-row as-btn${hot(w) ? ' soon' : ''}`}
-            key={w.igdb_id}
-            onClick={() => setWishOpen(w)}
-            {...gameSheetWarmProps(w, 'wishlist')}
-          >
-            {/* Art first, which is where every other row in this app puts it:
-                Now playing on this same screen, the Wishlist rows, the Library.
-                Beside the countdown it would have been the only one that is not,
-                and it costs the same 39px of title column either way. */}
-            <Cover src={w.cover} title={w.title} size="sm" className="up-cov" />
-            <span className="up-when">
-              <span className="up-n">{w.days === 0 ? 'Out' : w.days}</span>
-              <span className="up-u">{unit(w)}</span>
-            </span>
-            <span className="up-t">
-              {/* The title is its own span so it can be ellipsised. .up-t holds
-                  the date as a block child, and text-overflow does not apply to
-                  a box with mixed inline and block content. Same shape as
-                  .np-t / .np-s. */}
-              <span className="up-tt">{w.title}</span>
-              <span className="up-d">{w.day.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-            </span>
-          </button>
-        ))}
-        {moreToggle(key, rows.length)}
-      </div>
     )
   }
 
@@ -527,84 +448,67 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
       </button>
     ),
 
-    // No leave DATE anywhere: the Game Pass catalog carries `leaving_soon` and
-    // nothing else, so this says "soon" rather than inventing a countdown.
-    // The single-title BANNER is gone. It existed because a heading over one line
-    // was more chrome than content, which was true while one line was all this
-    // could hold; the pool is four now and the card form is the right one.
-    //
-    // No row repeats "Leaving soon" any more either. The heading says it once,
-    // and the line under each title is better spent on why THIS one is worth the
-    // last week: how far in you already are, or how well it reviewed.
     leaving_gp: () =>
       leaving.length ? (
-        <div className="chart-card" data-card="leaving_gp" key="leaving_gp">
-          <div className="hm-head">
-            <h2 className="chart-title">Leaving Game Pass</h2>
-          </div>
-          <div className="ins-sub">Yours first, then what else is going</div>
-          {(expanded.leaving_gp ? leaving : leaving.slice(0, RELEASE_PREVIEW)).map((g) => (
-            <button
-              type="button"
-              className="up-row as-btn"
-              key={g.igdb_id}
-              onClick={() => openLeaving(g)}
-            >
-              <span className="gp-badge">GP</span>
-              <span className="up-t">
-                {g.title}
-                <span className="up-d">
-                  {g.mine ? (
-                    num(g.playtime_minutes) > 0 ? (
-                      <>
-                        <span className="leaving">{minutesToHhm(num(g.playtime_minutes))} in</span>
-                        {` · ${Math.round(num(g.percent))}% done`}
-                      </>
-                    ) : (
-                      <span className="leaving">In your library, never started</span>
-                    )
-                  ) : (
-                    [g.year, g.rating ? `${Math.round(num(g.rating))} rated` : null].filter(Boolean).join(' · ')
-                  )}
-                </span>
-              </span>
-            </button>
-          ))}
-          {moreToggle('leaving_gp', leaving.length)}
-        </div>
+        <button
+          type="button"
+          className="hm-gp-alert"
+          data-card="leaving_gp"
+          key="leaving_gp"
+          onClick={() => openLeaving(leaving[0])}
+          {...gameSheetWarmProps(leaving[0], leaving[0].mine ? 'owned' : 'discover')}
+        >
+          <span className="gp-badge">GP</span>
+          <span className="hm-gp-copy">
+            <span className="hm-gp-title">Leaving Game Pass</span>
+            <span className="hm-gp-sub">
+              {leaving[0].title}
+              {leaving[0].mine && num(leaving[0].playtime_minutes) > 0
+                ? ` · ${minutesToHhm(num(leaving[0].playtime_minutes))} in`
+                : leaving[0].mine
+                  ? ' · Never started'
+                  : leaving[0].rating
+                    ? ` · ${Math.round(num(leaving[0].rating))} rated`
+                    : ''}
+            </span>
+          </span>
+          {CHEV}
+        </button>
       ) : null,
 
-    coming_up: () =>
-      comingUp.length
-        ? releaseCard({
-            key: 'coming_up',
-            title: 'Coming up',
-            sub: 'Wishlisted games with a confirmed date',
-            rows: comingUp,
-            unit: (w) => (w.days === 0 ? 'today' : w.days === 1 ? 'day' : 'days'),
-            hot: (w) => w.days <= 7,
-            to: 'wishlist',
-            toLabel: 'open your wishlist',
-          })
-        : null,
-
-    recently_released: () =>
-      recentlyReleased.length
-        ? releaseCard({
-            key: 'recently_released',
-            title: 'Recently released',
-            sub: 'Out now, and still not in your library',
-            rows: recentlyReleased,
-            // "ago" rather than "days ago": the column is 52px and the date sits
-            // on the line below, so the unit only has to point backwards.
-            unit: () => 'ago',
-            // The mirror of Coming up's amber: out inside the last week is the
-            // thing you might actually do something about tonight.
-            hot: (w) => w.days <= 7,
-            to: 'released',
-            toLabel: 'open the Out now list',
-          })
-        : null,
+    release_watch: () =>
+      comingUp.length || recentlyReleased.length ? (
+        <div className="chart-card hm-release-watch" data-card="release_watch" key="release_watch">
+          <div className="hm-head">
+            <h2 className="chart-title">
+              <button
+                type="button"
+                className="hm-head-btn"
+                aria-label="Release watch, open the release timeline"
+                onClick={() => onOpenList && onOpenList('releases')}
+              >
+                <span>
+                  <span className="hm-head-title">Release watch</span>
+                  <span className="hm-head-sub">From your wishlist</span>
+                </span>
+                <span className="hm-more" aria-hidden="true">{CHEV}</span>
+              </button>
+            </h2>
+          </div>
+          {comingUp[0] ? (
+            <div className="hm-release-group">
+              <div className="hm-release-label upcoming">Coming up</div>
+              {releaseRow(comingUp[0], 'upcoming')}
+            </div>
+          ) : null}
+          {recentlyReleased[0] ? (
+            <div className="hm-release-group">
+              <div className="hm-release-label out">Out now</div>
+              {releaseRow(recentlyReleased[0], 'out')}
+            </div>
+          ) : null}
+        </div>
+      ) : null,
   }
 
   // Consecutive tiles pair up into a row; everything else takes the full width.

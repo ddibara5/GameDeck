@@ -274,11 +274,15 @@ function GameDeckApp() {
       {view ? (
         <div className={`view-page${viewClosing ? ' closing' : ''}`}>
           <Suspense fallback={null}>
-            {/* Two views, one component. 'released' is the wishlist filtered to
-                what has already come out, which is where Recently released
-                points; see the scope note in WishlistTab. */}
-            {view === 'wishlist' || view === 'released' ? (
-              <WishlistTab onClose={closeView} scope={view === 'released' ? 'out' : 'all'} />
+            {/* Wishlist and Release watch share the same cached rows, list,
+                sorting, density and sheet. Release watch adds a three-way scope
+                control and opens on Upcoming; the drawer Wishlist stays on All. */}
+            {view === 'wishlist' || view === 'releases' || view === 'released' ? (
+              <WishlistTab
+                onClose={closeView}
+                mode={view === 'wishlist' ? 'wishlist' : 'releases'}
+                initialScope={view === 'released' ? 'out' : view === 'releases' ? 'upcoming' : 'all'}
+              />
             ) : (
               <ListView viewKey={view} onClose={closeView} />
             )}

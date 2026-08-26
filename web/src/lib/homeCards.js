@@ -19,11 +19,10 @@ const EVENT = 'gd-home-cards-change'
 // way the five cards that left Insights took theirs. A saved layout that still
 // names them drops them on the next read, which is what reconcile-on-read is for.
 export const CARD_CATALOG = [
-  { key: 'now_playing', form: 'full', label: 'Now playing', sub: 'The game in progress, with its arc' },
   { key: 'week', form: 'tile', label: 'Recent play', sub: 'This week and change versus the prior week' },
-  { key: 'leaving_gp', form: 'full', label: 'Leaving Game Pass', sub: 'Started games on the way out' },
-  { key: 'coming_up', form: 'full', label: 'Coming up', sub: 'Wishlist releases with a date' },
-  { key: 'recently_released', form: 'full', label: 'Recently released', sub: 'Wishlist games that are out and unowned' },
+  { key: 'now_playing', form: 'full', label: 'Now playing', sub: 'The game currently in progress' },
+  { key: 'release_watch', form: 'full', label: 'Release watch', sub: 'The next arrival and latest release from your wishlist' },
+  { key: 'leaving_gp', form: 'full', label: 'Leaving Game Pass', sub: 'The most relevant game on the way out' },
 ]
 
 export const CARD_BY_KEY = CARD_CATALOG.reduce((m, c) => ((m[c.key] = c), m), {})
@@ -33,10 +32,36 @@ export const CARD_BY_KEY = CARD_CATALOG.reduce((m, c) => ((m[c.key] = c), m), {}
 const DEFAULT_ORDER = CARD_CATALOG.map((c) => c.key)
 const DEFAULT_ENABLED = CARD_CATALOG.reduce((m, c) => ((m[c.key] = true), m), {})
 
+const LEGACY_RELEASE_KEYS = ['coming_up', 'recently_released']
+const LEGACY_DEFAULT_ORDER = ['now_playing', 'week', 'leaving_gp', ...LEGACY_RELEASE_KEYS]
+
+// Merge the two retired release cards without erasing a customized layout. A
+// stock legacy layout receives the new snapshot-first order; a customized one
+// keeps its relative order and gets Release watch where its first release card
+// used to be. The merged card stays enabled when either predecessor was enabled.
+export function migrateHomeCards(stored) {
+  if (!stored || !Array.isArray(stored.order)) return stored
+  const hasLegacy = LEGACY_RELEASE_KEYS.some((key) => stored.order.includes(key))
+  if (!hasLegacy || stored.order.includes('release_watch')) return stored
+
+  const stockOrder = stored.order.length === LEGACY_DEFAULT_ORDER.length
+    && stored.order.every((key, index) => key === LEGACY_DEFAULT_ORDER[index])
+  const order = stockOrder
+    ? DEFAULT_ORDER
+    : stored.order.flatMap((key, index, all) => {
+        if (!LEGACY_RELEASE_KEYS.includes(key)) return [key]
+        return index === all.findIndex((candidate) => LEGACY_RELEASE_KEYS.includes(candidate)) ? ['release_watch'] : []
+      })
+  const enabled = { ...(stored.enabled || {}) }
+  enabled.release_watch = LEGACY_RELEASE_KEYS.some((key) => Boolean(enabled[key]))
+  for (const key of LEGACY_RELEASE_KEYS) delete enabled[key]
+  return { ...stored, order, enabled }
+}
+
 function load() {
   let stored = null
   try {
-    stored = JSON.parse(localStorage.getItem(KEY) || 'null')
+    stored = migrateHomeCards(JSON.parse(localStorage.getItem(KEY) || 'null'))
   } catch {
     stored = null
   }

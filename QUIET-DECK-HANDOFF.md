@@ -196,6 +196,28 @@ time. The duplicate achievement-heavy stat row and decorative progress arc were
 removed. These changes use the existing `v_recent_activity` view and a 60-day
 cached window; no database migration or new production dependency is required.
 
+## Home snapshot and release watch
+
+Home now defaults to the order **Recent play**, **Now playing**, **Release watch**,
+then **Leaving Game Pass**. Recent play remains the compact doorway into Insights;
+Now playing remains the current-game continuation card.
+
+The former Coming up and Recently released cards are one **Release watch** card.
+It shows the next confirmed wishlist arrival and the newest unowned wishlist
+release, then opens one release timeline with **Upcoming**, **Out now**, and
+**All saved** views. Those views keep the existing shared wishlist cache, sort and
+density controls, swipe/remove/undo behavior, and wishlist game sheet. Home keeps
+the same 60-day windows and opens individual rows directly in that sheet.
+
+Leaving Game Pass remains separate because it has a different source and urgency,
+but Home renders only its strongest owned-first candidate as a compact alert. The
+underlying four-item relevance pool is unchanged.
+
+The `gamedeck_home_cards_v1` storage key remains in place. A stock legacy layout
+migrates to the new default order; a customized layout keeps its relative order
+and merges the two retired release-card preferences into Release watch. No saved
+Home layout is reset wholesale.
+
 ## Implementation history
 
 - `8ab4ce6` — implemented the Phase 1 shell foundation.
@@ -212,8 +234,9 @@ cached window; no database migration or new production dependency is required.
   palette-aware background treatments.
 - `27e1da8` — established the two-destination Discover hierarchy, elevated Ask
   AI, deferred hidden Browse work, and connected My Ranking to For You.
-- The Insights recent-play refresh is the next `main` checkpoint after the
-  Discover change.
+- `9ad4193` — refreshed Insights around recent play and simplified the Home
+  Insights doorway and Now Playing card.
+- The Home snapshot and Release watch refresh is the next `main` checkpoint.
 
 ## Post-approval performance hardening
 
@@ -251,6 +274,12 @@ activity read and required columns were also verified against the production
 Supabase project. Installed-app visual QA remains the authoritative check for the
 new Discover header, Ask AI transition, For You density, and recent-play card
 density.
+
+The Home snapshot and Release watch refresh completes with 145 transformed
+modules and all 30 automated Node tests passing. The local browser could reach
+only the expected owner sign-in boundary; installed-app review remains the
+authoritative authenticated visual check for the consolidated Home card, compact
+Game Pass alert, and three release scopes.
 
 The connected cloud browser could verify the public production shell only up to
 the expected owner sign-in screen. Treat Dave's installed-iPhone approval as the

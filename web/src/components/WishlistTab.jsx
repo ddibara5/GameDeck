@@ -231,12 +231,7 @@ function GridCard({ r, onOpen, scope }) {
   )
 }
 
-// One page, two scopes.
-//
-// `all` is the wishlist: everything you are tracking, soonest first, opened from
-// the drawer and from Coming up's chevron. `out` is the Out now page: the same
-// rows filtered to what has already released, newest first, opened from Recently
-// released' chevron.
+// One list implementation, with a release-focused mode for Home.
 //
 // A scope rather than a second component, deliberately. Everything below the
 // header is identical work: swipe to remove, the undo toast, the list and grid
@@ -249,17 +244,20 @@ function GridCard({ r, onOpen, scope }) {
 // section order 9e15, so it sorts below every future month, every quarter, every
 // year and To be announced. The card sent you to a page whose last row was the
 // thing you tapped for.
-export default function WishlistTab({ onClose, scope = 'all' }) {
+export default function WishlistTab({ onClose, mode = 'wishlist', initialScope = 'all' }) {
   const { items: allItems, loading } = useWishlist()
+  const [scope, setScope] = useState(initialScope)
+  const isReleaseMode = mode === 'releases'
   const isOutScope = scope === 'out'
-  // The window is EVERYTHING released, not the card's 60 days. Only 4 wishlist
-  // games came out in that window and the card already shows up to four, so a
-  // page scoped to it would show exactly what the card shows and the chevron
-  // would lead nowhere. 35 rows go back to 2020; the card is the tip of this.
+  const isUpcomingScope = scope === 'upcoming'
   const items = useMemo(
-    () => (isOutScope ? allItems.filter((r) => isOut(relOf(r))) : allItems),
-    [allItems, isOutScope]
+    () => allItems.filter((r) => (isOutScope ? isOut(relOf(r)) : isUpcomingScope ? !isOut(relOf(r)) : true)),
+    [allItems, isOutScope, isUpcomingScope]
   )
+  const scopeCounts = useMemo(() => {
+    const out = allItems.filter((r) => isOut(relOf(r))).length
+    return { upcoming: allItems.length - out, out, all: allItems.length }
+  }, [allItems])
   const [reconciled, setReconciled] = useState([])
   const [noteDismissed, setNoteDismissed] = useState(false)
   const [selected, setSelected] = useState(null)
@@ -342,16 +340,40 @@ export default function WishlistTab({ onClose, scope = 'all' }) {
         {back}
         <div>
           {/* See ListView: this is the screen's only heading while it is up. */}
-          <h1 className="wl-title">{isOutScope ? 'Out now' : 'Wishlist'}</h1>
+          <h1 className="wl-title">{isReleaseMode ? 'Release watch' : 'Wishlist'}</h1>
           <div className="wl-sub">
             {loading
               ? 'Loading…'
-              : isOutScope
+              : isUpcomingScope
+                ? `${items.length} upcoming wishlisted ${items.length === 1 ? 'game' : 'games'}`
+                : isOutScope
                 ? `${items.length} wishlisted ${items.length === 1 ? 'game' : 'games'} you don't own yet`
-                : `${items.length} ${items.length === 1 ? 'game' : 'games'} you're tracking`}
+                : `${items.length} ${items.length === 1 ? 'saved game' : 'saved games'}`}
           </div>
         </div>
       </div>
+
+      {isReleaseMode ? (
+        <div className="wl-scope-tabs" role="tablist" aria-label="Release watch view">
+          {[
+            ['upcoming', 'Upcoming'],
+            ['out', 'Out now'],
+            ['all', 'All saved'],
+          ].map(([key, label]) => (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={scope === key}
+              className={scope === key ? 'on' : ''}
+              key={key}
+              onClick={() => setScope(key)}
+            >
+              <span>{label}</span>
+              <b>{scopeCounts[key]}</b>
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       {reconciled.length && !noteDismissed ? (
         <div className="wl-note">
@@ -371,9 +393,13 @@ export default function WishlistTab({ onClose, scope = 'all' }) {
 
       {!loading && items.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-state-title">{isOutScope ? 'Nothing has landed yet' : 'Your wishlist is empty'}</div>
+          <div className="empty-state-title">
+            {isUpcomingScope ? 'Nothing is scheduled yet' : isOutScope ? 'Nothing has landed yet' : 'Your wishlist is empty'}
+          </div>
           <div>
-            {isOutScope
+            {isUpcomingScope
+              ? 'Saved games with a future release window show up here.'
+              : isOutScope
               ? 'Games you are tracking show up here once they release, and leave again if you buy them.'
               : 'Tap the heart on any game in Discover to start tracking it.'}
           </div>
@@ -382,7 +408,7 @@ export default function WishlistTab({ onClose, scope = 'all' }) {
 
       {items.length > 1 ? (
         <div className="wl-controls">
-          <div className="wl-sort" role="tablist" aria-label="Sort wishlist">
+          <div className="wl-sort" role="tablist" aria-label="Sort saved games">
             {SORTS.map((s) => (
               <button
                 key={s.k}
@@ -411,7 +437,7 @@ export default function WishlistTab({ onClose, scope = 'all' }) {
           be empty by construction: NextUp filters !isOut, so it would return
           null anyway. Gated on the scope as well, so the reason is stated rather
           than left to a coincidence in another file. */}
-      {sort === 'release' && !isOutScope && !loading ? <NextUp items={items} onOpen={setSelected} /> : null}
+      {sort === 'release' && !isOutScope && !isReleaseMode && !loading ? <NextUp items={items} onOpen={setSelected} /> : null}
 
       {sections.map((sec) => (
         <div key={sec.id}>
