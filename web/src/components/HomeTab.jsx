@@ -482,12 +482,11 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
             <span className="gp-badge">GP</span>
             <span className="hm-gp-copy">
               <span className="hm-gp-title">Leaving Game Pass</span>
-              <span className="hm-gp-sub">{first.title}{firstMeta ? ` · ${firstMeta}` : ''}</span>
+              <span className="hm-gp-sub">
+                {first.title}{firstMeta ? ` · ${firstMeta}` : ''}{leaving.length > 1 ? ` · +${leaving.length - 1} more` : ''}
+              </span>
             </span>
-            {leaving.length > 1 ? <span className="hm-gp-count">+{leaving.length - 1}</span> : null}
-            <svg className={`hm-chev${gpExpanded ? ' down' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M9 6l6 6-6 6" />
-            </svg>
+            <span className={`hm-more hm-gp-more${gpExpanded ? ' down' : ''}`} aria-hidden="true">{CHEV}</span>
           </button>
           {gpExpanded ? (
             <div className="hm-gp-list">
