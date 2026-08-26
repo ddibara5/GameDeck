@@ -15,7 +15,7 @@
 //   add &status=released|upcoming to constrain by availability (release date vs now)
 //   add &debug=1 to see the generated IGDB query in the response
 
-import { clientIp, requireOwner } from './_auth.js';
+import { clientIp, isN8nService, requireOwner } from './_auth.js';
 import { rateLimit } from './_rateLimit.js';
 
 const IGDB = 'https://api.igdb.com/v4';
@@ -418,9 +418,18 @@ export default async function handler(req, res) {
     res.status(405).json({ error: 'Method not allowed' });
     return;
   }
-  const user = await requireOwner(req, res);
+  // Scheduled Game Pass matching is server-to-server work and cannot carry the
+  // owner's short-lived browser JWT. Only this route opts into the private n8n
+  // credential; every browser call still takes the normal owner-auth path.
+  const serviceCall = isN8nService(req);
+  const user = serviceCall ? { id: 'n8n-gamepass-sync' } : await requireOwner(req, res);
   if (!user) return;
-  const quota = rateLimit(`discover:${user.id}:${clientIp(req)}`, { limit: 120, windowMs: 10 * 60 * 1000 });
+  const quota = rateLimit(`discover:${user.id}:${clientIp(req)}`, {
+    // The nightly matcher resolves roughly 500 titles in controlled n8n batches.
+    // It gets its own ceiling so it cannot consume the owner's interactive quota.
+    limit: serviceCall ? 700 : 120,
+    windowMs: 10 * 60 * 1000,
+  });
   if (!quota.allowed) {
     res.setHeader('Retry-After', String(quota.retryAfter));
     res.status(429).json({ error: 'Too many catalog requests. Try again shortly.' });

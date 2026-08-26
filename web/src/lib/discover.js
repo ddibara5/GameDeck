@@ -5,6 +5,7 @@
 import { supabase } from './supabase.js'
 import { authFetch } from './appAuth.js'
 import { swr, idbGet, idbSet } from './idbCache.js'
+import { gamePassCatalogAvailable, normalizeGamePassState } from './gamePassState.js'
 
 // How long a persisted payload is served without even asking the network.
 // Discover rails are editorial-ish lists that barely move hour to hour; the Game
@@ -267,7 +268,11 @@ export function loadGamePass() {
   return _gpPromise
 }
 
-// The leaving-soon subset, for the Home card.
+// The leaving-soon subset, plus enough catalog metadata for Home to distinguish
+// a healthy empty window from a failed/stale feed. A zero-row catalog is never a
+// legitimate Game Pass result; no leaving rows inside a populated, fresh catalog
+// is. The workflow runs daily, so 36 hours allows normal schedule drift while
+// surfacing a missed refresh before a second full day passes.
 //
 // Deliberately NOT loadGamePass() filtered, even though that payload carries
 // `leaving_soon` and is already cached. That cache has a 12 hour TTL, which is
@@ -281,16 +286,32 @@ export async function loadLeavingSoon(onFresh) {
   const { value } = await swr(
     'gamepass:leaving',
     async () => {
-      const { data, error } = await supabase
-        .from('gamepass')
-        .select('igdb_id, name, cover, year, rating')
-        .eq('leaving_soon', true)
-      if (error) throw new Error(error.message || 'Game Pass request failed')
-      return (data || []).filter((r) => r && r.igdb_id != null)
+      const [leavingResult, catalogResult] = await Promise.all([
+        supabase
+          .from('gamepass')
+          .select('igdb_id, name, cover, year, rating')
+          .eq('leaving_soon', true),
+        supabase
+          .from('gamepass')
+          .select('updated_at', { count: 'exact' })
+          .order('updated_at', { ascending: false })
+          .limit(1),
+      ])
+      if (leavingResult.error) throw new Error(leavingResult.error.message || 'Game Pass request failed')
+      if (catalogResult.error) throw new Error(catalogResult.error.message || 'Game Pass status request failed')
+      const updatedAt = catalogResult.data && catalogResult.data[0] && catalogResult.data[0].updated_at
+      return {
+        rows: (leavingResult.data || []).filter((r) => r && r.igdb_id != null),
+        available: gamePassCatalogAvailable(catalogResult.count, updatedAt),
+        updatedAt: updatedAt || null,
+      }
     },
     { maxAge: 0, onFresh },
-  ).catch(() => ({ value: [] }))
-  return value || []
+  ).catch(() => ({ value: { rows: [], available: false, updatedAt: null } }))
+  // v2 persisted this key as a bare rows array. Keep that disk value usable on
+  // the first frame while the mandatory background refresh writes the new state
+  // object; an old empty array is treated as unavailable, not healthy-empty.
+  return normalizeGamePassState(value)
 }
 
 let _libPromise = null

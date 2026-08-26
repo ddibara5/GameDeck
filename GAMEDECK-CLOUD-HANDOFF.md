@@ -40,6 +40,21 @@ procedures:
 5. Rotate a compromised secret in its provider, then update only the dependent
    Vercel or n8n credential and redeploy/retest.
 
+### Game Pass catalog safety
+
+The nightly Game Pass workflow authenticates its `/api/discover` matching calls
+with the existing private n8n server credential; it does not use or imitate the
+owner's browser session. It validates at least 400 resolved Microsoft titles,
+300 matched IGDB rows, and a 60% match floor before writing.
+
+The workflow must never clear `public.gamepass` directly. Its final step calls
+`replace_gamepass_catalog`, a service-role-only RPC that validates uniqueness and
+required fields and performs delete-plus-insert in one transaction. Any rejected
+payload or insert error preserves the prior catalog. Failures stop the workflow
+and route to the shared error workflow. The Home client considers a zero-row or
+more-than-36-hour-old catalog unavailable; a fresh catalog with zero leaving rows
+is a healthy empty state and remains hidden.
+
 ## Git publishing bridge
 
 The connected GitHub app may be able to read this repository while still being

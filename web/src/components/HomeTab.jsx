@@ -77,11 +77,12 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
   const { items: wishItems } = useWishlist()
   const [events, setEvents] = useState([])
   const [activityStart, setActivityStart] = useState(() => getActivityStartCache())
-  const [leavingRows, setLeavingRows] = useState([])
+  const [gamePass, setGamePass] = useState({ rows: [], available: true, updatedAt: null })
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
   const [wishOpen, setWishOpen] = useState(null)
   const [gpOpen, setGpOpen] = useState(null)
+  const [gpExpanded, setGpExpanded] = useState(false)
   const [customizeOpen, setCustomizeOpen] = useState(false)
   const cards = useHomeCards()
 
@@ -111,15 +112,15 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
           freshEvents = true
           setEvents(rows)
         }),
-        loadLeavingSoon((rows) => {
+        loadLeavingSoon((state) => {
           if (cancelled) return
           freshLeaving = true
-          setLeavingRows(rows)
+          setGamePass(state)
         }),
       ])
       if (cancelled) return
       if (!freshEvents) setEvents(act)
-      if (!freshLeaving) setLeavingRows(gp)
+      if (!freshLeaving) setGamePass(gp)
       setLoading(false)
     }
     load()
@@ -268,7 +269,7 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
   // `buildLibraryIndex` in lib/news.js already uses, and `normTitle` is the same
   // one Discover badges "In library" with. One definition of "the same game".
   const leaving = useMemo(() => {
-    if (!leavingRows.length) return []
+    if (!gamePass.rows.length) return []
     const byId = new Map()
     const byTitle = new Map()
     // A game owned on two platforms has a row each, and the one worth showing is
@@ -287,7 +288,7 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
     // row, so the row is claimed once: without this the card prints the same
     // game twice, under one React key.
     const claimed = new Set()
-    for (const r of leavingRows) {
+    for (const r of gamePass.rows) {
       const g = byId.get(r.igdb_id) || byTitle.get(normTitle(r.name)) || null
       if (g && claimed.has(g.master_id)) continue
       if (g) claimed.add(g.master_id)
@@ -301,7 +302,7 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
     mine.sort((a, b) => num(b.playtime_minutes) - num(a.playtime_minutes))
     theirs.sort((a, b) => num(b.rating) - num(a.rating))
     return [...mine, ...theirs].slice(0, RELEASE_MAX)
-  }, [games, leavingRows])
+  }, [games, gamePass.rows])
 
   if (loading || libLoading) {
     return (
@@ -448,33 +449,75 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
       </button>
     ),
 
-    leaving_gp: () =>
-      leaving.length ? (
-        <button
-          type="button"
-          className="hm-gp-alert"
-          data-card="leaving_gp"
-          key="leaving_gp"
-          onClick={() => openLeaving(leaving[0])}
-          {...gameSheetWarmProps(leaving[0], leaving[0].mine ? 'owned' : 'discover')}
-        >
-          <span className="gp-badge">GP</span>
-          <span className="hm-gp-copy">
-            <span className="hm-gp-title">Leaving Game Pass</span>
-            <span className="hm-gp-sub">
-              {leaving[0].title}
-              {leaving[0].mine && num(leaving[0].playtime_minutes) > 0
-                ? ` · ${minutesToHhm(num(leaving[0].playtime_minutes))} in`
-                : leaving[0].mine
-                  ? ' · Never started'
-                  : leaving[0].rating
-                    ? ` · ${Math.round(num(leaving[0].rating))} rated`
-                    : ''}
+    leaving_gp: () => {
+      if (!gamePass.available) {
+        return (
+          <div className="hm-gp-alert unavailable" data-card="leaving_gp" key="leaving_gp" role="status">
+            <span className="gp-status-mark" aria-hidden="true">!</span>
+            <span className="hm-gp-copy">
+              <span className="hm-gp-title">Game Pass data unavailable</span>
+              <span className="hm-gp-sub">Catalog refresh needs attention</span>
             </span>
-          </span>
-          {CHEV}
-        </button>
-      ) : null,
+          </div>
+        )
+      }
+      if (!leaving.length) return null
+      const first = leaving[0]
+      const firstMeta = first.mine && num(first.playtime_minutes) > 0
+        ? `${minutesToHhm(num(first.playtime_minutes))} in`
+        : first.mine
+          ? 'Never started'
+          : first.rating
+            ? `${Math.round(num(first.rating))} rated`
+            : ''
+      return (
+        <div className={`hm-gp-shell${gpExpanded ? ' expanded' : ''}`} data-card="leaving_gp" key="leaving_gp">
+          <button
+            type="button"
+            className="hm-gp-alert"
+            onClick={() => leaving.length > 1 ? setGpExpanded((open) => !open) : openLeaving(first)}
+            aria-expanded={leaving.length > 1 ? gpExpanded : undefined}
+            {...(leaving.length === 1 ? gameSheetWarmProps(first, first.mine ? 'owned' : 'discover') : {})}
+          >
+            <span className="gp-badge">GP</span>
+            <span className="hm-gp-copy">
+              <span className="hm-gp-title">Leaving Game Pass</span>
+              <span className="hm-gp-sub">{first.title}{firstMeta ? ` · ${firstMeta}` : ''}</span>
+            </span>
+            {leaving.length > 1 ? <span className="hm-gp-count">+{leaving.length - 1}</span> : null}
+            <svg className={`hm-chev${gpExpanded ? ' down' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M9 6l6 6-6 6" />
+            </svg>
+          </button>
+          {gpExpanded ? (
+            <div className="hm-gp-list">
+              {leaving.map((g) => (
+                <button
+                  type="button"
+                  className="hm-gp-row"
+                  key={`${g.mine ? 'owned' : 'catalog'}-${g.mine ? g.master_id : g.igdb_id}`}
+                  onClick={() => openLeaving(g)}
+                  {...gameSheetWarmProps(g, g.mine ? 'owned' : 'discover')}
+                >
+                  <span className={`hm-gp-rank${g.mine ? ' owned' : ''}`} aria-hidden="true">{g.mine ? 'Y' : 'GP'}</span>
+                  <span className="hm-gp-copy">
+                    <span className="hm-gp-row-title">{g.title}</span>
+                    <span className="hm-gp-sub">
+                      {g.mine
+                        ? num(g.playtime_minutes) > 0
+                          ? `${minutesToHhm(num(g.playtime_minutes))} in · ${Math.round(num(g.percent))}% done`
+                          : 'In your library · Never started'
+                        : [g.year, g.rating ? `${Math.round(num(g.rating))} rated` : null].filter(Boolean).join(' · ')}
+                    </span>
+                  </span>
+                  {CHEV}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      )
+    },
 
     release_watch: () =>
       comingUp.length || recentlyReleased.length ? (

@@ -210,8 +210,12 @@ density controls, swipe/remove/undo behavior, and wishlist game sheet. Home keep
 the same 60-day windows and opens individual rows directly in that sheet.
 
 Leaving Game Pass remains separate because it has a different source and urgency,
-but Home renders only its strongest owned-first candidate as a compact alert. The
-underlying four-item relevance pool is unchanged.
+and remains compact at rest. Its strongest owned-first candidate anchors the row;
+when more titles are leaving, a `+N` indicator expands the existing four-item
+relevance pool in place. A healthy catalog with no departures renders nothing.
+An empty or more-than-36-hour-old catalog renders the quiet **Game Pass data
+unavailable** status instead, so a failed feed no longer looks like a true empty
+window. Customize cards explains those conditional rendering rules.
 
 The `gamedeck_home_cards_v1` storage key remains in place. A stock legacy layout
 migrates to the new default order; a customized layout keeps its relative order
@@ -236,7 +240,8 @@ Home layout is reset wholesale.
   AI, deferred hidden Browse work, and connected My Ranking to For You.
 - `9ad4193` — refreshed Insights around recent play and simplified the Home
   Insights doorway and Now Playing card.
-- The Home snapshot and Release watch refresh is the next `main` checkpoint.
+- The Home snapshot, Release watch, and Game Pass recovery ship together in this
+  `main` checkpoint.
 
 ## Post-approval performance hardening
 
@@ -280,6 +285,16 @@ modules and all 30 automated Node tests passing. The local browser could reach
 only the expected owner sign-in boundary; installed-app review remains the
 authoritative authenticated visual check for the consolidated Home card, compact
 Game Pass alert, and three release scopes.
+
+The Game Pass recovery extends that checkpoint with private n8n service auth for
+the IGDB matcher, removes the destructive clear-first step, rejects suspicious
+source/match counts, and replaces the catalog through one service-role-only
+transaction. The database keeps the previous catalog if validation or insertion
+fails, and the workflow now routes failures to the shared n8n error workflow.
+The replacement RPC is tracked in `supabase/migrations/`; the n8n workflow itself
+remains in the cloud operations layer and must not be exported with credential or
+project identifiers. The combined Home update builds with 146 transformed modules
+and all 35 automated Node tests passing.
 
 The connected cloud browser could verify the public production shell only up to
 the expected owner sign-in screen. Treat Dave's installed-iPhone approval as the

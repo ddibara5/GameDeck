@@ -241,8 +241,21 @@
 .hm-release-group .up-row { border-bottom: none; }
 .hm-release-group .up-when { width: 58px; }
 
-/* Leaving Game Pass is an episodic exception, not a second feed. Keep its most
-   relevant row in the Home scan while avoiding another full dashboard module. */
+/* Leaving Game Pass is an episodic exception, not a second feed. The shell is
+   compact at rest and grows only after a deliberate tap when more titles exist. */
+.hm-gp-shell {
+  margin: var(--space-3) var(--screen-gutter) 0;
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.hm-gp-shell .hm-gp-alert {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
 .hm-gp-alert {
   display: flex;
   align-items: center;
@@ -258,6 +271,25 @@
   cursor: pointer;
 }
 .hm-gp-alert:active { background: var(--surface-2); }
+.hm-gp-alert.unavailable {
+  border-color: color-mix(in srgb, var(--accent) 18%, var(--line-soft));
+  background: color-mix(in srgb, var(--surface) 92%, var(--accent));
+  cursor: default;
+}
+.hm-gp-alert.unavailable:active { background: color-mix(in srgb, var(--surface) 92%, var(--accent)); }
+.gp-status-mark {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--accent) 11%, transparent);
+  color: var(--accent);
+  font-size: var(--t-foot);
+  font-weight: var(--w-bold);
+}
 .hm-gp-copy { flex: 1; min-width: 0; }
 .hm-gp-title,
 .hm-gp-sub {
@@ -268,6 +300,59 @@
 }
 .hm-gp-title { font-size: var(--t-foot); font-weight: var(--w-bold); }
 .hm-gp-sub { margin-top: 3px; color: var(--muted); font-size: var(--t-cap); }
+.hm-gp-count {
+  flex: none;
+  padding: 3px 6px;
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  color: var(--accent);
+  font-size: var(--t-cap2);
+  font-weight: var(--w-bold);
+}
+.hm-gp-alert .hm-chev { transition: transform var(--d-fast) var(--ease-out); }
+.hm-gp-alert .hm-chev.down { transform: rotate(90deg); }
+.hm-gp-list { padding: 0 13px 7px 56px; }
+.hm-gp-row {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 50px;
+  padding: 7px 0;
+  border: 0;
+  border-top: 1px solid var(--line-soft);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.hm-gp-row:active { opacity: 0.58; }
+.hm-gp-rank {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 7px;
+  font-weight: var(--w-bold);
+}
+.hm-gp-rank.owned {
+  background: color-mix(in srgb, var(--xbox) 18%, transparent);
+  color: color-mix(in srgb, var(--xbox) 62%, var(--text));
+}
+.hm-gp-row-title {
+  display: block;
+  overflow: hidden;
+  color: var(--text);
+  font-size: var(--t-cap);
+  font-weight: var(--w-bold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 /* --------------------------------------------------------- card headings */
 

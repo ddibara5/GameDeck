@@ -10,7 +10,7 @@ export default function CustomizeHome({ open, onClose }) {
       open={open}
       onClose={onClose}
       title="Customize cards"
-      note="Drag the handle to reorder. Toggle a card off to hide it from Home."
+      note="Drag to reorder. Game Pass appears only when useful, or when its feed needs attention."
       byKey={CARD_BY_KEY}
       getConfig={getHomeCards}
       setConfig={setHomeCards}

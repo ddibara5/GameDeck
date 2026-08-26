@@ -22,7 +22,7 @@ export const CARD_CATALOG = [
   { key: 'week', form: 'tile', label: 'Recent play', sub: 'This week and change versus the prior week' },
   { key: 'now_playing', form: 'full', label: 'Now playing', sub: 'The game currently in progress' },
   { key: 'release_watch', form: 'full', label: 'Release watch', sub: 'The next arrival and latest release from your wishlist' },
-  { key: 'leaving_gp', form: 'full', label: 'Leaving Game Pass', sub: 'The most relevant game on the way out' },
+  { key: 'leaving_gp', form: 'full', label: 'Game Pass', sub: 'Appears when games are leaving. Shows a status if the feed is unavailable.' },
 ]
 
 export const CARD_BY_KEY = CARD_CATALOG.reduce((m, c) => ((m[c.key] = c), m), {})
