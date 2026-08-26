@@ -53,7 +53,9 @@ begin
 
   select count(*) into v_previous_rows from public.gamepass;
 
-  delete from public.gamepass;
+  -- Supabase enables safe-update protection on API sessions, so retain an
+  -- explicit predicate even though this intentionally replaces every row.
+  delete from public.gamepass where true;
 
   insert into public.gamepass (
     igdb_id, name, cover, year, rating, released, leaving_soon, updated_at
