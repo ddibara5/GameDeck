@@ -6,6 +6,8 @@ import {
   setTheme,
   getAccent,
   setAccent,
+  getLogoStyle,
+  setLogoStyle,
   getShelfSize,
   setShelfSize,
   getListSize,
@@ -20,6 +22,7 @@ import { useMountTransition } from '../lib/useMountTransition.js'
 import { lockScroll } from '../lib/scrollLock.js'
 import { MenuItem, ICONS, relTime } from './menuUI.jsx'
 import { useNavConfig, setNavConfig } from '../lib/navConfig.js'
+import LogoMark from './LogoMark.jsx'
 
 const REPO = 'ddibara5/GameDeck'
 const SOURCE_URL = 'https://github.com/ddibara5/GameDeck'
@@ -61,6 +64,11 @@ const ACCENT_OPTIONS = [
   { key: 'graphite', label: 'Graphite', ring: '#202124', dot: '#98a2ae', ringLight: '#e8e9ec', dotLight: '#59626f' },
 ]
 
+const LOGO_STYLE_OPTIONS = [
+  { key: 'classic', label: 'Classic', sub: 'Clean, flat layers' },
+  { key: 'glass', label: 'Glass', sub: 'Translucent depth and highlights' },
+]
+
 // Poster width on horizontal rails (Continue Playing, Discover, wishlist, Game Pass).
 const SHELF_SIZE_OPTIONS = [
   { key: 's', label: 'Small' },
@@ -84,6 +92,7 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
   const [version, setVersion] = useState(null)
   const [theme, setThemeState] = useState(() => getTheme())
   const [accent, setAccentState] = useState(() => getAccent())
+  const [logoStyle, setLogoStyleState] = useState(() => getLogoStyle())
   const [shelfSize, setShelfSizeState] = useState(() => getShelfSize())
   const [listSize, setListSizeState] = useState(() => getListSize())
   const [ground, setGroundState] = useState(() => getGround())
@@ -279,6 +288,10 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
     setAccentState(setAccent(key))
   }
 
+  function changeLogoStyle(key) {
+    setLogoStyleState(setLogoStyle(key))
+  }
+
   function changeShelfSize(key) {
     setShelfSizeState(setShelfSize(key))
   }
@@ -302,6 +315,7 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
   // three moved behind rows instead of staying a wall of controls: a sub-page you
   // have to open to read is worse than the wall it replaced.
   const themeValue = `${labelOf(THEME_OPTIONS, theme)} · ${labelOf(ACCENT_OPTIONS, accent)}`
+  const logoStyleValue = labelOf(LOGO_STYLE_OPTIONS, logoStyle)
   const cardsValue = `${labelOf(SHELF_SIZE_OPTIONS, shelfSize)} · ${labelOf(LIST_SIZE_OPTIONS, listSize)}`
   const groundValue = labelOf(GROUND_OPTIONS, ground)
   // The oldest of the four sync stamps, because the question this section answers
@@ -328,6 +342,7 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
           <div className="menu-sec-label">Appearance</div>
           <div className="settings-group">
             <MenuItem glyph={ICONS.appear} label="Theme" sub="Light or dark, and the color" value={themeValue} onClick={() => push('theme')} />
+            <MenuItem glyph={ICONS.layers} label="Logo style" sub="The mark used inside GameDeck" value={logoStyleValue} onClick={() => push('logo')} />
             <MenuItem glyph={ICONS.image} label="Background" sub="What sits behind every tab" value={groundValue} onClick={() => push('background')} />
             <MenuItem glyph={ICONS.layers} label="Card sizing" sub="Posters and list rows" value={cardsValue} onClick={() => push('cards')} />
           </div>
@@ -464,6 +479,34 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
           </div>
         </Field>
 
+      </SubPage>
+
+      <SubPage open={stack.includes('logo')} depth={depthOf('logo')} title="Logo style" onBack={pop}>
+        <div className="logo-style-options" role="radiogroup" aria-label="In-app logo style">
+          {LOGO_STYLE_OPTIONS.map((opt) => (
+            <button
+              key={opt.key}
+              type="button"
+              className={`logo-style-option${logoStyle === opt.key ? ' on' : ''}`}
+              onClick={() => changeLogoStyle(opt.key)}
+              role="radio"
+              aria-checked={logoStyle === opt.key}
+            >
+              <span className="logo-style-preview">
+                <LogoMark variant={opt.key} className="logo-style-mark" />
+              </span>
+              <span className="logo-style-copy">
+                <b>{opt.label}</b>
+                <span>{opt.sub}</span>
+              </span>
+              <span className="logo-style-check" aria-hidden="true">✓</span>
+            </button>
+          ))}
+        </div>
+        <p className="settings-note">
+          Both styles automatically use your selected color theme. This changes the logo inside
+          GameDeck; the installed Home Screen icon stays the amber glass design.
+        </p>
       </SubPage>
 
       {/* The page remains the full-size live preview, while the swatches make the

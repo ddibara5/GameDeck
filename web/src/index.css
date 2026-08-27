@@ -365,6 +365,50 @@
 .gd-logo .l6 { fill: var(--logo-6); }
 .gd-logo .l7 { fill: var(--logo-7); }
 
+/* Classic is the existing flat mark. Glass keeps the exact footprint but adds
+   translucent faces, lit rims and a small theme-colored glow. The faces use the
+   same logo ramp, so every accent (including artwork-derived accents) continues
+   to recolor the mark without raster filters or per-theme image assets. */
+.gd-logo .logo-glass { display: none; }
+:root[data-logo-style="glass"] .gd-logo:not(.logo-force-classic) .logo-classic { display: none; }
+:root[data-logo-style="glass"] .gd-logo:not(.logo-force-classic) .logo-glass { display: inline; }
+.gd-logo.logo-force-classic .logo-classic { display: inline; }
+.gd-logo.logo-force-classic .logo-glass { display: none; }
+.gd-logo.logo-force-glass .logo-classic { display: none; }
+.gd-logo.logo-force-glass .logo-glass { display: inline; }
+
+.gd-logo .glass-shadow {
+  filter: drop-shadow(0 8px 7px color-mix(in srgb, var(--logo-1) 58%, transparent));
+}
+.gd-logo .glass-top,
+.gd-logo .glass-side {
+  stroke: color-mix(in srgb, white 62%, var(--logo-7));
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+.gd-logo .glass-top { fill-opacity: 0.88; }
+.gd-logo .glass-side { fill-opacity: 0.76; }
+.gd-logo .glass-peak { fill: var(--logo-7); }
+.gd-logo .glass-middle { fill: var(--logo-5); }
+.gd-logo .glass-bottom { fill: var(--logo-3); }
+.gd-logo .glass-rim {
+  fill: none;
+  stroke: color-mix(in srgb, white 72%, var(--logo-7));
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.76;
+}
+.gd-logo .glass-rim-peak { opacity: 0.96; }
+.gd-logo .glass-glint {
+  fill: none;
+  stroke: color-mix(in srgb, white 86%, var(--logo-7));
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.82;
+}
+
 .brand-caret {
   width: 15px;
   height: 15px;
@@ -440,6 +484,13 @@
   display: flex;
   align-items: center;
   gap: 11px;
+}
+
+.drawer-logo-mark {
+  width: 34px;
+  height: 36px;
+  display: block;
+  flex: none;
 }
 
 .drawer-brand .brand-word {
@@ -2503,6 +2554,86 @@ textarea {
   background: var(--surface-2);
   color: var(--text);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* In-app logo picker. The option itself is the preview, so the difference is
+   visible before selection instead of being reduced to two abstract labels. */
+.logo-style-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.logo-style-option {
+  appearance: none;
+  min-width: 0;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  padding: var(--space-4) var(--space-3) var(--space-3);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-3) var(--space-2);
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+  transition: border-color var(--d-fast) ease, background var(--d-fast) ease;
+}
+
+.logo-style-option.on {
+  border-color: color-mix(in srgb, var(--accent) 68%, var(--line));
+  background: color-mix(in srgb, var(--surface) 92%, var(--accent));
+}
+
+.logo-style-preview {
+  grid-column: 1 / -1;
+  min-height: 92px;
+  display: grid;
+  place-items: center;
+}
+
+.logo-style-mark {
+  width: 72px;
+  height: 86px;
+  display: block;
+  overflow: visible;
+}
+
+.logo-style-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.logo-style-copy b {
+  font-size: var(--t-sub);
+  font-weight: var(--w-semi);
+}
+
+.logo-style-copy span {
+  color: var(--muted);
+  font-size: var(--t-cap);
+  line-height: 1.25;
+}
+
+.logo-style-check {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: transparent;
+  font-size: var(--t-cap);
+  font-weight: var(--w-bold);
+}
+
+.logo-style-option.on .logo-style-check {
+  color: var(--bg);
+  border-color: var(--accent);
+  background: var(--accent);
 }
 
 /* Color theme (accent) swatch picker */

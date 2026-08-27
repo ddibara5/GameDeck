@@ -5,6 +5,7 @@ import { lockScroll } from '../lib/scrollLock.js'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
 import { useNavConfig, DEST_BY_KEY, GROUP_LABEL, isFolded, toggleGroup } from '../lib/navConfig.js'
 import { DEST_ICONS } from './destIcons.jsx'
+import LogoMark from './LogoMark.jsx'
 
 // The left drawer: a compact map of the app's places, grouped, with the bottom
 // bar acting as a shortcut into the same destinations.
@@ -86,17 +87,7 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpen
       <aside className={`drawer${closing ? ' closing' : ''}`} role="dialog" aria-label="Menu">
         <div className="drawer-head">
           <div className="drawer-brand">
-            <svg className="gd-logo" style={{ width: 34, height: 36, flex: 'none' }} viewBox="130 105 252 300" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <polygon className="l2" points="138,306 256,365 256,399 138,340" fill="#792d08" />
-              <polygon className="l1" points="374,306 256,365 256,399 374,340" fill="#5c2206" />
-              <polygon className="l3" points="256,247 374,306 256,365 138,306" fill="#9a3b0c" />
-              <polygon className="l3" points="138,239 256,298 256,332 138,273" fill="#9a3b0c" />
-              <polygon className="l2" points="374,239 256,298 256,332 374,273" fill="#792d08" />
-              <polygon className="l5" points="256,180 374,239 256,298 138,239" fill="#c85c15" />
-              <polygon className="l6" points="138,172 256,231 256,265 138,206" fill="#d97716" />
-              <polygon className="l4" points="374,172 256,231 256,265 374,206" fill="#b4590f" />
-              <polygon className="l7" points="256,113 374,172 256,231 138,172" fill="#f5a623" />
-            </svg>
+            <LogoMark className="drawer-logo-mark" />
             <span className="brand-word">Game<b>Deck</b></span>
           </div>
         </div>

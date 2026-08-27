@@ -10,6 +10,37 @@ const VALID = new Set(['dark', 'light', 'system'])
 const ACCENT_KEY = 'gamedeck_accent_v1'
 const ACCENTS = new Set(['walnut', 'slate', 'sage', 'plum', 'graphite'])
 
+// In-app brand treatment. This is intentionally separate from the installed
+// PWA icon, which iOS caches and cannot switch reliably at runtime.
+const LOGO_STYLE_KEY = 'gamedeck_logo_style_v1'
+const LOGO_STYLES = new Set(['classic', 'glass'])
+
+export function getLogoStyle() {
+  try {
+    const value = localStorage.getItem(LOGO_STYLE_KEY)
+    return LOGO_STYLES.has(value) ? value : 'classic'
+  } catch {
+    return 'classic'
+  }
+}
+
+export function applyLogoStyle(value) {
+  const next = LOGO_STYLES.has(value) ? value : 'classic'
+  document.documentElement.setAttribute('data-logo-style', next)
+  return next
+}
+
+export function setLogoStyle(value) {
+  const next = LOGO_STYLES.has(value) ? value : 'classic'
+  try {
+    localStorage.setItem(LOGO_STYLE_KEY, next)
+  } catch {
+    /* storage unavailable - preference just won't persist */
+  }
+  applyLogoStyle(next)
+  return next
+}
+
 export function getAccent() {
   try {
     const v = localStorage.getItem(ACCENT_KEY)
@@ -129,6 +160,7 @@ export function setTheme(pref) {
 export function initTheme() {
   applyTheme(getTheme())
   applyAccent(getAccent())
+  applyLogoStyle(getLogoStyle())
   applyShelfSize(getShelfSize())
   applyListSize(getListSize())
   try {
