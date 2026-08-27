@@ -51,42 +51,36 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="GameDeck" />
 
-    <!-- Home-screen icon: ONE graphite tile, in both appearances, because iOS
+    <!-- Home-screen icon: ONE amber-glass tile, in both appearances, because iOS
          cannot select an icon by appearance. Whatever is served is what gets
          installed, permanently, from install time. Serving a second set would not
          give the user a choice, it would only make "which icon did iOS pick?"
          unanswerable, which is the bug 9f2544f fixed.
 
-         Graphite rather than porcelain: a pale tile is the one bright square on a
-         home screen that is otherwise dark. The old argument for porcelain was
-         contrast, and it was true in isolation; the halo behind the mark is what
-         makes it unnecessary. Its outer field is exactly --bg, so the icon, the
-         splash screen and the app's first frame are all #1a1917.
+         The graphite field still matches the app's dark background and splash
+         screen, while the new translucent amber stack preserves the existing
+         silhouette with substantially stronger depth and edge contrast.
 
-         No -light in the filename. There is one set, so an appearance in the name
-         can only ever be wrong, and it already was.
-
-         The -v7 in these names is load-bearing. iOS caches a home-screen icon
+         The -v8 in these names is load-bearing. iOS caches a home-screen icon
          against its URL and keeps it well past any HTTP header, so redrawing a file
          in place never reaches a phone that has already added the app. Bump
          ICON_VERSION in scripts/gen-icons.cjs and these names together; the
          generator fails the build if they ever disagree. -->
-    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180-v7.png" />
-    <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-167-v7.png" />
-    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152-v7.png" />
-    <link rel="apple-touch-icon" sizes="120x120" href="/icons/icon-120-v7.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180-v8.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-167-v8.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152-v8.png" />
+    <link rel="apple-touch-icon" sizes="120x120" href="/icons/icon-120-v8.png" />
     <!-- Precomposed alias: older iOS looks for this name first and does not fall
          back to the plain one if it is absent. Same file, both names linked. -->
-    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="/icons/icon-180-v7.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="/icons/icon-180-v8.png" />
 
-    <link rel="icon" type="image/svg+xml" href="/icons/icon-v7.svg" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32-v7.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16-v7.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32-v8.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16-v8.png" />
     <!-- Versioned for the same reason the icons are: the OLD url is precached in the
          service worker's APP_SHELL, so a phone kept reading a stale manifest listing
          pre-v2 icon names. iOS reads the MANIFEST for the home-screen icon, so that
          stale copy outranked every apple-touch-icon above. -->
-    <link rel="manifest" href="/manifest-v7.webmanifest" />
+    <link rel="manifest" href="/manifest-v8.webmanifest" />
   </head>
   <body>
     <div id="root"></div>
