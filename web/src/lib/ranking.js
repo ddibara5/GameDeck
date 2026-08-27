@@ -13,7 +13,7 @@ export {
 const STATE_KEY = 'ranking:state'
 const SCORES_KEY = 'ranking:scores'
 const GAME_KEY = (id) => `ranking:game:${id}`
-const DISCOVER_TASTE_KEY = 'discover:tasteProbe'
+const DISCOVER_TASTE_KEY = 'discover:tasteProfile:v2'
 const RANKING_EVENT = 'gd-ranking-change'
 
 let stateCache = null

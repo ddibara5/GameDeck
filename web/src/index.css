@@ -393,7 +393,7 @@
   top: 0;
   left: 0;
   bottom: 0;
-  width: min(86%, 340px);
+  width: min(80vw, 320px);
   z-index: 201;
   background: color-mix(in srgb, var(--surface) 90%, transparent);
   border-right: 1px solid var(--glass-line);
@@ -463,8 +463,8 @@
   padding: 14px 8px 4px;
 }
 
-/* The drawer lists every destination now, so it scrolls. The bottom padding is
-   what keeps the last row clear of the Customize button. */
+/* The drawer remains scrollable for short landscape windows, though the reduced
+   two-group map fits without scrolling on a standard phone viewport. */
 .drawer-body {
   flex: 1;
   min-height: 0;
@@ -684,12 +684,6 @@
   height: 17px;
   flex: none;
   color: var(--accent);
-}
-
-.menu-foot-n {
-  padding: 9px 8px 0;
-  color: var(--muted);
-  font-size: var(--t-cap);
 }
 
 /* ---------- Settings page (gear-opened, full-screen) ---------- */

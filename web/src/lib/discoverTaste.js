@@ -44,14 +44,18 @@ export function rankingWeight(rank) {
 }
 
 export function tasteContribution(row, now = Date.now()) {
-  const minutes = Math.max(0, Number(row?.playtime_minutes) || 0)
-  if (!minutes) return 0
-  const playedAt = Date.parse(row?.last_played || '')
+  const lifetimeMinutes = Math.max(0, Number(row?.playtime_minutes) || 0)
+  const recentMinutes = Math.max(0, Number(row?.recent_minutes) || 0)
+  if (!lifetimeMinutes && !recentMinutes) return 0
+  const playedAt = Date.parse(row?.recent_last_played || row?.last_played || '')
   const daysAgo = Number.isFinite(playedAt) ? Math.max(0, (now - playedAt) / DAY_MS) : RECENCY_HALF_LIFE_DAYS
   const recency = clamp(0.3, 1, 0.5 ** (daysAgo / RECENCY_HALF_LIFE_DAYS))
-  // Log scaling preserves the difference between 2h and 20h without allowing a
-  // single 200h game to erase every other signal in the library.
-  const playStrength = Math.log1p(minutes / 60)
+  // The activity window is the strongest behavioral signal. Lifetime play is a
+  // quieter prior, so an old 200-hour game cannot drown out what is happening
+  // now. Log scaling still keeps either source from becoming a monopoly.
+  const recentStrength = Math.log1p(recentMinutes / 60) * 1.25
+  const lifetimeStrength = Math.log1p(lifetimeMinutes / 60) * (recentMinutes ? 0.22 : 0.32)
+  const playStrength = recentStrength + lifetimeStrength
   return playStrength * recency * rankingWeight(row?.personalRank)
 }
 
@@ -101,7 +105,7 @@ export function laneReason(lane) {
   return lane.exemplar ? `${lane.label}, like ${lane.exemplar}` : lane.label
 }
 
-function candidateScore(game, now) {
+function candidateScore(game, now, wishlistIds) {
   const rating = Number(game?.rating)
   const votes = Math.max(0, Number(game?.ratingCount) || 0)
   const confidence = votes / (votes + 25)
@@ -109,12 +113,17 @@ function candidateScore(game, now) {
   const releasedAt = Number(game?.released) * 1000
   const daysAgo = Number.isFinite(releasedAt) && releasedAt > 0 ? Math.max(0, (now - releasedAt) / DAY_MS) : 1095
   const freshness = 1 - clamp(0, 1, daysAgo / 1095)
-  return freshness * 0.58 + quality * 0.42
+  const wished = wishlistIds && (
+    wishlistIds.has(game?.id)
+    || wishlistIds.has(Number(game?.id))
+    || wishlistIds.has(String(game?.id))
+  )
+  return freshness * 0.58 + quality * 0.42 + (wished ? 0.14 : 0)
 }
 
-export function rankCandidates(games, now = Date.now()) {
+export function rankCandidates(games, now = Date.now(), { wishlistIds } = {}) {
   return (games || [])
-    .map((game, index) => ({ game, index, score: candidateScore(game, now) }))
+    .map((game, index) => ({ game, index, score: candidateScore(game, now, wishlistIds) }))
     .sort((a, b) => b.score - a.score || a.index - b.index)
     .map(({ game }) => game)
 }

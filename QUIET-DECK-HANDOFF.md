@@ -58,18 +58,22 @@ The new-install and Reset default bottom bar is:
 3. Discover
 4. Activity
 
-The drawer remains comprehensive. News and Rankings remain eligible for the bar
-through Navigation customization, while Insights is intentionally drawer-only.
-Wishlist, Shuffle, Backlog, Playing, Finished, Settings, and customization remain
-available through the drawer and existing secondary navigation.
+The drawer is a compact place map, 80vw with a 320px ceiling. **Your games** holds
+Home, Library, Activity, Insights, and Rankings; **Explore** holds Discover, News,
+and Wishlist. Insights remains drawer-only, while News and Rankings remain
+eligible for the bar through Navigation customization. Shuffle and Settings are
+pinned actions below the map. Backlog, Playing, and Finished remain available as
+Library status filters rather than duplicate destinations. Drawer customization
+lives in Settings beside the bottom-bar editor.
 
 Navigation persistence is deliberate:
 
 - Keep the `gamedeck_nav_v2` storage key.
 - Do not bump the key merely to introduce another default; that would overwrite
   existing users' choices.
-- A profile with saved v2 navigation keeps its saved order, enabled tabs, labels,
-  visibility, and collapsed drawer groups.
+- A profile with saved v2 navigation keeps its bar order, enabled tabs, labels,
+  and visibility. Its surviving drawer rows are regrouped once into the compact
+  two-group model; retired group folds are discarded.
 - Only a profile without saved navigation, or one using Reset, receives the Quiet
   Deck default.
 - The leftmost visible bar destination remains the app's landing tab.
@@ -152,19 +156,29 @@ while Discover remains open. Opening For You therefore no longer downloads or
 starts Browse's hidden catalog work. Browse and Ask AI ship as separate lazy
 chunks warmed from pointer-down or focus.
 
-For You combines implicit and explicit taste evidence. Recent playtime is
-recency-weighted and logarithmically scaled so an old marathon cannot dominate.
-My Ranking reactions provide direction, Elo refines that direction as comparison
-confidence grows, and `not_for_me` contributes no positive taste evidence.
+For You and Ask GameDeck now share the same evidence hierarchy. The 90-day
+`v_recent_activity` window is the strongest behavioral signal; lifetime play is
+a quieter prior, so an old marathon cannot dominate. My Ranking reactions provide
+direction, Elo refines that direction as comparison confidence grows, and
+`not_for_me` contributes no positive taste evidence. Wishlist saves are explicit
+intent and receive a bounded promotion inside a taste-matched lane.
 Ranking remains bounded; it changes taste-lane order and plain-language reasons
 such as “Because you loved…”, but no hidden score is shown to the user.
 
 Candidate releases are balanced on freshness and confidence-weighted catalog
 quality before taste lanes are interleaved. Taste lanes lead the generic New lane
 so a duplicate keeps its specific personalized reason. New releases start loading
-in parallel with the taste probe, partial lane failures are distinguished from a
+in parallel with the taste profile, partial lane failures are distinguished from a
 true empty feed, selected platforms are shown first, and ranking changes invalidate
-the taste profile immediately.
+the taste profile immediately. The on-screen profile note reports the amount of
+recent-play evidence rather than making a generic personalization claim.
+
+Ask GameDeck's server evidence bundle includes the authoritative library,
+chosen/derived statuses, recent activity, My Ranking, wishlist, and the current
+Game Pass catalog. Its prompt distinguishes ownership, interest, and availability,
+and requires each pick's “Why it fits” line to cite actual evidence without
+turning neutral play history into a positive reaction. Optional evidence reads
+degrade independently; only the library read is required for an answer.
 
 ## Insights: recent play over lifetime totals
 

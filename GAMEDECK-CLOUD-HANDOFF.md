@@ -11,11 +11,19 @@ or infrastructure console, not in the repository.
 ## Architecture
 
 - Vercel hosts the React PWA and the authenticated serverless API routes.
-- Supabase stores the game library, activity, wishlist, statuses, and rankings.
+- Supabase stores the game library, activity, wishlist, statuses, rankings, and
+  the current Game Pass catalog.
 - n8n runs scheduled platform syncs and the gaming-news refresh.
 - A private, token-gated scraping proxy supports the fallback library source.
 - Twitch/IGDB provides catalog metadata and art.
 - Anthropic powers the authenticated game concierge.
+
+The concierge loads one owner-scoped evidence bundle through the signed browser
+JWT: library ownership is required; recent activity, explicit/derived statuses,
+My Ranking, wishlist intent, and Game Pass availability are optional sections
+that fail independently. `web/src/lib/gameIntelligence.js` owns the shared
+recent-activity and ranking semantics used by both this server bundle and the
+For You client. Keep those meanings aligned when changing recommendation logic.
 
 ## Security boundary
 

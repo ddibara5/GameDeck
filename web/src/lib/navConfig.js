@@ -30,7 +30,10 @@ const EVENT = 'gd-nav-change'
 // destinations that fit comfortably at 390px.
 export const MIN_VISIBLE = 2
 
-// Every destination the drawer can show, in default order.
+// Every destination the drawer can show, in default order. The drawer stays a
+// map of places rather than a second filter surface: Backlog, Playing and
+// Finished live in Library's status filter, while Shuffle and Settings are
+// pinned utilities below the map.
 //
 // kind decides what the row does and whether it can sit in the bar:
 //   tab     a top-level tab. `bar: false` marks one that is reachable only from
@@ -51,34 +54,22 @@ export const DEST_CATALOG = [
   // leaving it out of the bar editor means the five that ARE eligible fill the
   // five slots exactly. A switch that can only ever be off is not a choice.
   { key: 'insights', label: 'Insights', group: 'games', kind: 'tab', bar: false, fixed: 'drawer only', sub: 'How it is going over time' },
+  { key: 'rankings', label: 'Rankings', group: 'games', kind: 'tab', sub: 'Your explicit game order' },
   { key: 'discover', label: 'Discover', group: 'explore', kind: 'tab' },
   { key: 'news', label: 'News', group: 'explore', kind: 'tab' },
   { key: 'wishlist', label: 'Wishlist', group: 'explore', kind: 'view', fixed: 'list' },
-  // The shuffler, off the header and into the list. It reads from BOTH pools
-  // (Play draws on the library, Buy on the wishlist), so it is not strictly a
-  // do-not-own destination, but Explore is the group for ways to find your next
-  // thing and Discover sits right above it doing the same job less randomly.
-  { key: 'shuffle', label: 'Shuffle', group: 'explore', kind: 'action', action: 'shuffle', fixed: ' ' },
-  { key: 'backlog', label: 'Backlog', group: 'shelves', kind: 'list', viewKey: 'status:backlog', fixed: 'shelf' },
-  { key: 'playing', label: 'Playing', group: 'shelves', kind: 'list', viewKey: 'status:playing', fixed: 'shelf' },
-  { key: 'finished', label: 'Finished', group: 'shelves', kind: 'list', viewKey: 'status:finished', fixed: 'shelf' },
-  // My Ranking is a full destination, not a filter. It lives at the end of the
-  // left shelf by default and is eligible for the bottom bar, but starts off the
-  // bar so adding it never crowds an existing five-tab layout.
-  { key: 'rankings', label: 'Rankings', group: 'shelves', kind: 'tab', sub: 'Your explicit game order' },
 ]
 
-// Settings is deliberately NOT in the catalog. It used to be the whole `app`
-// group, last in the order, which put it 113px below the fold of a drawer that
-// already overflowed: reaching it meant open, scroll, tap. It is pinned in the
-// drawer's footer now, with Customize, which was stranded down there too.
+// Settings and Shuffle are deliberately NOT in the catalog. They are actions,
+// not places, and stay pinned in the drawer footer. Drawer customization is in
+// Settings beside the bottom-bar editor instead of competing for a third footer
+// control.
 
 export const DEST_BY_KEY = DEST_CATALOG.reduce((m, d) => ((m[d.key] = d), m), {})
 
 export const GROUP_LABEL = {
   games: 'Your games',
   explore: 'Explore',
-  shelves: 'Shelves',
 }
 
 // Tabs only, for the tab bar and its icons.
@@ -130,6 +121,7 @@ const DEFAULT_BAR_SHOWN = true
 // group split across the order by dragging folds as one thing. Empty means every
 // group is open, which is the default and the only state that existed before.
 const DEFAULT_COLLAPSED = {}
+const DRAWER_MODEL = 2
 
 function load() {
   let stored = null
@@ -141,7 +133,15 @@ function load() {
 
   // Saved order first, then reconcile against the catalog so a destination added
   // later appears and a stale key drops out.
-  const savedOrder = (stored && Array.isArray(stored.order) && stored.order) || DEFAULT_ORDER
+  const rawSavedOrder = (stored && Array.isArray(stored.order) && stored.order) || DEFAULT_ORDER
+  // v1 of the drawer model mixed shelf filters and Shuffle into the ordered
+  // destination list. On the first read after the compact model ships, retain
+  // the user's relative order inside each surviving group while making the two
+  // groups contiguous. Bar order, membership, labels and visibility are not
+  // touched by this migration.
+  const savedOrder = stored && stored.drawerModel !== DRAWER_MODEL
+    ? Object.keys(GROUP_LABEL).flatMap((group) => rawSavedOrder.filter((key) => DEST_BY_KEY[key]?.group === group))
+    : rawSavedOrder
   const savedEnabled = (stored && stored.enabled) || {}
   const order = []
   const seen = new Set()
@@ -217,6 +217,7 @@ export function setNavConfig(config) {
     localStorage.setItem(
       KEY,
       JSON.stringify({
+        drawerModel: DRAWER_MODEL,
         order: config.order || cur.order,
         bar: config.bar || cur.bar,
         enabled: config.enabled || cur.enabled,

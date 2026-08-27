@@ -804,18 +804,16 @@ const drawer = await page.evaluate(() => ({
   open: [...document.querySelectorAll('.drawer .menu-sec')].map((e) => e.getAttribute('aria-expanded')),
   rowMin: Math.min(...[...document.querySelectorAll('.drawer .menu-item')].map((e) => e.getBoundingClientRect().height)),
   footMin: Math.min(...[...document.querySelectorAll('.menu-fb')].map((e) => e.getBoundingClientRect().height)),
+  width: document.querySelector('.drawer')?.getBoundingClientRect().width,
+  remainder: innerWidth - document.querySelector('.drawer')?.getBoundingClientRect().width,
 }))
-// Three groups, not four. Settings was the whole App group and is pinned in the
-// footer now, out of the ordered list entirely.
-check('drawer groups in order', drawer.groups.join('|') === 'Your games|Explore|Shelves', drawer.groups.join('|'))
-check('drawer lists every destination', drawer.rows.length === 11, String(drawer.rows.length))
+check('drawer groups in order', drawer.groups.join('|') === 'Your games|Explore', drawer.groups.join('|'))
+check('drawer lists the compact place map', drawer.rows.length === 8, String(drawer.rows.length))
 check('wishlist sits under Explore', drawer.rows.some((r) => r.startsWith('Wishlist')), '')
 check('News stays available in the drawer', drawer.rows.some((r) => r.startsWith('News')), drawer.rows.join(' // '))
 check('Rankings stays available in the drawer', drawer.rows.some((r) => r.startsWith('Rankings')), drawer.rows.join(' // '))
-// The die left the header for the list. Explore is Discover, News, Wishlist,
-// Shuffle: four ways to find the next thing.
-check('Shuffle sits under Explore', drawer.rows.some((r) => r.startsWith('Shuffle')), drawer.rows.join(' // '))
-check('Settings is not a row any more', !drawer.rows.some((r) => r.startsWith('Settings')), drawer.rows.join(' // '))
+check('shelf filters are not duplicate destinations', !drawer.rows.some((r) => /^Backlog|^Playing|^Finished/.test(r)), drawer.rows.join(' // '))
+check('actions are not destination rows', !drawer.rows.some((r) => /^Shuffle|^Settings/.test(r)), drawer.rows.join(' // '))
 // The pill came off on 21 Aug. Asserted as ZERO rather than deleted, because
 // "we took it out" is a decision and a deleted assertion defends nothing: the
 // selector it queries is the one the markup used, so a revert fails here.
@@ -824,19 +822,20 @@ check('current tab is marked', /^Home/.test(drawer.here || ''), drawer.here)
 // The point of the pin: both sit BELOW the scrolling body, so no amount of list
 // growth can push them off. Asserted as geometry rather than as "the element
 // exists", because it existed before too, 113px below the fold.
-check('Settings and Customize are pinned', drawer.foot.join('|') === 'Settings|Customize', drawer.foot.join('|'))
+check('Shuffle and Settings are pinned', drawer.foot.join('|') === 'Shuffle|Settings', drawer.foot.join('|'))
 check('the pinned pair sits outside the scroll', drawer.footVisible, JSON.stringify(drawer.foot))
-check('every group heading folds', drawer.folds === 3 && drawer.open.join('') === 'truetruetrue', `${drawer.folds} / ${drawer.open.join(',')}`)
+check('every group heading folds', drawer.folds === 2 && drawer.open.join('') === 'truetrue', `${drawer.folds} / ${drawer.open.join(',')}`)
 check('drawer rows keep phone-sized targets', drawer.rowMin >= 44 && drawer.footMin >= 44, `rows=${drawer.rowMin} footer=${drawer.footMin}`)
+check('drawer leaves meaningful screen context', drawer.width <= 320 && drawer.remainder >= 70, `width=${drawer.width} remainder=${drawer.remainder}`)
 await page.screenshot({ path: 'repro/out/drawer-dark.png', fullPage: true })
 
 /* ------------------------------------------------ folding a drawer group */
 
-// Shelves holds three rows. Folding it has to take exactly those three out, keep
+// Explore holds three rows. Folding it has to take exactly those three out, keep
 // every other row, say how many it is holding, and still be folded after a
 // reload. The count is asserted because a folded heading with no count is a dead
 // end: the rows are what say how many, and they are gone.
-await page.locator('.drawer .menu-sec', { hasText: 'Shelves' }).click()
+await page.locator('.drawer .menu-sec', { hasText: 'Explore' }).click()
 await page.waitForTimeout(350)
 const folded = await page.evaluate(() => ({
   rows: [...document.querySelectorAll('.drawer .menu-item')].map((e) => e.textContent.replace(/\s+/g, ' ').trim()),
@@ -845,14 +844,14 @@ const folded = await page.evaluate(() => ({
   open: [...document.querySelectorAll('.drawer .menu-sec')].map((e) => e.getAttribute('aria-expanded')),
   stored: JSON.parse(localStorage.getItem('gamedeck_nav_v2') || '{}').collapsed,
 }))
-check('folding hides that group only', folded.rows.length === 8 && !folded.rows.some((r) => /^Backlog|^Playing|^Finished/.test(r)), String(folded.rows.length))
-check('the other groups are untouched', folded.rows.some((r) => /^Home/.test(r)) && folded.rows.some((r) => /^Wishlist/.test(r)) && folded.rows.some((r) => /^Shuffle/.test(r)), '')
+check('folding hides that group only', folded.rows.length === 5 && !folded.rows.some((r) => /^Discover|^News|^Wishlist/.test(r)), String(folded.rows.length))
+check('the other group is untouched', folded.rows.some((r) => /^Home/.test(r)) && folded.rows.some((r) => /^Rankings/.test(r)), '')
 check('a folded heading says how many', folded.n === '3', folded.n)
-check('only that heading reports folded', folded.open.join(',') === 'true,true,false', folded.open.join(','))
-check('the fold is stored, not just drawn', JSON.stringify(folded.stored) === '{"shelves":true}', JSON.stringify(folded.stored))
+check('only that heading reports folded', folded.open.join(',') === 'true,false', folded.open.join(','))
+check('the fold is stored, not just drawn', JSON.stringify(folded.stored) === '{"explore":true}', JSON.stringify(folded.stored))
 // The headings still print in the same order with a group shut, because the fold
 // hides rows and never touches the order.
-check('the order survives the fold', folded.groups.join('|') === 'Your games|Explore|Shelves3', folded.groups.join('|'))
+check('the order survives the fold', folded.groups.join('|') === 'Your games|Explore3', folded.groups.join('|'))
 await page.screenshot({ path: 'repro/out/drawer-folded.png', fullPage: true })
 
 await page.reload({ waitUntil: 'networkidle' })
@@ -860,16 +859,16 @@ await page.waitForTimeout(900)
 await page.locator('.brand-btn, .brand').first().click()
 await page.waitForTimeout(500)
 const afterFoldReload = await page.evaluate(() => document.querySelectorAll('.drawer .menu-item').length)
-check('the fold survives a reload', afterFoldReload === 8, String(afterFoldReload))
+check('the fold survives a reload', afterFoldReload === 5, String(afterFoldReload))
 
 // And back, because a fold you cannot undo is a deletion.
-await page.locator('.drawer .menu-sec', { hasText: 'Shelves' }).click()
+await page.locator('.drawer .menu-sec', { hasText: 'Explore' }).click()
 await page.waitForTimeout(350)
 const unfolded = await page.evaluate(() => ({
   rows: document.querySelectorAll('.drawer .menu-item').length,
   stored: JSON.parse(localStorage.getItem('gamedeck_nav_v2') || '{}').collapsed,
 }))
-check('unfolding brings the rows back', unfolded.rows === 11, String(unfolded.rows))
+check('unfolding brings the rows back', unfolded.rows === 8, String(unfolded.rows))
 // Emptied rather than left holding `false`, so storage lists folded groups only.
 check('unfolding clears the stored key', JSON.stringify(unfolded.stored) === '{}', JSON.stringify(unfolded.stored))
 
@@ -890,28 +889,27 @@ check('the week strip left Insights', insights.strips === 0, String(insights.str
 check('Insights keeps its recent overview', insights.cardTitles.some((t) => /Your week/.test(t)), insights.cardTitles.join(', '))
 await page.screenshot({ path: 'repro/out/insights-dark.png', fullPage: true })
 
-/* --------------------------------------------------------------- 4. backlog */
+/* ---------------------------------------------- 4. backlog through Library */
 
 await page.locator('.brand-btn, .brand').first().click()
 await page.waitForTimeout(450)
-await page.getByRole('button', { name: /^Backlog/ }).first().click()
+await page.getByRole('button', { name: /^Library/ }).first().click()
 await page.waitForTimeout(700)
+await page.getByRole('button', { name: 'Filters', exact: true }).click()
+await page.getByRole('dialog', { name: 'Filters' }).getByRole('button', { name: 'Backlog', exact: true }).click()
+await page.getByRole('dialog', { name: 'Filters' }).getByRole('button', { name: /^Show / }).click()
 const backlog = await page.evaluate(() => ({
-  title: document.querySelector('.wl-title')?.textContent.trim(),
-  sub: document.querySelector('.wl-sub')?.textContent.trim(),
+  title: document.querySelector('.brand-title')?.textContent.trim(),
+  activeFilters: [...document.querySelectorAll('.filter-btn .filter-count')].map((e) => e.textContent.trim()),
   rows: document.querySelectorAll('.game-card').length,
 }))
-check('backlog list opens from the drawer', backlog.title === 'Backlog' && backlog.rows > 0, `${backlog.title} ${backlog.sub} ${backlog.rows} rows`)
-await page.screenshot({ path: 'repro/out/backlog-dark.png', fullPage: true })
+check('backlog stays reachable through Library filters', backlog.title === 'Library' && backlog.activeFilters.includes('1') && backlog.rows > 0, `${backlog.title} ${backlog.activeFilters} ${backlog.rows} rows`)
+await page.screenshot({ path: 'repro/out/library-backlog-dark.png', fullPage: true })
 
 /* ----------------------------------------------------------------- 5. light */
 
 await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'light'))
-await page.locator('.wl-back').first().click()
-await page.waitForTimeout(500)
-// Back out of the list lands on whatever tab was under it, which is Insights by
-// this point in the run. Go to Home explicitly, or the light shot is of the
-// wrong page and would have quietly proved nothing.
+// Go to Home explicitly so the light shot proves the intended surface.
 await page.getByRole('button', { name: /^Home/ }).first().click()
 await page.waitForTimeout(700)
 const lightTitle = await page.evaluate(() => document.querySelector('.brand-title')?.textContent.trim())
@@ -945,7 +943,9 @@ await page.screenshot({ path: 'repro/out/drawer-light.png', fullPage: true })
 
 /* -------------------------------------------------------- 6. drawer editor */
 
-await page.locator('.menu-fb', { hasText: 'Customize' }).click()
+await page.locator('.menu-fb', { hasText: 'Settings' }).click()
+await page.waitForTimeout(600)
+await page.getByRole('button', { name: /Drawer/ }).first().click()
 await page.waitForTimeout(600)
 const editor = await page.evaluate(() => ({
   title: document.querySelector('.settings-hd-title')?.textContent.trim(),
@@ -956,14 +956,12 @@ const editor = await page.evaluate(() => ({
   prev: document.querySelectorAll('.cz-prev').length,
 }))
 check('drawer editor is titled Drawer', editor.title === 'Drawer', editor.title)
-check('drawer editor lists the same three groups', editor.secs.join('|') === 'Your games|Explore|Shelves', editor.secs.join('|'))
-check('drawer editor row count', editor.rows === 11, String(editor.rows))
+check('drawer editor lists the same two groups', editor.secs.join('|') === 'Your games|Explore', editor.secs.join('|'))
+check('drawer editor row count', editor.rows === 8, String(editor.rows))
 // The whole point of the split: this editor cannot change bar membership, so it
 // has no switches at all. Every row states what it is instead.
 check('drawer editor has no switches', editor.toggles === 0, String(editor.toggles))
-// 10 of 11: Settings is an action rather than a destination with a kind, and it
-// has nothing true to say in that column.
-check('every drawer row states what it is', editor.fixed.filter(Boolean).length === 10, editor.fixed.join(', '))
+check('drawer-only rows state what they are', editor.fixed.includes('drawer only') && editor.fixed.includes('list'), editor.fixed.join(', '))
 check('the bar preview is not here', editor.prev === 0, String(editor.prev))
 check('Insights reads as drawer only', editor.fixed.includes('drawer only'), editor.fixed.join(', '))
 await page.screenshot({ path: 'repro/out/editor-drawer.png', fullPage: true })
@@ -972,15 +970,8 @@ await page.waitForTimeout(500)
 
 /* ----------------------------------------------------------- 7. bar editor */
 
-// Reached from Settings, which is where a bar setting belongs. The drawer's own
-// button goes to the drawer editor, one tap from the thing it edits.
+// Reached from Settings, which is where both navigation editors belong.
 //
-// Settings is opened from the drawer's pinned footer now rather than a header
-// gear. Two taps, and neither of them a scroll.
-await page.locator('.brand-btn, .brand').first().click()
-await page.waitForTimeout(450)
-await page.locator('.menu-fb', { hasText: 'Settings' }).click()
-await page.waitForTimeout(600)
 await page.getByRole('button', { name: /Bottom bar/ }).first().click()
 await page.waitForTimeout(600)
 // Settings is still mounted underneath, so its heading matches the same selector.

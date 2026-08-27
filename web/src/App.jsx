@@ -314,7 +314,6 @@ function GameDeckApp() {
         onOpenList={(key) => openView(key)}
         onOpenSettings={() => setSettingsOpen(true)}
         onShuffle={() => setShuffleOpen(true)}
-        onCustomize={() => setCustomizeNavOpen(true)}
         onOpenTab={(t) => {
           closeView()
           setActiveTab(t)

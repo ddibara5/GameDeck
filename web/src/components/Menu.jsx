@@ -3,31 +3,30 @@ import { useWishlist } from '../lib/wishlist.js'
 import { useMountTransition } from '../lib/useMountTransition.js'
 import { lockScroll } from '../lib/scrollLock.js'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
-import { useStatusMap, effectiveStatus, includeInLists } from '../lib/userStatus.js'
 import { useNavConfig, DEST_BY_KEY, GROUP_LABEL, isFolded, toggleGroup } from '../lib/navConfig.js'
 import { DEST_ICONS } from './destIcons.jsx'
 
-// The left drawer: the whole map of the app, grouped, with the bottom bar marked
-// as a shortcut into it rather than as a separate thing.
+// The left drawer: a compact map of the app's places, grouped, with the bottom
+// bar acting as a shortcut into the same destinations.
 //
 // It used to list a hand-written Lists section plus a "More" section holding
 // whichever tabs the bar was hiding, which meant the drawer's shape depended on
 // a setting made weeks ago and Insights only appeared if it had been switched
-// off. Now every destination in the nav catalog is here, in the user's own order.
+// off. Now every place in the compact nav catalog is here, in the user's order;
+// filters stay inside Library and actions stay pinned below the map.
 //
 // There was an "on bar" pill on each row that is also a tab. It came off on
 // 21 Aug: the bar it referred to is on screen at the same time as the drawer, so
-// the pill labelled something the eye can already see, on five of twelve rows.
+// the pill labelled something the eye can already see on several rows.
 // Which tabs are on the bar is a question the bar editor answers, and that is
 // where the "on bar" / "off bar" column still lives.
 //
 // Group headings are printed as the list is walked, not by grouping it first,
 // because the order belongs to the user: drag a row somewhere else and its
 // heading follows it there. Same rule as the editor, so the two always agree.
-export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpenTab, onWarmTab, onOpenSettings, onShuffle, onCustomize, activeTab }) {
+export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpenTab, onWarmTab, onOpenSettings, onShuffle, activeTab }) {
   const { items: wishItems } = useWishlist()
   const { games } = useLibraryGames()
-  const statusMap = useStatusMap()
   const nav = useNavConfig()
   const { mounted, closing } = useMountTransition(open)
 
@@ -43,17 +42,10 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpen
     return c
   }, [nav.order])
 
-  // Live counts from the (session-cached) library and the status map, so a badge
-  // and the list it opens can never disagree.
-  const counts = useMemo(() => {
-    const c = { backlog: 0, playing: 0, finished: 0 }
-    for (const g of games) {
-      if (!includeInLists(g, statusMap)) continue
-      const s = effectiveStatus(g, statusMap)
-      if (c[s] != null) c[s] += 1
-    }
-    return { ...c, library: games.length, wishlist: wishItems.length }
-  }, [games, statusMap, wishItems])
+  const counts = useMemo(
+    () => ({ library: games.length, wishlist: wishItems.length }),
+    [games, wishItems],
+  )
 
   // Close on Escape.
   useEffect(() => {
@@ -82,8 +74,6 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpen
     if (dest.kind === 'tab') return go(() => onOpenTab && onOpenTab(dest.key))
     if (dest.kind === 'view') return go(onOpenWishlist)
     if (dest.kind === 'list') return go(() => onOpenList && onOpenList(dest.viewKey))
-    // Two actions in the catalog now, so the row says which one rather than
-    // `action` meaning Settings by position.
     if (dest.kind === 'action') return go(dest.action === 'shuffle' ? onShuffle : onOpenSettings)
     return undefined
   }
@@ -163,27 +153,18 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpen
 
         </div>
 
-        {/* Pinned, outside the scrolling body. Both of these used to sit at the
-            end of the list, which on a drawer that overflows by 113px meant the
-            two things you reach for deliberately were the two you had to scroll
-            to find. Neither is a destination in the list sense, so neither is
-            reorderable and neither belongs in the catalog. */}
+        {/* Pinned actions stay visible regardless of drawer ordering or folds. */}
         <div className="menu-foot">
           <div className="menu-foot-acts">
+            <button type="button" className="menu-fb" onClick={() => go(onShuffle)}>
+              {cloneElement(DEST_ICONS.shuffle, { className: 'menu-fb-i' })}
+              Shuffle
+            </button>
             <button type="button" className="menu-fb" onClick={() => go(onOpenSettings)}>
               {cloneElement(DEST_ICONS.settings, { className: 'menu-fb-i' })}
               Settings
             </button>
-            <button type="button" className="menu-fb" onClick={() => go(onCustomize)}>
-              <svg className="menu-fb-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-                <path d="M4 7h10M18 7h2M4 17h6M14 17h6" />
-                <circle cx="16" cy="7" r="2" />
-                <circle cx="12" cy="17" r="2" />
-              </svg>
-              Customize
-            </button>
           </div>
-          <div className="menu-foot-n">GameDeck · {counts.library} games</div>
         </div>
       </aside>
     </>

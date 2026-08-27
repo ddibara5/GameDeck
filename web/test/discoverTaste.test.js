@@ -11,6 +11,7 @@ import {
   rankLanes,
   tasteContribution,
 } from '../src/lib/discoverTaste.js'
+import { buildTasteProfile } from '../src/lib/gameIntelligence.js'
 
 const NOW = Date.parse('2026-08-25T12:00:00Z')
 
@@ -37,6 +38,41 @@ test('recent play matters more and logarithmic playtime prevents one title from 
   const marathon = tasteContribution(played({ playtime_minutes: 12000 }), NOW)
   assert.ok(recent > old)
   assert.ok(marathon < recent * 3)
+})
+
+test('the shared profile joins recent activity and rankings onto taste rows', () => {
+  const profile = buildTasteProfile({
+    games: [played({ master_id: 1 }), played({ master_id: 2, title: 'Other' })],
+    ranks: [{ master_id: 1, reaction: 'loved', score: 1660, comparison_count: 6 }],
+    activity: [
+      { master_id: 1, event_date: '2026-08-24', minutes_delta: 90 },
+      { master_id: 1, event_date: '2026-08-25', minutes_delta: 30 },
+    ],
+    wishlist: [{ igdb_id: 9 }],
+  })
+  assert.equal(profile.rows[0].recent_minutes, 120)
+  assert.equal(profile.rows[0].recent_active_days, 2)
+  assert.equal(profile.rows[0].personalRank.reaction, 'loved')
+  assert.deepEqual(profile.evidence, {
+    recentGameCount: 1,
+    recentMinutes: 120,
+    activeDayCount: 2,
+    rankedGameCount: 1,
+    wishlistCount: 1,
+  })
+})
+
+test('recent behavior outweighs an old lifetime marathon', () => {
+  const recent = tasteContribution(played({
+    playtime_minutes: 300,
+    recent_minutes: 240,
+    recent_last_played: '2026-08-24',
+  }), NOW)
+  const oldMarathon = tasteContribution(played({
+    playtime_minutes: 30000,
+    last_played: '2023-08-24',
+  }), NOW)
+  assert.ok(recent > oldMarathon)
 })
 
 test('lane explanations use explicit ranking reactions and reject negative exemplars', () => {
@@ -73,6 +109,19 @@ test('candidate ranking balances freshness with confidence-weighted quality', ()
       { id: 2, rating: 84, ratingCount: 200, released },
     ],
     NOW,
+  )
+  assert.equal(ranked[0].id, 2)
+})
+
+test('wishlist intent promotes a relevant candidate inside its lane', () => {
+  const released = Math.floor(Date.parse('2026-08-01T12:00:00Z') / 1000)
+  const ranked = rankCandidates(
+    [
+      { id: 1, rating: 90, ratingCount: 200, released },
+      { id: 2, rating: 84, ratingCount: 200, released },
+    ],
+    NOW,
+    { wishlistIds: new Set([2]) },
   )
   assert.equal(ranked[0].id, 2)
 })

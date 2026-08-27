@@ -6,7 +6,7 @@ import DiscoverDetail from './DiscoverDetail.jsx'
 import { fetchDiscoverLanes, loadLibraryTitles, normTitle } from '../lib/discover.js'
 import { useWishlist } from '../lib/wishlist.js'
 import { useDiscoverPrefs, platformParam, platformLabel } from '../lib/discoverPrefs.js'
-import { useTasteLanes, NEW_LANE, laneReason, rankCandidates, interleave } from '../lib/discoverLanes.js'
+import { useTasteProfile, NEW_LANE, laneReason, rankCandidates, interleave } from '../lib/discoverLanes.js'
 import { gameSheetWarmProps } from '../lib/gameSheetWarmIntent.js'
 
 // Pull a wider candidate pool than the feed displays. The server still returns
@@ -38,16 +38,17 @@ function preferredPlatforms(platforms, selected) {
   return picked.slice(0, 3).join(', ')
 }
 
-function rankedLaneMap(result, keys) {
+function rawLaneMap(result, keys) {
   const out = {}
-  for (const key of keys) out[key] = rankCandidates(result?.lanes?.[key] || []).slice(0, PICKS_PER_LANE)
+  for (const key of keys) out[key] = result?.lanes?.[key] || []
   return out
 }
 
 export default function DiscoverForYou({ onAsk, onTune }) {
   const prefs = useDiscoverPrefs()
   const platform = platformParam(prefs.platforms)
-  const tasteLanes = useTasteLanes()
+  const tasteProfile = useTasteProfile()
+  const tasteLanes = tasteProfile?.lanes || null
   const [byLane, setByLane] = useState({})
   const [newState, setNewState] = useState('loading')
   const [tasteState, setTasteState] = useState('waiting')
@@ -72,7 +73,7 @@ export default function DiscoverForYou({ onAsk, onTune }) {
   }, [libTitles])
 
   // The general New lane starts immediately. On a cold profile it can render
-  // while the taste probe is still resolving instead of sitting behind that
+  // while the taste profile is still resolving instead of sitting behind that
   // dependency waterfall.
   useEffect(() => {
     let alive = true
@@ -82,7 +83,7 @@ export default function DiscoverForYou({ onAsk, onTune }) {
     setNewState('loading')
     const apply = (result) => {
       if (!alive) return
-      setByLane((current) => ({ ...current, ...rankedLaneMap(result, keys) }))
+      setByLane((current) => ({ ...current, ...rawLaneMap(result, keys) }))
       setFailedKeys((current) => [...new Set([...current.filter((key) => !keys.includes(key)), ...(result.failedKeys || [])])])
     }
     fetchDiscoverLanes(keys, CANDIDATES_PER_LANE, { platform, onFresh: apply })
@@ -115,7 +116,7 @@ export default function DiscoverForYou({ onAsk, onTune }) {
     setTasteState('loading')
     const apply = (result) => {
       if (!alive) return
-      setByLane((current) => ({ ...current, ...rankedLaneMap(result, keys) }))
+      setByLane((current) => ({ ...current, ...rawLaneMap(result, keys) }))
       setFailedKeys((current) => [...new Set([...current.filter((key) => !keys.includes(key)), ...(result.failedKeys || [])])])
     }
     fetchDiscoverLanes(keys, CANDIDATES_PER_LANE, { platform, onFresh: apply })
@@ -137,24 +138,35 @@ export default function DiscoverForYou({ onAsk, onTune }) {
   // before the general New lane can claim it.
   const lanes = useMemo(() => (tasteLanes ? [...tasteLanes, NEW_LANE] : [NEW_LANE]), [tasteLanes])
 
+  const rankedByLane = useMemo(() => {
+    const out = {}
+    for (const lane of lanes) {
+      out[lane.key] = rankCandidates(byLane[lane.key] || [], Date.now(), { wishlistIds: wishIds })
+        .slice(0, PICKS_PER_LANE)
+    }
+    return out
+  }, [byLane, lanes, wishIds])
+
   useEffect(() => {
     if (only && !lanes.some((lane) => lane.key === only)) setOnly(null)
   }, [lanes, only])
 
   const feed = useMemo(() => {
     const active = only ? lanes.filter((lane) => lane.key === only) : lanes
-    return interleave(active, byLane, { drop: (game) => isOwned(game.name) })
-  }, [lanes, byLane, only, isOwned])
+    return interleave(active, rankedByLane, { drop: (game) => isOwned(game.name) })
+  }, [lanes, rankedByLane, only, isOwned])
 
   const tastePending = tasteState === 'waiting' || tasteState === 'loading'
   const loading = feed.length === 0 && (newState === 'loading' || tastePending)
   const unavailable = feed.length === 0 && !tastePending && (newState === 'error' || tasteState === 'error')
-  const hasRankings = Boolean(tasteLanes?.some((lane) => lane.rankedEvidence > 0))
-  const profileNote = hasRankings
-    ? 'Picked from recent play + My Ranking'
-    : tasteLanes?.length
-      ? 'Picked from your recent play'
-      : 'New releases while your taste profile grows'
+  const evidence = tasteProfile?.evidence
+  const profileNote = evidence?.recentGameCount && evidence?.rankedGameCount
+    ? `Shaped by ${evidence.recentGameCount} recently played games + My Ranking`
+    : evidence?.recentGameCount
+      ? `Shaped by ${evidence.recentGameCount} recently played games`
+      : evidence?.rankedGameCount
+        ? 'Shaped by My Ranking while recent play grows'
+        : 'New releases while your taste profile grows'
 
   return (
     <div className="discover-foryou" aria-busy={loading}>

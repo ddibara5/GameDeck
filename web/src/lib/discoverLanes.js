@@ -6,21 +6,24 @@
 // lanes, and the lane is the reason printed on the row. When a lane is wrong,
 // the chip says which one.
 //
-// Lanes are ordered by recent, meaningful play from a small taste probe of the
-// library, with My Ranking reactions and comparisons strengthening or removing
-// that evidence. The ordering is therefore explainable rather than a guess.
+// Lanes are ordered by the shared taste profile: 90-day activity first, lifetime
+// play as a quieter prior, and My Ranking strengthening or removing evidence.
+// The ordering is therefore explainable rather than a guess.
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase.js'
 import { swr } from './idbCache.js'
 import { rankLanes } from './discoverTaste.js'
+import { loadRecentActivity } from './recentActivity.js'
+import { loadWishlist } from './wishlist.js'
+import { buildTasteProfile } from './gameIntelligence.js'
 
 export { LANE_CATALOG, NEW_LANE, MAX_TASTE_LANES, laneReason, rankCandidates, interleave } from './discoverTaste.js'
 
-const PROBE_KEY = 'discover:tasteProbe'
-const PROBE_TTL = 24 * 60 * 60 * 1000
+const PROBE_KEY = 'discover:tasteProfile:v2'
+const PROBE_TTL = 6 * 60 * 60 * 1000
 const RANKING_EVENT = 'gd-ranking-change'
 
-// The taste probe.
+// The taste profile's keyword sidecar.
 //
 // Deliberately NOT `useLibraryGames`, and this is the one place in the app where
 // a second query against `games` is the right answer rather than the bug the
@@ -30,27 +33,32 @@ const RANKING_EVENT = 'gd-ranking-change'
 // 513. Every column it selects is read here and nowhere else, so it cannot drift
 // out of step with a surface that expects something different.
 //
-// Sixty most-recently-played rows with real time on them. Recency matters more
-// than lifetime totals: a library's all-time top is a decade of history, and
-// what you have been playing lately is what a discovery feed should look like.
-async function fetchTasteProbe() {
-  const [gameRes, rankRes] = await Promise.all([
+// Up to one hundred most-recently-played keyword rows. The activity window is
+// joined below and carries the stronger weight; this query supplies only the
+// genres/themes needed to turn that behavior into named lanes.
+async function fetchTasteProfile() {
+  const [gameRes, rankRes, activity, wishlist] = await Promise.all([
     supabase
       .from('games')
       .select('master_id, title, keywords, playtime_minutes, last_played')
-      .gte('playtime_minutes', 120)
       .not('last_played', 'is', null)
       .order('last_played', { ascending: false })
-      .limit(60),
+      .limit(100),
     supabase.from('game_ranks').select('master_id, score, reaction, comparison_count'),
+    loadRecentActivity({ days: 90, limit: 500 }),
+    loadWishlist(),
   ])
   if (gameRes.error) throw new Error(gameRes.error.message || 'Taste probe failed')
-  const ranks = new Map((rankRes.data || []).map((row) => [String(row.master_id), row]))
-  return (gameRes.data || []).map((row) => ({ ...row, personalRank: ranks.get(String(row.master_id)) || null }))
+  return buildTasteProfile({
+    games: gameRes.data || [],
+    ranks: rankRes.data || [],
+    activity,
+    wishlist,
+  })
 }
 
-export function useTasteLanes() {
-  const [lanes, setLanes] = useState(null)
+export function useTasteProfile() {
+  const [profile, setProfile] = useState(null)
   const [revision, setRevision] = useState(0)
 
   useEffect(() => {
@@ -61,14 +69,17 @@ export function useTasteLanes() {
 
   useEffect(() => {
     let alive = true
-    swr(PROBE_KEY, fetchTasteProbe, { maxAge: PROBE_TTL })
-      .then(({ value }) => alive && setLanes(rankLanes(value)))
+    swr(PROBE_KEY, fetchTasteProfile, { maxAge: PROBE_TTL })
+      .then(({ value }) => alive && setProfile({
+        lanes: rankLanes(value?.rows || []),
+        evidence: value?.evidence || null,
+      }))
       // A failed probe is not worth surfacing: the feed falls back to the
       // platform lane on its own, which is still the useful half.
-      .catch(() => alive && setLanes([]))
+      .catch(() => alive && setProfile({ lanes: [], evidence: null }))
     return () => {
       alive = false
     }
   }, [revision])
-  return lanes
+  return profile
 }
