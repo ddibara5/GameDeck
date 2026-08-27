@@ -25,6 +25,12 @@ that fail independently. `web/src/lib/gameIntelligence.js` owns the shared
 recent-activity and ranking semantics used by both this server bundle and the
 For You client. Keep those meanings aligned when changing recommendation logic.
 
+For You outcome learning stores append-only, owner-scoped exposures and explicit
+detail opens. Wishlist, ownership, play, and positive ranking outcomes are
+derived from their existing source tables through security-invoker views. The
+client applies only minimum-sample, bounded feedback; it does not treat the
+analytics log as a new game-state source of truth.
+
 ## Security boundary
 
 - The browser signs in with a Supabase magic link for the configured owner email.

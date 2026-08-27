@@ -24,6 +24,40 @@ function clamp(min, max, value) {
   return Math.max(min, Math.min(max, value))
 }
 
+function feedbackAt(feedback, key) {
+  if (!feedback) return null
+  if (typeof feedback.get === 'function') {
+    return feedback.get(key) || feedback.get(Number(key)) || feedback.get(String(key)) || null
+  }
+  return feedback[key] || feedback[String(key)] || null
+}
+
+// Outcome evidence is deliberately a secondary correction. Five impressions are
+// required before a lane moves at all, sparse samples are shrunk toward neutral,
+// and even mature evidence can only adjust the lane by ten percent.
+export function laneOutcomeMultiplier(feedback) {
+  const exposures = Math.max(0, Number(feedback?.exposure_count) || 0)
+  if (exposures < 5) return 1
+  const detailRate = Math.min(exposures, Math.max(0, Number(feedback?.detail_open_count) || 0)) / exposures
+  const meaningfulRate = Math.min(exposures, Math.max(0, Number(feedback?.meaningful_outcome_count) || 0)) / exposures
+  const signal = detailRate * 0.35 + meaningfulRate * 0.65
+  const confidence = clamp(0, 1, (exposures - 4) / 16)
+  return clamp(0.9, 1.1, 1 + (signal - 0.08) * 0.35 * confidence)
+}
+
+// Per-game feedback mostly prevents stale repetition. A detail open is a weak
+// positive; wishlist/ownership/play/ranking evidence is stronger but still
+// smaller than the existing freshness, quality and explicit-wishlist signals.
+export function candidateOutcomeAdjustment(feedback) {
+  const exposures = Math.max(0, Number(feedback?.exposure_count) || 0)
+  const details = Math.max(0, Number(feedback?.detail_open_count) || 0)
+  const meaningful = Math.max(0, Number(feedback?.meaningful_outcome_count) || 0)
+  if (meaningful > 0) return Math.min(0.08, 0.04 + meaningful * 0.015)
+  if (details > 0) return Math.min(0.04, details * 0.015)
+  if (exposures < 3) return 0
+  return -Math.min(0.12, (exposures - 2) * 0.035)
+}
+
 // Reactions are the user's explicit opinion. Elo refines that opinion once
 // comparisons exist, and comparison_count controls how strongly that refinement
 // is trusted. An un-compared reaction still matters; an early Elo number does
@@ -59,7 +93,7 @@ export function tasteContribution(row, now = Date.now()) {
   return playStrength * recency * rankingWeight(row?.personalRank)
 }
 
-export function rankLanes(rows, now = Date.now()) {
+export function rankLanes(rows, now = Date.now(), { laneFeedback } = {}) {
   const out = []
   for (const lane of LANE_CATALOG) {
     let strength = 0
@@ -83,9 +117,11 @@ export function rankLanes(rows, now = Date.now()) {
       }
     }
     if (count >= 2) {
+      const outcomeMultiplier = laneOutcomeMultiplier(feedbackAt(laneFeedback, lane.key))
       out.push({
         ...lane,
-        strength,
+        strength: strength * outcomeMultiplier,
+        outcomeMultiplier,
         count,
         rankedEvidence,
         exemplar: exemplar?.title || null,
@@ -105,7 +141,7 @@ export function laneReason(lane) {
   return lane.exemplar ? `${lane.label}, like ${lane.exemplar}` : lane.label
 }
 
-function candidateScore(game, now, wishlistIds) {
+function candidateScore(game, now, wishlistIds, gameFeedback) {
   const rating = Number(game?.rating)
   const votes = Math.max(0, Number(game?.ratingCount) || 0)
   const confidence = votes / (votes + 25)
@@ -118,12 +154,15 @@ function candidateScore(game, now, wishlistIds) {
     || wishlistIds.has(Number(game?.id))
     || wishlistIds.has(String(game?.id))
   )
-  return freshness * 0.58 + quality * 0.42 + (wished ? 0.14 : 0)
+  return freshness * 0.58
+    + quality * 0.42
+    + (wished ? 0.14 : 0)
+    + candidateOutcomeAdjustment(feedbackAt(gameFeedback, game?.id))
 }
 
-export function rankCandidates(games, now = Date.now(), { wishlistIds } = {}) {
+export function rankCandidates(games, now = Date.now(), { wishlistIds, gameFeedback } = {}) {
   return (games || [])
-    .map((game, index) => ({ game, index, score: candidateScore(game, now, wishlistIds) }))
+    .map((game, index) => ({ game, index, score: candidateScore(game, now, wishlistIds, gameFeedback) }))
     .sort((a, b) => b.score - a.score || a.index - b.index)
     .map(({ game }) => game)
 }

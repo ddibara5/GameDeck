@@ -8,6 +8,7 @@ import { useWishlist } from '../lib/wishlist.js'
 import { useDiscoverPrefs, platformParam, platformLabel } from '../lib/discoverPrefs.js'
 import { useTasteProfile, NEW_LANE, laneReason, rankCandidates, interleave } from '../lib/discoverLanes.js'
 import { gameSheetWarmProps } from '../lib/gameSheetWarmIntent.js'
+import { recordRecommendationDetailOpen, trackRecommendationFeed } from '../lib/recommendationLearning.js'
 
 // Pull a wider candidate pool than the feed displays. The server still returns
 // recent matching releases, then the client can balance freshness with
@@ -49,6 +50,7 @@ export default function DiscoverForYou({ onAsk, onTune }) {
   const platform = platformParam(prefs.platforms)
   const tasteProfile = useTasteProfile()
   const tasteLanes = tasteProfile?.lanes || null
+  const gameFeedback = tasteProfile?.gameFeedback
   const [byLane, setByLane] = useState({})
   const [newState, setNewState] = useState('loading')
   const [tasteState, setTasteState] = useState('waiting')
@@ -141,11 +143,14 @@ export default function DiscoverForYou({ onAsk, onTune }) {
   const rankedByLane = useMemo(() => {
     const out = {}
     for (const lane of lanes) {
-      out[lane.key] = rankCandidates(byLane[lane.key] || [], Date.now(), { wishlistIds: wishIds })
+      out[lane.key] = rankCandidates(byLane[lane.key] || [], Date.now(), {
+        wishlistIds: wishIds,
+        gameFeedback,
+      })
         .slice(0, PICKS_PER_LANE)
     }
     return out
-  }, [byLane, lanes, wishIds])
+  }, [byLane, lanes, wishIds, gameFeedback])
 
   useEffect(() => {
     if (only && !lanes.some((lane) => lane.key === only)) setOnly(null)
@@ -155,6 +160,17 @@ export default function DiscoverForYou({ onAsk, onTune }) {
     const active = only ? lanes.filter((lane) => lane.key === only) : lanes
     return interleave(active, rankedByLane, { drop: (game) => isOwned(game.name) })
   }, [lanes, rankedByLane, only, isOwned])
+
+  const feedSig = feed.map((game) => `${game.id}:${game.lane?.key || 'new'}`).join(',')
+  useEffect(() => {
+    trackRecommendationFeed(feed.map((game) => ({
+      ...game,
+      recommendationReason: laneReason(game.lane),
+    })))
+    // The signature is the stable recommendation identity. Tracking a new
+    // object instance with the same rows would only repeat the same batch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feedSig])
 
   const tastePending = tasteState === 'waiting' || tasteState === 'loading'
   const loading = feed.length === 0 && (newState === 'loading' || tastePending)
@@ -167,6 +183,9 @@ export default function DiscoverForYou({ onAsk, onTune }) {
       : evidence?.rankedGameCount
         ? 'Shaped by My Ranking while recent play grows'
         : 'New releases while your taste profile grows'
+  const learningNote = evidence?.recommendationOutcomeCount
+    ? ` · ${evidence.recommendationOutcomeCount} recommendation outcome${evidence.recommendationOutcomeCount === 1 ? '' : 's'}`
+    : ''
 
   return (
     <div className="discover-foryou" aria-busy={loading}>
@@ -179,7 +198,7 @@ export default function DiscoverForYou({ onAsk, onTune }) {
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 2.5c.6 4.2 2.8 6.4 7 7-4.2.6-6.4 2.8-7 7-.6-4.2-2.8-6.4-7-7 4.2-.6 6.4-2.8 7-7Z" />
         </svg>
-        <span>{profileNote}</span>
+        <span>{profileNote}{learningNote}</span>
       </div>
 
       {lanes.length ? (
@@ -210,12 +229,24 @@ export default function DiscoverForYou({ onAsk, onTune }) {
           </div>
         ) : (
           <div className="fy-feed">
-            {feed.map((game) => {
+            {feed.map((game, index) => {
               const wished = wishIds.has(game.id)
               const platforms = preferredPlatforms(game.platforms, prefs.platforms)
               return (
                 <div className="fy-row-wrap" key={game.id}>
-                  <button type="button" className="fy-row" onClick={() => setSelected(game)} {...gameSheetWarmProps(game, 'discover')}>
+                  <button
+                    type="button"
+                    className="fy-row"
+                    onClick={() => {
+                      recordRecommendationDetailOpen(game, {
+                        lane: game.lane,
+                        position: index + 1,
+                        reason: laneReason(game.lane),
+                      })
+                      setSelected(game)
+                    }}
+                    {...gameSheetWarmProps(game, 'discover')}
+                  >
                     <Cover src={game.cover} title={game.name} size="sm" className="fy-cov" />
                     <span className="fy-body">
                       <span className="fy-name">{game.name}</span>

@@ -180,6 +180,29 @@ and requires each pick's “Why it fits” line to cite actual evidence without
 turning neutral play history into a positive reaction. Optional evidence reads
 degrade independently; only the library read is required for an answer.
 
+### Recommendation outcome learning
+
+For You now records one structured exposure per game and browser session plus a
+deduplicated detail-open interaction. Wishlist, ownership, first play, and a
+later `loved`/`liked` reaction are not copied into analytics rows; the database
+derives them from the existing authoritative tables. Only the latest exposure
+before an outcome receives credit, with 30-day wishlist/open, 90-day ownership,
+and 180-day play/ranking windows.
+
+Outcome evidence is intentionally secondary. A taste lane needs at least five
+exposures before it can move, sparse evidence is shrunk toward neutral, and the
+result is capped at a ten-percent adjustment. Per-game evidence can softly
+promote a game that led to a meaningful outcome or suppress a game ignored in at
+least three sessions. It cannot override explicit My Ranking, wishlist intent,
+platform scope, catalog quality, or the existing taste evidence hierarchy.
+
+The append-only browser tables are `recommendation_exposures` and
+`recommendation_interactions`; the security-invoker feedback views are
+`v_recommendation_outcomes`, `v_recommendation_lane_feedback`, and
+`v_recommendation_game_feedback`. Phase 3 applies to the structured For You feed.
+Ask GameDeck remains free-form text and is not assigned fabricated catalog IDs
+for attribution.
+
 ## Insights: recent play over lifetime totals
 
 Insights now answers what has changed lately instead of repeating library totals

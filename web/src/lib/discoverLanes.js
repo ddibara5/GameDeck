@@ -19,7 +19,7 @@ import { buildTasteProfile } from './gameIntelligence.js'
 
 export { LANE_CATALOG, NEW_LANE, MAX_TASTE_LANES, laneReason, rankCandidates, interleave } from './discoverTaste.js'
 
-const PROBE_KEY = 'discover:tasteProfile:v2'
+const PROBE_KEY = 'discover:tasteProfile:v3'
 const PROBE_TTL = 6 * 60 * 60 * 1000
 const RANKING_EVENT = 'gd-ranking-change'
 
@@ -37,7 +37,7 @@ const RANKING_EVENT = 'gd-ranking-change'
 // joined below and carries the stronger weight; this query supplies only the
 // genres/themes needed to turn that behavior into named lanes.
 async function fetchTasteProfile() {
-  const [gameRes, rankRes, activity, wishlist] = await Promise.all([
+  const [gameRes, rankRes, activity, wishlist, laneFeedbackRes, gameFeedbackRes] = await Promise.all([
     supabase
       .from('games')
       .select('master_id, title, keywords, playtime_minutes, last_played')
@@ -47,14 +47,25 @@ async function fetchTasteProfile() {
     supabase.from('game_ranks').select('master_id, score, reaction, comparison_count'),
     loadRecentActivity({ days: 90, limit: 500 }),
     loadWishlist(),
+    supabase
+      .from('v_recommendation_lane_feedback')
+      .select('lane_key,exposure_count,detail_open_count,meaningful_outcome_count,last_shown_at'),
+    supabase
+      .from('v_recommendation_game_feedback')
+      .select('igdb_id,exposure_count,detail_open_count,meaningful_outcome_count,last_shown_at'),
   ])
   if (gameRes.error) throw new Error(gameRes.error.message || 'Taste probe failed')
-  return buildTasteProfile({
+  const profile = buildTasteProfile({
     games: gameRes.data || [],
     ranks: rankRes.data || [],
     activity,
     wishlist,
   })
+  const laneFeedback = new Map((laneFeedbackRes.error ? [] : laneFeedbackRes.data || []).map((row) => [row.lane_key, row]))
+  const gameFeedback = new Map((gameFeedbackRes.error ? [] : gameFeedbackRes.data || []).map((row) => [String(row.igdb_id), row]))
+  const recommendationOutcomeCount = [...gameFeedback.values()]
+    .reduce((sum, row) => sum + Math.max(0, Number(row.meaningful_outcome_count) || 0), 0)
+  return { ...profile, laneFeedback, gameFeedback, recommendationOutcomeCount }
 }
 
 export function useTasteProfile() {
@@ -71,12 +82,15 @@ export function useTasteProfile() {
     let alive = true
     swr(PROBE_KEY, fetchTasteProfile, { maxAge: PROBE_TTL })
       .then(({ value }) => alive && setProfile({
-        lanes: rankLanes(value?.rows || []),
-        evidence: value?.evidence || null,
+        lanes: rankLanes(value?.rows || [], Date.now(), { laneFeedback: value?.laneFeedback }),
+        gameFeedback: value?.gameFeedback || new Map(),
+        evidence: value?.evidence
+          ? { ...value.evidence, recommendationOutcomeCount: value?.recommendationOutcomeCount || 0 }
+          : null,
       }))
       // A failed probe is not worth surfacing: the feed falls back to the
       // platform lane on its own, which is still the useful half.
-      .catch(() => alive && setProfile({ lanes: [], evidence: null }))
+      .catch(() => alive && setProfile({ lanes: [], gameFeedback: new Map(), evidence: null }))
     return () => {
       alive = false
     }

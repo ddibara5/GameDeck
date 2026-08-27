@@ -4,7 +4,9 @@ import test from 'node:test'
 
 import {
   NEW_LANE,
+  candidateOutcomeAdjustment,
   interleave,
+  laneOutcomeMultiplier,
   laneReason,
   rankCandidates,
   rankingWeight,
@@ -122,6 +124,56 @@ test('wishlist intent promotes a relevant candidate inside its lane', () => {
     ],
     NOW,
     { wishlistIds: new Set([2]) },
+  )
+  assert.equal(ranked[0].id, 2)
+})
+
+test('outcome learning waits for evidence and keeps lane influence bounded', () => {
+  assert.equal(laneOutcomeMultiplier({
+    exposure_count: 4,
+    detail_open_count: 4,
+    meaningful_outcome_count: 4,
+  }), 1)
+
+  const positive = laneOutcomeMultiplier({
+    exposure_count: 20,
+    detail_open_count: 12,
+    meaningful_outcome_count: 8,
+  })
+  const ignored = laneOutcomeMultiplier({
+    exposure_count: 20,
+    detail_open_count: 0,
+    meaningful_outcome_count: 0,
+  })
+  assert.ok(positive > 1 && positive <= 1.1)
+  assert.ok(ignored >= 0.9 && ignored < 1)
+})
+
+test('per-game learning gently rewards outcomes and suppresses repeated ignores', () => {
+  assert.equal(candidateOutcomeAdjustment({ exposure_count: 2 }), 0)
+  assert.ok(candidateOutcomeAdjustment({
+    exposure_count: 3,
+    meaningful_outcome_count: 1,
+  }) > 0)
+  assert.ok(candidateOutcomeAdjustment({
+    exposure_count: 4,
+    detail_open_count: 0,
+    meaningful_outcome_count: 0,
+  }) < 0)
+
+  const released = Math.floor(Date.parse('2026-08-01T12:00:00Z') / 1000)
+  const ranked = rankCandidates(
+    [
+      { id: 1, rating: 86, ratingCount: 200, released },
+      { id: 2, rating: 84, ratingCount: 200, released },
+    ],
+    NOW,
+    {
+      gameFeedback: new Map([
+        ['1', { exposure_count: 6 }],
+        ['2', { exposure_count: 3, meaningful_outcome_count: 1 }],
+      ]),
+    },
   )
   assert.equal(ranked[0].id, 2)
 })
