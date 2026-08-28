@@ -3,12 +3,10 @@ import Cover from './Cover.jsx'
 import Skeleton from './Skeleton.jsx'
 import GameDetail from './GameDetail.jsx'
 import GameSheet from './GameSheet.jsx'
-import DiscoverDetail from './DiscoverDetail.jsx'
 import CustomizeHome from './CustomizeHome.jsx'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
-import { loadLeavingSoon } from '../lib/discover.js'
 import { useWishlist } from '../lib/wishlist.js'
-import { normTitle } from '../lib/discover.js'
+import { relOf, releaseCalendarDay, releaseDaysFromToday } from '../lib/wishlistRelease.js'
 import { useHomeCards, CARD_BY_KEY } from '../lib/homeCards.js'
 import { platformMeta, minutesToHhm, parseDayOrInstant, libraryCover } from '../lib/format.js'
 import { getActivityStartCache, loadActivityStart, loadRecentActivity } from '../lib/recentActivity.js'
@@ -22,9 +20,8 @@ import './home.css'
 // next Tuesday belongs on Insights, which is why the lifetime cards are not here
 // and why this page ends on the customize button rather than scrolling forever.
 //
-// Now playing, Release watch, Leaving Game Pass and the week totals live here,
-// not on Insights, so the landing page stays a current snapshot rather than a
-// second analytics page.
+// Now playing, Release watch and the week totals live here, not on Insights, so
+// the landing page stays a current snapshot rather than a second analytics page.
 
 const num = (v) => Number(v) || 0
 
@@ -50,16 +47,9 @@ const COMING_UP_DAYS = 60
 // than two windows chosen separately.
 const RECENT_DAYS = 60
 
-// The release watch card shows one item on either side of today. The full release
-// timeline owns the rest. Leaving Game Pass keeps a four-row relevance pool but
-// Home only renders its strongest item as a compact urgency alert.
-const RELEASE_MAX = 4
-
-// The floor for a Game Pass title you do NOT own. Ungated, the leaving window
-// offers a 58 next to The Witcher 3's 92, and a card pointing at your last week
-// on Game Pass cannot also do that. Same reasoning as the shortlist gate that
-// came off Home with Pick up next; the number is a judgement, not a measurement.
-const GP_MIN_RATING = 70
+// Two covers on either side of today keep both directions visible at once. The
+// full release timeline owns everything beyond this compact Home preview.
+const RELEASE_VISIBLE = 2
 
 const CHEV = (
   <svg className="hm-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -77,50 +67,31 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
   const { items: wishItems } = useWishlist()
   const [events, setEvents] = useState([])
   const [activityStart, setActivityStart] = useState(() => getActivityStartCache())
-  const [gamePass, setGamePass] = useState({ rows: [], available: true, updatedAt: null })
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
   const [wishOpen, setWishOpen] = useState(null)
-  const [gpOpen, setGpOpen] = useState(null)
-  const [gpExpanded, setGpExpanded] = useState(false)
   const [customizeOpen, setCustomizeOpen] = useState(false)
   const cards = useHomeCards()
 
   useEffect(() => {
     let cancelled = false
-    // Both of these read from disk first and refresh behind, so this screen no
-    // longer waits on the network to draw. It used to await two live queries
-    // before clearing `loading`, which on Dave's machine is ~420ms of skeleton.
-    //
-    // Each resolves with the DISK copy and calls back with the network one, and
-    // the callback can win the race: with a fast connection the fresh
-    // rows arrive before the await below continues, and assigning the resolved
-    // value then would overwrite them with the stale copy. repro/home.mjs
-    // caught exactly that - the Game Pass card kept showing the previous
-    // window's rows. So the callback is authoritative once it has fired.
+    // Activity reads from disk first and refreshes behind, so Home no longer
+    // waits on the network to draw. The callback is authoritative if it wins the
+    // race with the resolved disk copy.
     let freshEvents = false
-    let freshLeaving = false
     loadActivityStart((start) => {
       if (!cancelled) setActivityStart(start)
     }).then((start) => {
       if (!cancelled) setActivityStart(start)
     })
     async function load() {
-      const [act, gp] = await Promise.all([
-        loadRecentActivity({ days: ACTIVITY_DAYS }, (rows) => {
-          if (cancelled) return
-          freshEvents = true
-          setEvents(rows)
-        }),
-        loadLeavingSoon((state) => {
-          if (cancelled) return
-          freshLeaving = true
-          setGamePass(state)
-        }),
-      ])
+      const act = await loadRecentActivity({ days: ACTIVITY_DAYS }, (rows) => {
+        if (cancelled) return
+        freshEvents = true
+        setEvents(rows)
+      })
       if (cancelled) return
       if (!freshEvents) setEvents(act)
-      if (!freshLeaving) setGamePass(gp)
       setLoading(false)
     }
     load()
@@ -202,107 +173,35 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
     }
   }, [events, gamesById, week])
 
-  const comingUp = useMemo(() => {
-    const today = startOfDay(new Date())
-    const soon = Math.floor((Date.now() + COMING_UP_DAYS * 86400000) / 1000)
-    return wishItems
-      // Day precision only: a quarter or a year resolves to the END of its
-      // window, so "Q4 2027" would arrive as 31 Dec and read as a date it is not.
-      // This used to be a server-side filter on Home's own query; it is a client
-      // filter now that the rows come from the shared cache.
-      .filter((w) => w.date_precision === 'day' && w.released != null && num(w.released) <= soon)
-      .map((w) => {
-        // `released` is a calendar day stored as a unix second, so it sits at UTC
-        // midnight. Building the local date from its UTC parts keeps a game dated
-        // the 20th from reading as the 19th anywhere west of UTC.
-        const utc = new Date(num(w.released) * 1000)
-        const day = new Date(utc.getUTCFullYear(), utc.getUTCMonth(), utc.getUTCDate())
-        return { ...w, day, days: daysBetween(day, today) }
-      })
-      .filter((w) => w.days >= 0)
-      .sort((a, b) => a.days - b.days)
-      .slice(0, RELEASE_MAX)
-  }, [wishItems])
-
-  // The same wishlist rows, the other side of today. Day 0 belongs to Coming up,
-  // which renders it as "Out today", so this starts at one day ago and the two
-  // cards can never show the same game.
-  const recentlyReleased = useMemo(() => {
-    const today = startOfDay(new Date())
-    // A wishlist game you have since bought is not news. `games` is already
-    // loaded for every other card on this page, so this costs no read.
+  const releaseWatch = useMemo(() => {
+    // A wishlist game you have since bought is not release news. `games` is
+    // already loaded for Now playing, so this costs no additional read.
     const owned = new Set(games.filter((g) => g.igdb_id != null).map((g) => g.igdb_id))
-    return wishItems
-      .filter((w) => w.date_precision === 'day' && w.released != null && !owned.has(w.igdb_id))
+    const dated = wishItems
       .map((w) => {
-        const utc = new Date(num(w.released) * 1000)
-        const day = new Date(utc.getUTCFullYear(), utc.getUTCMonth(), utc.getUTCDate())
-        return { ...w, day, days: daysBetween(today, day) }
+        const rel = relOf(w)
+        if (rel.k !== 'day' || rel.ts == null) return null
+        return { ...w, day: releaseCalendarDay(rel), delta: releaseDaysFromToday(rel) }
       })
-      .filter((w) => w.days >= 1 && w.days <= RECENT_DAYS)
-      .sort((a, b) => a.days - b.days)
-      .slice(0, RELEASE_MAX)
-  }, [wishItems, games])
+      .filter(Boolean)
 
-  // Yours first, then the rest of what is going.
-  //
-  // This card used to be only about games you had started, which was right when
-  // the question was "use it or lose it". It reads five titles today and exactly
-  // one of them is in the library, so under that rule it is a one-row card most
-  // months. "Leaving soon" is a clock, and a clock is worth reading whether or
-  // not you already own the thing, so the pool is the whole leaving window with
-  // your own games pinned to the top.
-  //
-  // `mine` is what every consumer below branches on: it decides the subtitle and
-  // it decides which sheet the row opens.
-  //
-  // Ownership is matched by igdb_id FIRST and by normalised title second,
-  // because IGDB gives an edition its own id: the Game Pass row for The Witcher
-  // 3 is 119402 (Complete Edition) while both library rows carry 1942, so an
-  // id-only join calls a game with 20h on it "not yours" and offers to wishlist
-  // it. Seven of the 499 catalogue rows are in that position today (Silksong,
-  // Mirror's Edge, Resident Evil 2, UNO, Mass Effect, Gears of War and the
-  // Witcher), and all seven were checked by hand: seven real matches, zero
-  // false ones.
-  //
-  // byId-then-byTitle, resolving duplicates to the most-played row, is the shape
-  // `buildLibraryIndex` in lib/news.js already uses, and `normTitle` is the same
-  // one Discover badges "In library" with. One definition of "the same game".
-  const leaving = useMemo(() => {
-    if (!gamePass.rows.length) return []
-    const byId = new Map()
-    const byTitle = new Map()
-    // A game owned on two platforms has a row each, and the one worth showing is
-    // the one carrying the time: the Witcher on PSN (1249m) not on Xbox (0m).
-    const better = (a, b) => num(a && a.playtime_minutes) > num(b && b.playtime_minutes)
-    for (const g of games) {
-      if (g.igdb_id != null && (!byId.has(g.igdb_id) || better(g, byId.get(g.igdb_id)))) byId.set(g.igdb_id, g)
-      const k = normTitle(g.title)
-      if (k && (!byTitle.has(k) || better(g, byTitle.get(k)))) byTitle.set(k, g)
-    }
-    const mine = []
-    const theirs = []
-    // Two storefront entries can resolve to one IGDB game (a base game and its
-    // edition), which the catalog sync already knows and ORs the flag over. Both
-    // can therefore be in this window and both can now land on the same library
-    // row, so the row is claimed once: without this the card prints the same
-    // game twice, under one React key.
-    const claimed = new Set()
-    for (const r of gamePass.rows) {
-      const g = byId.get(r.igdb_id) || byTitle.get(normTitle(r.name)) || null
-      if (g && claimed.has(g.master_id)) continue
-      if (g) claimed.add(g.master_id)
-      // Owned counts whether or not you have started it. Started is the better
-      // row and sorts above, but "it is in your library, you never opened it,
-      // and it goes this week" is the single most actionable line this card can
-      // print, and the old rule dropped it from BOTH buckets.
-      if (g) mine.push({ ...g, mine: true })
-      else if (num(r.rating) >= GP_MIN_RATING) theirs.push({ ...r, title: r.name, mine: false })
-    }
-    mine.sort((a, b) => num(b.playtime_minutes) - num(a.playtime_minutes))
-    theirs.sort((a, b) => num(b.rating) - num(a.rating))
-    return [...mine, ...theirs].slice(0, RELEASE_MAX)
-  }, [games, gamePass.rows])
+    const comingUp = dated
+      .filter((w) => w.delta > 0 && w.delta <= COMING_UP_DAYS)
+      .sort((a, b) => a.delta - b.delta || String(a.title).localeCompare(String(b.title)))
+      .slice(0, RELEASE_VISIBLE)
+      .map((w) => ({ ...w, days: w.delta }))
+
+    // Day zero belongs to Out now. This is a calendar boundary, not an elapsed
+    // timestamp boundary, so it flips at the start of the user's local day.
+    const recentlyReleased = dated
+      .filter((w) => w.delta <= 0 && w.delta >= -RECENT_DAYS && !owned.has(w.igdb_id))
+      .sort((a, b) => b.delta - a.delta || String(a.title).localeCompare(String(b.title)))
+      .slice(0, RELEASE_VISIBLE)
+      .map((w) => ({ ...w, days: Math.abs(w.delta) }))
+
+    return { comingUp, recentlyReleased }
+  }, [wishItems, games])
+  const { comingUp, recentlyReleased } = releaseWatch
 
   if (loading || libLoading) {
     return (
@@ -335,42 +234,30 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
 
   const openGame = (g) => g && setSelected(g)
 
-  // Every row on this card opens something now. A game you own opens the owned
-  // detail; a catalogue row opens the DISCOVER sheet, which is the surface the
-  // app already has for an IGDB game you do not own, and the one News uses for
-  // exactly this case.
-  //
-  // The seed is sparse on purpose. GameSheet's discover variant already handles
-  // an entry that carries only id/name/cover/year: it paints a skeleton the
-  // right height and fetches the rest by id. Awaiting the fetch first, the way
-  // News does, would mean a tap that does nothing for as long as IGDB takes.
-  const openLeaving = (g) =>
-    g.mine
-      ? openGame(g)
-      : setGpOpen({ id: g.igdb_id, name: g.title, cover: g.cover, year: g.year, rating: g.rating })
-
   const releaseRow = (w, direction) => {
     const upcoming = direction === 'upcoming'
+    const status = upcoming
+      ? { main: w.days, unit: w.days === 1 ? 'day' : 'days' }
+      : w.days === 0
+        ? { main: 'Out', unit: 'today' }
+        : { main: w.days, unit: w.days === 1 ? 'day ago' : 'days ago' }
     return (
       <button
         type="button"
-        className={`up-row as-btn${w.days <= 7 ? ' soon' : ''}`}
+        className={`hm-release-item${upcoming ? ' upcoming' : ' out'}${w.days <= 7 ? ' soon' : ''}`}
         key={`${direction}-${w.igdb_id}`}
         onClick={() => setWishOpen(w)}
         {...gameSheetWarmProps(w, 'wishlist')}
       >
         <Cover src={w.cover} title={w.title} size="sm" className="up-cov" />
-        <span className="up-t">
-          <span className="up-tt">{w.title}</span>
-          <span className="up-d">
+        <span className="hm-release-copy">
+          <span className="hm-release-title">{w.title}</span>
+          <span className="hm-release-date">
             {upcoming ? '' : 'Released '}
             {w.day.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
           </span>
-        </span>
-        <span className="up-when">
-          <span className="up-n">{w.days === 0 ? 'Out' : w.days}</span>
-          <span className="up-u">
-            {upcoming ? (w.days === 0 ? 'today' : w.days === 1 ? 'day' : 'days') : w.days === 1 ? 'day ago' : 'days ago'}
+          <span className="hm-release-status">
+            <b>{status.main}</b> {status.unit}
           </span>
         </span>
       </button>
@@ -449,75 +336,6 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
       </button>
     ),
 
-    leaving_gp: () => {
-      if (!gamePass.available) {
-        return (
-          <div className="hm-gp-alert unavailable" data-card="leaving_gp" key="leaving_gp" role="status">
-            <span className="gp-status-mark" aria-hidden="true">!</span>
-            <span className="hm-gp-copy">
-              <span className="hm-gp-title">Game Pass data unavailable</span>
-              <span className="hm-gp-sub">Catalog refresh needs attention</span>
-            </span>
-          </div>
-        )
-      }
-      if (!leaving.length) return null
-      const first = leaving[0]
-      const firstMeta = first.mine && num(first.playtime_minutes) > 0
-        ? `${minutesToHhm(num(first.playtime_minutes))} in`
-        : first.mine
-          ? 'Never started'
-          : first.rating
-            ? `${Math.round(num(first.rating))} rated`
-            : ''
-      return (
-        <div className={`hm-gp-shell${gpExpanded ? ' expanded' : ''}`} data-card="leaving_gp" key="leaving_gp">
-          <button
-            type="button"
-            className="hm-gp-alert"
-            onClick={() => leaving.length > 1 ? setGpExpanded((open) => !open) : openLeaving(first)}
-            aria-expanded={leaving.length > 1 ? gpExpanded : undefined}
-            {...(leaving.length === 1 ? gameSheetWarmProps(first, first.mine ? 'owned' : 'discover') : {})}
-          >
-            <span className="gp-badge">GP</span>
-            <span className="hm-gp-copy">
-              <span className="hm-gp-title">Leaving Game Pass</span>
-              <span className="hm-gp-sub">
-                {first.title}{firstMeta ? ` · ${firstMeta}` : ''}{leaving.length > 1 ? ` · +${leaving.length - 1} more` : ''}
-              </span>
-            </span>
-            <span className={`hm-more hm-gp-more${gpExpanded ? ' down' : ''}`} aria-hidden="true">{CHEV}</span>
-          </button>
-          {gpExpanded ? (
-            <div className="hm-gp-list">
-              {leaving.map((g) => (
-                <button
-                  type="button"
-                  className="hm-gp-row"
-                  key={`${g.mine ? 'owned' : 'catalog'}-${g.mine ? g.master_id : g.igdb_id}`}
-                  onClick={() => openLeaving(g)}
-                  {...gameSheetWarmProps(g, g.mine ? 'owned' : 'discover')}
-                >
-                  <span className={`hm-gp-rank${g.mine ? ' owned' : ''}`} aria-hidden="true">{g.mine ? 'Y' : 'GP'}</span>
-                  <span className="hm-gp-copy">
-                    <span className="hm-gp-row-title">{g.title}</span>
-                    <span className="hm-gp-sub">
-                      {g.mine
-                        ? num(g.playtime_minutes) > 0
-                          ? `${minutesToHhm(num(g.playtime_minutes))} in · ${Math.round(num(g.percent))}% done`
-                          : 'In your library · Never started'
-                        : [g.year, g.rating ? `${Math.round(num(g.rating))} rated` : null].filter(Boolean).join(' · ')}
-                    </span>
-                  </span>
-                  {CHEV}
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </div>
-      )
-    },
-
     release_watch: () =>
       comingUp.length || recentlyReleased.length ? (
         <div className="chart-card hm-release-watch" data-card="release_watch" key="release_watch">
@@ -539,14 +357,24 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
           </div>
           {comingUp[0] ? (
             <div className="hm-release-group">
-              <div className="hm-release-label upcoming">Coming up</div>
-              {releaseRow(comingUp[0], 'upcoming')}
+              <div className="hm-release-label-row">
+                <div className="hm-release-label upcoming">Coming up</div>
+                <span>Next {comingUp.length}</span>
+              </div>
+              <div className={`hm-release-items${comingUp.length === 1 ? ' single' : ''}`}>
+                {comingUp.map((w) => releaseRow(w, 'upcoming'))}
+              </div>
             </div>
           ) : null}
           {recentlyReleased[0] ? (
             <div className="hm-release-group">
-              <div className="hm-release-label out">Out now</div>
-              {releaseRow(recentlyReleased[0], 'out')}
+              <div className="hm-release-label-row">
+                <div className="hm-release-label out">Out now</div>
+                <span>Newest {recentlyReleased.length}</span>
+              </div>
+              <div className={`hm-release-items${recentlyReleased.length === 1 ? ' single' : ''}`}>
+                {recentlyReleased.map((w) => releaseRow(w, 'out'))}
+              </div>
             </div>
           ) : null}
         </div>
@@ -598,7 +426,7 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
         <div className="chart-card">
           <div className="chart-empty">
             {visible.length
-              ? 'Nothing to show yet. These cards fill in once a sync has some play, a wishlist date or a Game Pass exit to report.'
+              ? 'Nothing to show yet. These cards fill in once a sync has some play or a wishlist date to report.'
               : 'Every card is switched off. Open Customize cards to bring some back.'}
           </div>
         </div>
@@ -620,12 +448,6 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
           wishlist variant of the sheet - the same one the Wishlist page opens,
           with the same heart and the same remove. */}
       {wishOpen ? <GameSheet variant="wishlist" game={wishOpen} onClose={() => setWishOpen(null)} /> : null}
-      {/* A Game Pass row you do not own is an IGDB game, so it opens the sheet
-          Discover and News open, with the same wishlist heart. No Ask AI and no
-          More like this: both are Discover callbacks that navigate WITHIN
-          Discover, and Home has no route there, so the props are left off and
-          GameSheet hides the buttons. */}
-      {gpOpen ? <DiscoverDetail game={gpOpen} onClose={() => setGpOpen(null)} /> : null}
     </div>
   )
 }

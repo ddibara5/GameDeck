@@ -235,29 +235,29 @@ cached window; no database migration or new production dependency is required.
 
 ## Home snapshot and release watch
 
-Home now defaults to the order **Recent play**, **Now playing**, **Release watch**,
-then **Leaving Game Pass**. Recent play remains the compact doorway into Insights;
-Now playing remains the current-game continuation card.
+Home now defaults to **Recent play**, **Now playing**, then **Release watch**.
+Recent play remains the compact doorway into Insights; Now playing remains the
+current-game continuation card.
 
 The former Coming up and Recently released cards are one **Release watch** card.
-It shows the next confirmed wishlist arrival and the newest unowned wishlist
-release, then opens one release timeline with **Upcoming**, **Out now**, and
-**All saved** views. Those views keep the existing shared wishlist cache, sort and
-density controls, swipe/remove/undo behavior, and wishlist game sheet. Home keeps
-the same 60-day windows and opens individual rows directly in that sheet.
+It shows the next two confirmed wishlist arrivals and the newest two unowned
+wishlist releases in two-column cover-and-copy groups, then opens one release
+timeline with **Upcoming**, **Out now**, and **All saved** views. Those views keep
+the existing shared wishlist cache, sort and density controls,
+swipe/remove/undo behavior, and wishlist game sheet. Home keeps the same 60-day
+windows and opens individual rows directly in that sheet. A precise release
+dated today belongs to **Out now** from the start of the user's local calendar
+day; only future days belong to **Coming up**.
 
-Leaving Game Pass remains separate because it has a different source and urgency,
-and remains compact at rest. Its strongest owned-first candidate anchors the row;
-when more titles are leaving, a `+N` indicator expands the existing four-item
-relevance pool in place. A healthy catalog with no departures renders nothing.
-An empty or more-than-36-hour-old catalog renders the quiet **Game Pass data
-unavailable** status instead, so a failed feed no longer looks like a true empty
-window. Customize cards explains those conditional rendering rules.
+The Game Pass card, its Home catalog read, and its Customize cards entry were
+removed from Home. Game Pass remains available in Discover and Shuffle; its
+catalog, sync, database recovery, and non-Home behavior are unchanged.
 
 The `gamedeck_home_cards_v1` storage key remains in place. A stock legacy layout
 migrates to the new default order; a customized layout keeps its relative order
-and merges the two retired release-card preferences into Release watch. No saved
-Home layout is reset wholesale.
+and merges the two retired release-card preferences into Release watch. The
+retired `leaving_gp` key is stripped during reconciliation without resetting the
+rest of a saved Home layout.
 
 ## Implementation history
 

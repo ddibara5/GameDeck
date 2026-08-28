@@ -48,8 +48,26 @@ export function effTs(rel) {
   return windowEnd(rel)
 }
 
-export function isOut(rel) {
-  return rel.k !== 'tba' && rel.ts != null && windowEnd(rel) < Date.now()
+// Release dates are calendar dates, not launch-time instants. Keep the stored
+// UTC day intact when turning one into the user's local calendar day; otherwise
+// UTC midnight makes a title appear released the prior evening west of UTC.
+export function releaseCalendarDay(rel) {
+  const ts = windowEnd(rel)
+  if (!Number.isFinite(ts)) return null
+  const utc = new Date(ts)
+  return new Date(utc.getUTCFullYear(), utc.getUTCMonth(), utc.getUTCDate())
+}
+
+// Positive is upcoming, zero is today, negative is already out. `now` is an
+// argument so every consumer and test can make the same calendar-day decision.
+export function releaseDaysFromToday(rel, now = new Date()) {
+  const day = releaseCalendarDay(rel)
+  return day ? daysBetween(day, startOfDay(now)) : null
+}
+
+export function isOut(rel, now = new Date()) {
+  const days = releaseDaysFromToday(rel, now)
+  return days != null && days <= 0
 }
 
 export function byTitle(a, b) {

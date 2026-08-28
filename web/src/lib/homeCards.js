@@ -21,8 +21,7 @@ const EVENT = 'gd-home-cards-change'
 export const CARD_CATALOG = [
   { key: 'week', form: 'tile', label: 'Recent play', sub: 'This week and change versus the prior week' },
   { key: 'now_playing', form: 'full', label: 'Now playing', sub: 'The game currently in progress' },
-  { key: 'release_watch', form: 'full', label: 'Release watch', sub: 'The next arrival and latest release from your wishlist' },
-  { key: 'leaving_gp', form: 'full', label: 'Game Pass', sub: 'Appears when games are leaving. Shows a status if the feed is unavailable.' },
+  { key: 'release_watch', form: 'full', label: 'Release watch', sub: 'The next two arrivals and newest two releases from your wishlist' },
 ]
 
 export const CARD_BY_KEY = CARD_CATALOG.reduce((m, c) => ((m[c.key] = c), m), {})
@@ -34,6 +33,17 @@ const DEFAULT_ENABLED = CARD_CATALOG.reduce((m, c) => ((m[c.key] = true), m), {}
 
 const LEGACY_RELEASE_KEYS = ['coming_up', 'recently_released']
 const LEGACY_DEFAULT_ORDER = ['now_playing', 'week', 'leaving_gp', ...LEGACY_RELEASE_KEYS]
+const RETIRED_CARD_KEYS = new Set(['leaving_gp'])
+
+function stripRetiredCards(config) {
+  const enabled = { ...(config.enabled || {}) }
+  for (const key of RETIRED_CARD_KEYS) delete enabled[key]
+  return {
+    ...config,
+    order: config.order.filter((key) => !RETIRED_CARD_KEYS.has(key)),
+    enabled,
+  }
+}
 
 // Merge the two retired release cards without erasing a customized layout. A
 // stock legacy layout receives the new snapshot-first order; a customized one
@@ -42,7 +52,7 @@ const LEGACY_DEFAULT_ORDER = ['now_playing', 'week', 'leaving_gp', ...LEGACY_REL
 export function migrateHomeCards(stored) {
   if (!stored || !Array.isArray(stored.order)) return stored
   const hasLegacy = LEGACY_RELEASE_KEYS.some((key) => stored.order.includes(key))
-  if (!hasLegacy || stored.order.includes('release_watch')) return stored
+  if (!hasLegacy || stored.order.includes('release_watch')) return stripRetiredCards(stored)
 
   const stockOrder = stored.order.length === LEGACY_DEFAULT_ORDER.length
     && stored.order.every((key, index) => key === LEGACY_DEFAULT_ORDER[index])
@@ -55,7 +65,7 @@ export function migrateHomeCards(stored) {
   const enabled = { ...(stored.enabled || {}) }
   enabled.release_watch = LEGACY_RELEASE_KEYS.some((key) => Boolean(enabled[key]))
   for (const key of LEGACY_RELEASE_KEYS) delete enabled[key]
-  return { ...stored, order, enabled }
+  return stripRetiredCards({ ...stored, order, enabled })
 }
 
 function load() {

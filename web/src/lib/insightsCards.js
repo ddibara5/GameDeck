@@ -13,9 +13,9 @@ const EVENT = 'gd-insights-cards-change'
 // rolling period, where it went, what changed, and which milestones happened.
 //
 // Five keys left on 20 Aug 2026 (week_totals, now_playing, pace, coming_up,
-// leaving_gp) for the Home tab's own catalog in homeCards.js. They are MOVED,
-// not copied. A saved layout that still names them drops them silently on the
-// next read, which is what reconcile-on-read is for.
+// leaving_gp). The current continuation and release views moved to Home; Pace
+// and the Home Game Pass card were later retired. A saved Insights layout that
+// still names the old keys drops them silently on the next read.
 export const CARD_CATALOG = [
   { key: 'week_chart', group: 'recent', label: 'Play overview', sub: '7- or 30-day total, chart and comparison' },
   { key: 'week_games', group: 'recent', label: 'Where your time went', sub: 'Share, progress and achievements by game' },

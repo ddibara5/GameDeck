@@ -383,61 +383,6 @@
 .np-summary b { color: var(--text); font-weight: var(--w-bold); }
 .np-summary i { width: 1px; height: 13px; background: var(--line); }
 
-/* Coming up / Leaving Game Pass share a row */
-.up-row {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  width: 100%;
-  padding: 9px 0;
-  border-bottom: 1px solid var(--line);
-  text-align: left;
-}
-.up-row:last-child { border-bottom: none; }
-.up-row.as-btn {
-  border-left: none;
-  border-right: none;
-  border-top: none;
-  background: none;
-  color: inherit;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.up-row.as-btn:active { opacity: 0.72; }
-.up-when { flex: none; width: 52px; text-align: center; }
-.up-n { display: block; font-size: var(--t-body); font-weight: var(--w-bold); line-height: 1; }
-.up-u {
-  display: block;
-  font-size: var(--t-cap2);
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-top: 3px;
-}
-.up-row.soon .up-n { color: var(--amber); }
-.up-t {
-  flex: 1;
-  min-width: 0;
-  font-size: var(--t-sub);
-  font-weight: var(--w-semi);
-}
-.up-d { display: block; font-size: var(--t-cap); color: var(--muted); margin-top: 3px; font-weight: var(--w-med); }
-.gp-badge {
-  flex: none;
-  width: 34px;
-  height: 34px;
-  border-radius: var(--r-xs);
-  background: var(--xbox);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--t-cap);
-  font-weight: var(--w-bold);
-  color: #fff;
-}
-.leaving { color: var(--amber); font-weight: var(--w-semi); }
-
-
 @media (max-width: 360px) {
   .ins-card-head > span,
   .ins-section-head > span { display: none; }

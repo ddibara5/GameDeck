@@ -179,36 +179,22 @@
 
 /* ------------------------------------------------------- release row art */
 
-/* Half of Now playing's 56x74, one radius step down, on the two release cards.
-   Cover measures its own slot before the first paint, so a 28px box asks the
-   CDN for 96px rather than the 224 the `sm` default would have taken.
+/* Release watch uses almost the same poster scale as Now playing, arranged as
+   two compact cover-and-copy cells so both time directions stay visible.
 
    `.cover.up-cov` rather than `.up-cov`, because .cover-sm is 52x52 at the same
    specificity and lives in index.css: the override would then depend on import
    order rather than on the selector, which is not a thing to leave to luck. */
 .cover.up-cov {
-  width: 28px;
-  height: 37px;
-  border-radius: var(--r-xs);
+  width: 50px;
+  height: 66px;
+  flex: none;
+  border-radius: var(--r-sm);
   font-size: var(--t-cap);
   letter-spacing: 0;
 }
 
-/* One line each, so every row is the same height and the card is SHORTER than
-   it was before the covers arrived. Three of the four Coming up rows were
-   already 54px and one was 72px, so the raggedness predates this change; the
-   cover just made it worth fixing. The full title is one tap away in the sheet
-   and the date underneath disambiguates two releases on the same day. */
-.up-tt,
-.up-d {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.up-tt { display: block; }
-
-/* One timeline card replaces two nearly identical release cards. The category
-   labels carry direction; each side keeps the existing row and sheet behavior. */
+/* One timeline card replaces two nearly identical release cards. */
 .hm-release-watch .hm-head {
   padding-bottom: 10px;
   border-bottom: 1px solid var(--line);
@@ -223,13 +209,25 @@
   letter-spacing: normal;
   text-transform: none;
 }
-.hm-release-group { padding-top: 11px; }
+.hm-release-group { padding-top: 13px; }
 .hm-release-group + .hm-release-group {
-  margin-top: 5px;
+  margin-top: 13px;
   border-top: 1px solid var(--line-soft);
 }
+.hm-release-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.hm-release-label-row > span {
+  color: var(--muted);
+  font-size: var(--t-cap2);
+  font-weight: var(--w-med);
+  text-transform: uppercase;
+}
 .hm-release-label {
-  margin-bottom: 1px;
   color: var(--muted);
   font-size: var(--t-cap2);
   font-weight: var(--w-bold);
@@ -238,123 +236,60 @@
 }
 .hm-release-label.upcoming { color: var(--accent); }
 .hm-release-label.out { color: color-mix(in srgb, var(--xbox) 58%, var(--text)); }
-.hm-release-group .up-row { border-bottom: none; }
-.hm-release-group .up-when { width: 58px; }
-
-/* Leaving Game Pass is an episodic exception, not a second feed. The shell is
-   compact at rest and grows only after a deliberate tap when more titles exist. */
-.hm-gp-shell {
-  margin: var(--space-3) var(--screen-gutter) 0;
-  overflow: hidden;
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius);
-  background: var(--surface);
+.hm-release-items {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
 }
-.hm-gp-shell .hm-gp-alert {
-  margin: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-}
-.hm-gp-alert {
+.hm-release-items.single { grid-template-columns: minmax(0, 1fr); }
+.hm-release-item {
   display: flex;
-  align-items: center;
-  gap: 11px;
-  width: 100%;
+  align-items: flex-start;
+  gap: 9px;
   min-width: 0;
-  min-height: 64px;
-  margin: var(--space-3) var(--screen-gutter) 0;
-  padding: 10px 13px;
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius);
-  background: var(--surface);
+  padding: 0;
+  border: 0;
+  background: none;
   color: inherit;
   text-align: left;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
-.hm-gp-alert:active { background: var(--surface-2); }
-.hm-gp-alert.unavailable {
-  border-color: color-mix(in srgb, var(--accent) 18%, var(--line-soft));
-  background: color-mix(in srgb, var(--surface) 92%, var(--accent));
-  cursor: default;
-}
-.hm-gp-alert.unavailable:active { background: color-mix(in srgb, var(--surface) 92%, var(--accent)); }
-.gp-status-mark {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  flex: none;
-  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
-  border-radius: 9px;
-  background: color-mix(in srgb, var(--accent) 11%, transparent);
-  color: var(--accent);
-  font-size: var(--t-foot);
-  font-weight: var(--w-bold);
-}
-.hm-gp-copy { flex: 1; min-width: 0; }
-.hm-gp-title,
-.hm-gp-row .hm-gp-sub {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.hm-gp-title { font-size: var(--t-foot); font-weight: var(--w-bold); }
-.hm-gp-sub { margin-top: 3px; color: var(--muted); font-size: var(--t-cap); }
-.hm-gp-alert > .hm-gp-copy .hm-gp-sub {
+.hm-release-item:active { opacity: 0.72; }
+.hm-release-copy { min-width: 0; padding-top: 2px; }
+.hm-release-title {
   display: -webkit-box;
   overflow: hidden;
-  max-height: 2.6em;
-  line-height: 1.3;
-  overflow-wrap: anywhere;
-  white-space: normal;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-.hm-gp-more .hm-chev { transition: transform var(--d-fast) var(--ease-out); }
-.hm-gp-more.down .hm-chev { transform: rotate(90deg); }
-.hm-gp-list { padding: 0 13px 7px 56px; }
-.hm-gp-row {
-  display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) 18px;
-  align-items: center;
-  gap: 9px;
-  width: 100%;
-  min-height: 50px;
-  padding: 7px 0;
-  border: 0;
-  border-top: 1px solid var(--line-soft);
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.hm-gp-row:active { opacity: 0.58; }
-.hm-gp-rank {
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 7px;
-  background: var(--surface-2);
-  color: var(--muted);
-  font-size: 7px;
-  font-weight: var(--w-bold);
-}
-.hm-gp-rank.owned {
-  background: color-mix(in srgb, var(--xbox) 18%, transparent);
-  color: color-mix(in srgb, var(--xbox) 62%, var(--text));
-}
-.hm-gp-row-title {
-  display: block;
-  overflow: hidden;
+  min-height: 2.4em;
   color: var(--text);
   font-size: var(--t-cap);
   font-weight: var(--w-bold);
+  line-height: 1.2;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.hm-release-date {
+  display: block;
+  overflow: hidden;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: var(--t-cap2);
+  font-weight: var(--w-med);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.hm-release-status {
+  display: block;
+  margin-top: 3px;
+  color: var(--accent);
+  font-size: var(--t-cap2);
+  font-weight: var(--w-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.hm-release-status b { font: inherit; }
+.hm-release-item.out .hm-release-status { color: color-mix(in srgb, var(--xbox) 62%, var(--text)); }
 
 /* --------------------------------------------------------- card headings */
 
