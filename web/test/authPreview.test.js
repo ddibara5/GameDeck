@@ -11,13 +11,14 @@ test('preview auth has public configuration and a bounded request path', async (
   assert.match(source, /fetch: authFetchWithTimeout/)
 })
 
-test('magic-link requests recover from failures and use the allow-listed origin', async () => {
+test('magic-link requests recover and route trusted GameDeck previews directly', async () => {
   const [gate, auth] = await Promise.all([
     readFile(new URL('../src/components/AuthGate.jsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/lib/appAuth.js', import.meta.url), 'utf8'),
   ])
 
   assert.match(gate, /try \{[\s\S]*sendSignInEmail\(\)[\s\S]*catch \(caught\)[\s\S]*finally \{[\s\S]*setBusy\(false\)/)
-  assert.match(auth, /SIGN_IN_REDIRECT_URL = 'https:\/\/gamedeck-kappa\.vercel\.app'/)
-  assert.match(auth, /emailRedirectTo: SIGN_IN_REDIRECT_URL/)
+  assert.match(gate, /It will return directly to this preview/)
+  assert.match(auth, /signInRedirectUrl/)
+  assert.match(auth, /emailRedirectTo: signInRedirectUrl\(\)/)
 })

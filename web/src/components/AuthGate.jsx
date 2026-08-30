@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react'
 import Brand from './Brand.jsx'
 import { OWNER_EMAIL } from '../lib/supabase.js'
 import { isEmailRateLimitError, sendSignInEmail, verifyCopiedSignInLink } from '../lib/appAuth.js'
+import { isDirectPreviewSignIn } from '../lib/authRedirect.js'
 import './rankings.css'
 
 export default function AuthGate() {
+  const directPreview = isDirectPreviewSignIn()
   const [step, setStep] = useState('request')
   const [busy, setBusy] = useState(false)
   const [signInLink, setSignInLink] = useState('')
@@ -40,9 +42,11 @@ export default function AuthGate() {
         : (error.message || 'Could not send the sign-in link. Check your connection and try again.'))
       return
     }
-    setStep('verify')
+    setStep(directPreview ? 'waiting' : 'verify')
     setCooldown(60)
-    setMessage(`Long-press the sign-in button in the email to copy its link. Do not open it in Safari.`)
+    setMessage(directPreview
+      ? 'Open the email and tap its sign-in button. It will return directly to this preview.'
+      : 'Long-press the sign-in button in the email to copy its link. Do not open it in Safari.')
   }
 
   const verifyLink = async (link) => {
@@ -104,6 +108,18 @@ export default function AuthGate() {
           <button type="button" className="auth-button" disabled={busy} onClick={requestLink}>
             {busy ? 'Sending…' : 'Email me a sign-in link'}
           </button>
+        ) : step === 'waiting' ? (
+          <div className="auth-form">
+            <button type="button" className="auth-button" disabled>
+              Check your email
+            </button>
+            <button type="button" className="auth-secondary auth-secondary-strong" onClick={() => setStep('verify')}>
+              Use a copied link instead
+            </button>
+            <button type="button" className="auth-secondary" disabled={busy || cooldown > 0} onClick={requestLink}>
+              {cooldown > 0 ? `Send another link in ${cooldown}s` : 'Send another link'}
+            </button>
+          </div>
         ) : (
           <form className="auth-form" onSubmit={submitLink}>
             <button type="button" className="auth-button" disabled={busy} onClick={pasteLink}>

@@ -1,12 +1,7 @@
 import { useEffect, useState } from 'react'
 import { OWNER_EMAIL, supabase } from './supabase.js'
 import { parseSupabaseEmailLink } from './authLink.js'
-
-// Magic links are copied back into the app and verified client-side, so their
-// redirect destination does not need to follow each ephemeral preview hostname.
-// Using the allow-listed production origin keeps email requests valid from every
-// Vercel preview without weakening the Supabase redirect allowlist.
-const SIGN_IN_REDIRECT_URL = 'https://gamedeck-kappa.vercel.app'
+import { signInRedirectUrl } from './authRedirect.js'
 
 export function isOwnerSession(session) {
   return session?.user?.email?.toLowerCase() === OWNER_EMAIL
@@ -39,7 +34,7 @@ export function sendSignInEmail() {
     email: OWNER_EMAIL,
     options: {
       shouldCreateUser: false,
-      emailRedirectTo: SIGN_IN_REDIRECT_URL,
+      emailRedirectTo: signInRedirectUrl(),
     },
   })
 }
