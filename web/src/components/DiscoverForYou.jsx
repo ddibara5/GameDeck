@@ -17,6 +17,17 @@ import { recordRecommendationDetailOpen, trackRecommendationFeed } from '../lib/
 const CANDIDATES_PER_LANE = 16
 const PICKS_PER_LANE = 8
 
+export function freshnessLabel(updatedAt, now = Date.now()) {
+  const elapsed = Math.max(0, now - Number(updatedAt || now))
+  const minutes = Math.floor(elapsed / 60000)
+  if (minutes < 1) return 'just now'
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  if (hours < 48) return 'yesterday'
+  return `${Math.floor(hours / 24)}d ago`
+}
+
 const PLATFORM_MATCHERS = {
   xbox: /xbox|xone|series/i,
   psn: /playstation|\bps[45]\b/i,
@@ -45,6 +56,14 @@ function rawLaneMap(result, keys) {
   return out
 }
 
+function refreshedLaneMap(result, keys) {
+  const out = {}
+  for (const key of keys) {
+    if (Array.isArray(result?.lanes?.[key])) out[key] = result.lanes[key]
+  }
+  return out
+}
+
 export default function DiscoverForYou({ onAsk, onTune }) {
   const prefs = useDiscoverPrefs()
   const platform = platformParam(prefs.platforms)
@@ -58,6 +77,12 @@ export default function DiscoverForYou({ onAsk, onTune }) {
   const [libTitles, setLibTitles] = useState(null)
   const [selected, setSelected] = useState(null)
   const [only, setOnly] = useState(null)
+  const [refreshing, setRefreshing] = useState(false)
+  const [refreshError, setRefreshError] = useState(false)
+  const [updatedAt, setUpdatedAt] = useState(Date.now)
+  const [clock, setClock] = useState(Date.now)
+  const [deprioritizeIds, setDeprioritizeIds] = useState(() => new Set())
+  const [feedBatch, setFeedBatch] = useState('initial')
 
   const { ids: wishIds } = useWishlist()
 
@@ -68,6 +93,18 @@ export default function DiscoverForYou({ onAsk, onTune }) {
       alive = false
     }
   }, [])
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setClock(Date.now()), 60000)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
+    setDeprioritizeIds(new Set())
+    setFeedBatch('initial')
+    setUpdatedAt(Date.now())
+    setRefreshError(false)
+  }, [platform])
 
   const isOwned = useMemo(() => {
     if (!libTitles) return () => false
@@ -146,11 +183,12 @@ export default function DiscoverForYou({ onAsk, onTune }) {
       out[lane.key] = rankCandidates(byLane[lane.key] || [], Date.now(), {
         wishlistIds: wishIds,
         gameFeedback,
+        deprioritizeIds,
       })
         .slice(0, PICKS_PER_LANE)
     }
     return out
-  }, [byLane, lanes, wishIds, gameFeedback])
+  }, [byLane, lanes, wishIds, gameFeedback, deprioritizeIds])
 
   useEffect(() => {
     if (only && !lanes.some((lane) => lane.key === only)) setOnly(null)
@@ -166,11 +204,42 @@ export default function DiscoverForYou({ onAsk, onTune }) {
     trackRecommendationFeed(feed.map((game) => ({
       ...game,
       recommendationReason: laneReason(game.lane),
-    })))
+    })), { batchId: feedBatch })
     // The signature is the stable recommendation identity. Tracking a new
     // object instance with the same rows would only repeat the same batch.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [feedSig])
+  }, [feedSig, feedBatch])
+
+  async function refreshPicks() {
+    if (refreshing || loading) return
+    const keys = [...new Set([NEW_LANE.key, ...(tasteLanes || []).map((lane) => lane.key)])]
+    const currentIds = new Set(
+      Object.values(rankedByLane)
+        .flat()
+        .map((game) => game?.id)
+        .filter(Boolean),
+    )
+    setRefreshing(true)
+    setRefreshError(false)
+    try {
+      const result = await fetchDiscoverLanes(keys, CANDIDATES_PER_LANE, { platform, force: true })
+      setByLane((current) => ({ ...current, ...refreshedLaneMap(result, keys) }))
+      setFailedKeys((result.failedKeys || []).filter((key) => keys.includes(key)))
+      setDeprioritizeIds(currentIds)
+      setNewState('ready')
+      setTasteState('ready')
+      const completedAt = Date.now()
+      setUpdatedAt(completedAt)
+      setClock(completedAt)
+      setFeedBatch(`refresh-${completedAt.toString(36)}`)
+    } catch {
+      // Keep the current feed intact. A manual refresh is never allowed to turn
+      // a good last-known set into an error screen.
+      setRefreshError(true)
+    } finally {
+      setRefreshing(false)
+    }
+  }
 
   const tastePending = tasteState === 'waiting' || tasteState === 'loading'
   const loading = feed.length === 0 && (newState === 'loading' || tastePending)
@@ -188,10 +257,19 @@ export default function DiscoverForYou({ onAsk, onTune }) {
     : ''
 
   return (
-    <div className="discover-foryou" aria-busy={loading}>
+    <div className="discover-foryou" aria-busy={loading || refreshing}>
       <div className="fy-scope-row">
-        <span>{platformLabel(prefs.platforms)} · Not in library</span>
-        <button type="button" onClick={onTune}>Tune</button>
+        <span>Updated {freshnessLabel(updatedAt, clock)} · {platformLabel(prefs.platforms)} · Not in library</span>
+        <div className="fy-scope-actions">
+          <button type="button" className="fy-refresh" onClick={refreshPicks} disabled={refreshing || loading}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M20 6v5h-5" />
+              <path d="M18.5 15a7 7 0 1 1-1.2-8.3L20 11" />
+            </svg>
+            {refreshing ? 'Refreshing…' : 'Refresh picks'}
+          </button>
+          <button type="button" className="fy-tune" onClick={onTune}>Tune</button>
+        </div>
       </div>
 
       <div className="fy-profile-note">
@@ -270,6 +348,10 @@ export default function DiscoverForYou({ onAsk, onTune }) {
 
       {(failedKeys.length || newState === 'error' || tasteState === 'error') && feed.length ? (
         <p className="fy-partial-note">Some recommendation tastes couldn't refresh.</p>
+      ) : null}
+
+      {refreshError && feed.length ? (
+        <p className="fy-partial-note">Couldn't refresh right now. Showing your previous picks.</p>
       ) : null}
 
       {selected ? (

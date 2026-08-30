@@ -128,6 +128,29 @@ test('wishlist intent promotes a relevant candidate inside its lane', () => {
   assert.equal(ranked[0].id, 2)
 })
 
+test('manual refresh promotes near-equal alternatives without hiding a clearly stronger pick', () => {
+  const released = Math.floor(Date.parse('2026-08-01T12:00:00Z') / 1000)
+  const nearTie = rankCandidates(
+    [
+      { id: 1, rating: 86, ratingCount: 200, released },
+      { id: 2, rating: 84, ratingCount: 200, released },
+    ],
+    NOW,
+    { deprioritizeIds: new Set([1]) },
+  )
+  assert.equal(nearTie[0].id, 2)
+
+  const clearWinner = rankCandidates(
+    [
+      { id: 3, rating: 98, ratingCount: 500, released },
+      { id: 4, rating: 60, ratingCount: 20, released },
+    ],
+    NOW,
+    { deprioritizeIds: new Set([3]) },
+  )
+  assert.equal(clearWinner[0].id, 3)
+})
+
 test('outcome learning waits for evidence and keeps lane influence bounded', () => {
   assert.equal(laneOutcomeMultiplier({
     exposure_count: 4,

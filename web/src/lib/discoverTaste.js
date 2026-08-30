@@ -160,9 +160,20 @@ function candidateScore(game, now, wishlistIds, gameFeedback) {
     + candidateOutcomeAdjustment(feedbackAt(gameFeedback, game?.id))
 }
 
-export function rankCandidates(games, now = Date.now(), { wishlistIds, gameFeedback } = {}) {
+export function rankCandidates(games, now = Date.now(), { wishlistIds, gameFeedback, deprioritizeIds } = {}) {
   return (games || [])
-    .map((game, index) => ({ game, index, score: candidateScore(game, now, wishlistIds, gameFeedback) }))
+    .map((game, index) => {
+      const shown = deprioritizeIds && (
+        deprioritizeIds.has(game?.id)
+        || deprioritizeIds.has(Number(game?.id))
+        || deprioritizeIds.has(String(game?.id))
+      )
+      // Manual refresh is a diversity nudge, not a quality reset. Four points is
+      // enough for a near-tie from the wider candidate pool to move ahead, while
+      // a materially stronger pick remains visible and may legitimately repeat.
+      const refreshPenalty = shown ? 0.04 : 0
+      return { game, index, score: candidateScore(game, now, wishlistIds, gameFeedback) - refreshPenalty }
+    })
     .sort((a, b) => b.score - a.score || a.index - b.index)
     .map(({ game }) => game)
 }

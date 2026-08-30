@@ -698,10 +698,18 @@ button.shelf-head:active {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: var(--space-2);
   padding: 2px var(--screen-gutter);
   color: var(--muted);
   font-size: var(--t-cap2);
+}
+
+.fy-scope-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
 }
 
 .fy-scope-row button {
@@ -714,6 +722,45 @@ button.shelf-head:active {
   font-size: var(--t-cap);
   font-weight: var(--w-semi);
   cursor: pointer;
+}
+
+.fy-scope-row .fy-refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 126px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in oklab, var(--accent) 52%, var(--line));
+  border-radius: var(--r-pill);
+  background: color-mix(in oklab, var(--accent) 8%, transparent);
+}
+
+.fy-refresh svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.fy-refresh:disabled {
+  opacity: 0.68;
+  cursor: default;
+}
+
+.fy-refresh:disabled svg {
+  animation: fy-refresh-spin 0.9s linear infinite;
+}
+
+@keyframes fy-refresh-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fy-refresh:disabled svg { animation: none; }
 }
 
 .fy-profile-note {
