@@ -26,7 +26,7 @@ import { useDialogA11y } from '../lib/useDialogA11y.js'
 // Group headings are printed as the list is walked, not by grouping it first,
 // because the order belongs to the user: drag a row somewhere else and its
 // heading follows it there. Same rule as the editor, so the two always agree.
-export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpenTab, onWarmTab, onOpenSettings, onShuffle, activeTab }) {
+export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpenTab, onWarmTab, onOpenSettings, onShuffle, onSearch, searchPinned = false, activeTab }) {
   const { items: wishItems } = useWishlist()
   const { games } = useLibraryGames()
   const nav = useNavConfig()
@@ -138,7 +138,13 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpen
 
         {/* Pinned actions stay visible regardless of drawer ordering or folds. */}
         <div className="menu-foot">
-          <div className="menu-foot-acts">
+          <div className={`menu-foot-acts${searchPinned ? ' has-search' : ''}`}>
+            {searchPinned ? (
+              <button type="button" className="menu-fb" onClick={() => go(onSearch)}>
+                {cloneElement(DEST_ICONS.search, { className: 'menu-fb-i' })}
+                Search
+              </button>
+            ) : null}
             <button type="button" className="menu-fb" onClick={() => go(onShuffle)}>
               {cloneElement(DEST_ICONS.shuffle, { className: 'menu-fb-i' })}
               Shuffle

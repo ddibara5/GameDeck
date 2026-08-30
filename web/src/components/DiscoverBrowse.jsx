@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import DiscoverCard from './DiscoverCard.jsx'
 import DiscoverDetail from './DiscoverDetail.jsx'
 import DiscoverRailList from './DiscoverRailList.jsx'
 import Cover from './Cover.jsx'
-import Skeleton from './Skeleton.jsx'
 import WishHeart from './WishHeart.jsx'
-import { fetchDiscover, fetchDiscoverHome, fetchGamesByIds, loadLibraryTitles, loadGamePass, normTitle } from '../lib/discover.js'
+import { fetchDiscoverHome, fetchGamesByIds, loadLibraryTitles, loadGamePass, normTitle } from '../lib/discover.js'
 import { releaseDayDelta, releaseTiming, timingParts, shelfMetaDate, releaseWindowEndTs } from '../lib/format.js'
 import TimingOverlay from './TimingOverlay.jsx'
 import { useWishlist } from '../lib/wishlist.js'
@@ -86,7 +84,6 @@ const RAILS = [
 ]
 
 const YEARS = ['all', 2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2016, 2014, 2011]
-const PAGE_SIZE = 30
 // Stable identity for "every platform", so the memo below does not recompute on
 // every render while the session override is on.
 const ALL_PLATFORMS = []
@@ -128,8 +125,6 @@ export default function DiscoverBrowse({
   onCustomize,
   openFiltersToken = 0,
   hideOwnedToken = 0,
-  query,
-  onQueryChange,
 }) {
   const [preset, setPreset] = useState(null)
   const [filters, setFilters] = useState(DEFAULT_FILTERS)
@@ -141,12 +136,6 @@ export default function DiscoverBrowse({
   }, [openFiltersToken])
 
   const [rails, setRails] = useState({}) // key -> games[]; a key is undefined until its batch resolves
-
-  const [results, setResults] = useState([])
-  const [page, setPage] = useState(0)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-  const [hasMore, setHasMore] = useState(false)
 
   const [selected, setSelected] = useState(null)
   const [openRail, setOpenRail] = useState(null)
@@ -167,8 +156,6 @@ export default function DiscoverBrowse({
   const hideOwned = wideOpen ? false : prefs.hideOwned
   const standing = !wideOpen && (prefs.hideOwned || prefs.platforms.length > 0)
 
-  const debounceRef = useRef(null)
-  const reqRef = useRef(0)
   const lastFilterSig = useRef(null)
 
   const filtersActive =
@@ -176,17 +163,15 @@ export default function DiscoverBrowse({
     filters.year !== 'all' ||
     filters.status !== 'all' ||
     filters.sort !== 'popularity'
-  // Typing a title is a request for ranked matches, so search still collapses the
-  // page into one flat list. Filters and the vibe preset are a different intent -
-  // "show me the same shelves, but only RPGs" - so they narrow every rail in
-  // place and the browsable structure survives. Rails that filter down to nothing
-  // hide themselves.
-  const searchMode = Boolean(query.trim())
+  const activeFilterCount =
+    (preset ? 1 : 0) +
+    (filters.genre !== 'all' ? 1 : 0) +
+    (filters.year !== 'all' ? 1 : 0) +
+    (filters.status !== 'all' ? 1 : 0) +
+    (filters.sort !== 'popularity' ? 1 : 0) +
+    (prefs.platforms.length ? 1 : 0) +
+    (prefs.hideOwned ? 1 : 0)
   const narrowed = Boolean(preset || filtersActive)
-
-  useEffect(() => {
-    if (searchMode) setPreset(null)
-  }, [searchMode, query])
 
   // Load the user's library titles once (for the "In library" badge).
   useEffect(() => {
@@ -306,10 +291,10 @@ export default function DiscoverBrowse({
   //
   // Only recorded once NOTHING is pending, and only for the unnarrowed home. A
   // half-loaded page would teach it that every slow row is empty, and a filtered
-  // or searched page empties rails on purpose, so either would poison the hint
+  // or filtered page empties rails on purpose, so either would poison the hint
   // and bring the layout jump back on the following load.
   const railsPending = enabledRailKeys.some((k) => rails[k] === undefined)
-  const settled = !wishLoading && gamePass !== null && !railsPending && !searchMode && !narrowed
+  const settled = !wishLoading && gamePass !== null && !railsPending && !narrowed
   const filledSig = settled
     ? rowsConfig.order
         .filter((key) => {
@@ -390,52 +375,7 @@ export default function DiscoverBrowse({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [railKeySig, railFilterSig])
 
-  // Flat result list, for text search only. Filters no longer trigger this - they
-  // narrow the rails instead.
-  useEffect(() => {
-    if (!searchMode) {
-      setResults([])
-      setPage(0)
-      setError(null)
-      return
-    }
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => runSearch(0, false), query ? 280 : 0)
-    return () => debounceRef.current && clearTimeout(debounceRef.current)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, preset, filters, searchMode, railFilterSig])
-
-  async function runSearch(nextPage, append) {
-    const reqId = ++reqRef.current
-    setLoading(true)
-    setError(null)
-    try {
-      const params = {
-        q: query.trim() || undefined,
-        preset: preset || undefined,
-        genre: filters.genre,
-        platform: platformParam(activePlatforms),
-        year: filters.year,
-        status: filters.status,
-        sort: filters.sort,
-        page: nextPage,
-        limit: PAGE_SIZE,
-      }
-      const games = await fetchDiscover(params)
-      if (reqId !== reqRef.current) return // a newer request superseded this one
-      setResults((prev) => (append ? [...prev, ...games] : games))
-      setPage(nextPage)
-      setHasMore(games.length >= PAGE_SIZE)
-    } catch (err) {
-      if (reqId !== reqRef.current) return
-      setError(err.message || 'Something went wrong')
-    } finally {
-      if (reqId === reqRef.current) setLoading(false)
-    }
-  }
-
   function resetAll() {
-    onQueryChange('')
     setPreset(null)
     setFilters(DEFAULT_FILTERS)
   }
@@ -457,15 +397,28 @@ export default function DiscoverBrowse({
     const slug = g.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
     setSelected(null)
     setPreset(null)
-    onQueryChange('')
     setFilters({ ...DEFAULT_FILTERS, genre: slug || 'all', sort: 'rating' })
   }
 
   const hideFromLibrary = (list) => (hideOwned && list ? list.filter((g) => !isOwned(g.name)) : list || [])
-  const visibleResults = hideFromLibrary(results)
 
   return (
     <div className="discover-browse">
+      <div className="browse-local-toolbar">
+        <span>Explore the complete catalog</span>
+        <button
+          type="button"
+          className={`filter-btn${activeFilterCount ? ' active' : ''}`}
+          onClick={() => setShowFilters(true)}
+          aria-label={activeFilterCount ? `Filters, ${activeFilterCount} active` : 'Filters'}
+        >
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+            <path d="M4 6h16M7 12h10M10 18h4" />
+          </svg>
+          <span>Filters</span>
+          {activeFilterCount ? <span className="filter-count">{activeFilterCount}</span> : null}
+        </button>
+      </div>
       {standing || wideOpen ? (
         <div className="showing-strip">
           <span className="showing-summary">
@@ -484,7 +437,7 @@ export default function DiscoverBrowse({
         </div>
       ) : null}
 
-      {!searchMode && narrowed ? (
+      {narrowed ? (
         <div className="results-head">
           <span className="results-count">Filtering every row</span>
           <button type="button" className="results-clear" onClick={resetAll}>
@@ -493,58 +446,7 @@ export default function DiscoverBrowse({
         </div>
       ) : null}
 
-      {searchMode ? (
-        <>
-          <div className="results-head">
-            <span className="results-count">
-              {loading && results.length === 0 ? 'Searching…' : `${visibleResults.length}${hasMore ? '+' : ''} games`}
-            </span>
-            <button type="button" className="results-clear" onClick={resetAll}>
-              Clear
-            </button>
-          </div>
-
-          {error ? (
-            <div className="empty-state">
-              <div className="empty-state-title">Couldn't load games</div>
-              <div>{error}</div>
-            </div>
-          ) : loading && results.length === 0 ? (
-            <Skeleton count={6} />
-          ) : visibleResults.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-state-title">No games found</div>
-              <div>
-                {hideOwned && results.length > 0
-                  ? 'Every match is already in your library. Turn off "In-library hidden" to see them.'
-                  : 'Try a different search, preset, or filter.'}
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="game-list">
-                {visibleResults.map((g) => (
-                  <DiscoverCard key={g.id} game={g} inLibrary={isOwned(g.name)} wishActive={wishIds.has(g.id)} onSelect={setSelected} />
-                ))}
-              </div>
-              {hasMore ? (
-                <div className="show-more-row">
-                  <button
-                    type="button"
-                    className="show-more-btn"
-                    onClick={() => runSearch(page + 1, true)}
-                    disabled={loading}
-                  >
-                    {loading ? 'Loading…' : 'Show more'}
-                  </button>
-                </div>
-              ) : null}
-            </>
-          )}
-        </>
-      ) : (
-        <>
-          {rowsConfig.order.map((key) => {
+      {rowsConfig.order.map((key) => {
             if (!rowsConfig.enabled[key]) return null
             const row = ROW_BY_KEY[key]
             if (!row) return null
@@ -621,18 +523,16 @@ export default function DiscoverBrowse({
                 </div>
               </section>
             )
-          })}
-          <button type="button" className="customize-btn" onClick={() => onCustomize && onCustomize()}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="4" y1="7" x2="20" y2="7" />
-              <circle cx="9" cy="7" r="2.3" fill="var(--surface)" />
-              <line x1="4" y1="17" x2="20" y2="17" />
-              <circle cx="15" cy="17" r="2.3" fill="var(--surface)" />
-            </svg>
-            Customize rows
-          </button>
-        </>
-      )}
+      })}
+      <button type="button" className="customize-btn" onClick={() => onCustomize && onCustomize()}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="4" y1="7" x2="20" y2="7" />
+          <circle cx="9" cy="7" r="2.3" fill="var(--surface)" />
+          <line x1="4" y1="17" x2="20" y2="17" />
+          <circle cx="15" cy="17" r="2.3" fill="var(--surface)" />
+        </svg>
+        Customize rows
+      </button>
 
       {showFilters ? (
         <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && setShowFilters(false)}>

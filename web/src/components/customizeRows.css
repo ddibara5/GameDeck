@@ -226,9 +226,14 @@
   margin-bottom: 10px;
 }
 
-.cz-prev-bar .tabbar {
+.cz-prev-bar .app-dock {
   position: static;
   transform: none;
   width: 100%;
+  grid-template-columns: minmax(0, 1fr) 62px;
+  pointer-events: none;
+}
+
+.cz-prev-bar .tabbar {
   box-shadow: none;
 }

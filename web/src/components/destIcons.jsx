@@ -14,6 +14,7 @@ function icon(children) {
 
 export const DEST_ICONS = {
   ...TAB_ICONS,
+  search: icon(<><circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 5 5" /></>),
   wishlist: icon(<path d="M12 21s-7-4.5-9.5-8.5A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6.5C19 16.5 12 21 12 21z" />),
   backlog: icon(
     <>
