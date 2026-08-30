@@ -2,6 +2,27 @@
 
 For GameDeck, after I approve implementation or say “proceed,” automatically commit and push the tested change to `main` through the n8n workflow. Do not request separate push approval.
 
+## Agent Skills policy
+
+GameDeck keeps repository-local Codex skills under `.agents/skills/`. Treat these as part of the normal project workflow, not optional reference material. Codex/cloud work agents working anywhere in this repository should inspect the available skill names/descriptions at task start and invoke all clearly applicable skills automatically.
+
+Current skills:
+
+- `web-design-guidelines` — use for UI/UX reviews, visual consistency, accessibility, responsive-layout audits, and interface polish.
+- `vercel-react-best-practices` — use when writing, reviewing, refactoring, or performance-tuning meaningful React code. GameDeck is React 18 + Vite, so ignore Next.js- or React-19-only guidance unless the project explicitly adopts it.
+- `frontend-testing-debugging` — use for rendered UI changes, interaction bugs, regressions, responsive/mobile QA, console/runtime issues, and post-change visual verification.
+- `security-best-practices` — apply secure-by-default practices during normal implementation; invoke the full audit workflow when explicitly asked for a security review. Passively surface only high-confidence critical/high-impact issues during unrelated work.
+
+For meaningful frontend implementation work, the expected combination is normally:
+
+1. Follow GameDeck project context and established UI/architecture guidance first.
+2. Apply `vercel-react-best-practices` while implementing React changes.
+3. Apply `web-design-guidelines` when the work affects UI/UX or visual consistency.
+4. Apply `frontend-testing-debugging` before declaring rendered frontend work complete.
+5. Apply `security-best-practices` whenever the change crosses auth, API, Supabase, secrets, untrusted-content, navigation, or other security-sensitive boundaries.
+
+Skills supplement project files; they do not override GameDeck-specific architecture, approved design decisions, deployment conventions, or standing authorization. If skill guidance conflicts with a documented GameDeck decision, preserve the GameDeck decision and note the conflict only when material.
+
 ---
 
 > **SUPERSEDED - historical reference only.**
