@@ -41,8 +41,8 @@ test('a direct reaction previews insertion position, tier, and closest neighbor'
 test('Rankings offers direct library search and makes comparison optional', () => {
   const rankings = readFileSync(new URL('../src/components/RankingsTab.jsx', import.meta.url), 'utf8')
   const sheet = readFileSync(new URL('../src/components/RankGameSheet.jsx', import.meta.url), 'utf8')
-  assert.match(rankings, /Rank a game/)
   assert.match(rankings, /Search your library to rank/)
+  assert.doesNotMatch(rankings, /rank-primary-action/)
   assert.doesNotMatch(rankings, /unseeded\[0\]/)
   assert.match(sheet, /Save to rankings/)
   assert.match(sheet, /Maybe later/)

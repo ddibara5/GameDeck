@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Cover from './Cover.jsx'
 import RankGameSheet from './RankGameSheet.jsx'
 import { libraryCover } from '../lib/format.js'
@@ -56,7 +56,6 @@ export default function RankingsTab() {
   const [rankQuery, setRankQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
   const [rankTarget, setRankTarget] = useState(null)
-  const searchRef = useRef(null)
 
   const refresh = async (force = false) => {
     setError('')
@@ -106,12 +105,6 @@ export default function RankingsTab() {
   }, [searchOpen, rankQuery, games, eligible, rankedIds])
   const pair = useMemo(() => chooseComparisonPair(explicitRanks, state.comparisons), [explicitRanks, state.comparisons])
 
-  const focusRankSearch = () => {
-    setSection('ranking')
-    setSearchOpen(true)
-    window.setTimeout(() => searchRef.current?.focus(), 0)
-  }
-
   const compare = async (result) => {
     if (!pair || busy) return
     setBusy(true)
@@ -135,14 +128,9 @@ export default function RankingsTab() {
     <section className="rank-page" aria-label="Rankings">
       <header className="rank-head">
         <p className="page-subtitle">Your taste, ordered by your choices</p>
-        <button type="button" className="rank-primary-action" onClick={focusRankSearch}>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8L12 3Z" /></svg>
-          Rank a game
-        </button>
         <div className="rank-search-wrap">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6" /><path d="m16 16 4 4" /></svg>
           <input
-            ref={searchRef}
             type="search"
             value={rankQuery}
             placeholder="Search your library to rank"
@@ -209,7 +197,7 @@ export default function RankingsTab() {
                 <RankGame key={rank.master_id} game={gameById.get(String(rank.master_id))} rank={rank} position={index + 1} tier={tierForPosition(index, explicitRanks.length)} />
               ))}
             </ol>
-          ) : <p className="rank-empty">Rank a game above to start your list.</p>}
+          ) : <p className="rank-empty">Search above to rank a game and start your list.</p>}
           {explicitRanks.length >= 2 ? (
             <button type="button" className="rank-precision-card" onClick={() => setSection('compare')}>
               <span><strong>Want more precision?</strong><small>Compare close neighbors when you feel like it.</small></span>
