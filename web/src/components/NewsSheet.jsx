@@ -57,7 +57,7 @@ export default function NewsSheet({ item, rel, onClose, onOpenGame }) {
   const lead = safeSources[0] || null
   const fav = lead ? faviconFor(lead.url) : ''
   const when = relTime(item.publishedAt)
-  const outlets = outletCount(item.sources)
+  const outlets = outletCount(safeSources)
 
   const onBackdrop = (e) => {
     if (e.target === e.currentTarget) requestClose()
@@ -147,7 +147,7 @@ export default function NewsSheet({ item, rel, onClose, onOpenGame }) {
                   rel="noopener noreferrer"
                   onClick={() => markRead(item.primaryUrl)}
                 >
-                  {sources.length === 1 ? 'Read article →' : `${s.name} →`}
+                  {safeSources.length === 1 ? 'Read article →' : `${s.name} →`}
                 </a>
               </span>
             ))}
