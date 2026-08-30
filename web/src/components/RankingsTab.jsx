@@ -131,7 +131,6 @@ export default function RankingsTab() {
   return (
     <section className="rank-page" aria-label="Rankings">
       <header className="rank-head">
-        <p className="page-subtitle">Your taste, ordered by your choices</p>
         <div className="rank-search-wrap">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6" /><path d="m16 16 4 4" /></svg>
           <input

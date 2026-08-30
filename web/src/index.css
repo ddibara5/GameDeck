@@ -1671,10 +1671,9 @@ textarea {
    title at every scroll position and the 34px copy would only be saying the same
    word twice, 44px further down.
 
-   The subtitle stays because it is the one part the header cannot carry. On Home
-   it is the date and on Library the collection summary, both facts; the four
-   descriptive ones are taglines and could go, but that is an editing decision
-   rather than a layout one. */
+   Home's date and Library's collection summary remain because they are changing
+   facts. Generic descriptive taglines were removed from the other tab tops so
+   their first visible row is useful content or a page control. */
 .page-header {
   padding: 0 var(--screen-gutter) var(--space-3);
 }

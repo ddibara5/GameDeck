@@ -4,10 +4,6 @@
   padding: 0 var(--screen-gutter) var(--space-5);
 }
 
-.rank-head > .page-subtitle {
-  margin-bottom: var(--space-3);
-}
-
 .rank-precision-card svg {
   width: 18px;
   height: 18px;

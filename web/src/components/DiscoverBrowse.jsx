@@ -405,7 +405,6 @@ export default function DiscoverBrowse({
   return (
     <div className="discover-browse">
       <div className="browse-local-toolbar">
-        <span>Explore the complete catalog</span>
         <button
           type="button"
           className={`filter-btn${activeFilterCount ? ' active' : ''}`}

@@ -235,14 +235,6 @@ export default function DiscoverForYou({ onAsk, onOpenAsk }) {
   const tastePending = tasteState === 'waiting' || tasteState === 'loading'
   const loading = feed.length === 0 && (newState === 'loading' || tastePending)
   const unavailable = feed.length === 0 && !tastePending && (newState === 'error' || tasteState === 'error')
-  const evidence = tasteProfile?.evidence
-  const profileNote = evidence?.recentGameCount && evidence?.rankedGameCount
-    ? 'Based on recent play + rankings'
-    : evidence?.recentGameCount
-      ? 'Based on recent play'
-      : evidence?.rankedGameCount
-        ? 'Based on rankings'
-        : 'Personalizing as you play'
   const pullRefresh = usePullRefresh({
     onRefresh: refreshPicks,
     disabled: loading || refreshing,
@@ -267,19 +259,6 @@ export default function DiscoverForYou({ onAsk, onOpenAsk }) {
           <span className="fy-refresh-spinner" aria-hidden="true" />
           <span ref={pullRefresh.labelRef} />
         </span>
-      </div>
-
-      <div className="fy-heading">
-        <h2>Your picks</h2>
-      </div>
-
-      <div className="fy-profile-bar">
-        <div className="fy-profile-note">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 2.5c.6 4.2 2.8 6.4 7 7-4.2.6-6.4 2.8-7 7-.6-4.2-2.8-6.4-7-7 4.2-.6 6.4-2.8 7-7Z" />
-          </svg>
-          <span>{profileNote}</span>
-        </div>
       </div>
 
       {lanes.length ? (

@@ -111,10 +111,6 @@ export default function ActivityTab() {
 
   return (
     <div>
-      <div className="page-header">
-        <p className="page-subtitle">Recent play sessions and achievement unlocks</p>
-      </div>
-
       {loading ? (
         <Skeleton count={6} />
       ) : error ? (
