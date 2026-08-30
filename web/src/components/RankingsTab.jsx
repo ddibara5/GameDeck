@@ -18,7 +18,6 @@ import './rankings.css'
 const SECTIONS = [
   { key: 'ranking', label: 'Ranking' },
   { key: 'compare', label: 'Compare' },
-  { key: 'how', label: 'How it works' },
 ]
 
 function RankGame({ game, rank, position, tier, onSelect }) {
@@ -239,15 +238,6 @@ export default function RankingsTab() {
           ) : (
             <p className="rank-empty">Add reactions to at least two eligible games, or come back after a skipped pair leaves rotation.</p>
           )}
-        </div>
-      ) : null}
-
-      {section === 'how' ? (
-        <div className="rank-how">
-          <article><b>1</b><h3>React</h3><p>Loved, liked, mixed, or not for me gives each game a sensible starting point.</p></article>
-          <article><b>2</b><h3>Compare</h3><p>Pick between close neighbors. Early choices move more; settled games move less.</p></article>
-          <article><b>3</b><h3>Order</h3><p>S, A, B, and C tiers are percentiles of only the games you explicitly ranked.</p></article>
-          <p className="rank-note">Rankings reflect your explicit opinion. Discover uses a separate recommendation score for what you may want next.</p>
         </div>
       ) : null}
 

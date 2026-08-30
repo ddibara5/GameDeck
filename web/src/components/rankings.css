@@ -374,43 +374,6 @@
 }
 
 .rank-compare small { display: block; color: var(--muted); }
-
-.rank-how {
-  display: grid;
-  gap: 0;
-  overflow: hidden;
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius);
-  background: var(--surface);
-}
-
-.rank-how article {
-  display: grid;
-  grid-template-columns: 38px 1fr;
-  column-gap: var(--space-3);
-  padding: var(--space-4);
-  background: transparent;
-}
-
-.rank-how article + article { border-top: 1px solid var(--line-soft); }
-
-.rank-how article > b {
-  grid-row: 1 / 3;
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: var(--r-sm);
-  background: var(--surface-2);
-  color: var(--accent);
-}
-
-.rank-how h3,
-.rank-how p { margin: 0; }
-.rank-how h3 { font-size: var(--t-sub); font-weight: var(--w-semi); }
-.rank-how p { margin-top: var(--space-1); color: var(--muted); font-size: var(--t-foot); }
-
-.rank-note { padding: var(--space-3); color: var(--muted); font-size: var(--t-foot); }
 .rank-empty { padding: var(--space-6) var(--space-4); color: var(--muted); text-align: center; }
 .rank-error { color: var(--danger, #c45b5b); font-size: var(--t-foot); }
 
