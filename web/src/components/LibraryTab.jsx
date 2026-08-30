@@ -51,7 +51,6 @@ function librarySummary(games) {
 
 export default function LibraryTab() {
   const { games, loading, error } = useLibraryGames()
-  const [search, setSearch] = useState('')
   const [platformFilter, setPlatformFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [sortKey, setSortKey] = useState('last_played')
@@ -109,11 +108,6 @@ export default function LibraryTab() {
       list = list.filter((g) => hasVibe(g, vibe, kwMap))
     }
 
-    const query = search.trim().toLowerCase()
-    if (query) {
-      list = list.filter((g) => g.title?.toLowerCase().includes(query))
-    }
-
     const sorted = [...list]
     switch (sortKey) {
       case 'title':
@@ -142,12 +136,12 @@ export default function LibraryTab() {
     // kwMap is a dependency: the vibe filter reads it, and it arrives after the
     // first render. Without it here, picking a vibe before the keywords land
     // would filter against an empty map and never recompute.
-  }, [games, platformFilter, statusFilter, genre, vibe, search, sortKey, statusMap, kwMap])
+  }, [games, platformFilter, statusFilter, genre, vibe, sortKey, statusMap, kwMap])
 
   // Reset the visible window whenever the filter/search/sort changes.
   useEffect(() => {
     setVisibleCount(12)
-  }, [platformFilter, statusFilter, genre, vibe, search, sortKey])
+  }, [platformFilter, statusFilter, genre, vibe, sortKey])
 
   return (
     <div>
@@ -155,15 +149,8 @@ export default function LibraryTab() {
         <p className="page-subtitle">{librarySummary(games)}</p>
       </div>
       <div className="library-sticky">
-        <div className="library-searchbar">
-          <input
-            type="search"
-            className="search-input"
-            placeholder="Search your library"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            aria-label="Search games"
-          />
+        <div className="library-toolbar">
+          <span className="library-toolbar-note">Organize your games</span>
           <button
             type="button"
             className={`filter-btn${activeCount ? ' active' : ''}`}
@@ -173,6 +160,7 @@ export default function LibraryTab() {
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <path d="M4 6h16M7 12h10M10 18h4" />
             </svg>
+            <span>Filters</span>
             {activeCount ? <span className="filter-count">{activeCount}</span> : null}
           </button>
         </div>
@@ -188,7 +176,7 @@ export default function LibraryTab() {
       ) : visibleGames.length === 0 ? (
         <div className="empty-state">
           <div className="empty-state-title">No games found</div>
-          <div>Try a different search or filter.</div>
+          <div>Try a different filter.</div>
         </div>
       ) : (
         <>
