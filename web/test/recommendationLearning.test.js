@@ -25,11 +25,13 @@ test('For You records impressions and opens without blocking navigation', async 
 
 test('manual refresh keeps the prior feed and creates a distinct learning batch', async () => {
   const component = await readFile(new URL('../src/components/DiscoverForYou.jsx', import.meta.url), 'utf8')
+  const pullRefresh = await readFile(new URL('../src/lib/usePullRefresh.js', import.meta.url), 'utf8')
   const learning = await readFile(new URL('../src/lib/recommendationLearning.js', import.meta.url), 'utf8')
   const discover = await readFile(new URL('../src/lib/discover.js', import.meta.url), 'utf8')
 
   assert.match(component, /usePullRefresh/)
   assert.match(component, /Refreshing picks…/)
+  assert.match(pullRefresh, /addEventListener\('touchmove', onTouchMove, \{ passive: false \}\)/)
   assert.match(component, /force: true/)
   assert.match(component, /Showing your previous picks/)
   assert.match(component, /batchId: feedBatch/)

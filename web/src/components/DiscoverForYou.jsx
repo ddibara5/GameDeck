@@ -253,12 +253,9 @@ export default function DiscoverForYou({ onAsk, onOpenAsk }) {
 
   return (
     <div
+      ref={pullRefresh.hostRef}
       className={`discover-foryou ${pullRefresh.handlers.className}`}
       aria-busy={loading || refreshing}
-      onTouchStart={pullRefresh.handlers.onTouchStart}
-      onTouchMove={pullRefresh.handlers.onTouchMove}
-      onTouchEnd={pullRefresh.handlers.onTouchEnd}
-      onTouchCancel={pullRefresh.handlers.onTouchCancel}
     >
       <div
         ref={pullRefresh.gutterRef}

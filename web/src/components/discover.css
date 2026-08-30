@@ -868,6 +868,10 @@ button.shelf-head:active {
   padding-bottom: 8px;
 }
 
+.pull-refresh-host {
+  overscroll-behavior-y: contain;
+}
+
 .fy-refresh-gutter {
   height: 0;
   display: grid;

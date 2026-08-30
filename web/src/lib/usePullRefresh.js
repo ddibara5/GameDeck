@@ -21,6 +21,7 @@ export default function usePullRefresh({
   doneLabel = 'Updated',
   errorLabel = 'Couldn\'t refresh',
 }) {
+  const hostRef = useRef(null)
   const gutterRef = useRef(null)
   const labelRef = useRef(null)
 
@@ -151,17 +152,29 @@ export default function usePullRefresh({
     settle(0, '', false)
   }, [run, settle])
 
+  useEffect(() => {
+    const host = hostRef.current
+    if (!host) return undefined
+    host.addEventListener('touchstart', onTouchStart, { passive: true })
+    host.addEventListener('touchmove', onTouchMove, { passive: false })
+    host.addEventListener('touchend', onTouchEnd, { passive: true })
+    host.addEventListener('touchcancel', onTouchEnd, { passive: true })
+    return () => {
+      host.removeEventListener('touchstart', onTouchStart)
+      host.removeEventListener('touchmove', onTouchMove)
+      host.removeEventListener('touchend', onTouchEnd)
+      host.removeEventListener('touchcancel', onTouchEnd)
+    }
+  }, [onTouchEnd, onTouchMove, onTouchStart])
+
   return {
+    hostRef,
     gutterRef,
     labelRef,
     phase,
     busy: phase === 'working',
     refreshNow: run,
     handlers: {
-      onTouchStart,
-      onTouchMove,
-      onTouchEnd,
-      onTouchCancel: onTouchEnd,
       className: 'pull-refresh-host',
     },
   }
