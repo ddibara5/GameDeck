@@ -201,25 +201,27 @@ test('per-game learning gently rewards outcomes and suppresses repeated ignores'
   assert.equal(ranked[0].id, 2)
 })
 
-test('Discover presents two destination tabs and a separate Ask AI action', async () => {
+test('Discover keeps For You and Browse in a compact accessible selector', async () => {
   const source = await readFile(new URL('../src/components/DiscoverTab.jsx', import.meta.url), 'utf8')
   assert.equal((source.match(/role="tab"/g) || []).length, 2)
-  assert.match(source, /className="discover-ask-button"/)
-  assert.doesNotMatch(source, /role="tab"[^>]*>[\s\S]{0,100}Ask AI/)
+  assert.match(source, /role="tablist" aria-label="Discover view"/)
+  assert.match(source, /aria-controls="discover-foryou-panel"/)
+  assert.match(source, /aria-controls="discover-browse-panel"/)
+  assert.doesNotMatch(source, /className="discover-browse-page"/)
+  assert.doesNotMatch(source, /className="discover-browse-back"/)
 })
 
-test('Discover puts persistent search and Browse before For You', async () => {
-  const source = await readFile(new URL('../src/components/DiscoverTab.jsx', import.meta.url), 'utf8')
-  const browseTab = source.indexOf('id="discover-tab-browse"')
-  const forYouTab = source.indexOf('id="discover-tab-foryou"')
-
-  assert.match(source, /className="discover-global-searchbar"/)
-  assert.match(source, /className="discover-search-shell"/)
-  assert.match(source, /className="discover-search-actions"/)
-  assert.match(source, /placeholder="Search all games"/)
-  assert.doesNotMatch(source, /Browse, search, and tune your recommendations/)
-  assert.match(source, /if \(value\.trim\(\) && mode !== 'browse'\) selectMode\('browse'\)/)
-  assert.match(source, /sessionStorage\.getItem\(MODE_KEY\) === 'foryou' \? 'foryou' : 'browse'/)
-  assert.ok(browseTab > 0)
-  assert.ok(forYouTab > browseTab)
+test('Discover keeps title search global and Ask GameDeck contextual', async () => {
+  const [discover, browse, forYou] = await Promise.all([
+    readFile(new URL('../src/components/DiscoverTab.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/DiscoverBrowse.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/DiscoverForYou.jsx', import.meta.url), 'utf8'),
+  ])
+  assert.doesNotMatch(discover, /placeholder="Search all games"/)
+  assert.doesNotMatch(browse, /fetchDiscover\(|query\.trim\(\)|DiscoverCard/)
+  assert.doesNotMatch(forYou, /Browse catalog/)
+  assert.match(forYou, /Ask GameDeck about these picks/)
+  assert.match(forYou, /Refreshing picks…/)
+  assert.doesNotMatch(forYou, /className="fy-refresh"/)
+  assert.doesNotMatch(discover, /sessionStorage/)
 })

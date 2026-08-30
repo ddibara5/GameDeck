@@ -2,13 +2,16 @@ import { useEffect, useState } from 'react'
 import Brand from './Brand.jsx'
 import { OWNER_EMAIL } from '../lib/supabase.js'
 import { isEmailRateLimitError, sendSignInEmail, verifyCopiedSignInLink } from '../lib/appAuth.js'
-import './rankings.css'
+import { isDirectPreviewSignIn } from '../lib/authRedirect.js'
+import './auth.css'
 
 export default function AuthGate() {
+  const directPreview = isDirectPreviewSignIn()
   const [step, setStep] = useState('request')
   const [busy, setBusy] = useState(false)
   const [signInLink, setSignInLink] = useState('')
   const [cooldown, setCooldown] = useState(0)
+  const [rateLimited, setRateLimited] = useState(false)
   const [tone, setTone] = useState('status')
   const [message, setMessage] = useState('')
 
@@ -22,6 +25,7 @@ export default function AuthGate() {
 
   const requestLink = async () => {
     setBusy(true)
+    setRateLimited(false)
     setTone('status')
     setMessage('')
     let error
@@ -34,15 +38,20 @@ export default function AuthGate() {
       setBusy(false)
     }
     if (error) {
+      const limited = isEmailRateLimitError(error)
       setTone('error')
-      setMessage(isEmailRateLimitError(error)
-        ? 'Too many sign-in emails were requested. Use the latest unused link, or try again in about an hour.'
+      setRateLimited(limited)
+      if (limited) setStep(directPreview ? 'waiting' : 'verify')
+      setMessage(limited
+        ? 'Email limit reached. No new link was sent. Use the latest unused email, or try again in about an hour.'
         : (error.message || 'Could not send the sign-in link. Check your connection and try again.'))
       return
     }
-    setStep('verify')
+    setStep(directPreview ? 'waiting' : 'verify')
     setCooldown(60)
-    setMessage(`Long-press the sign-in button in the email to copy its link. Do not open it in Safari.`)
+    setMessage(directPreview
+      ? 'Open the email and tap its sign-in button. It will return directly to this preview.'
+      : 'Long-press the sign-in button in the email to copy its link. Do not open it in Safari.')
   }
 
   const verifyLink = async (link) => {
@@ -94,16 +103,29 @@ export default function AuthGate() {
     <main className="auth-page">
       <section className="auth-card" aria-labelledby="auth-title">
         <div className="auth-brand"><Brand /></div>
-        <p className="auth-kicker">Private game library</p>
-        <h1 id="auth-title">Sign in to GameDeck</h1>
+        <p className="auth-kicker">Private access</p>
+        <h1 id="auth-title">Sign in</h1>
         <p className="auth-copy">
-          Your play history, wishlist, and rankings are personal. A passwordless email link keeps them private without another password to manage.
+          GameDeck is private. We’ll email a one-time sign-in link to your authorized account.
         </p>
-        <div className="auth-email" aria-label="Authorized email">{OWNER_EMAIL}</div>
+        <p className="auth-target">Send to <strong>{OWNER_EMAIL}</strong></p>
+        {message ? <p className={`auth-message ${tone}`} role={tone === 'error' ? 'alert' : 'status'}>{message}</p> : null}
         {step === 'request' ? (
-          <button type="button" className="auth-button" disabled={busy} onClick={requestLink}>
-            {busy ? 'Sending…' : 'Email me a sign-in link'}
+          <button type="button" className="auth-button" disabled={busy || rateLimited} onClick={requestLink}>
+            {busy ? 'Sending link…' : 'Email me a sign-in link'}
           </button>
+        ) : step === 'waiting' ? (
+          <div className="auth-form">
+            <button type="button" className="auth-button" disabled>
+              {rateLimited ? 'Use your latest email' : 'Check your email'}
+            </button>
+            <button type="button" className="auth-secondary auth-secondary-strong" onClick={() => setStep('verify')}>
+              Use a copied link instead
+            </button>
+            <button type="button" className="auth-secondary" disabled={busy || rateLimited || cooldown > 0} onClick={requestLink}>
+              {rateLimited ? 'Try sending again later' : cooldown > 0 ? `Send another link in ${cooldown}s` : 'Send another link'}
+            </button>
+          </div>
         ) : (
           <form className="auth-form" onSubmit={submitLink}>
             <button type="button" className="auth-button" disabled={busy} onClick={pasteLink}>
@@ -125,12 +147,11 @@ export default function AuthGate() {
             <button type="submit" className="auth-secondary auth-secondary-strong" disabled={busy || !signInLink.trim()}>
               Sign in with pasted link
             </button>
-            <button type="button" className="auth-secondary" disabled={busy || cooldown > 0} onClick={requestLink}>
-              {cooldown > 0 ? `Send another link in ${cooldown}s` : 'Send another link'}
+            <button type="button" className="auth-secondary" disabled={busy || rateLimited || cooldown > 0} onClick={requestLink}>
+              {rateLimited ? 'Try sending again later' : cooldown > 0 ? `Send another link in ${cooldown}s` : 'Send another link'}
             </button>
           </form>
         )}
-        {message ? <p className={`auth-message ${tone}`} role={tone === 'error' ? 'alert' : 'status'}>{message}</p> : null}
       </section>
     </main>
   )

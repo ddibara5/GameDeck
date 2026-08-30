@@ -9,43 +9,32 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 // hears about the coarse phase (working / done), which changes at most twice
 // per gesture. Dragging causes zero re-renders.
 
-const THRESHOLD = 68
-const MAX = 90
+const THRESHOLD = 62
+const MAX = 84
 const WORKING_H = 40
-// The refresh spends real LLM budget on the n8n side, so the client holds its
-// own cooldown on top of the workflow's already-running guard. Inside it, a
-// pull still re-reads the table; it just does not ask for another run.
-const COOLDOWN_MS = 5 * 60 * 1000
-const COOLDOWN_KEY = 'gamedeck_news_refresh_at'
-const DONE_MS = 1600
+const DONE_MS = 1200
 
-function lastRunAt() {
-  try {
-    return Number(sessionStorage.getItem(COOLDOWN_KEY)) || 0
-  } catch {
-    return 0
-  }
-}
-
-function stampRun() {
-  try {
-    sessionStorage.setItem(COOLDOWN_KEY, String(Date.now()))
-  } catch {
-    // ignore storage failures
-  }
-}
-
-export default function usePullRefresh({ onRefresh }) {
+export default function usePullRefresh({
+  onRefresh,
+  disabled = false,
+  workingLabel = 'Refreshing…',
+  doneLabel = 'Updated',
+  errorLabel = 'Couldn\'t refresh',
+}) {
+  const hostRef = useRef(null)
   const gutterRef = useRef(null)
   const labelRef = useRef(null)
-  const spinRef = useRef(null)
 
   const [phase, setPhase] = useState('idle')
-  const [note, setNote] = useState('')
 
-  const drag = useRef({ startY: 0, active: false, y: 0, armed: false, raf: 0 })
+  const drag = useRef({ startX: 0, startY: 0, active: false, y: 0, armed: false, raf: 0 })
   const busyRef = useRef(false)
   const aliveRef = useRef(true)
+  const onRefreshRef = useRef(onRefresh)
+  const disabledRef = useRef(disabled)
+
+  onRefreshRef.current = onRefresh
+  disabledRef.current = disabled
 
   useEffect(() => {
     aliveRef.current = true
@@ -76,24 +65,20 @@ export default function usePullRefresh({ onRefresh }) {
   )
 
   const run = useCallback(async () => {
-    if (busyRef.current) return
+    if (busyRef.current || disabledRef.current) return
     busyRef.current = true
     setPhase('working')
-    settle(WORKING_H, 'Fetching new stories', true)
+    settle(WORKING_H, workingLabel, true)
 
-    const canTrigger = Date.now() - lastRunAt() > COOLDOWN_MS
-    if (canTrigger) stampRun()
-
-    let result = ''
+    let result = doneLabel
     try {
-      result = (await onRefresh({ canTrigger })) || 'Up to date'
+      result = (await onRefreshRef.current()) || doneLabel
     } catch {
-      result = 'Could not refresh'
+      result = errorLabel
     }
     if (!aliveRef.current) return
 
     setPhase('done')
-    setNote(result)
     settle(WORKING_H, result, false)
 
     setTimeout(() => {
@@ -102,10 +87,11 @@ export default function usePullRefresh({ onRefresh }) {
       setPhase('idle')
       settle(0, '', false)
     }, DONE_MS)
-  }, [onRefresh, settle])
+  }, [doneLabel, errorLabel, settle, workingLabel])
 
   const onTouchStart = useCallback((e) => {
-    if (window.scrollY > 0 || busyRef.current) return
+    if (window.scrollY > 0 || busyRef.current || disabledRef.current) return
+    drag.current.startX = e.touches[0].clientX
     drag.current.startY = e.touches[0].clientY
     drag.current.active = true
     drag.current.armed = false
@@ -116,7 +102,15 @@ export default function usePullRefresh({ onRefresh }) {
     (e) => {
       const d = drag.current
       if (!d.active) return
+      const dx = e.touches[0].clientX - d.startX
       const dy = e.touches[0].clientY - d.startY
+      if (Math.abs(dx) > Math.abs(dy)) {
+        d.active = false
+        d.y = 0
+        d.armed = false
+        settle(0, '', false)
+        return
+      }
       // A downward drag that starts anywhere but the very top is a scroll, not
       // a pull; hand it back rather than fighting the scroller.
       if (dy <= 0 || window.scrollY > 0) {
@@ -125,6 +119,7 @@ export default function usePullRefresh({ onRefresh }) {
         if (!d.raf) d.raf = requestAnimationFrame(flush)
         return
       }
+      if (e.cancelable) e.preventDefault()
       d.y = Math.min(dy * 0.5, MAX) // damped
       d.armed = d.y >= THRESHOLD
       if (!d.raf) d.raf = requestAnimationFrame(flush)
@@ -134,7 +129,7 @@ export default function usePullRefresh({ onRefresh }) {
         paint(d.y, d.armed ? 'Release to refresh' : 'Pull to refresh', d.armed)
       }
     },
-    [paint],
+    [paint, settle],
   )
 
   const onTouchEnd = useCallback(() => {
@@ -157,20 +152,30 @@ export default function usePullRefresh({ onRefresh }) {
     settle(0, '', false)
   }, [run, settle])
 
+  useEffect(() => {
+    const host = hostRef.current
+    if (!host) return undefined
+    host.addEventListener('touchstart', onTouchStart, { passive: true })
+    host.addEventListener('touchmove', onTouchMove, { passive: false })
+    host.addEventListener('touchend', onTouchEnd, { passive: true })
+    host.addEventListener('touchcancel', onTouchEnd, { passive: true })
+    return () => {
+      host.removeEventListener('touchstart', onTouchStart)
+      host.removeEventListener('touchmove', onTouchMove)
+      host.removeEventListener('touchend', onTouchEnd)
+      host.removeEventListener('touchcancel', onTouchEnd)
+    }
+  }, [onTouchEnd, onTouchMove, onTouchStart])
+
   return {
+    hostRef,
     gutterRef,
     labelRef,
-    spinRef,
     phase,
-    note,
     busy: phase === 'working',
     refreshNow: run,
     handlers: {
-      onTouchStart,
-      onTouchMove,
-      onTouchEnd,
-      onTouchCancel: onTouchEnd,
-      className: 'news-pull-host',
+      className: 'pull-refresh-host',
     },
   }
 }

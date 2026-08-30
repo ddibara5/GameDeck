@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { lockScroll } from './lib/scrollLock.js'
 import Brand from './components/Brand.jsx'
 import Menu from './components/Menu.jsx'
@@ -14,6 +14,7 @@ import CustomizeBar from './components/CustomizeBar.jsx'
 import AuthGate from './components/AuthGate.jsx'
 import { useAppSession } from './lib/appAuth.js'
 import AppErrorBoundary from './components/AppErrorBoundary.jsx'
+import { buildAppLocation, defaultSearchScope, readAppLocation } from './lib/appLocation.js'
 
 // Code-split each tab and the overlay views into their own chunk so the initial
 // bundle only carries the shell + the first (Home, by default) tab. The service worker
@@ -50,6 +51,9 @@ const VIEW_LOADERS = {
 }
 const ListView = lazy(VIEW_LOADERS.list)
 const ShufflePicker = lazy(VIEW_LOADERS.shuffle)
+const loadGlobalSearch = () => import('./components/GlobalSearch.jsx')
+const GlobalSearch = lazy(loadGlobalSearch)
+const VALID_TABS = new Set(Object.keys(TAB_BY_KEY))
 
 function ChunkFallback({ label = 'Opening…', overlay = false }) {
   return (
@@ -80,20 +84,30 @@ export default function App() {
 }
 
 function GameDeckApp() {
+  const initialShell = useRef(null)
+  if (!initialShell.current) {
+    const fallback = visibleKeys(getNavConfig())[0] || 'home'
+    initialShell.current = readAppLocation(window.location.href, VALID_TABS, fallback)
+  }
   // Open on whatever tab is leftmost in the saved layout (not always Library), so
   // reordering the tab bar also changes the landing tab.
-  const [activeTab, setActiveTab] = useState(() => visibleKeys(getNavConfig())[0] || 'home')
+  const [activeTab, setActiveTab] = useState(() => initialShell.current.tab)
   const [menuOpen, setMenuOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [customizeOpen, setCustomizeOpen] = useState(false)
   const [customizeNavOpen, setCustomizeNavOpen] = useState(false)
   const [customizeBarOpen, setCustomizeBarOpen] = useState(false)
   const [shuffleOpen, setShuffleOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(() => initialShell.current.searchOpen)
+  const [searchVisited, setSearchVisited] = useState(() => initialShell.current.searchOpen)
+  const [searchScope, setSearchScope] = useState(
+    () => initialShell.current.searchScope || defaultSearchScope({ activeTab: initialShell.current.tab, view: initialShell.current.view }),
+  )
   // Live tab bar layout (order + which tabs show + label visibility).
   const nav = useNavConfig()
   const visibleTabs = visibleKeys(nav)
   // A drawer-opened overlay view (Wishlist / status lists) shown over the active tab.
-  const [view, setView] = useState(null)
+  const [view, setView] = useState(() => initialShell.current.view)
   const [viewClosing, setViewClosing] = useState(false)
   const viewTimer = useRef(null)
   // Header goes frosted + shows a separator once the page is scrolled off the top.
@@ -104,6 +118,52 @@ function GameDeckApp() {
   // print their own heading, and two would disagree about where you are.
   const headerTitle = view ? '' : TAB_BY_KEY[activeTab]?.label || ''
 
+  const writeLocation = useCallback((next, replace = false) => {
+    const href = buildAppLocation(window.location.href, next)
+    window.history[replace ? 'replaceState' : 'pushState'](
+      { ...(window.history.state || {}), gamedeckShell: true, gamedeckSearch: Boolean(next.searchOpen) },
+      '',
+      href,
+    )
+  }, [])
+
+  const navigateTab = useCallback((tab, { replace = false } = {}) => {
+    if (!VALID_TABS.has(tab)) return
+    if (viewTimer.current) {
+      clearTimeout(viewTimer.current)
+      viewTimer.current = null
+    }
+    setView(null)
+    setViewClosing(false)
+    setSearchOpen(false)
+    setActiveTab(tab)
+    writeLocation({ tab, view: null, searchOpen: false, searchScope: null }, replace)
+  }, [writeLocation])
+
+  const openSearch = useCallback(() => {
+    const scope = defaultSearchScope({ activeTab, view })
+    loadGlobalSearch()
+    setSearchVisited(true)
+    setSearchScope(scope)
+    setSearchOpen(true)
+    writeLocation({ tab: activeTab, view, searchOpen: true, searchScope: scope })
+  }, [activeTab, view, writeLocation])
+
+  const closeSearch = useCallback(() => {
+    const current = new URL(window.location.href)
+    if (current.searchParams.get('search') === '1' && window.history.state?.gamedeckSearch) {
+      window.history.back()
+      return
+    }
+    setSearchOpen(false)
+    writeLocation({ tab: activeTab, view, searchOpen: false, searchScope: null }, true)
+  }, [activeTab, view, writeLocation])
+
+  const changeSearchScope = useCallback((scope) => {
+    setSearchScope(scope)
+    if (searchOpen) writeLocation({ tab: activeTab, view, searchOpen: true, searchScope: scope }, true)
+  }, [activeTab, view, searchOpen, writeLocation])
+
   const openView = (v) => {
     if (viewTimer.current) {
       clearTimeout(viewTimer.current)
@@ -111,6 +171,8 @@ function GameDeckApp() {
     }
     setViewClosing(false)
     setView(v)
+    setSearchOpen(false)
+    writeLocation({ tab: activeTab, view: v, searchOpen: false, searchScope: null })
   }
   // Animate the view out (slide + fade, like the drawer), then unmount it.
   const closeView = () => {
@@ -120,6 +182,7 @@ function GameDeckApp() {
       setView(null)
       setViewClosing(false)
       viewTimer.current = null
+      writeLocation({ tab: activeTab, view: null, searchOpen: false, searchScope: null }, true)
     }, VIEW_EXIT_MS)
   }
   useEffect(() => () => viewTimer.current && clearTimeout(viewTimer.current), [])
@@ -140,9 +203,35 @@ function GameDeckApp() {
     const changed = prevVisibleKey.current !== visibleKey
     prevVisibleKey.current = visibleKey
     if (!changed || view) return
-    if (!visibleTabs.includes(activeTab)) setActiveTab(visibleTabs[0])
+    if (!visibleTabs.includes(activeTab)) navigateTab(visibleTabs[0], { replace: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleKey])
+
+  useEffect(() => {
+    // Put the initial destination in the address bar without adding a history
+    // entry, then let browser/PWA Back restore tabs, list views, and Search.
+    writeLocation({
+      tab: activeTab,
+      view,
+      searchOpen,
+      searchScope: searchOpen ? searchScope : null,
+    }, true)
+    const onPopState = () => {
+      const fallback = visibleKeys(getNavConfig())[0] || 'home'
+      const next = readAppLocation(window.location.href, VALID_TABS, fallback)
+      setActiveTab(next.tab)
+      setView(next.view)
+      setViewClosing(false)
+      setSearchOpen(next.searchOpen)
+      if (next.searchOpen) setSearchVisited(true)
+      setSearchScope(next.searchScope || defaultSearchScope({ activeTab: next.tab, view: next.view }))
+    }
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+    // Shell location is initialised once; subsequent writes are owned by the
+    // explicit navigation handlers above, not by render state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     // A little hysteresis keeps iOS rubber-band/one-pixel scroll noise from
@@ -267,7 +356,7 @@ function GameDeckApp() {
             <HomeTab
               onOpenTab={(t) => {
                 closeView()
-                setActiveTab(t)
+                navigateTab(t)
               }}
               onOpenList={openView}
             />
@@ -307,8 +396,9 @@ function GameDeckApp() {
           active={view ? null : activeTab}
           onChange={(t) => {
             closeView()
-            setActiveTab(t)
+            navigateTab(t)
           }}
+          onSearch={openSearch}
           onWarm={(t) => warmLoader(TAB_LOADERS[t])}
           tabs={visibleTabs}
           showLabels={nav.labels}
@@ -323,9 +413,11 @@ function GameDeckApp() {
         onOpenList={(key) => openView(key)}
         onOpenSettings={() => setSettingsOpen(true)}
         onShuffle={() => setShuffleOpen(true)}
+        onSearch={openSearch}
+        searchPinned={!nav.barShown}
         onOpenTab={(t) => {
           closeView()
-          setActiveTab(t)
+          navigateTab(t)
         }}
         onWarmTab={(t) => warmLoader(TAB_LOADERS[t])}
       />
@@ -341,6 +433,16 @@ function GameDeckApp() {
       <CustomizeRows open={customizeOpen} onClose={() => setCustomizeOpen(false)} />
       <CustomizeNav open={customizeNavOpen} onClose={() => setCustomizeNavOpen(false)} />
       <CustomizeBar open={customizeBarOpen} onClose={() => setCustomizeBarOpen(false)} />
+      {searchVisited ? (
+        <Suspense fallback={searchOpen ? <ChunkFallback label="Opening Search…" overlay /> : null}>
+          <GlobalSearch
+            open={searchOpen}
+            defaultScope={searchScope}
+            onClose={closeSearch}
+            onScopeChange={changeSearchScope}
+          />
+        </Suspense>
+      ) : null}
     </div>
   )
 }

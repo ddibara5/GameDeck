@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import Cover from './Cover.jsx'
 import WishHeart from './WishHeart.jsx'
 import Skeleton from './Skeleton.jsx'
@@ -8,6 +8,7 @@ import { useWishlist } from '../lib/wishlist.js'
 import { useDiscoverPrefs, platformParam } from '../lib/discoverPrefs.js'
 import { useTasteProfile, NEW_LANE, laneReason, rankCandidates, interleave } from '../lib/discoverLanes.js'
 import { recordRecommendationDetailOpen, trackRecommendationFeed } from '../lib/recommendationLearning.js'
+import usePullRefresh from '../lib/usePullRefresh.js'
 
 // Pull a wider candidate pool than the feed displays. The server still returns
 // recent matching releases, then the client can balance freshness with
@@ -63,7 +64,7 @@ function refreshedLaneMap(result, keys) {
   return out
 }
 
-export default function DiscoverForYou({ onAsk, onTune }) {
+export default function DiscoverForYou({ onAsk, onOpenAsk }) {
   const prefs = useDiscoverPrefs()
   const platform = platformParam(prefs.platforms)
   const tasteProfile = useTasteProfile()
@@ -78,8 +79,6 @@ export default function DiscoverForYou({ onAsk, onTune }) {
   const [only, setOnly] = useState(null)
   const [refreshing, setRefreshing] = useState(false)
   const [refreshError, setRefreshError] = useState(false)
-  const [updatedAt, setUpdatedAt] = useState(Date.now)
-  const [clock, setClock] = useState(Date.now)
   const [deprioritizeIds, setDeprioritizeIds] = useState(() => new Set())
   const [feedBatch, setFeedBatch] = useState('initial')
 
@@ -94,14 +93,8 @@ export default function DiscoverForYou({ onAsk, onTune }) {
   }, [])
 
   useEffect(() => {
-    const timer = window.setInterval(() => setClock(Date.now()), 60000)
-    return () => window.clearInterval(timer)
-  }, [])
-
-  useEffect(() => {
     setDeprioritizeIds(new Set())
     setFeedBatch('initial')
-    setUpdatedAt(Date.now())
     setRefreshError(false)
   }, [platform])
 
@@ -210,7 +203,7 @@ export default function DiscoverForYou({ onAsk, onTune }) {
   }, [feedSig, feedBatch])
 
   async function refreshPicks() {
-    if (refreshing || loading) return
+    if (refreshing || loading) return 'Still loading picks'
     const keys = [...new Set([NEW_LANE.key, ...(tasteLanes || []).map((lane) => lane.key)])]
     const currentIds = new Set(
       Object.values(rankedByLane)
@@ -227,14 +220,13 @@ export default function DiscoverForYou({ onAsk, onTune }) {
       setDeprioritizeIds(currentIds)
       setNewState('ready')
       setTasteState('ready')
-      const completedAt = Date.now()
-      setUpdatedAt(completedAt)
-      setClock(completedAt)
-      setFeedBatch(`refresh-${completedAt.toString(36)}`)
+      setFeedBatch(`refresh-${Date.now().toString(36)}`)
+      return 'Picks refreshed'
     } catch {
       // Keep the current feed intact. A manual refresh is never allowed to turn
       // a good last-known set into an error screen.
       setRefreshError(true)
+      return 'Couldn\'t refresh picks'
     } finally {
       setRefreshing(false)
     }
@@ -251,31 +243,42 @@ export default function DiscoverForYou({ onAsk, onTune }) {
       : evidence?.rankedGameCount
         ? 'Based on rankings'
         : 'Personalizing as you play'
+  const pullRefresh = usePullRefresh({
+    onRefresh: refreshPicks,
+    disabled: loading || refreshing,
+    workingLabel: 'Refreshing picks…',
+    doneLabel: 'Picks refreshed',
+    errorLabel: 'Couldn\'t refresh picks',
+  })
 
   return (
-    <div className="discover-foryou" aria-busy={loading || refreshing}>
+    <div
+      ref={pullRefresh.hostRef}
+      className={`discover-foryou ${pullRefresh.handlers.className}`}
+      aria-busy={loading || refreshing}
+    >
+      <div
+        ref={pullRefresh.gutterRef}
+        className={`fy-refresh-gutter ${pullRefresh.phase}`}
+        role="status"
+        aria-live="polite"
+      >
+        <span className="fy-refresh-flag">
+          <span className="fy-refresh-spinner" aria-hidden="true" />
+          <span ref={pullRefresh.labelRef} />
+        </span>
+      </div>
+
+      <div className="fy-heading">
+        <h2>Your picks</h2>
+      </div>
+
       <div className="fy-profile-bar">
         <div className="fy-profile-note">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 2.5c.6 4.2 2.8 6.4 7 7-4.2.6-6.4 2.8-7 7-.6-4.2-2.8-6.4-7-7 4.2-.6 6.4-2.8 7-7Z" />
           </svg>
           <span>{profileNote}</span>
-        </div>
-        <div className="fy-scope-actions">
-          <button
-            type="button"
-            className="fy-refresh"
-            onClick={refreshPicks}
-            disabled={refreshing || loading}
-            aria-label={refreshing ? 'Refreshing picks' : 'Refresh picks'}
-            title={refreshing ? 'Refreshing picks' : 'Refresh picks'}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M20 6v5h-5" />
-              <path d="M18.5 15a7 7 0 1 1-1.2-8.3L20 11" />
-            </svg>
-          </button>
-          <button type="button" className="fy-tune" onClick={onTune}>Tune</button>
         </div>
       </div>
 
@@ -291,11 +294,6 @@ export default function DiscoverForYou({ onAsk, onTune }) {
           ))}
         </div>
       ) : null}
-
-      <div className="fy-feed-head">
-        <strong>Your picks</strong>
-        <span>{refreshing ? 'Refreshing…' : `Refreshed ${freshnessLabel(updatedAt, clock)}`}</span>
-      </div>
 
       <div>
         {unavailable ? (
@@ -316,34 +314,43 @@ export default function DiscoverForYou({ onAsk, onTune }) {
               const wished = wishIds.has(game.id)
               const platforms = preferredPlatforms(game.platforms, prefs.platforms)
               return (
-                <div className="fy-row-wrap" key={game.id}>
-                  <button
-                    type="button"
-                    className="fy-row"
-                    onClick={() => {
-                      recordRecommendationDetailOpen(game, {
-                        lane: game.lane,
-                        position: index + 1,
-                        reason: laneReason(game.lane),
-                      })
-                      setSelected(game)
-                    }}
-                  >
-                    <Cover src={game.cover} title={game.name} size="sm" className="fy-cov" />
-                    <span className="fy-body">
-                      <span className="fy-name">{game.name}</span>
-                      <span className="fy-meta">
-                        {game.year ? <span>{game.year}</span> : null}
-                        {game.rating ? <span className="fy-rating">{` · ${game.rating}`}</span> : null}
-                        {platforms ? <span>{` · ${platforms}`}</span> : null}
+                <Fragment key={game.id}>
+                  <div className="fy-row-wrap">
+                    <button
+                      type="button"
+                      className="fy-row"
+                      onClick={() => {
+                        recordRecommendationDetailOpen(game, {
+                          lane: game.lane,
+                          position: index + 1,
+                          reason: laneReason(game.lane),
+                        })
+                        setSelected(game)
+                      }}
+                    >
+                      <Cover src={game.cover} title={game.name} size="sm" className="fy-cov" />
+                      <span className="fy-body">
+                        <span className="fy-name">{game.name}</span>
+                        <span className="fy-meta">
+                          {game.year ? <span>{game.year}</span> : null}
+                          {game.rating ? <span className="fy-rating">{` · ${game.rating}`}</span> : null}
+                          {platforms ? <span>{` · ${platforms}`}</span> : null}
+                        </span>
+                        <span className={`fy-why${wished ? ' wished' : ''}`}>
+                          {wished ? 'On your wishlist · available now' : laneReason(game.lane)}
+                        </span>
                       </span>
-                      <span className={`fy-why${wished ? ' wished' : ''}`}>
-                        {wished ? 'On your wishlist · available now' : laneReason(game.lane)}
-                      </span>
-                    </span>
-                  </button>
-                  <WishHeart game={game} active={wished} />
-                </div>
+                    </button>
+                    <WishHeart game={game} active={wished} />
+                  </div>
+                  {index === 2 && onOpenAsk ? (
+                    <button type="button" className="fy-ask-row" onClick={onOpenAsk}>
+                      <span aria-hidden="true">✦</span>
+                      Ask GameDeck about these picks
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+                    </button>
+                  ) : null}
+                </Fragment>
               )
             })}
           </div>
