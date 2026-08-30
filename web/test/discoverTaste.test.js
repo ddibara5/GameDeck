@@ -184,3 +184,16 @@ test('Discover presents two destination tabs and a separate Ask AI action', asyn
   assert.match(source, /className="discover-ask-button"/)
   assert.doesNotMatch(source, /role="tab"[^>]*>[\s\S]{0,100}Ask AI/)
 })
+
+test('Discover puts persistent search and Browse before For You', async () => {
+  const source = await readFile(new URL('../src/components/DiscoverTab.jsx', import.meta.url), 'utf8')
+  const browseTab = source.indexOf('id="discover-tab-browse"')
+  const forYouTab = source.indexOf('id="discover-tab-foryou"')
+
+  assert.match(source, /className="discover-global-searchbar"/)
+  assert.match(source, /placeholder="Search all games"/)
+  assert.match(source, /if \(value\.trim\(\) && mode !== 'browse'\) selectMode\('browse'\)/)
+  assert.match(source, /sessionStorage\.getItem\(MODE_KEY\) === 'foryou' \? 'foryou' : 'browse'/)
+  assert.ok(browseTab > 0)
+  assert.ok(forYouTab > browseTab)
+})

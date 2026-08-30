@@ -38,6 +38,17 @@
   background: transparent;
 }
 
+.discover-global-searchbar {
+  display: flex;
+  gap: 8px;
+  padding: var(--space-2) var(--screen-gutter) 0;
+}
+
+.discover-global-searchbar .search-input {
+  flex: 1;
+  min-width: 0;
+}
+
 .discover-seg {
   min-width: 0;
   height: 44px;
@@ -143,24 +154,11 @@
   min-height: 0;
 }
 
-/* ---------- Browse: search + filter ---------- */
+/* ---------- Browse: shared search + filter ---------- */
 
 .discover-browse {
   padding-bottom: 12px;
 }
-
-.discover-searchbar {
-  display: flex;
-  gap: 8px;
-  padding: var(--space-3) var(--screen-gutter) var(--space-2);
-}
-
-.discover-searchbar .search-input {
-  flex: 1;
-  min-width: 0;
-}
-
-
 
 .preset-row {
   display: flex;

@@ -123,8 +123,14 @@ function ShelfSkeleton({ label }) {
   )
 }
 
-export default function DiscoverBrowse({ onAsk, onCustomize, openFiltersToken = 0 }) {
-  const [query, setQuery] = useState('')
+export default function DiscoverBrowse({
+  onAsk,
+  onCustomize,
+  openFiltersToken = 0,
+  hideOwnedToken = 0,
+  query,
+  onQueryChange,
+}) {
   const [preset, setPreset] = useState(null)
   const [filters, setFilters] = useState(DEFAULT_FILTERS)
   const [showFilters, setShowFilters] = useState(false)
@@ -151,6 +157,11 @@ export default function DiscoverBrowse({ onAsk, onCustomize, openFiltersToken = 
   // quietly become the new default the next time Discover opens.
   const prefs = useDiscoverPrefs()
   const [wideOpen, setWideOpen] = useState(false)
+
+  useEffect(() => {
+    if (hideOwnedToken > 0) setWideOpen(false)
+  }, [hideOwnedToken])
+
   const activePlatforms = wideOpen ? ALL_PLATFORMS : prefs.platforms
   const hideOwned = wideOpen ? false : prefs.hideOwned
   const standing = !wideOpen && (prefs.hideOwned || prefs.platforms.length > 0)
@@ -171,6 +182,10 @@ export default function DiscoverBrowse({ onAsk, onCustomize, openFiltersToken = 
   // hide themselves.
   const searchMode = Boolean(query.trim())
   const narrowed = Boolean(preset || filtersActive)
+
+  useEffect(() => {
+    if (searchMode) setPreset(null)
+  }, [searchMode, query])
 
   // Load the user's library titles once (for the "In library" badge).
   useEffect(() => {
@@ -419,7 +434,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize, openFiltersToken = 
   }
 
   function resetAll() {
-    setQuery('')
+    onQueryChange('')
     setPreset(null)
     setFilters(DEFAULT_FILTERS)
   }
@@ -441,7 +456,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize, openFiltersToken = 
     const slug = g.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
     setSelected(null)
     setPreset(null)
-    setQuery('')
+    onQueryChange('')
     setFilters({ ...DEFAULT_FILTERS, genre: slug || 'all', sort: 'rating' })
   }
 
@@ -450,55 +465,6 @@ export default function DiscoverBrowse({ onAsk, onCustomize, openFiltersToken = 
 
   return (
     <div className="discover-browse">
-      <div className="discover-searchbar">
-        <input
-          type="search"
-          className="search-input"
-          placeholder="Search all games by title"
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value)
-            if (e.target.value) setPreset(null)
-          }}
-          aria-label="Search games"
-        />
-        <button
-          type="button"
-          className={`filter-btn${filtersActive ? ' active' : ''}`}
-          onClick={() => setShowFilters(true)}
-          aria-label="Filters"
-        >
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <path d="M4 6h16M7 12h10M10 18h4" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          className={`filter-btn${hideOwned ? ' active' : ''}`}
-          onClick={() => {
-            setWideOpen(false)
-            setDiscoverPrefs({ ...prefs, hideOwned: !hideOwned })
-          }}
-          aria-pressed={hideOwned}
-          aria-label={hideOwned ? 'Show games in your library' : 'Hide games in your library'}
-          title={hideOwned ? 'In-library hidden' : 'Hide in-library'}
-        >
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            {hideOwned ? (
-              <>
-                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20C5 20 1 12 1 12a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M1 1l22 22" />
-                <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
-              </>
-            ) : (
-              <>
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                <circle cx="12" cy="12" r="3" />
-              </>
-            )}
-          </svg>
-        </button>
-      </div>
-
       {standing || wideOpen ? (
         <div className="showing-strip">
           <span className="showing-label">Showing</span>
