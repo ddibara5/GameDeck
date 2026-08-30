@@ -22,16 +22,27 @@ const SECTIONS = [
 ]
 
 function RankGame({ game, rank, position, tier, onSelect }) {
+  const score = Math.round(rank.score)
+  const comparisonLabel = `${rank.comparison_count} ${rank.comparison_count === 1 ? 'comparison' : 'comparisons'}`
+
   return (
     <li className="rank-item">
-      <button type="button" className="rank-row" onClick={() => onSelect(game)} aria-label={`Open ${game.title}`}>
-        <div className={`rank-place tier-${tier.toLowerCase()}`}><b>{position}</b><span>{tier}</span></div>
+      <button
+        type="button"
+        className="rank-row"
+        onClick={() => onSelect(game)}
+        aria-label={`Open ${game.title}, ranked ${position}, ${tier} tier, score ${score}`}
+      >
+        <div className={`rank-place tier-${tier.toLowerCase()}`} aria-hidden="true">{position}</div>
         <Cover src={libraryCover(game)} title={game.title} />
         <div className="rank-row-copy">
           <strong>{game.title}</strong>
-          <span>{rank.reaction.replaceAll('_', ' ')} · {rank.comparison_count} comparisons</span>
+          <div className="rank-row-meta">
+            <span className={`rank-tier tier-${tier.toLowerCase()}`}>{tier} tier</span>
+            <span className="rank-summary">{rank.reaction.replaceAll('_', ' ')} · {comparisonLabel}</span>
+          </div>
         </div>
-        <div className="rank-score">{Math.round(rank.score)}</div>
+        <div className="rank-score" aria-hidden="true">{score}</div>
       </button>
     </li>
   )

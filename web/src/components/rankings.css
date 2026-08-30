@@ -107,7 +107,7 @@
 .rank-row {
   width: 100%;
   display: grid;
-  grid-template-columns: 44px var(--game-art-row) minmax(0, 1fr) auto;
+  grid-template-columns: 36px var(--game-art-row) minmax(0, 1fr) auto;
   gap: var(--space-3);
   align-items: center;
   min-height: 72px;
@@ -133,20 +133,29 @@
 }
 
 .rank-place {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--r-sm);
-  background: var(--surface-2);
+  width: 36px;
+  color: var(--muted);
+  font-size: var(--t-t1);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--w-bold);
+  letter-spacing: -0.04em;
+  line-height: 1;
+  text-align: center;
 }
 
-.rank-place b { font-size: var(--t-sub); }
-.rank-place span { font-size: var(--t-cap2); font-weight: var(--w-bold); }
-.rank-place.tier-s { color: #e5a938; }
-.rank-place.tier-a { color: #8da6d8; }
-.rank-place.tier-b { color: #9aab83; }
+.rank-place.tier-s,
+.rank-tier.tier-s { --rank-tier-color: #d99a2b; }
+.rank-place.tier-a,
+.rank-tier.tier-a { --rank-tier-color: #6f8dc8; }
+.rank-place.tier-b,
+.rank-tier.tier-b { --rank-tier-color: #718b53; }
+.rank-place.tier-c,
+.rank-tier.tier-c { --rank-tier-color: #9b725f; }
+
+.rank-place[class*="tier-"],
+.rank-tier[class*="tier-"] {
+  color: color-mix(in oklab, var(--rank-tier-color) 76%, var(--text));
+}
 
 .rank-row-copy {
   min-width: 0;
@@ -163,10 +172,35 @@
   white-space: nowrap;
 }
 
-.rank-row-copy span {
+.rank-row-meta {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.rank-tier {
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border: 1px solid color-mix(in oklab, var(--rank-tier-color) 36%, transparent);
+  border-radius: var(--r-pill);
+  background: color-mix(in oklab, var(--rank-tier-color) 13%, transparent);
+  font-size: var(--t-cap2);
+  font-weight: var(--w-bold);
+  letter-spacing: 0.045em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.rank-summary {
+  min-width: 0;
+  overflow: hidden;
   color: var(--muted);
   font-size: var(--t-cap);
+  text-overflow: ellipsis;
   text-transform: capitalize;
+  white-space: nowrap;
 }
 
 .rank-score {

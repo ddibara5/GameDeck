@@ -40,11 +40,15 @@ test('a direct reaction previews insertion position, tier, and closest neighbor'
 
 test('Rankings offers direct library search and makes comparison optional', () => {
   const rankings = readFileSync(new URL('../src/components/RankingsTab.jsx', import.meta.url), 'utf8')
+  const styles = readFileSync(new URL('../src/components/rankings.css', import.meta.url), 'utf8')
   const sheet = readFileSync(new URL('../src/components/RankGameSheet.jsx', import.meta.url), 'utf8')
   assert.match(rankings, /Search your library to rank/)
   assert.doesNotMatch(rankings, /rank-primary-action/)
   assert.match(rankings, /onClick=\{\(\) => onSelect\(game\)\}/)
   assert.match(rankings, /<GameDetail game=\{selectedGame\}/)
+  assert.match(rankings, /rank-tier tier-/)
+  assert.match(rankings, /ranked \$\{position\}, \$\{tier\} tier/)
+  assert.match(styles, /\.rank-place\.tier-c/)
   assert.doesNotMatch(rankings, /unseeded\[0\]/)
   assert.match(sheet, /Save to rankings/)
   assert.match(sheet, /Maybe later/)
