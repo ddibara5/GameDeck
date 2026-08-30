@@ -18,6 +18,7 @@ import {
   platformLabel,
   PLATFORM_CHOICES,
 } from '../lib/discoverPrefs.js'
+import { useDialogA11y } from '../lib/useDialogA11y.js'
 
 const CURRENT_YEAR = new Date().getFullYear()
 
@@ -133,6 +134,7 @@ export default function DiscoverBrowse({
   const [preset, setPreset] = useState(null)
   const [filters, setFilters] = useState(DEFAULT_FILTERS)
   const [showFilters, setShowFilters] = useState(false)
+  const filterDialogRef = useDialogA11y({ active: showFilters, onClose: () => setShowFilters(false) })
 
   useEffect(() => {
     if (openFiltersToken > 0) setShowFilters(true)
@@ -634,7 +636,7 @@ export default function DiscoverBrowse({
 
       {showFilters ? (
         <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && setShowFilters(false)}>
-          <div className="modal-sheet filter-sheet" role="dialog" aria-modal="true" aria-label="Filters">
+          <div ref={filterDialogRef} className="modal-sheet filter-sheet" role="dialog" aria-modal="true" aria-label="Filters">
             <div className="modal-handle" />
             <button type="button" className="modal-close" aria-label="Close filters" onClick={() => setShowFilters(false)}>&times;</button>
             <div className="detail-title">Filters</div>

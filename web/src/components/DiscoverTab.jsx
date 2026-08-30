@@ -2,6 +2,7 @@ import { lazy, Suspense, useState } from 'react'
 import DiscoverForYou from './DiscoverForYou.jsx'
 import { preloadMarkdown } from './ChatMessage.jsx'
 import { setDiscoverPrefs, useDiscoverPrefs } from '../lib/discoverPrefs.js'
+import { useDialogA11y } from '../lib/useDialogA11y.js'
 import './discover.css'
 
 const MODE_KEY = 'gamedeck_discover_mode_v1'
@@ -28,6 +29,7 @@ export default function DiscoverTab({ onCustomize }) {
   const [hideOwnedToken, setHideOwnedToken] = useState(0)
   const [query, setQuery] = useState('')
   const prefs = useDiscoverPrefs()
+  const askDialogRef = useDialogA11y({ active: askOpen, onClose: () => setAskOpen(false) })
 
   function selectMode(next) {
     if (next === 'browse') loadDiscoverBrowse()
@@ -215,7 +217,7 @@ export default function DiscoverTab({ onCustomize }) {
       </div>
 
       {askOpen ? (
-        <div className="discover-ask-view" role="dialog" aria-modal="true" aria-label="Ask GameDeck">
+        <div ref={askDialogRef} className="discover-ask-view" role="dialog" aria-modal="true" aria-label="Ask GameDeck">
           <div className="discover-ask-header">
             <button type="button" className="discover-ask-back" aria-label="Back to Discover" onClick={() => setAskOpen(false)}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">

@@ -16,6 +16,7 @@ import { availableVibes } from '../lib/vibes.js'
 import { useVibeKeywords } from '../lib/useLibraryGames.js'
 import { loadRankingScores } from '../lib/ranking.js'
 import './shuffle.css'
+import { useDialogA11y } from '../lib/useDialogA11y.js'
 
 // Horizontal travel before a drag counts as a swipe rather than a stray finger.
 const SWIPE_PX = 56
@@ -52,6 +53,7 @@ export default function ShufflePicker({ open, onClose }) {
   const [gamePassOnly, setGamePassOnly] = useState(false)
   const [boost, setBoost] = useState(true)
   const [showFilters, setShowFilters] = useState(false)
+  const filterDialogRef = useDialogA11y({ active: showFilters, onClose: () => setShowFilters(false) })
 
   const [result, setResult] = useState(null)
   const [sheet, setSheet] = useState(null)
@@ -397,7 +399,7 @@ export default function ShufflePicker({ open, onClose }) {
 
       {showFilters ? (
         <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && setShowFilters(false)}>
-          <div className="modal-sheet filter-sheet" role="dialog" aria-modal="true" aria-label="Filters">
+          <div ref={filterDialogRef} className="modal-sheet filter-sheet" role="dialog" aria-modal="true" aria-label="Filters">
             <div className="modal-handle" />
             <button type="button" className="modal-close" aria-label="Close filters" onClick={() => setShowFilters(false)}>&times;</button>
             <div className="detail-title">Filters</div>

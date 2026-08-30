@@ -15,6 +15,8 @@ import {
 } from '../lib/news.js'
 import { remoteImg } from '../lib/format.js'
 import { addToWishlist } from '../lib/wishlist.js'
+import { safeExternalUrl } from '../lib/safeUrl.js'
+import { useDialogA11y } from '../lib/useDialogA11y.js'
 import './news.css'
 
 /**
@@ -41,14 +43,18 @@ const FILL_W = 200
 
 export default function NewsSheet({ item, rel, onClose, onOpenGame }) {
   const { closing, requestClose } = useDelayedClose(onClose)
+  const dialogRef = useDialogA11y({ onClose: requestClose })
   const { dragY, dragging, handlers: dragHandlers } = useSheetDrag(requestClose)
   const [artStep, setArtStep] = useState(0)
   useEffect(() => lockScroll(), [])
 
   const sources = dedupeSources(item.sources)
+  const safeSources = sources
+    .map((source) => ({ ...source, url: safeExternalUrl(source.url) }))
+    .filter((source) => source.url)
   const chain = cardArtChain(item, rel.row?.cover_igdb)
   const art = chain[artStep] || null
-  const lead = sources[0] || null
+  const lead = safeSources[0] || null
   const fav = lead ? faviconFor(lead.url) : ''
   const when = relTime(item.publishedAt)
   const outlets = outletCount(item.sources)
@@ -60,6 +66,7 @@ export default function NewsSheet({ item, rel, onClose, onOpenGame }) {
   return createPortal(
     <div className={`modal-backdrop${closing ? ' closing' : ''}`} onClick={onBackdrop}>
       <div
+        ref={dialogRef}
         className="modal-sheet news-sheet"
         role="dialog"
         aria-modal="true"
@@ -130,7 +137,7 @@ export default function NewsSheet({ item, rel, onClose, onOpenGame }) {
           {/* Every source, not the two the row used to show. This is the
               place that has room for them. */}
           <div className="news-sources">
-            {sources.map((s, i) => (
+            {safeSources.map((s, i) => (
               <span key={s.url + i}>
                 {i > 0 ? <span className="news-source-sep" aria-hidden="true">|</span> : null}
                 <a

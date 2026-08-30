@@ -6,6 +6,7 @@ import { useLibraryGames } from '../lib/useLibraryGames.js'
 import { useNavConfig, DEST_BY_KEY, GROUP_LABEL, isFolded, toggleGroup } from '../lib/navConfig.js'
 import { DEST_ICONS } from './destIcons.jsx'
 import LogoMark from './LogoMark.jsx'
+import { useDialogA11y } from '../lib/useDialogA11y.js'
 
 // The left drawer: a compact map of the app's places, grouped, with the bottom
 // bar acting as a shortcut into the same destinations.
@@ -30,6 +31,7 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpen
   const { games } = useLibraryGames()
   const nav = useNavConfig()
   const { mounted, closing } = useMountTransition(open)
+  const dialogRef = useDialogA11y({ active: mounted, onClose })
 
   // How many rows each group holds, over the user's own order. A group split in
   // two by dragging counts as one, which is also how it folds: the fold is a
@@ -47,16 +49,6 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpen
     () => ({ library: games.length, wishlist: wishItems.length }),
     [games, wishItems],
   )
-
-  // Close on Escape.
-  useEffect(() => {
-    if (!open) return undefined
-    const onKey = (e) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose])
 
   // Lock background scroll while the drawer is open.
   useEffect(() => {
@@ -83,8 +75,8 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpen
 
   return (
     <>
-      <div className={`drawer-scrim${closing ? ' closing' : ''}`} onClick={onClose} />
-      <aside className={`drawer${closing ? ' closing' : ''}`} role="dialog" aria-label="Menu">
+      <div data-dialog-companion className={`drawer-scrim${closing ? ' closing' : ''}`} onClick={onClose} />
+      <aside ref={dialogRef} className={`drawer${closing ? ' closing' : ''}`} role="dialog" aria-modal="true" aria-label="Menu">
         <div className="drawer-head">
           <div className="drawer-brand">
             <LogoMark className="drawer-logo-mark" />

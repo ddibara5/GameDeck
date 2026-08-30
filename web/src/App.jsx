@@ -51,6 +51,15 @@ const VIEW_LOADERS = {
 const ListView = lazy(VIEW_LOADERS.list)
 const ShufflePicker = lazy(VIEW_LOADERS.shuffle)
 
+function ChunkFallback({ label = 'Opening…', overlay = false }) {
+  return (
+    <div className={`chunk-fallback${overlay ? ' overlay' : ''}`} role="status" aria-live="polite">
+      <span className="chunk-fallback-line skeleton" aria-hidden="true" />
+      <span>{label}</span>
+    </div>
+  )
+}
+
 const warmLoader = (loader) => {
   if (!loader) return
   Promise.resolve().then(loader).catch(() => {})
@@ -253,7 +262,7 @@ function GameDeckApp() {
         )}
       </header>
       <main className="app-main">
-        <Suspense fallback={null}>
+        <Suspense fallback={<ChunkFallback label={`Opening ${headerTitle || 'GameDeck'}…`} />}>
           {activeTab === 'home' && (
             <HomeTab
               onOpenTab={(t) => {
@@ -273,7 +282,7 @@ function GameDeckApp() {
       </main>
       {view ? (
         <div className={`view-page${viewClosing ? ' closing' : ''}`}>
-          <Suspense fallback={null}>
+          <Suspense fallback={<ChunkFallback label="Opening list…" overlay />}>
             {/* Wishlist and Release watch share the same cached rows, list,
                 sorting, density and sheet. Release watch adds a three-way scope
                 control and opens on Upcoming; the drawer Wishlist stays on All. */}
@@ -320,7 +329,7 @@ function GameDeckApp() {
         }}
         onWarmTab={(t) => warmLoader(TAB_LOADERS[t])}
       />
-      <Suspense fallback={null}>
+      <Suspense fallback={<ChunkFallback label="Opening Shuffle…" overlay />}>
         {shuffleOpen ? <ShufflePicker open onClose={() => setShuffleOpen(false)} /> : null}
       </Suspense>
       <SettingsPage

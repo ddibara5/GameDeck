@@ -14,14 +14,16 @@ import { useEffect, useState } from 'react'
  * almost always does too.
  */
 let parse = null
+let sanitize = null
 let loading = null
 
 export function preloadMarkdown() {
   if (parse) return Promise.resolve(parse)
   if (!loading) {
-    loading = import('marked')
-      .then((m) => {
+    loading = Promise.all([import('marked'), import('dompurify')])
+      .then(([m, purifier]) => {
         parse = m.marked.parse.bind(m.marked)
+        sanitize = purifier.default.sanitize.bind(purifier.default)
         return parse
       })
       .catch(() => {
@@ -35,13 +37,14 @@ export function preloadMarkdown() {
   return loading
 }
 
-/**
- * Strips <script> tags defensively before rendering markdown-derived HTML.
- * This app only ever renders its own AI assistant's replies, so this is a
- * light sanity check rather than a full sanitizer.
- */
-function stripScripts(html) {
-  return html.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
+const SANITIZE_OPTIONS = {
+  USE_PROFILES: { html: true },
+  FORBID_TAGS: ['style', 'form', 'input', 'button', 'iframe', 'object', 'embed'],
+  FORBID_ATTR: ['style'],
+}
+
+export function sanitizeMarkdownHtml(html) {
+  return sanitize ? sanitize(html, SANITIZE_OPTIONS) : ''
 }
 
 function SafeMarkdown({ content }) {
@@ -63,7 +66,10 @@ function SafeMarkdown({ content }) {
   // visible reflow rather than a change of typography.
   if (!ready) return <div className="chat-md-plain">{content}</div>
 
-  const html = stripScripts(parse(content || ''))
+  // Assistant output and web-search evidence are untrusted at this boundary.
+  // DOMPurify removes event handlers, script-bearing URL schemes, raw forms,
+  // embeds and other active markup while preserving useful markdown structure.
+  const html = sanitizeMarkdownHtml(parse(content || ''))
   // eslint-disable-next-line react/no-danger
   return <div dangerouslySetInnerHTML={{ __html: html }} />
 }

@@ -200,8 +200,7 @@ export default function DiscoverAsk({ seedPrompt, onSeedConsumed }) {
     persistActiveId(id)
   }
 
-  function deleteChat(id, e) {
-    e.stopPropagation()
+  function deleteChat(id) {
     setChats((prev) => {
       const next = prev.filter((c) => c.id !== id)
       persistChats(next)
@@ -248,16 +247,12 @@ export default function DiscoverAsk({ seedPrompt, onSeedConsumed }) {
               <div
                 key={c.id}
                 className={`chat-history-item${c.id === currentId ? ' active' : ''}`}
-                role="button"
-                tabIndex={0}
-                onClick={() => openChat(c.id)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') openChat(c.id)
-                }}
               >
-                <span className="chat-history-title">{c.title}</span>
-                <span className="chat-history-time">{relTime(c.updatedAt)}</span>
-                <button type="button" className="chat-history-del" onClick={(e) => deleteChat(c.id, e)} aria-label="Delete chat">
+                <button type="button" className="chat-history-open" onClick={() => openChat(c.id)}>
+                  <span className="chat-history-title">{c.title}</span>
+                  <span className="chat-history-time">{relTime(c.updatedAt)}</span>
+                </button>
+                <button type="button" className="chat-history-del" onClick={() => deleteChat(c.id)} aria-label={`Delete ${c.title}`}>
                   ×
                 </button>
               </div>
@@ -286,13 +281,14 @@ export default function DiscoverAsk({ seedPrompt, onSeedConsumed }) {
               <ChatMessage key={idx} role={m.role} content={m.content} isError={m.isError} />
             ))}
             {sending && (
-              <div className="chat-bubble-row assistant">
+              <div className="chat-bubble-row assistant" role="status" aria-live="polite">
                 <div className="chat-bubble assistant">
-                  <span className="typing-indicator">
+                  <span className="typing-indicator" aria-hidden="true">
                     <span className="typing-dot" />
                     <span className="typing-dot" />
                     <span className="typing-dot" />
                   </span>
+                  <span className="sr-only">GameDeck is responding…</span>
                 </div>
               </div>
             )}
@@ -303,12 +299,15 @@ export default function DiscoverAsk({ seedPrompt, onSeedConsumed }) {
               className="chat-input"
               rows={1}
               placeholder="Ask for your next game…"
+              name="game-question"
+              autoComplete="off"
+              aria-label="Ask GameDeck"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
             />
-            <button type="submit" className="chat-send-btn" disabled={sending || !input.trim()}>
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
+            <button type="submit" className="chat-send-btn" disabled={sending || !input.trim()} aria-label="Send message">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                 <path d="M4 12l16-7-6 16-2.5-6.5L4 12z" strokeLinejoin="round" strokeLinecap="round" />
               </svg>
             </button>
