@@ -57,38 +57,51 @@ export const TAB_ICONS = {
   ),
 }
 
-export default function TabBar({ tabs, active, onChange, onWarm, badges, showLabels = true }) {
+export default function TabBar({ tabs, active, onChange, onWarm, onSearch, badges, showLabels = true }) {
   const activeIndex = tabs.indexOf(active)
+  // The detached search utility owns a fixed 62px touch target. Six destination
+  // labels beside it would squeeze below a useful reading width on a 390px
+  // phone, so only that maximum-density configuration switches to icons. The
+  // user's tab order and membership remain untouched.
+  const renderLabels = showLabels && tabs.length < 6
 
   return (
-    <nav
-      className={`tabbar${showLabels ? '' : ' icons-only'}${activeIndex >= 0 ? ' has-active' : ''}`}
-      aria-label="Main navigation"
-      style={{ '--tab-count': Math.max(1, tabs.length), '--active-index': Math.max(0, activeIndex) }}
-    >
-      <span className="tabbar-lens" aria-hidden="true" />
-      {tabs.map((tab) => {
-        const meta = TAB_BY_KEY[tab]
-        if (!meta) return null
-        const isActive = tab === active
-        const hasBadge = badges && badges[tab] && !isActive
-        return (
-          <button
-            key={tab}
-            type="button"
-            className={`tabbar-btn${isActive ? ' active' : ''}`}
-            onPointerDown={() => onWarm && onWarm(tab)}
-            onFocus={() => onWarm && onWarm(tab)}
-            onClick={() => onChange(tab)}
-            aria-current={isActive ? 'page' : undefined}
-            aria-label={showLabels ? undefined : meta.label}
-          >
-            {hasBadge ? <span className="tab-unread" aria-label="New" /> : null}
-            <span className="tabbar-icon">{TAB_ICONS[tab]}</span>
-            {showLabels ? <span>{meta.label}</span> : null}
-          </button>
-        )
-      })}
-    </nav>
+    <div className="app-dock">
+      <nav
+        className={`tabbar${renderLabels ? '' : ' icons-only'}${activeIndex >= 0 ? ' has-active' : ''}`}
+        aria-label="Main navigation"
+        style={{ '--tab-count': Math.max(1, tabs.length), '--active-index': Math.max(0, activeIndex) }}
+      >
+        <span className="tabbar-lens" aria-hidden="true" />
+        {tabs.map((tab) => {
+          const meta = TAB_BY_KEY[tab]
+          if (!meta) return null
+          const isActive = tab === active
+          const hasBadge = badges && badges[tab] && !isActive
+          return (
+            <button
+              key={tab}
+              type="button"
+              className={`tabbar-btn${isActive ? ' active' : ''}`}
+              onPointerDown={() => onWarm && onWarm(tab)}
+              onFocus={() => onWarm && onWarm(tab)}
+              onClick={() => onChange(tab)}
+              aria-current={isActive ? 'page' : undefined}
+              aria-label={renderLabels ? undefined : meta.label}
+            >
+              {hasBadge ? <span className="tab-unread" aria-label="New" /> : null}
+              <span className="tabbar-icon">{TAB_ICONS[tab]}</span>
+              {renderLabels ? <span>{meta.label}</span> : null}
+            </button>
+          )
+        })}
+      </nav>
+      <button type="button" className="global-search-trigger" aria-label="Search GameDeck" onClick={onSearch}>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="10.5" cy="10.5" r="6.5" />
+          <path d="m15.5 15.5 5 5" />
+        </svg>
+      </button>
+    </div>
   )
 }
