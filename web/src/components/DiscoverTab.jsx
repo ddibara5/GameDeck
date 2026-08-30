@@ -83,6 +83,9 @@ export default function DiscoverTab({ onCustomize }) {
   return (
     <div className="discover-page">
       <div className="discover-base" hidden={askOpen}>
+        <div className="page-header discover-page-header">
+          <p className="page-subtitle">Browse, search, and tune your recommendations</p>
+        </div>
         <div className="discover-global-searchbar">
           <input
             type="search"

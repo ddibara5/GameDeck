@@ -121,7 +121,7 @@ export function weightFor(item, { mode, gamePass, boost, personalRanks }) {
     const score = Number(personalRanks.get(Number(item.master_id)))
     if (Number.isFinite(score)) {
       weight *= Math.max(0.8, Math.min(1.2, 1 + (score - 1500) / 750))
-      if (score >= 1575) reason = 'high in My Ranking'
+      if (score >= 1575) reason = 'high in your rankings'
     }
   }
   if (!boost) return { weight, reason }

@@ -313,6 +313,7 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
           <div className="modal-handle" />
           <Cover src={coverSrc} title={title} size="lg" />
         </div>
+        <button type="button" className="modal-close" aria-label="Close game details" onClick={requestClose}>&times;</button>
 
         <div className="detail-title">{title}</div>
         {metaText || rating != null ? (

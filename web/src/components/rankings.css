@@ -1,25 +1,23 @@
 .rank-page {
-  max-width: 760px;
+  max-width: 640px;
   margin: 0 auto;
-  padding: 0 var(--screen-gutter) calc(var(--tabbar-height) + var(--space-5));
+  padding: 0 var(--screen-gutter) var(--space-5);
 }
 
-.rank-head h2 {
-  margin: 0 0 var(--space-3);
-  font-size: var(--t-t1);
-  letter-spacing: var(--t-t1-tr);
+.rank-head > .page-subtitle {
+  margin-bottom: var(--space-3);
 }
 
 .rank-primary-action {
   width: 100%;
-  min-height: 52px;
+  min-height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   margin-bottom: var(--space-3);
   border: 1px solid color-mix(in oklab, var(--accent) 56%, var(--line));
-  border-radius: var(--r-md);
+  border-radius: var(--r-sm);
   background: color-mix(in oklab, var(--accent) 9%, var(--surface));
   color: var(--accent);
   font: inherit;
@@ -59,11 +57,11 @@
 
 .rank-search-wrap > input {
   width: 100%;
-  min-height: 50px;
+  min-height: 44px;
   box-sizing: border-box;
   padding: 0 14px 0 42px;
   border: 1px solid var(--line-soft);
-  border-radius: var(--r-md);
+  border-radius: var(--r-sm);
   background: var(--surface);
   color: var(--text);
   font: inherit;
@@ -110,31 +108,7 @@
 .rank-search-results > p { margin: 0; padding: var(--space-4); text-align: center; }
 
 .rank-tabs {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
   margin-bottom: var(--space-4);
-  padding: var(--space-1);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--r-sm);
-  background: var(--surface);
-}
-
-.rank-tabs button {
-  min-height: 44px;
-  padding: var(--space-2);
-  border: 0;
-  border-radius: var(--r-xs);
-  background: transparent;
-  color: var(--muted);
-  font: inherit;
-  font-size: var(--t-foot);
-  font-weight: var(--w-semi);
-}
-
-.rank-tabs button[aria-selected='true'] {
-  background: var(--surface-2);
-  color: var(--text);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .rank-list {

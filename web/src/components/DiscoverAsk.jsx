@@ -269,7 +269,7 @@ export default function DiscoverAsk({ seedPrompt, onSeedConsumed }) {
           {!hasStarted && (
             <>
               <div className="chat-intro">
-                <p className="page-subtitle">Recommendations use your library, recent play, platforms, wishlist, and My Ranking.</p>
+                <p className="page-subtitle">Recommendations use your library, recent play, platforms, wishlist, and rankings.</p>
               </div>
               <div className="chat-suggestions">
                 {SUGGESTIONS.map((s) => (

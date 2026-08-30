@@ -5,11 +5,10 @@
    block itself moved to the Insights tab. */
 
 .activity-group-label {
-  font-size: var(--t-foot);
-  font-weight: var(--w-bold);
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: var(--t-body);
+  font-weight: var(--w-semi);
+  color: var(--text);
+  letter-spacing: var(--t-body-tr);
   margin: var(--space-5) var(--screen-gutter) var(--space-2);
 }
 

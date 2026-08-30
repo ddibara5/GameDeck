@@ -399,6 +399,7 @@ export default function ShufflePicker({ open, onClose }) {
         <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && setShowFilters(false)}>
           <div className="modal-sheet filter-sheet" role="dialog" aria-modal="true" aria-label="Filters">
             <div className="modal-handle" />
+            <button type="button" className="modal-close" aria-label="Close filters" onClick={() => setShowFilters(false)}>&times;</button>
             <div className="detail-title">Filters</div>
 
             {mode === 'play' ? (

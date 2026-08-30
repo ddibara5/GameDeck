@@ -245,6 +245,7 @@ export default function DiscoverRailList({ row, seedItems, isOwned, hideOwned, w
         <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && setSortOpen(false)}>
           <div className="modal-sheet filter-sheet" role="dialog" aria-modal="true" aria-label="Sort">
             <div className="modal-handle" />
+            <button type="button" className="modal-close" aria-label="Close sort options" onClick={() => setSortOpen(false)}>&times;</button>
             <div className="detail-title">Sort</div>
             <div className="filter-group">
               <div className="filter-options">

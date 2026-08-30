@@ -41,7 +41,7 @@
 .discover-global-searchbar {
   display: flex;
   gap: 8px;
-  padding: var(--space-2) var(--screen-gutter) 0;
+  padding: 0 var(--screen-gutter);
 }
 
 .discover-global-searchbar .search-input {

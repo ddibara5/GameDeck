@@ -132,10 +132,9 @@ export default function RankingsTab() {
   const rightGame = pair ? gameById.get(String(pair[1].master_id)) : null
 
   return (
-    <section className="rank-page" aria-labelledby="rank-title">
+    <section className="rank-page" aria-label="Rankings">
       <header className="rank-head">
         <p className="page-subtitle">Your taste, ordered by your choices</p>
-        <h2 id="rank-title">My Ranking</h2>
         <button type="button" className="rank-primary-action" onClick={focusRankSearch}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8L12 3Z" /></svg>
           Rank a game
@@ -181,13 +180,14 @@ export default function RankingsTab() {
             </div>
           ) : null}
         </div>
-        <div className="rank-tabs" role="tablist" aria-label="Ranking sections">
+        <div className="seg rank-tabs" role="tablist" aria-label="Ranking sections">
           {SECTIONS.map((item) => (
             <button
               key={item.key}
               type="button"
               role="tab"
               aria-selected={section === item.key}
+              className={`seg-btn${section === item.key ? ' active' : ''}`}
               onClick={() => {
                 setSection(item.key)
                 setSearchOpen(false)
@@ -243,7 +243,7 @@ export default function RankingsTab() {
           <article><b>1</b><h3>React</h3><p>Loved, liked, mixed, or not for me gives each game a sensible starting point.</p></article>
           <article><b>2</b><h3>Compare</h3><p>Pick between close neighbors. Early choices move more; settled games move less.</p></article>
           <article><b>3</b><h3>Order</h3><p>S, A, B, and C tiers are percentiles of only the games you explicitly ranked.</p></article>
-          <p className="rank-note">My Ranking is your explicit opinion. Discover still uses a separate recommendation score for what you may want next.</p>
+          <p className="rank-note">Rankings reflect your explicit opinion. Discover uses a separate recommendation score for what you may want next.</p>
         </div>
       ) : null}
 

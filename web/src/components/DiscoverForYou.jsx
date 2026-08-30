@@ -245,11 +245,11 @@ export default function DiscoverForYou({ onAsk, onTune }) {
   const unavailable = feed.length === 0 && !tastePending && (newState === 'error' || tasteState === 'error')
   const evidence = tasteProfile?.evidence
   const profileNote = evidence?.recentGameCount && evidence?.rankedGameCount
-    ? `Shaped by ${evidence.recentGameCount} recently played games + My Ranking`
+    ? `Shaped by ${evidence.recentGameCount} recently played games + rankings`
     : evidence?.recentGameCount
       ? `Shaped by ${evidence.recentGameCount} recently played games`
       : evidence?.rankedGameCount
-        ? 'Shaped by My Ranking while recent play grows'
+        ? 'Shaped by rankings while recent play grows'
         : 'New releases while your taste profile grows'
   const learningNote = evidence?.recommendationOutcomeCount
     ? ` · ${evidence.recommendationOutcomeCount} recommendation outcome${evidence.recommendationOutcomeCount === 1 ? '' : 's'}`

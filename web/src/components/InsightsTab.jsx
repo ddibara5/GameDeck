@@ -233,7 +233,7 @@ export default function InsightsTab() {
   const month = useMemo(() => periodInsights(events, new Date(), INSIGHT_MONTH_DAYS, activityStart), [events, activityStart])
 
   if (loading) {
-    return <div><div className="page-header"><p className="page-subtitle">Your recent play, in motion.</p></div><Skeleton count={4} /></div>
+    return <div><div className="page-header"><p className="page-subtitle">Your recent play, in motion</p></div><Skeleton count={4} /></div>
   }
 
   const renderers = {
@@ -246,7 +246,7 @@ export default function InsightsTab() {
 
   return (
     <div>
-      <div className="page-header"><p className="page-subtitle">Your recent play, in motion.</p></div>
+      <div className="page-header"><p className="page-subtitle">Your recent play, in motion</p></div>
       <PeriodToggle span={span} onChange={setSpan} />
       {rendered.length ? rendered : <div className="chart-card"><div className="chart-empty">Every card is switched off. Open Customize cards to bring some back.</div></div>}
       <button type="button" className="customize-btn" onClick={() => setCustomizeOpen(true)}>

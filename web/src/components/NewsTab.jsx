@@ -185,7 +185,7 @@ export default function NewsTab() {
   return (
     <div>
       <div className="page-header">
-        <p className="page-subtitle">This week in gaming, for your library.</p>
+        <p className="page-subtitle">This week in gaming, for your library</p>
         {!loading && rows.length > 0 ? (
           <button type="button" className="news-refresh-note" onClick={refreshNow} disabled={busy}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

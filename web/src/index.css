@@ -784,9 +784,9 @@
 
 .settings-back {
   flex: none;
-  width: 40px;
-  height: 40px;
-  margin-left: -8px;
+  width: 44px;
+  height: 44px;
+  margin-left: -10px;
   border: none;
   background: none;
   color: var(--accent);
@@ -1313,6 +1313,7 @@ textarea {
 .page-subtitle {
   color: var(--muted);
   font-size: var(--t-foot);
+  line-height: 1.35;
   margin: 0;
 }
 
@@ -1349,7 +1350,13 @@ textarea {
 }
 
 .search-input:focus {
-  border-color: var(--walnut-light);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+:is(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .chip-row {
@@ -1671,12 +1678,19 @@ textarea {
   text-align: center;
   padding: 48px 24px;
   color: var(--muted);
+  line-height: 1.45;
 }
 
 .empty-state-title {
   color: var(--text);
   font-weight: var(--w-semi);
   margin-bottom: 6px;
+}
+
+.empty-state > * {
+  max-width: 320px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* ---------- Modal / detail sheet ---------- */
@@ -1715,6 +1729,7 @@ textarea {
 }
 
 .modal-sheet {
+  position: relative;
   width: 100%;
   max-width: 640px;
   max-height: 88vh;
@@ -1754,20 +1769,32 @@ textarea {
 
 .modal-close {
   position: absolute;
-  top: 14px;
-  right: 16px;
-  width: 32px;
-  height: 32px;
+  z-index: 4;
+  top: 8px;
+  right: 12px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   border: 1px solid var(--line);
-  background: var(--surface-2);
-  color: var(--muted);
+  background: color-mix(in srgb, var(--surface-2) 92%, transparent);
+  color: var(--text);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: var(--t-body);
+  font-size: var(--t-t2);
   letter-spacing: var(--t-body-tr);
+  line-height: 1;
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+
+.modal-close:active {
+  background: var(--line);
+}
+
+.modal-close:disabled {
+  opacity: 0.5;
 }
 
 .detail-title {
@@ -2545,6 +2572,7 @@ textarea {
   font-size: var(--t-foot);
   font-weight: var(--w-semi);
   padding: 8px 0;
+  min-height: 36px;
   border-radius: var(--r-xs);
   cursor: pointer;
   transition: background var(--d-fast) ease, color var(--d-fast) ease;

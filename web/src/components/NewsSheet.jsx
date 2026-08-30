@@ -99,6 +99,7 @@ export default function NewsSheet({ item, rel, onClose, onOpenGame }) {
             </div>
           ) : null}
         </div>
+        <button type="button" className="modal-close" aria-label="Close story" onClick={requestClose}>&times;</button>
 
         <div className="ns-body">
           <div className="news-meta">

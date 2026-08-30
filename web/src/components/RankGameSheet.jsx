@@ -103,6 +103,7 @@ export default function RankGameSheet({ open, game, ranks, gameById, existingRan
     >
       <div className="modal-sheet rank-game-sheet" role="dialog" aria-modal="true" aria-label={`Rank ${displayGame.title}`}>
         <div className="modal-handle" />
+        <button type="button" className="modal-close" aria-label="Close ranking" disabled={busy} onClick={onClose}>&times;</button>
         <Cover src={libraryCover(displayGame)} title={displayGame.title} size="lg" className="rank-sheet-cover" />
 
         {phase === 'reaction' ? (
@@ -136,7 +137,7 @@ export default function RankGameSheet({ open, game, ranks, gameById, existingRan
               </div>
 
               <button type="button" className="rank-sheet-save" disabled={!reaction || busy} onClick={saveReaction}>
-                {busy ? 'Saving…' : existingRank ? 'Update My Ranking' : 'Save to My Ranking'}
+                {busy ? 'Saving…' : existingRank ? 'Update ranking' : 'Save to rankings'}
               </button>
               <small>Optional: fine-tune its position with one close comparison next.</small>
             </section>

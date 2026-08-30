@@ -112,7 +112,7 @@ export default function ActivityTab() {
   return (
     <div>
       <div className="page-header">
-        <p className="page-subtitle">Recent play sessions and achievement unlocks.</p>
+        <p className="page-subtitle">Recent play sessions and achievement unlocks</p>
       </div>
 
       {loading ? (

@@ -44,7 +44,7 @@ test('Rankings offers direct library search and makes comparison optional', () =
   assert.match(rankings, /Rank a game/)
   assert.match(rankings, /Search your library to rank/)
   assert.doesNotMatch(rankings, /unseeded\[0\]/)
-  assert.match(sheet, /Save to My Ranking/)
+  assert.match(sheet, /Save to rankings/)
   assert.match(sheet, /Maybe later/)
 })
 
