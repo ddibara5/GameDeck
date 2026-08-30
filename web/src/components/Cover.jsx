@@ -22,10 +22,9 @@ function snapWidth(px) {
   return WIDTH_LADDER[WIDTH_LADDER.length - 1]
 }
 
-// The slot is measured rather than passed in, because every slot in this app is
-// sized by a CSS variable the user can change in Settings > Appearance:
-// --list-thumb is 52 / 66 / 84 and --shelf-pw is 116 / 146 / 174. A width baked
-// into the call site would be right at one setting and wrong at the other two.
+// The slot is measured rather than passed in, because repeatable game-card slots
+// are sized by the semantic variables in cardSize.css. A width baked into the
+// call site would be right at one artwork setting and wrong at the other two.
 //
 // Measured before paint, in a layout effect, so the first painted <img> already
 // carries the right src. Doing it in useEffect would paint a default-width image

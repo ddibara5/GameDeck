@@ -66,61 +66,51 @@ export function setAccent(name) {
   return a
 }
 
-// Card sizing. Shelf = poster width on every horizontal rail (Continue Playing,
-// Discover shelves, wishlist, Game Pass). List = Library / Discover list-row
-// thumbnail + title. Applied via data-shelf / data-list on <html>; the actual
-// scales live in index.css. Defaults: shelf 'm' (medium), list 'comfortable'.
+// One artwork scale for every repeatable game-card surface. The two preferences
+// this replaces split horizontal shelves from list rows, which is why changing
+// Settings only affected part of the app. A single data-artwork attribute now
+// drives the semantic cover tokens in cardSize.css.
+//
+// The legacy keys are read only when the new preference does not exist. Taking
+// the larger of the two preserves the user's most spacious existing choice and
+// avoids shrinking one of their views during migration.
+const ARTWORK_KEY = 'gamedeck_artwork_size_v1'
 const SHELF_KEY = 'gamedeck_shelf_size_v1'
 const LIST_KEY = 'gamedeck_list_size_v1'
-const SHELF_SIZES = new Set(['s', 'm', 'l'])
-const LIST_SIZES = new Set(['compact', 'comfortable', 'large'])
+const ARTWORK_SIZES = new Set(['s', 'm', 'l'])
+const SHELF_RANK = { s: 0, m: 1, l: 2 }
+const LIST_RANK = { compact: 0, comfortable: 1, large: 2 }
+const SIZE_BY_RANK = ['s', 'm', 'l']
 
-export function getShelfSize() {
+export function getArtworkSize() {
   try {
-    const v = localStorage.getItem(SHELF_KEY)
-    return SHELF_SIZES.has(v) ? v : 'm'
+    const saved = localStorage.getItem(ARTWORK_KEY)
+    if (ARTWORK_SIZES.has(saved)) return saved
+
+    const shelf = localStorage.getItem(SHELF_KEY)
+    const list = localStorage.getItem(LIST_KEY)
+    const migrated = SIZE_BY_RANK[Math.max(SHELF_RANK[shelf] ?? 1, LIST_RANK[list] ?? 1)]
+    localStorage.setItem(ARTWORK_KEY, migrated)
+    return migrated
   } catch {
     return 'm'
   }
 }
 
-export function applyShelfSize(v) {
-  document.documentElement.setAttribute('data-shelf', SHELF_SIZES.has(v) ? v : 'm')
+export function applyArtworkSize(v) {
+  const size = ARTWORK_SIZES.has(v) ? v : 'm'
+  document.documentElement.setAttribute('data-artwork', size)
+  return size
 }
 
-export function setShelfSize(v) {
-  const s = SHELF_SIZES.has(v) ? v : 'm'
+export function setArtworkSize(v) {
+  const size = ARTWORK_SIZES.has(v) ? v : 'm'
   try {
-    localStorage.setItem(SHELF_KEY, s)
+    localStorage.setItem(ARTWORK_KEY, size)
   } catch {
     /* storage unavailable - preference just won't persist */
   }
-  applyShelfSize(s)
-  return s
-}
-
-export function getListSize() {
-  try {
-    const v = localStorage.getItem(LIST_KEY)
-    return LIST_SIZES.has(v) ? v : 'comfortable'
-  } catch {
-    return 'comfortable'
-  }
-}
-
-export function applyListSize(v) {
-  document.documentElement.setAttribute('data-list', LIST_SIZES.has(v) ? v : 'comfortable')
-}
-
-export function setListSize(v) {
-  const s = LIST_SIZES.has(v) ? v : 'comfortable'
-  try {
-    localStorage.setItem(LIST_KEY, s)
-  } catch {
-    /* storage unavailable - preference just won't persist */
-  }
-  applyListSize(s)
-  return s
+  return applyArtworkSize(size)
 }
 
 export function getTheme() {
@@ -161,8 +151,7 @@ export function initTheme() {
   applyTheme(getTheme())
   applyAccent(getAccent())
   applyLogoStyle(getLogoStyle())
-  applyShelfSize(getShelfSize())
-  applyListSize(getListSize())
+  applyArtworkSize(getArtworkSize())
   try {
     const mq = window.matchMedia('(prefers-color-scheme: light)')
     const onChange = () => {

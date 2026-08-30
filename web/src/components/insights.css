@@ -143,7 +143,13 @@
 }
 .wk-game + .wk-game { border-top: 1px solid var(--line); }
 .wk-game.flat { cursor: default; }
-.wk-game .cover { width: 34px; height: 45px; border-radius: var(--r-xs); flex: none; }
+.wk-game .cover {
+  width: var(--game-art-mini);
+  height: auto;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--r-xs);
+  flex: none;
+}
 .wk-gb { flex: 1; min-width: 0; display: block; }
 .wk-gn {
   display: block;
@@ -338,7 +344,13 @@
 }
 .np.flat { cursor: default; }
 .np:active:not(.flat) { opacity: 0.72; }
-.np .cover { width: 56px; height: 74px; border-radius: var(--r-sm); flex: none; }
+.np .cover {
+  width: var(--game-art-feature);
+  height: auto;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--r-sm);
+  flex: none;
+}
 .np-b { flex: 1; min-width: 0; display: block; }
 .np-t {
   display: block;

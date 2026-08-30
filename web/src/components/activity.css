@@ -60,7 +60,13 @@
    renders, it just stops pretending to be a button. */
 .activity-row.flat { cursor: default; }
 
-.activity-row .cover { width: 46px; height: 61px; border-radius: var(--r-xs); flex: none; }
+.activity-row .cover {
+  width: var(--game-art-compact);
+  height: auto;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--r-xs);
+  flex: none;
+}
 
 .activity-body { flex: 1; min-width: 0; }
 .activity-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 2px; }

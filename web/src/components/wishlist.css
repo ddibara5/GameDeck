@@ -232,8 +232,9 @@
 }
 
 .cover.wish-cover {
-  width: 60px;
-  height: 80px;
+  width: var(--game-art-row);
+  height: auto;
+  aspect-ratio: 3 / 4;
   border-radius: var(--r-sm);
   font-size: var(--t-t2);
   letter-spacing: var(--t-t2-tr);
@@ -445,7 +446,7 @@
 /* ---------- Grid density ---------- */
 .wl-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(var(--game-art-grid-columns), 1fr);
   gap: 12px;
   padding: 6px 16px 4px;
 }
@@ -558,7 +559,7 @@
 
 .wl-ncard {
   flex: none;
-  width: 128px;
+  width: var(--game-art-next);
   text-align: left;
   background: var(--surface);
   border: 1px solid var(--line-soft);
@@ -572,7 +573,8 @@
 
 .wl-nart {
   position: relative;
-  height: 150px;
+  height: auto;
+  aspect-ratio: 3 / 4;
   background: var(--surface-2);
 }
 

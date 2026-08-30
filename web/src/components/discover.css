@@ -269,7 +269,7 @@
 
 .discover-browse .shelf-card,
 .discover-browse .shelf-poster {
-  width: var(--shelf-pw);
+  width: var(--game-art-rail);
 }
 
 .discover-browse .shelf-poster {
@@ -277,7 +277,7 @@
 }
 
 .discover-browse .shelf-poster .cover-lg {
-  max-width: var(--shelf-pw);
+  max-width: var(--game-art-rail);
   margin: 0;
 }
 
@@ -553,7 +553,7 @@ button.shelf-head:active {
 
 .rail-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(var(--game-art-grid-columns), 1fr);
   gap: 16px 12px;
   padding: 14px 16px 20px;
 }
@@ -808,7 +808,7 @@ button.shelf-head:active {
      55px, and flex-start left all of that slack under the last line. */
   align-items: center;
   width: 100%;
-  min-height: 108px;
+  min-height: calc(var(--game-art-row) * 4 / 3 + 20px);
   padding: 10px 44px 10px 0;
   background: none;
   border: none;
@@ -818,12 +818,13 @@ button.shelf-head:active {
   cursor: pointer;
 }
 
-/* 66 wide to match --list-thumb's default, so a pick and a Library row line up
-   across the two tabs. */
+/* Shares the row token with Library and search results, so switching the global
+   setting keeps the three views aligned. */
 .cover.fy-cov {
-  width: 66px;
-  height: 88px;
-  min-width: 66px;
+  width: var(--game-art-row);
+  height: auto;
+  min-width: var(--game-art-row);
+  aspect-ratio: 3 / 4;
   border-radius: var(--r-sm);
   margin: 0;
 }

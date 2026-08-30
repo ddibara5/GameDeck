@@ -8,10 +8,8 @@ import {
   setAccent,
   getLogoStyle,
   setLogoStyle,
-  getShelfSize,
-  setShelfSize,
-  getListSize,
-  setListSize,
+  getArtworkSize,
+  setArtworkSize,
 } from '../lib/theme.js'
 import {
   getGround,
@@ -69,18 +67,10 @@ const LOGO_STYLE_OPTIONS = [
   { key: 'glass', label: 'Glass', sub: 'Translucent depth and highlights' },
 ]
 
-// Poster width on horizontal rails (Continue Playing, Discover, wishlist, Game Pass).
-const SHELF_SIZE_OPTIONS = [
+const ARTWORK_SIZE_OPTIONS = [
   { key: 's', label: 'Small' },
   { key: 'm', label: 'Medium' },
   { key: 'l', label: 'Large' },
-]
-
-// Library / Discover list-row thumbnail + title size.
-const LIST_SIZE_OPTIONS = [
-  { key: 'compact', label: 'Compact' },
-  { key: 'comfortable', label: 'Comfortable' },
-  { key: 'large', label: 'Large' },
 ]
 
 export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer }) {
@@ -93,8 +83,7 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
   const [theme, setThemeState] = useState(() => getTheme())
   const [accent, setAccentState] = useState(() => getAccent())
   const [logoStyle, setLogoStyleState] = useState(() => getLogoStyle())
-  const [shelfSize, setShelfSizeState] = useState(() => getShelfSize())
-  const [listSize, setListSizeState] = useState(() => getListSize())
+  const [artworkSize, setArtworkSizeState] = useState(() => getArtworkSize())
   const [ground, setGroundState] = useState(() => getGround())
   // The open sub-pages, outermost first. Escape and the back-swipe pop one level
   // rather than dismissing Settings, and the stack keeps that behavior uniform.
@@ -292,12 +281,8 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
     setLogoStyleState(setLogoStyle(key))
   }
 
-  function changeShelfSize(key) {
-    setShelfSizeState(setShelfSize(key))
-  }
-
-  function changeListSize(key) {
-    setListSizeState(setListSize(key))
+  function changeArtworkSize(key) {
+    setArtworkSizeState(setArtworkSize(key))
   }
 
   function changeGround(key) {
@@ -316,7 +301,7 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
   // have to open to read is worse than the wall it replaced.
   const themeValue = `${labelOf(THEME_OPTIONS, theme)} · ${labelOf(ACCENT_OPTIONS, accent)}`
   const logoStyleValue = labelOf(LOGO_STYLE_OPTIONS, logoStyle)
-  const cardsValue = `${labelOf(SHELF_SIZE_OPTIONS, shelfSize)} · ${labelOf(LIST_SIZE_OPTIONS, listSize)}`
+  const artworkValue = labelOf(ARTWORK_SIZE_OPTIONS, artworkSize)
   const groundValue = labelOf(GROUND_OPTIONS, ground)
   // The oldest of the four sync stamps, because the question this section answers
   // is "is anything stale", and the answer to that is never the freshest one.
@@ -344,7 +329,7 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
             <MenuItem glyph={ICONS.appear} label="Theme" sub="Light or dark, and the color" value={themeValue} onClick={() => push('theme')} />
             <MenuItem glyph={ICONS.layers} label="Logo style" sub="The mark used inside GameDeck" value={logoStyleValue} onClick={() => push('logo')} />
             <MenuItem glyph={ICONS.image} label="Background" sub="What sits behind every tab" value={groundValue} onClick={() => push('background')} />
-            <MenuItem glyph={ICONS.layers} label="Card sizing" sub="Posters and list rows" value={cardsValue} onClick={() => push('cards')} />
+            <MenuItem glyph={ICONS.layers} label="Game artwork" sub="One cover size across every tab" value={artworkValue} onClick={() => push('cards')} />
           </div>
         </div>
 
@@ -565,13 +550,20 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
         </p>
       </SubPage>
 
-      <SubPage open={stack.includes('cards')} depth={depthOf('cards')} title="Card sizing" onBack={pop}>
-        <Field label="Shelf posters" hint="Continue playing, Discover rails, wishlist">
-          <Seg options={SHELF_SIZE_OPTIONS} value={shelfSize} onPick={changeShelfSize} name="Shelf size" />
+      <SubPage open={stack.includes('cards')} depth={depthOf('cards')} title="Game artwork" onBack={pop}>
+        <Field label="Cover size" hint="Medium is about 15% larger than the previous default">
+          <Seg options={ARTWORK_SIZE_OPTIONS} value={artworkSize} onPick={changeArtworkSize} name="Game artwork size" />
         </Field>
-        <Field label="List rows" hint="Library and Discover lists">
-          <Seg options={LIST_SIZE_OPTIONS} value={listSize} onPick={changeListSize} name="List size" />
-        </Field>
+        <div className="settings-artwork-scope" aria-label="Applies everywhere">
+          <strong>Applies everywhere</strong>
+          <ul>
+            <li>Home cards</li>
+            <li>Library rows</li>
+            <li>Browse, For You, and search</li>
+            <li>Release Watch and Wishlist</li>
+            <li>Rankings, Activity, and Insights</li>
+          </ul>
+        </div>
       </SubPage>
     </div>
   )

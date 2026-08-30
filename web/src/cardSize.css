@@ -1,38 +1,101 @@
-/* Card sizing (Settings > Appearance).
-   --shelf-pw   = poster width on the Discover rails only (see discover.css).
-   --list-thumb / --list-title = Library / Discover list-row thumbnail + title.
-   Defaults live here; data-shelf / data-list on <html> (set by lib/theme.js)
-   switch the scale. Imported after index.css so these override the base sizes. */
+/* Universal game artwork sizing (Settings > Game artwork).
+
+   One preference drives semantic slots instead of forcing unlike layouts to use
+   one literal pixel width. Medium deliberately lifts the surfaces that used to
+   feel undersized by roughly 15%; Small and Large scale every slot together.
+   Dedicated hero artwork in GameSheet and Shuffle is intentionally outside this
+   system because it belongs to a full-screen/modal composition, not a card feed. */
 :root {
-  --shelf-pw: 146px;
-  --list-thumb: 66px;
-  --list-title: 16px;
+  --game-art-row: 68px;
+  --game-art-compact: 52px;
+  --game-art-mini: 38px;
+  --game-art-feature: 64px;
+  --game-art-release: 58px;
+  --game-art-rail: 168px;
+  --game-art-next: 140px;
+  --game-art-duel: 158px;
+  --game-art-grid-columns: 3;
 }
 
-:root[data-shelf='s'] { --shelf-pw: 116px; }
-:root[data-shelf='m'] { --shelf-pw: 146px; }
-:root[data-shelf='l'] { --shelf-pw: 174px; }
+:root[data-artwork='s'] {
+  --game-art-row: 52px;
+  --game-art-compact: 42px;
+  --game-art-mini: 32px;
+  --game-art-feature: 52px;
+  --game-art-release: 46px;
+  --game-art-rail: 126px;
+  --game-art-next: 112px;
+  --game-art-duel: 128px;
+  --game-art-grid-columns: 4;
+}
 
-:root[data-list='compact'] { --list-thumb: 52px; --list-title: 15px; }
-:root[data-list='comfortable'] { --list-thumb: 66px; --list-title: 16px; }
-:root[data-list='large'] { --list-thumb: 84px; --list-title: 17.5px; }
+:root[data-artwork='m'] {
+  --game-art-row: 68px;
+  --game-art-compact: 52px;
+  --game-art-mini: 38px;
+  --game-art-feature: 64px;
+  --game-art-release: 58px;
+  --game-art-rail: 168px;
+  --game-art-next: 140px;
+  --game-art-duel: 158px;
+  --game-art-grid-columns: 3;
+}
 
-/* Base poster width for any shelf outside Discover. The Library's "Continue
-   playing" rail was the only one and has been removed, so this now serves as the
-   unscoped default; the Discover rails still override it with --shelf-pw through
-   the higher-specificity .discover-browse rule in discover.css. */
+:root[data-artwork='l'] {
+  --game-art-row: 84px;
+  --game-art-compact: 64px;
+  --game-art-mini: 46px;
+  --game-art-feature: 76px;
+  --game-art-release: 70px;
+  --game-art-rail: 198px;
+  --game-art-next: 168px;
+  --game-art-duel: 188px;
+  --game-art-grid-columns: 2;
+}
+
+/* Library and Discover search rows share the same 3:4 cover slot. */
+.game-card .cover-sm {
+  width: var(--game-art-row);
+  height: auto;
+  aspect-ratio: 3 / 4;
+  font-size: calc(var(--game-art-row) * 0.38);
+}
+
+/* Horizontal poster rails use the common rail token. Component styles retain
+   responsibility for gaps, labels and badges. */
 .shelf-card,
 .shelf-poster {
-  width: 116px;
+  width: var(--game-art-rail);
 }
 
-/* Scoped to .game-card so other small covers (menus, etc.) stay fixed. */
-.game-card .cover-sm {
-  width: var(--list-thumb);
-  height: var(--list-thumb);
-  font-size: calc(var(--list-thumb) * 0.38);
+.settings-artwork-scope {
+  margin: var(--space-5) 0 0;
+  padding: var(--space-4);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  background: var(--surface);
 }
 
-.game-card .game-title {
-  font-size: var(--list-title);
+.settings-artwork-scope strong {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-size: var(--t-foot);
+  font-weight: var(--w-semi);
+}
+
+.settings-artwork-scope ul {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: var(--t-foot);
+}
+
+.settings-artwork-scope li::before {
+  content: '✓';
+  margin-right: 8px;
+  color: var(--accent);
+  font-weight: var(--w-bold);
 }

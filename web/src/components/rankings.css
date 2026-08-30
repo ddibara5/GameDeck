@@ -50,7 +50,7 @@
 
 .rank-row {
   display: grid;
-  grid-template-columns: 44px 52px minmax(0, 1fr) auto;
+  grid-template-columns: 44px var(--game-art-row) minmax(0, 1fr) auto;
   gap: var(--space-3);
   align-items: center;
   min-height: 72px;
@@ -59,6 +59,12 @@
 }
 
 .rank-row:last-child { border-bottom: 0; }
+
+.rank-row > .cover {
+  width: var(--game-art-row);
+  height: auto;
+  aspect-ratio: 3 / 4;
+}
 
 .rank-place {
   display: grid;
@@ -122,12 +128,18 @@
 
 .rank-seed-card {
   display: grid;
-  grid-template-columns: 56px 1fr;
+  grid-template-columns: var(--game-art-row) 1fr;
   gap: var(--space-3);
   padding: var(--space-4);
   border: 1px solid var(--line-soft);
   border-radius: var(--radius);
   background: var(--surface);
+}
+
+.rank-seed-card > .cover {
+  width: var(--game-art-row);
+  height: auto;
+  aspect-ratio: 3 / 4;
 }
 
 .rank-reaction-label {
@@ -180,7 +192,7 @@
   font: inherit;
 }
 
-.rank-duel-card .cover-lg { width: min(100%, 150px); }
+.rank-duel-card .cover-lg { width: min(100%, var(--game-art-duel)); }
 .rank-duel-card strong { font-size: var(--t-foot); line-height: 1.25; }
 .rank-duel-card span { color: var(--accent); font-size: var(--t-cap); }
 .rank-vs { color: var(--muted); font-size: var(--t-cap); }

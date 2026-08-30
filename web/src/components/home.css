@@ -186,8 +186,9 @@
    specificity and lives in index.css: the override would then depend on import
    order rather than on the selector, which is not a thing to leave to luck. */
 .cover.up-cov {
-  width: 50px;
-  height: 66px;
+  width: var(--game-art-release);
+  height: auto;
+  aspect-ratio: 3 / 4;
   flex: none;
   border-radius: var(--r-sm);
   font-size: var(--t-cap);
