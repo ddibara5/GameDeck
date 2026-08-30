@@ -9,7 +9,6 @@ import { relOf, releaseCalendarDay, releaseDaysFromToday } from '../lib/wishlist
 import { platformMeta, minutesToHhm, parseDayOrInstant, libraryCover } from '../lib/format.js'
 import { getActivityStartCache, loadActivityStart, loadRecentActivity } from '../lib/recentActivity.js'
 import { weekStats, WEEK_SPAN, startOfDay, daysBetween, dayKey, eventDay } from '../lib/playWeek.js'
-import { gameSheetWarmProps } from '../lib/gameSheetWarmIntent.js'
 import './insights.css'
 import './home.css'
 
@@ -243,7 +242,6 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
         className={`hm-release-item${upcoming ? ' upcoming' : ' out'}${w.days <= 7 ? ' soon' : ''}`}
         key={`${direction}-${w.igdb_id}`}
         onClick={() => setWishOpen(w)}
-        {...gameSheetWarmProps(w, 'wishlist')}
       >
         <Cover src={w.cover} title={w.title} size="sm" className="up-cov" />
         <span className="hm-release-copy">
@@ -271,7 +269,6 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
             type="button"
             className={`np${nowPlaying.game ? '' : ' flat'}`}
             onClick={nowPlaying.game ? () => openGame(nowPlaying.game) : undefined}
-            {...gameSheetWarmProps(nowPlaying.game, 'owned')}
           >
             <Cover src={nowPlaying.cover} title={nowPlaying.title} size="sm" />
             <span className="np-b">

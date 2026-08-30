@@ -10,7 +10,6 @@ import { releaseDayDelta, releaseTiming, timingParts, shelfMetaDate, releaseWind
 import TimingOverlay from './TimingOverlay.jsx'
 import { useWishlist } from '../lib/wishlist.js'
 import { useRowsConfig, ROW_BY_KEY, getFilledRows, setFilledRows } from '../lib/discoverRows.js'
-import { gameSheetWarmProps } from '../lib/gameSheetWarmIntent.js'
 import { VIBES } from '../lib/vibes.js'
 import {
   useDiscoverPrefs,
@@ -600,7 +599,7 @@ export default function DiscoverBrowse({
                     const metaDate = shelfMetaDate(g, timing)
                     return (
                       <div className="shelf-card-wrap" key={g.id}>
-                        <button type="button" className="shelf-card" onClick={() => setSelected(g)} {...gameSheetWarmProps(g, 'discover')}>
+                        <button type="button" className="shelf-card" onClick={() => setSelected(g)}>
                           <div className="shelf-poster">
                             <Cover src={g.cover} title={g.name} size="lg" />
                             {isOwned(g.name) ? <span className="in-library-dot" title="In library" /> : null}

@@ -21,7 +21,6 @@ import {
 } from '../lib/playInsights.js'
 import { useCardsConfig } from '../lib/insightsCards.js'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
-import { gameSheetWarmProps } from '../lib/gameSheetWarmIntent.js'
 import './insights.css'
 
 const WEEK_TRACK = 46
@@ -138,7 +137,7 @@ function TimeSplit({ insight, gamesById, onOpenGame }) {
                 ? `${row.achievements} ${row.achievements === 1 ? 'achievement' : 'achievements'}`
                 : null
             return (
-              <button type="button" className={`wk-game${game ? '' : ' flat'}`} key={row.master_id} onClick={game ? () => onOpenGame(game) : undefined} {...gameSheetWarmProps(game, 'owned')}>
+              <button type="button" className={`wk-game${game ? '' : ' flat'}`} key={row.master_id} onClick={game ? () => onOpenGame(game) : undefined}>
                 <Cover src={libraryCover(game, row.cover)} title={row.title} size="sm" />
                 <span className="wk-gb">
                   <span className="wk-gn">{row.title}</span>
@@ -191,7 +190,7 @@ function Milestones({ insight, gamesById, onOpenGame }) {
         const game = milestone.master_id != null ? gamesById.get(String(milestone.master_id)) || null : null
         const content = <><span className={`milestone-icon${milestone.type === 'progress' ? ' brass' : ''}`}>{milestone.type === 'completed' ? '✓' : milestone.type === 'progress' ? '↗' : '★'}</span><span className="milestone-copy"><b>{milestone.title}</b><small>{milestoneCopy(milestone, insight.span)}</small></span></>
         return game ? (
-          <button type="button" className="milestone-row" key={`${milestone.type}-${milestone.master_id}`} onClick={() => onOpenGame(game)} {...gameSheetWarmProps(game, 'owned')}>{content}</button>
+          <button type="button" className="milestone-row" key={`${milestone.type}-${milestone.master_id}`} onClick={() => onOpenGame(game)}>{content}</button>
         ) : <div className="milestone-row flat" key={`${milestone.type}-${index}`}>{content}</div>
       }) : <div className="chart-empty">Milestones will appear as new progress is recorded.</div>}
     </section>

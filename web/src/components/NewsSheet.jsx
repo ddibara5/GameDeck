@@ -29,13 +29,9 @@ import './news.css'
  * because a second bottom sheet that behaves even slightly differently is worse
  * than no second bottom sheet.
  *
- * Not tinted from its art, unlike the game sheet. That tint is a canvas read,
- * a canvas read needs the pixels same-origin, and /api/tint is deliberately not
- * an open proxy - it takes an IGDB image id and builds the url itself. Article
- * images come from a dozen press hosts, so tinting would mean either opening
- * that route to arbitrary urls or tinting only the minority of stories whose
- * art happens to be an IGDB cover. Neither is worth it, so the sheet keeps the
- * plain surface.
+ * The image stays in a dedicated band above the text. Like the game sheet, the
+ * body uses the plain theme surface so opening it never requires image-derived
+ * color work.
  */
 // The band is full sheet width at 196px tall; 800 covers it at 2x on the widest
 // phone. The blurred fill behind a cover is scaled 140% and blurred 24px, so it

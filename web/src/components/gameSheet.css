@@ -6,21 +6,11 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  /* --text, like the blurb. Every piece of copy that sits directly on the card
-     is --text now, and that is what lets the tint be strong enough to see: with
-     --muted here the safe lightness band was so narrow that a pale cover in
-     light mode came out 8 rgb units from the untinted card. Size and weight
-     still separate this row from the title. */
-  color: var(--text);
+  color: var(--muted);
   font-size: var(--t-foot);
   margin: 2px 0 4px;
 }
 
-/* The NUMBER is --text and only the glyph is amber. --amber on the card
-   measured 2.85:1 in light and 4.81:1 in dark, and it fails on the untinted
-   surface too, so this is an old bug rather than one the tint introduced - the
-   tint is just what made it worth measuring. The star carries no meaning the
-   number does not, so it can stay decorative. */
 .gs-star {
   color: var(--text);
   font-weight: var(--w-semi);
@@ -100,79 +90,23 @@
   gap: 6px;
   margin: 10px 0 2px;
 }
-/* ---------- Controls that sit ON the card ----------
-   The chips and the two secondary buttons used to be painted in --surface-2 and
-   --line, which are fixed tokens chosen against a fixed --surface. The card's
-   background is not fixed any more - it is sampled from the cover - so those
-   fills read as grey slabs dropped onto a coloured card.
-
-   Translucent instead, so they lift or deepen whatever the card happens to be
-   and stay part of it. White over the dark theme, black over the light one,
-   which is the only pair that works in both directions from an arbitrary hue.
-
-   This MOVES them across a line the contrast audit draws. An opaque fill is a
-   known ground, so repro/tint.mjs used to skip those elements; a translucent one
-   composites over the tint and has to be measured like any other text on the
-   card. The audit's threshold moved from "any fill" to "an effectively opaque
-   fill" in the same change, or this would have gone unchecked.
-
-   .meta-chip takes --text with them. It was --muted, and --muted needs the tint
-   at L 0.15 or below to clear 4.5 while the band reaches 0.20 - it only ever
-   passed because the opaque fill was hiding it. */
 .meta-chip {
   font-size: var(--t-cap);
-  color: var(--text);
-  border: 1px solid var(--gs-hairline);
-  background: var(--gs-raise);
+  color: var(--muted);
+  border: 1px solid var(--line-soft);
+  background: var(--surface-2);
   border-radius: var(--r-pill);
   padding: 3px 9px;
 }
 
-/* `:not(.filter-sheet)` is doing real work here, not tidiness. FOUR other
-   components render `<div className="modal-sheet filter-sheet">` - the Discover
-   filters, the rail sort, the Library filters and the shuffler - so scoping to
-   `.modal-sheet` alone restyles every one of them, and they sit on a fixed
-   --surface where the original token pair is still correct. Only the game sheet
-   has a --gs-tint. */
-.modal-sheet:not(.filter-sheet) {
-  --gs-raise: rgba(255, 255, 255, 0.08);
-  --gs-hairline: rgba(255, 255, 255, 0.14);
-}
-
-/* The thin tan strip across the top of the card. `.modal-sheet` carries
-   `border-top: 1px solid var(--line)`, and --line is #38332e, a warm brown
-   picked to read as a divider against the fixed --surface. Against a teal or
-   navy card it is a tan line instead. Measured at DPR 3: three device rows of
-   rgb(56,51,46) between the backdrop and the tint.
-
-   The COLOUR goes, not the border. Keeping the 1px means --gs-bleed-y stays 17
-   (border 1 + padding 16) and the hero's bleed still lands exactly on the edge
-   it was measured against. A transparent border shows the element's own
-   background through it, so that row becomes the card's colour rather than a
-   gap. */
-.modal-sheet:not(.filter-sheet) {
-  border-top-color: transparent;
-}
-
-[data-theme="light"] .modal-sheet:not(.filter-sheet) {
-  --gs-raise: rgba(0, 0, 0, 0.05);
-  --gs-hairline: rgba(0, 0, 0, 0.12);
-}
-
-.modal-sheet:not(.filter-sheet) .discover-action:not(.primary) {
-  background: var(--gs-raise);
-  border-color: var(--gs-hairline);
+.game-sheet .discover-action:not(.primary) {
+  background: var(--surface-2);
+  border-color: var(--line-soft);
 }
 
 /* Summary blurb. */
-/* --text, not --muted, and this is what pays for the gradient above. The blurb
-   is the lowest-contrast thing that scrolls across the art, so it sets the
-   ceiling on how thin the veil is allowed to be. Brightening it buys back more
-   headroom than any veil tuning could, and body text over key art wants to be
-   bright anyway. Measured: 11.32:1 at the worst scroll position against
-   typical art, 5.05:1 against a blown-out white screenshot. */
 .discover-summary {
-  color: var(--text);
+  color: var(--muted);
   font-size: var(--t-foot);
   line-height: 1.55;
   margin: 12px 0 4px;
@@ -270,109 +204,4 @@
   border: 1px solid var(--line);
 }
 
-/* ---------- The card's colour ----------
-   Set per game by GameSheet as an inline --gs-tint, and unset the rest of the
-   time, so this one line is both the tinted card and the plain one.
-
-   This replaces a blurred screenshot behind a veil, which is worth writing down
-   because the replacement is not a simplification for its own sake: that
-   structure shipped three defects in three commits (it sized to the padding box
-   and scrolled away; its scaled art escaped the veil as a band; and once both
-   were fixed the veil had to be so opaque that the art moved the card by one
-   rgb unit). All three came from the same root - an unbounded IMAGE and text
-   competing for the same pixels, where the text has to win, so the image loses
-   everything.
-
-   A colour sampled from the cover and clamped into a known lightness band ends
-   that. The ground under the text is knowable in advance, so it can be strong
-   enough to see: every clamped tint holds --muted at 4.74:1 or better in dark
-   and 4.62:1 in light, worst hue, worst saturation, solved across all 360 hues
-   rather than sampled from one game. See src/lib/tint.js.
-
-   background-color, not a gradient: it covers the sheet's whole scroll area
-   natively, which is what "the whole card" means. An absolutely positioned
-   layer only ever covered the padding box, and that was defect one. */
-/* ---------- The hero backdrop ----------
-   The cover again, blurred to a colour field, filling the top of the card and
-   DISSOLVING into the tint rather than sitting behind a veil.
-
-   The mask is the whole idea, and it is what three previous attempts at this
-   were missing. A veil has to be opaque enough to protect the worst text
-   against the worst art, everywhere, all at once. A mask does not protect
-   anything: it removes the art entirely before the text starts. So no word on
-   this card is ever over an image, which is not a contrast argument that has to
-   be re-measured per game - it is a geometric one, and it is asserted as
-   geometry rather than as a ratio.
-
-   The offsets are load-bearing and were measured, not guessed: the art is gone
-   by 336px and the title starts at 352 at its highest. If the sheet's head ever
-   grows or shrinks, move the mask's last stop with it.
-
-   Painted from the same immutable URL the tint sampler decoded, so the browser
-   reuses the warmed response and decoded pixels. There is deliberately no
-   second fade here: the sheet only mounts art while its own opening animation
-   is still moving, and otherwise keeps the tint-only background for that open. */
-.gs-hero {
-  position: relative;
-  /* The sheet's border-top (1) plus padding-top (16), and its side padding.
-     Keep in step with .modal-sheet's padding in index.css. */
-  --gs-bleed-y: 17px;
-  --gs-bleed-x: 20px;
-  height: 420px;
-  margin: calc(-1 * var(--gs-bleed-y)) calc(-1 * var(--gs-bleed-x)) -420px;
-  overflow: hidden;
-  pointer-events: none;
-  border-radius: inherit;
-  /* 80%, not 86%. At 86% the mask reaches zero at 361px and the title starts at
-     352, so the last few percent of art landed under the first word - and the
-     first fixture tried here HID that, because its tint and its art were close
-     enough in colour that the difference fell under the detection threshold and
-     read as "art stops at 323". The assertion in repro/tint.mjs runs three
-     covers chosen for contrast against the tint for exactly this reason.
-     80% of 420 is 336, which clears 352 by 16px. */
-  -webkit-mask-image: linear-gradient(180deg, #000 0, #000 38%, transparent 80%);
-  mask-image: linear-gradient(180deg, #000 0, #000 38%, transparent 80%);
-}
-
-/* Inset NEGATIVE so the blur's soft rim falls outside the band and .gs-hero
-   clips it. The rim is why an unclipped blurred layer shows a seam, and it is
-   the same trap as the scale overhang that shipped as a visible band in
-   567a27d. No transform here: a transform would scale the mask with the
-   element and move its last stop off the offsets it was measured against. */
-/* An <img>, not a background, so it shares the colour sampler's cache entry
-   (see src/lib/tint.js). object-fit does what background-size: cover did. */
-.gs-hero-img {
-  position: absolute;
-  inset: -14%;
-  width: 128%;
-  height: 128%;
-  object-fit: cover;
-  object-position: center 30%;
-  /* 8, down from 14, so the art either side of the cover reads as a picture
-     rather than a wash. Dave asked for the top of the band specifically and
-     said the fade below it was already right, which the mask makes free: the
-     backdrop is gone by 336px and the title starts at 352, so nothing about
-     turning the blur down moves a single word.
-
-     The floor is set by resolution, and it was measured rather than guessed.
-     The band renders 503x538 CSS, which is 1509 device px at DPR 3, against a
-     555px source: a 2.7x enlargement. At blur 8 the radius is 24 device px and
-     covers it completely. Compared against t_screenshot_big (940px, 66KB vs
-     27KB) at 14/10/8/6 on the real key art: at 8 the two are indistinguishable,
-     and only at 6 does the bigger source start to look crisper. So the extra
-     39KB buys nothing here and is not spent. Go below 6 and it would be.
-
-     34 was the number the OLD backdrop needed - a 90px cover stretched 5.7x. */
-  filter: blur(8px) saturate(1.25);
-}
-
-.modal-sheet {
-  background-color: var(--gs-tint, var(--surface));
-  transition: background-color 260ms ease;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .modal-sheet {
-    transition: none;
-  }
-}
+.game-sheet { background: var(--surface); }

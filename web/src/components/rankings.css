@@ -326,57 +326,6 @@
 .rank-sheet-duel > span { color: var(--muted); font-size: var(--t-cap); }
 .rank-sheet-later { display: block; min-height: 44px; margin: 0 auto; border: 0; background: none; color: var(--muted); font: inherit; }
 
-.rank-section-title {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin: var(--space-5) 0 var(--space-2);
-}
-
-.rank-section-title h3 {
-  margin: 0;
-  font-size: var(--t-body);
-  font-weight: var(--w-semi);
-  letter-spacing: var(--t-body-tr);
-}
-
-.rank-section-title span { color: var(--muted); font-size: var(--t-cap); }
-
-.rank-seed-card {
-  display: grid;
-  grid-template-columns: var(--game-art-row) 1fr;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius);
-  background: var(--surface);
-}
-
-.rank-seed-card > .cover {
-  width: var(--game-art-row);
-  height: auto;
-  aspect-ratio: 3 / 4;
-}
-
-.rank-reaction-label {
-  margin: var(--space-2) 0 var(--space-1);
-  color: var(--muted);
-  font-size: var(--t-cap2);
-}
-
-.rank-reaction-options { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-
-.rank-reaction-options button {
-  min-height: 40px;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--r-pill);
-  background: var(--surface-2);
-  color: var(--text);
-  font: inherit;
-  font-size: var(--t-cap);
-}
-
 .rank-compare {
   padding: var(--space-4);
   border: 1px solid var(--line-soft);
@@ -464,16 +413,28 @@
 .rank-empty { padding: var(--space-6) var(--space-4); color: var(--muted); text-align: center; }
 .rank-error { color: var(--danger, #c45b5b); font-size: var(--t-foot); }
 
-.rank-sheet-badge {
-  display: inline-flex;
-  margin: var(--space-2) auto 0;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--r-pill);
+.game-sheet-rank {
+  width: 100%;
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: var(--space-3) 0 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
   background: var(--surface-2);
-  color: var(--accent);
-  font-size: var(--t-cap);
-  font-weight: var(--w-bold);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
 }
+
+.game-sheet-rank > span { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
+.game-sheet-rank small { color: var(--muted); font-size: var(--t-cap); }
+.game-sheet-rank strong { overflow: hidden; font-size: var(--t-foot); text-overflow: ellipsis; white-space: nowrap; }
+.game-sheet-rank svg { width: 18px; height: 18px; flex: 0 0 auto; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.game-sheet-rank:disabled { opacity: 0.62; }
 
 .auth-page,
 .auth-loading {

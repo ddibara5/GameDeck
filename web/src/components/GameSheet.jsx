@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Cover from './Cover.jsx'
+import RankGameSheet from './RankGameSheet.jsx'
 import { useDelayedClose } from '../lib/useDelayedClose.js'
 import { useSheetDrag } from '../lib/useSheetDrag.js'
 import { lockScroll } from '../lib/scrollLock.js'
-import { useAchievementsUrl } from '../lib/useLibraryGames.js'
-import { coverImageId, igdbCover, platformMeta, minutesToHhm, formatDate, releaseLabel } from '../lib/format.js'
+import { useAchievementsUrl, useLibraryGames } from '../lib/useLibraryGames.js'
+import { igdbCover, platformMeta, minutesToHhm, formatDate, releaseLabel } from '../lib/format.js'
 import {
   STATUSES,
   STATUS_LABELS,
@@ -16,13 +17,100 @@ import {
 } from '../lib/userStatus.js'
 import { useWishlist, toggleWishlist } from '../lib/wishlist.js'
 import { fetchGameById } from '../lib/discover.js'
-import { coverLook, peekCoverLook } from '../lib/tint.js'
-import { resolveTheme } from '../lib/theme.js'
-import { backdropUrl, peekGameSheetMedia, SHEET_ART_DEADLINE_MS } from '../lib/gameSheetWarm.js'
+import { peekGameSheetMedia } from '../lib/gameSheetMedia.js'
 import Lightbox from './Lightbox.jsx'
-import RankingReaction from './RankingReaction.jsx'
-import { getGameRankCache, loadGameRank, seedForReaction } from '../lib/ranking.js'
+import {
+  REACTIONS,
+  getRankingStateCache,
+  isRankingEligible,
+  loadRankingState,
+  tierForPosition,
+} from '../lib/ranking.js'
 import './gameSheet.css'
+
+function reactionLabel(reaction) {
+  return REACTIONS.find((item) => item.key === reaction)?.label || String(reaction || '').replaceAll('_', ' ')
+}
+
+function OwnedRankingAction({ game }) {
+  const cachedState = getRankingStateCache()
+  const [rankingState, setRankingState] = useState(cachedState)
+  const [rankOpen, setRankOpen] = useState(false)
+  const [opening, setOpening] = useState(false)
+  const [error, setError] = useState('')
+  const { games } = useLibraryGames()
+  const gameById = useMemo(() => new Map(games.map((item) => [String(item.master_id), item])), [games])
+
+  useEffect(() => {
+    let alive = true
+    loadRankingState(false, (fresh) => {
+      if (alive) setRankingState(fresh)
+    })
+      .then((state) => {
+        if (alive) setRankingState(state)
+      })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [])
+
+  const ranks = rankingState?.ranks || []
+  const index = ranks.findIndex((item) => String(item.master_id) === String(game.master_id))
+  const rank = index >= 0 ? ranks[index] : null
+  const eligible = Boolean(rank) || isRankingEligible(game, explicitStatus(game))
+  if (!eligible) return null
+
+  const tier = rank ? tierForPosition(index, ranks.length) : null
+
+  async function openRanking() {
+    if (opening) return
+    setError('')
+    if (!rankingState) {
+      setOpening(true)
+      try {
+        setRankingState(await loadRankingState())
+      } catch (err) {
+        setError(err.message || 'Could not load your ranking.')
+        setOpening(false)
+        return
+      }
+      setOpening(false)
+    }
+    setRankOpen(true)
+  }
+
+  async function refreshRanking() {
+    const next = await loadRankingState(true)
+    setRankingState(next)
+  }
+
+  return (
+    <>
+      <button type="button" className="game-sheet-rank" disabled={opening} onClick={openRanking}>
+        <span>
+          <small>My ranking</small>
+          <strong>
+            {rank
+              ? `${reactionLabel(rank.reaction)} · ${Math.round(rank.score)} · Tier ${tier}`
+              : opening
+                ? 'Opening…'
+                : 'Rank this game'}
+          </strong>
+        </span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+      </button>
+      {error ? <p className="rank-error" role="alert">{error}</p> : null}
+      <RankGameSheet
+        open={rankOpen}
+        game={game}
+        ranks={ranks}
+        gameById={gameById}
+        existingRank={rank}
+        onClose={() => setRankOpen(false)}
+        onSaved={refreshRanking}
+      />
+    </>
+  )
+}
 
 // Holds the vertical space that the summary + screenshot strip + genre chips
 // will occupy once the IGDB media fetch lands. Without it the sheet paints
@@ -82,8 +170,6 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   // deliberate one and there is no way back out of an override.
   const [status, setStatusState] = useState('backlog')
   const [pinned, setPinned] = useState(false)
-  const [rank, setRank] = useState(() => (owned && game ? getGameRankCache(game.master_id) || null : null))
-  const [reactionPrompt, setReactionPrompt] = useState(false)
 
   // achievements_url is no longer carried on library rows: it was 34 kB across
   // 513 of them to serve this single link, on a sheet that shows one game at a
@@ -93,20 +179,6 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
     if (!owned || !game) return
     setPinned(Boolean(explicitStatus(game)))
     setStatusState(effectiveStatus(game))
-  }, [owned, game])
-
-  useEffect(() => {
-    if (!owned || !game) return undefined
-    let alive = true
-    setReactionPrompt(false)
-    const cached = getGameRankCache(game.master_id)
-    setRank(cached === undefined ? null : cached)
-    loadGameRank(game.master_id, (fresh) => {
-      if (alive) setRank(fresh)
-    }).then((data) => {
-      if (alive) setRank(data || null)
-    }).catch(() => {})
-    return () => { alive = false }
   }, [owned, game])
 
   // IGDB media. Discover rail items already carry their summary + screenshots, so
@@ -175,80 +247,6 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   // Lock background scroll while the sheet is open (shared ref-counted lock).
   useEffect(() => lockScroll(), [])
 
-  // The card's colour. Sampled from the COVER rather than from a screenshot,
-  // for two reasons. It is fast: the cover is the image you just tapped, so it
-  // is already decoded and in cache, and the tint lands on the first frame
-  // instead of after the IGDB media fetch that the old blurred backdrop waited
-  // on. And it is stable: one source means the card does not change colour a
-  // beat after it opens.
-  //
-  // Read through /api/tint rather than straight off the image CDN. A canvas
-  // read of a cross-origin image needs the host to send CORS headers, neither
-  // IGDB nor wsrv.nl documents that it does, and a missing header fails silently
-  // as "no tint". The API route serves the same bytes from this origin, so the
-  // question does not arise. See web/api/tint.js.
-  // THE CARD SETTLES IN TWO MOVES, and the rule that shapes both of them is
-  // that the colour and the backdrop must always come from the SAME picture.
-  // The version that did not - key art behind a cover-sampled colour - looked
-  // like a rendering fault: warm art dissolving into a teal card. Mocking it is
-  // the only reason it was caught.
-  //
-  //   fast  the cover, colour only. Already decoded and in cache because it is
-  //         the image you just tapped, so the card is the right colour in ~80ms
-  //         and no picture is encoded that nobody paints.
-  //   rich  the key art, colour AND backdrop, from one read. Intent handlers
-  //         warm it before the click; a session cache makes later opens fully
-  //         synchronous. A cold result only joins during the opening animation,
-  //         never as a late pop into a sheet that has already settled.
-  //
-  // `rich` wins whenever it exists rather than the two racing, so whichever
-  // resolves first the pair on screen is never mismatched.
-  const coverId = game ? coverImageId(game) : null
-  const fastSrc = coverId ? `/api/tint?id=${encodeURIComponent(coverId)}&kind=cover` : null
-  // The discover payload carries backdropId at open; a library row only learns
-  // it from the media fetch. Same field either way, so this is one expression.
-  const bdSrc = (() => {
-    const from = (media && media.backdropId ? media : null) || (game && game.backdropId ? game : null)
-    return backdropUrl(from)
-  })()
-  const theme = resolveTheme()
-  const openedAt = useRef(typeof performance !== 'undefined' ? performance.now() : Date.now())
-  const [fast, setFast] = useState(() => peekCoverLook(fastSrc, theme))
-  const [rich, setRich] = useState(() => peekCoverLook(bdSrc, theme))
-
-  useEffect(() => {
-    if (!fastSrc) { setFast(null); return undefined }
-    let alive = true
-    setFast(null)
-    const cached = peekCoverLook(fastSrc, theme)
-    if (cached) { setFast(cached); return undefined }
-    coverLook(fastSrc, theme).then((c) => {
-      if (alive) setFast(c)
-    })
-    return () => { alive = false }
-  }, [fastSrc, theme])
-
-  useEffect(() => {
-    if (!bdSrc) { setRich(null); return undefined }
-    let alive = true
-    const cached = peekCoverLook(bdSrc, theme)
-    setRich(cached)
-    if (cached) return () => { alive = false }
-    coverLook(bdSrc, theme).then((c) => {
-      // Artwork may join while the sheet itself is moving, but never pop into a
-      // settled sheet. A late result is still cached, so the next open starts
-      // with it on the first frame.
-      const now = typeof performance !== 'undefined' ? performance.now() : Date.now()
-      if (alive && c && now - openedAt.current <= SHEET_ART_DEADLINE_MS) setRich(c)
-    })
-    return () => { alive = false }
-  }, [bdSrc, theme])
-
-  const tint = rich || fast
-  // The <img> below is the same url the colour was sampled from, so painting it
-  // is a cache hit rather than a second download.
-  const backdrop = rich ? bdSrc : null
-
   if (!game) return null
 
   const title = game.title || game.name
@@ -291,7 +289,7 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   const wishActive = wishIds.has(Number(igdbId))
   const seed = { id: igdbId, name: title, year, genres }
 
-  const handleBackdropClick = (e) => {
+  const handleOverlayClick = (e) => {
     if (e.target === e.currentTarget) requestClose()
   }
 
@@ -300,38 +298,17 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   // `will-change: transform`, which would otherwise trap this sheet and make it
   // glitch or open misaligned). Keeps every sheet in the app on one identical path.
   return createPortal(
-    <div className={`modal-backdrop${closing ? ' closing' : ''}`} onClick={handleBackdropClick}>
+    <div className={`modal-backdrop${closing ? ' closing' : ''}`} onClick={handleOverlayClick}>
       <div
-        className="modal-sheet"
+        className="modal-sheet game-sheet"
         role="dialog"
         aria-modal="true"
         aria-label={title}
         style={{
           transform: closing ? 'translateY(110%)' : dragY ? `translateY(${dragY}px)` : undefined,
           transition: dragging ? 'none' : 'transform var(--d-base) var(--ease-out)',
-          // Falls back to --surface in the stylesheet until (or unless) a tint
-          // resolves, so a game with no cover, or a CDN that will not send CORS
-          // headers, gets exactly the card it had before.
-          ...(tint ? { '--gs-tint': tint } : null),
         }}
       >
-        {/* The game's KEY ART, blurred and full bleed, masked out before any
-            text starts. Not the cover: the cover is the poster sitting on top
-            of this, and blurring the same picture behind itself is what made
-            the card read as the poster twice. Artworks are landscape and carry
-            no HUD, which is why they beat screenshots here.
-
-            A plain <img>. It carries crossOrigin only to match the sampler's
-            request exactly; the sharing itself does not depend on that, since
-            Chromium keys the cache by url and this route is same-origin and
-            immutable. Measured: the second read of the same url transfers 300
-            bytes against the first one's 5611. */}
-        {backdrop ? (
-          <div className="gs-hero" aria-hidden="true">
-            <img className="gs-hero-img" src={backdrop} crossOrigin="anonymous" alt="" decoding="async" />
-          </div>
-        ) : null}
-
         <div className="sheet-drag-zone" {...dragHandlers}>
           <div className="modal-handle" />
           <Cover src={coverSrc} title={title} size="lg" />
@@ -349,7 +326,6 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
           </div>
         ) : null}
         {!owned && inLibrary ? <span className="in-library-badge sheet">In your library</span> : null}
-        {owned && rank ? <span className="rank-sheet-badge">My rank · {Math.round(rank.score)}</span> : null}
 
         {owned ? (
           <>
@@ -371,7 +347,6 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
                     setStatus(game.master_id, clearing ? null : s)
                     setPinned(!clearing)
                     setStatusState(clearing ? derivedStatus(game) : s)
-                    if (!clearing && s === 'finished' && !rank) setReactionPrompt(true)
                   }}
                 >
                   {STATUS_LABELS[s]}
@@ -383,15 +358,7 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
                 ? 'Set by you. Tap it again to clear.'
                 : 'Worked out from your playtime. Tap to set your own.'}
             </p>
-            {reactionPrompt ? (
-              <RankingReaction
-                masterId={game.master_id}
-                onSaved={(reaction) => {
-                  setRank({ score: seedForReaction(reaction), reaction, comparison_count: 0 })
-                  setReactionPrompt(false)
-                }}
-              />
-            ) : null}
+            <OwnedRankingAction game={game} />
           </>
         ) : (
           <div className="discover-actions">

@@ -1,6 +1,5 @@
 import Cover from './Cover.jsx'
 import WishHeart from './WishHeart.jsx'
-import { gameSheetWarmProps } from '../lib/gameSheetWarmIntent.js'
 
 // A single Discover catalog result. Mirrors the Library GameCard layout so the
 // two grids feel like one app, but is fed by IGDB data (name/cover/year/rating).
@@ -11,7 +10,7 @@ export default function DiscoverCard({ game, inLibrary, wishActive, onSelect }) 
 
   return (
     <div className="discover-card-wrap">
-      <button type="button" className="game-card discover-card" onClick={() => onSelect(game)} {...gameSheetWarmProps(game, 'discover')}>
+      <button type="button" className="game-card discover-card" onClick={() => onSelect(game)}>
         <Cover src={game.cover} title={game.name} size="sm" />
         <div className="game-card-body">
           <div className="game-title">{game.name}</div>

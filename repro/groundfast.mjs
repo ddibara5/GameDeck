@@ -160,20 +160,6 @@ const d1 = await launch({ ground: 'nowplaying', deadArt: true })
 check('a picture that will not load keeps the paint that was already measured',
   d1.attr === 'nowplaying' && d1.first, `${d1.attr}, already there: ${d1.first}`)
 
-/* ---------- 5. the worker and the app agree about /api/tint ---------- */
-{
-  const page = await ctx.newPage()
-  await page.goto(BASE)
-  const sw = await page.evaluate(async () => (await fetch('/sw.js')).text())
-  await page.close()
-  const body = sw.slice(sw.indexOf('const { request } = event'))
-  const imgBranch = body.slice(body.indexOf('images.igdb.com'), body.indexOf('Live data'))
-  check('sw.js serves /api/tint from the image cache', /isTintImage/.test(imgBranch), imgBranch.match(/if \(([^)]*)\)/)?.[1]?.slice(0, 76))
-  // The same condition has to be SUBTRACTED from the network-first api branch,
-  // or the first matching rule wins and the cache branch is unreachable.
-  check('...and excludes it from the network-first api branch', /!isTintImage\(url\)/.test(sw), /!isTintImage/.test(sw) ? 'excluded' : 'still network-first')
-}
-
 await browser.close()
 const failed = results.filter((r) => !r).length
 console.log(`\n${results.length - failed}/${results.length} passed`)

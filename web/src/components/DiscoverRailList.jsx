@@ -11,7 +11,6 @@ import { groupByRelease } from '../lib/wishlistRelease.js'
 import { useDelayedClose } from '../lib/useDelayedClose.js'
 import { useEdgeBack } from '../lib/useEdgeBack.js'
 import { lockScroll } from '../lib/scrollLock.js'
-import { gameSheetWarmProps } from '../lib/gameSheetWarmIntent.js'
 
 // Full "see all" page for a Discover rail: every game in the list, in a grid,
 // with a sort control and paging. Opened by tapping a rail heading. Portaled to
@@ -58,7 +57,7 @@ function RailCard({ g, isOwned, wishIds, onOpen }) {
   const metaDate = shelfMetaDate(g, timing)
   return (
     <div className="shelf-card-wrap">
-      <button type="button" className="shelf-card" onClick={() => onOpen(g)} {...gameSheetWarmProps(g, 'discover')}>
+      <button type="button" className="shelf-card" onClick={() => onOpen(g)}>
         <div className="shelf-poster">
           <Cover src={g.cover} title={g.name} size="lg" />
           {isOwned(g.name) ? <span className="in-library-dot" title="In library" /> : null}

@@ -288,29 +288,6 @@ export function igdbCover(imageId, size = 't_cover_big') {
   return `https://images.igdb.com/igdb/image/upload/${size}/${imageId}.jpg`
 }
 
-/**
- * The IGDB image id behind whatever cover a row happens to carry.
- *
- * Owned and wishlist rows store the bare id in `cover_igdb`; Discover entries
- * carry a full CDN URL in `cover`, because that is the shape the IGDB API
- * returns. The game sheet needs the id either way, so this is the one place
- * that knows both shapes. Returns null when there is no cover at all, which is
- * a real case and simply means no tint.
- */
-export function coverImageId(game) {
-  if (!game) return null
-  if (game.cover_igdb) return String(game.cover_igdb)
-  let url = game.cover || game.cover_small
-  if (!url) return null
-  // A cover that has already been through optImg is a wsrv.nl address with the
-  // real one percent-encoded inside it. Nothing passes that shape in today, but
-  // it costs one line to not return null if something ever does.
-  const wrapped = String(url).match(/[?&]url=([^&]+)/)
-  if (wrapped) url = decodeURIComponent(wrapped[1])
-  const m = String(url).match(/\/upload\/t_[a-z0-9_]+\/([A-Za-z0-9_-]+)\.[a-z]+/)
-  return m ? m[1] : null
-}
-
 // Native pixel width of each IGDB size bucket, so we never ask the CDN to upscale
 // past the source (upscaling is the only thing that would make an image blurry).
 const IGDB_BUCKET_W = {

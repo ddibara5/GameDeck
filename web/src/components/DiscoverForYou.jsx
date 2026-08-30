@@ -7,7 +7,6 @@ import { fetchDiscoverLanes, loadLibraryTitles, normTitle } from '../lib/discove
 import { useWishlist } from '../lib/wishlist.js'
 import { useDiscoverPrefs, platformParam, platformLabel } from '../lib/discoverPrefs.js'
 import { useTasteProfile, NEW_LANE, laneReason, rankCandidates, interleave } from '../lib/discoverLanes.js'
-import { gameSheetWarmProps } from '../lib/gameSheetWarmIntent.js'
 import { recordRecommendationDetailOpen, trackRecommendationFeed } from '../lib/recommendationLearning.js'
 
 // Pull a wider candidate pool than the feed displays. The server still returns
@@ -323,7 +322,6 @@ export default function DiscoverForYou({ onAsk, onTune }) {
                       })
                       setSelected(game)
                     }}
-                    {...gameSheetWarmProps(game, 'discover')}
                   >
                     <Cover src={game.cover} title={game.name} size="sm" className="fy-cov" />
                     <span className="fy-body">

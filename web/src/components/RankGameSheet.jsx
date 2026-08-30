@@ -14,7 +14,7 @@ import { useMountTransition } from '../lib/useMountTransition.js'
 import { lockScroll } from '../lib/scrollLock.js'
 import './rankings.css'
 
-export default function RankGameSheet({ open, game, ranks, gameById, onClose, onSaved }) {
+export default function RankGameSheet({ open, game, ranks, gameById, existingRank = null, onClose, onSaved }) {
   const { mounted, closing } = useMountTransition(open)
   const [displayGame, setDisplayGame] = useState(game)
   const [reaction, setReaction] = useState(null)
@@ -25,11 +25,11 @@ export default function RankGameSheet({ open, game, ranks, gameById, onClose, on
   useEffect(() => {
     if (!open || !game) return
     setDisplayGame(game)
-    setReaction(null)
+    setReaction(existingRank?.reaction || null)
     setPhase('reaction')
     setBusy(false)
     setError('')
-  }, [open, game])
+  }, [open, game]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!mounted) return undefined
@@ -45,7 +45,12 @@ export default function RankGameSheet({ open, game, ranks, gameById, onClose, on
     return () => window.removeEventListener('keydown', onKey)
   }, [mounted, busy, onClose])
 
-  const score = reaction ? seedForReaction(reaction) : null
+  const keepsRefinedScore = Boolean(existingRank && Number(existingRank.comparison_count) > 0)
+  const score = reaction
+    ? keepsRefinedScore
+      ? Number(existingRank.score)
+      : seedForReaction(reaction)
+    : null
   const placement = useMemo(
     () => (score == null ? null : estimateRankPlacement(ranks, score, displayGame?.master_id)),
     [ranks, score, displayGame?.master_id],
@@ -103,7 +108,9 @@ export default function RankGameSheet({ open, game, ranks, gameById, onClose, on
         {phase === 'reaction' ? (
           <>
             <h2>Rank {displayGame.title}</h2>
-            <p className="rank-sheet-intro">Choose your reaction to give it a starting score.</p>
+            <p className="rank-sheet-intro">
+              {existingRank ? 'Update your reaction or refine its placement.' : 'Choose your reaction to give it a starting score.'}
+            </p>
 
             <section className="rank-sheet-card">
               <h3>Your reaction</h3>
@@ -124,12 +131,12 @@ export default function RankGameSheet({ open, game, ranks, gameById, onClose, on
               </div>
 
               <div className="rank-sheet-preview" aria-live="polite">
-                <span>Starting score <strong>{score == null ? '—' : score}</strong></span>
+                <span>{keepsRefinedScore ? 'Current score' : 'Starting score'} <strong>{score == null ? '—' : Math.round(score)}</strong></span>
                 <span>Estimated tier <strong>{placement?.tier || '—'}</strong></span>
               </div>
 
               <button type="button" className="rank-sheet-save" disabled={!reaction || busy} onClick={saveReaction}>
-                {busy ? 'Saving…' : 'Save to My Ranking'}
+                {busy ? 'Saving…' : existingRank ? 'Update My Ranking' : 'Save to My Ranking'}
               </button>
               <small>Optional: fine-tune its position with one close comparison next.</small>
             </section>
