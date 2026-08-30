@@ -3,11 +3,9 @@ import Cover from './Cover.jsx'
 import Skeleton from './Skeleton.jsx'
 import GameDetail from './GameDetail.jsx'
 import GameSheet from './GameSheet.jsx'
-import CustomizeHome from './CustomizeHome.jsx'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
 import { useWishlist } from '../lib/wishlist.js'
 import { relOf, releaseCalendarDay, releaseDaysFromToday } from '../lib/wishlistRelease.js'
-import { useHomeCards, CARD_BY_KEY } from '../lib/homeCards.js'
 import { platformMeta, minutesToHhm, parseDayOrInstant, libraryCover } from '../lib/format.js'
 import { getActivityStartCache, loadActivityStart, loadRecentActivity } from '../lib/recentActivity.js'
 import { weekStats, WEEK_SPAN, startOfDay, daysBetween, dayKey, eventDay } from '../lib/playWeek.js'
@@ -18,7 +16,7 @@ import './home.css'
 // The landing screen. It answers three questions and then stops: what am I in
 // the middle of, what expires, what should I start. Anything that reads the same
 // next Tuesday belongs on Insights, which is why the lifetime cards are not here
-// and why this page ends on the customize button rather than scrolling forever.
+// and why the page stops after its three fixed snapshot cards.
 //
 // Now playing, Release watch and the week totals live here, not on Insights, so
 // the landing page stays a current snapshot rather than a second analytics page.
@@ -70,8 +68,6 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
   const [wishOpen, setWishOpen] = useState(null)
-  const [customizeOpen, setCustomizeOpen] = useState(false)
-  const cards = useHomeCards()
 
   useEffect(() => {
     let cancelled = false
@@ -304,7 +300,12 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
             <span><b>{minutesToHhm(nowPlaying.minutesTotal)}</b> total</span>
           </div>
         </div>
-      ) : null,
+      ) : (
+        <div className="chart-card" key="now_playing">
+          <div className="np-head"><h2 className="chart-title">Now playing</h2></div>
+          <div className="chart-empty">No recent game to continue yet.</div>
+        </div>
+      ),
 
     week: () => (
       <button type="button" className="hm-tile" key="week" onClick={() => onOpenTab && onOpenTab('insights')}>
@@ -336,8 +337,7 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
       </button>
     ),
 
-    release_watch: () =>
-      comingUp.length || recentlyReleased.length ? (
+    release_watch: () => (
         <div className="chart-card hm-release-watch" data-card="release_watch" key="release_watch">
           <div className="hm-head">
             <h2 className="chart-title">
@@ -377,42 +377,21 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
               </div>
             </div>
           ) : null}
+          {!comingUp.length && !recentlyReleased.length ? (
+            <div className="chart-empty">No saved releases in the current 60-day window.</div>
+          ) : null}
         </div>
-      ) : null,
+      ),
   }
 
-  // Consecutive tiles pair up into a row; everything else takes the full width.
-  // Grouping happens here rather than in the catalog so turning a tile off can
-  // never leave a half-empty grid behind.
-  //
-  // A run of ONE is not a pair, and `solo` gives it the whole width rather than
-  // leaving it sitting in the left half of a two-column grid with nothing beside
-  // it. It keeps the tile's height, so it reads as a bar rather than a card. This
-  // is the rule that mattered the moment Backlog was removed and This week became
-  // the only tile, and it is a rule rather than a special case: put a second tile
-  // back in the catalog and the two pair up again with nothing else to change.
-  const visible = cards.order.filter((k) => cards.enabled[k] && CARDS[k])
-  const blocks = []
-  let run = []
-  const flush = () => {
-    if (!run.length) return
-    blocks.push(
-      <div className={`hm-grid${run.length === 1 ? ' solo' : ''}`} key={`grid-${blocks.length}`}>
-        {run}
-      </div>
-    )
-    run = []
-  }
-  for (const key of visible) {
-    const node = CARDS[key]()
-    if (!node) continue
-    if (CARD_BY_KEY[key] && CARD_BY_KEY[key].form === 'tile') run.push(node)
-    else {
-      flush()
-      blocks.push(node)
-    }
-  }
-  flush()
+  // Home is a fixed snapshot now. Keep the order explicit here so a stale
+  // gamedeck_home_cards_v1 value can neither hide nor rearrange the three cards.
+  // The tile wrapper preserves Recent play's compact full-width treatment.
+  const blocks = [
+    <div className="hm-grid solo" key="grid-week">{CARDS.week()}</div>,
+    CARDS.now_playing(),
+    CARDS.release_watch(),
+  ]
 
   return (
     <div>
@@ -420,29 +399,8 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
         <p className="page-subtitle">{todayLabel()}</p>
       </div>
 
-      {/* Two different emptinesses, and saying which is which is the difference
-          between a settings problem and a data problem. */}
-      {blocks.length ? blocks : (
-        <div className="chart-card">
-          <div className="chart-empty">
-            {visible.length
-              ? 'Nothing to show yet. These cards fill in once a sync has some play or a wishlist date to report.'
-              : 'Every card is switched off. Open Customize cards to bring some back.'}
-          </div>
-        </div>
-      )}
+      {blocks}
 
-      <button type="button" className="customize-btn" onClick={() => setCustomizeOpen(true)}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-          <path d="M4 6h16M4 12h16M4 18h16" />
-          <circle cx="9" cy="6" r="2" fill="currentColor" stroke="none" />
-          <circle cx="15" cy="12" r="2" fill="currentColor" stroke="none" />
-          <circle cx="7" cy="18" r="2" fill="currentColor" stroke="none" />
-        </svg>
-        Customize cards
-      </button>
-
-      <CustomizeHome open={customizeOpen} onClose={() => setCustomizeOpen(false)} />
       {selected ? <GameDetail game={selected} onClose={() => setSelected(null)} /> : null}
       {/* A Coming up row is a WISHLIST row, not an owned game, so it opens the
           wishlist variant of the sheet - the same one the Wishlist page opens,
