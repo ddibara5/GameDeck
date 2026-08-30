@@ -83,53 +83,58 @@ export default function DiscoverTab({ onCustomize }) {
   return (
     <div className="discover-page">
       <div className="discover-base" hidden={askOpen}>
-        <div className="page-header discover-page-header">
-          <p className="page-subtitle">Browse, search, and tune your recommendations</p>
-        </div>
         <div className="discover-global-searchbar">
-          <input
-            type="search"
-            className="search-input"
-            placeholder="Search all games"
-            value={query}
-            onChange={(event) => searchGames(event.target.value)}
-            aria-label="Search all games"
-          />
-          <button
-            type="button"
-            className="filter-btn"
-            onClick={tuneForYou}
-            aria-label="Filters"
-          >
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-              <path d="M4 6h16M7 12h10M10 18h4" />
+          <div className="discover-search-shell">
+            <svg className="discover-search-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="6" />
+              <path d="m16 16 4 4" />
             </svg>
-          </button>
-          <button
-            type="button"
-            className={`filter-btn${prefs.hideOwned ? ' active' : ''}`}
-            onClick={() => {
-              setDiscoverPrefs({ ...prefs, hideOwned: !prefs.hideOwned })
-              setHideOwnedToken((value) => value + 1)
-            }}
-            aria-pressed={prefs.hideOwned}
-            aria-label={prefs.hideOwned ? 'Show games in your library' : 'Hide games in your library'}
-            title={prefs.hideOwned ? 'In-library hidden' : 'Hide in-library'}
-          >
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              {prefs.hideOwned ? (
-                <>
-                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20C5 20 1 12 1 12a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M1 1l22 22" />
-                  <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
-                </>
-              ) : (
-                <>
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                  <circle cx="12" cy="12" r="3" />
-                </>
-              )}
-            </svg>
-          </button>
+            <input
+              type="search"
+              className="search-input"
+              placeholder="Search all games"
+              value={query}
+              onChange={(event) => searchGames(event.target.value)}
+              aria-label="Search all games"
+            />
+            <div className="discover-search-actions">
+              <button
+                type="button"
+                className="discover-search-action"
+                onClick={tuneForYou}
+                aria-label="Filters"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 6h16M7 12h10M10 18h4" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className={`discover-search-action${prefs.hideOwned ? ' active' : ''}`}
+                onClick={() => {
+                  setDiscoverPrefs({ ...prefs, hideOwned: !prefs.hideOwned })
+                  setHideOwnedToken((value) => value + 1)
+                }}
+                aria-pressed={prefs.hideOwned}
+                aria-label={prefs.hideOwned ? 'Show games in your library' : 'Hide games in your library'}
+                title={prefs.hideOwned ? 'In-library hidden' : 'Hide in-library'}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  {prefs.hideOwned ? (
+                    <>
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20C5 20 1 12 1 12a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M1 1l22 22" />
+                      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+                    </>
+                  ) : (
+                    <>
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </>
+                  )}
+                </svg>
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="discover-topbar">

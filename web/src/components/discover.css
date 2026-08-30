@@ -6,7 +6,7 @@
    ============================================================ */
 
 .discover-page {
-  --disc-topbar-h: 60px;
+  --disc-topbar-h: 54px;
   position: relative;
   flex: 1;
   min-height: 0;
@@ -33,20 +33,94 @@
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-2);
-  padding: 7px var(--screen-gutter) 9px;
+  padding: 4px var(--screen-gutter) 6px;
   border-bottom: 0;
   background: transparent;
 }
 
 .discover-global-searchbar {
-  display: flex;
-  gap: 8px;
   padding: 0 var(--screen-gutter);
 }
 
-.discover-global-searchbar .search-input {
-  flex: 1;
+.discover-search-shell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  transition: border-color var(--d-fast) ease, box-shadow var(--d-fast) ease;
+}
+
+.discover-search-shell:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.discover-search-icon {
+  position: absolute;
+  left: 14px;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 2;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.discover-search-shell .search-input {
+  width: 100%;
   min-width: 0;
+  min-height: 46px;
+  padding: 0 94px 0 42px;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  box-shadow: none;
+}
+
+.discover-search-shell .search-input:focus {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.discover-search-actions {
+  position: absolute;
+  top: 1px;
+  right: 2px;
+  bottom: 1px;
+  display: flex;
+  align-items: center;
+}
+
+.discover-search-action {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.discover-search-action.active {
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+  color: var(--accent);
+}
+
+.discover-search-action svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .discover-seg {
@@ -62,14 +136,14 @@
   gap: 6px;
   min-height: 44px;
   padding: 0 13px;
-  border: 0;
-  border-radius: var(--r-md);
-  background: var(--accent);
-  color: var(--bg);
+  border: 1px solid color-mix(in oklab, var(--accent) 44%, var(--line));
+  border-radius: var(--r-sm);
+  background: color-mix(in oklab, var(--accent) 7%, var(--surface));
+  color: var(--accent);
   font-size: var(--t-foot);
   font-weight: var(--w-bold);
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  box-shadow: none;
 }
 
 .discover-ask-button svg {
@@ -627,50 +701,31 @@ button.shelf-head:active {
 .showing-strip {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 16px 2px;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 36px;
+  padding: 0 var(--screen-gutter) 2px;
 }
 
-.showing-label {
-  font-size: var(--t-cap);
+.showing-summary {
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--t-cap2);
   color: var(--muted);
-}
-
-/* Filled, not outlined. These two say what is narrowing the page and they were
-   the only controls in the app with no background at all: an outline and some
-   letters, sitting on whatever the page happens to be. The fill is the same
-   material as the bars, without the blur - a 22px chip has almost nothing behind
-   it to frost, and ten of them would be ten compositing layers holding the
-   smallest type in the app. */
-.showing-chip {
-  font-size: var(--t-cap);
-  font-weight: var(--w-semi);
-  color: var(--accent);
-  background: var(--glass-chip);
-  border: 1px solid var(--glass-line);
-  border-radius: var(--r-pill);
-  padding: 3px 9px;
   white-space: nowrap;
-}
-
-/* Measured, the same way the light tab-bar label was: --accent in light mode is
-   #9c7449 and reads 3.45:1 on the page, which it did before this chip had any
-   background at all. --walnut is the theme's own dark mid-tone and every accent
-   defines one, so this follows Slate, Sage, Plum and Graphite without five more
-   lines. Walnut measures 6.09:1. */
-[data-theme="light"] .showing-chip {
-  color: var(--walnut);
+  text-overflow: ellipsis;
 }
 
 .showing-clear {
   margin-left: auto;
+  min-width: 64px;
+  min-height: 44px;
   background: none;
   border: none;
-  padding: 3px 0;
+  padding: 0;
   font-size: var(--t-cap);
   font-weight: var(--w-semi);
-  color: var(--muted);
+  color: var(--accent);
   cursor: pointer;
 }
 
@@ -693,16 +748,13 @@ button.shelf-head:active {
   padding-bottom: 8px;
 }
 
-.fy-scope-row {
+.fy-profile-bar {
   min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
   gap: var(--space-2);
-  padding: 2px var(--screen-gutter);
-  color: var(--muted);
-  font-size: var(--t-cap2);
+  padding: 0 var(--screen-gutter);
 }
 
 .fy-scope-actions {
@@ -712,7 +764,7 @@ button.shelf-head:active {
   margin-left: auto;
 }
 
-.fy-scope-row button {
+.fy-profile-bar button {
   min-width: 44px;
   min-height: 44px;
   padding: 0;
@@ -724,13 +776,12 @@ button.shelf-head:active {
   cursor: pointer;
 }
 
-.fy-scope-row .fy-refresh {
+.fy-profile-bar .fy-refresh {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  min-width: 126px;
-  padding: 0 12px;
+  min-width: 44px;
+  padding: 0;
   border: 1px solid color-mix(in oklab, var(--accent) 52%, var(--line));
   border-radius: var(--r-pill);
   background: color-mix(in oklab, var(--accent) 8%, transparent);
@@ -764,12 +815,19 @@ button.shelf-head:active {
 }
 
 .fy-profile-note {
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 6px;
-  margin: 3px var(--screen-gutter) 4px;
+  margin: 0;
   color: color-mix(in oklab, var(--accent) 86%, var(--text));
   font-size: var(--t-cap2);
+}
+
+.fy-profile-note span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .fy-profile-note svg {
@@ -786,7 +844,7 @@ button.shelf-head:active {
 .lane-chips {
   display: flex;
   gap: 6px;
-  padding: 8px 16px 6px;
+  padding: 4px var(--screen-gutter) 6px;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -796,6 +854,7 @@ button.shelf-head:active {
 }
 
 .lane-chip {
+  position: relative;
   flex: 0 0 auto;
   font-size: var(--t-foot);
   font-weight: var(--w-med);
@@ -803,10 +862,16 @@ button.shelf-head:active {
   background: var(--glass-chip);
   border: 1px solid var(--glass-line);
   border-radius: var(--r-pill);
-  min-height: 44px;
-  padding: 0 14px;
+  min-height: 36px;
+  padding: 0 13px;
   white-space: nowrap;
   cursor: pointer;
+}
+
+.lane-chip::before {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
 }
 
 .lane-chip.active {
@@ -814,6 +879,24 @@ button.shelf-head:active {
   border-color: var(--line-soft);
   color: var(--accent);
   font-weight: var(--w-semi);
+}
+
+.fy-feed-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--screen-gutter) var(--space-1);
+}
+
+.fy-feed-head strong {
+  font-size: var(--t-sub);
+}
+
+.fy-feed-head span {
+  color: var(--muted);
+  font-size: var(--t-cap2);
+  white-space: nowrap;
 }
 
 /* One continuous canvas, hairline rows. The feed label and lane controls already
@@ -949,7 +1032,7 @@ button.shelf-head:active {
   text-align: center;
 }
 
-[data-theme="light"] .fy-scope-row button,
+[data-theme="light"] .fy-profile-bar button,
 [data-theme="light"] .fy-profile-note,
 [data-theme="light"] .fy-why {
   color: var(--walnut);

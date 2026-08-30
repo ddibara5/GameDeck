@@ -5,7 +5,7 @@ import Skeleton from './Skeleton.jsx'
 import DiscoverDetail from './DiscoverDetail.jsx'
 import { fetchDiscoverLanes, loadLibraryTitles, normTitle } from '../lib/discover.js'
 import { useWishlist } from '../lib/wishlist.js'
-import { useDiscoverPrefs, platformParam, platformLabel } from '../lib/discoverPrefs.js'
+import { useDiscoverPrefs, platformParam } from '../lib/discoverPrefs.js'
 import { useTasteProfile, NEW_LANE, laneReason, rankCandidates, interleave } from '../lib/discoverLanes.js'
 import { recordRecommendationDetailOpen, trackRecommendationFeed } from '../lib/recommendationLearning.js'
 
@@ -245,37 +245,38 @@ export default function DiscoverForYou({ onAsk, onTune }) {
   const unavailable = feed.length === 0 && !tastePending && (newState === 'error' || tasteState === 'error')
   const evidence = tasteProfile?.evidence
   const profileNote = evidence?.recentGameCount && evidence?.rankedGameCount
-    ? `Shaped by ${evidence.recentGameCount} recently played games + rankings`
+    ? 'Based on recent play + rankings'
     : evidence?.recentGameCount
-      ? `Shaped by ${evidence.recentGameCount} recently played games`
+      ? 'Based on recent play'
       : evidence?.rankedGameCount
-        ? 'Shaped by rankings while recent play grows'
-        : 'New releases while your taste profile grows'
-  const learningNote = evidence?.recommendationOutcomeCount
-    ? ` · ${evidence.recommendationOutcomeCount} recommendation outcome${evidence.recommendationOutcomeCount === 1 ? '' : 's'}`
-    : ''
+        ? 'Based on rankings'
+        : 'Personalizing as you play'
 
   return (
     <div className="discover-foryou" aria-busy={loading || refreshing}>
-      <div className="fy-scope-row">
-        <span>Updated {freshnessLabel(updatedAt, clock)} · {platformLabel(prefs.platforms)} · Not in library</span>
+      <div className="fy-profile-bar">
+        <div className="fy-profile-note">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 2.5c.6 4.2 2.8 6.4 7 7-4.2.6-6.4 2.8-7 7-.6-4.2-2.8-6.4-7-7 4.2-.6 6.4-2.8 7-7Z" />
+          </svg>
+          <span>{profileNote}</span>
+        </div>
         <div className="fy-scope-actions">
-          <button type="button" className="fy-refresh" onClick={refreshPicks} disabled={refreshing || loading}>
+          <button
+            type="button"
+            className="fy-refresh"
+            onClick={refreshPicks}
+            disabled={refreshing || loading}
+            aria-label={refreshing ? 'Refreshing picks' : 'Refresh picks'}
+            title={refreshing ? 'Refreshing picks' : 'Refresh picks'}
+          >
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M20 6v5h-5" />
               <path d="M18.5 15a7 7 0 1 1-1.2-8.3L20 11" />
             </svg>
-            {refreshing ? 'Refreshing…' : 'Refresh picks'}
           </button>
           <button type="button" className="fy-tune" onClick={onTune}>Tune</button>
         </div>
-      </div>
-
-      <div className="fy-profile-note">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 2.5c.6 4.2 2.8 6.4 7 7-4.2.6-6.4 2.8-7 7-.6-4.2-2.8-6.4-7-7 4.2-.6 6.4-2.8 7-7Z" />
-        </svg>
-        <span>{profileNote}{learningNote}</span>
       </div>
 
       {lanes.length ? (
@@ -290,6 +291,11 @@ export default function DiscoverForYou({ onAsk, onTune }) {
           ))}
         </div>
       ) : null}
+
+      <div className="fy-feed-head">
+        <strong>Your picks</strong>
+        <span>{refreshing ? 'Refreshing…' : `Refreshed ${freshnessLabel(updatedAt, clock)}`}</span>
+      </div>
 
       <div>
         {unavailable ? (

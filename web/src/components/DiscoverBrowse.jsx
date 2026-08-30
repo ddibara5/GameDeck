@@ -466,17 +466,18 @@ export default function DiscoverBrowse({
     <div className="discover-browse">
       {standing || wideOpen ? (
         <div className="showing-strip">
-          <span className="showing-label">Showing</span>
-          {activePlatforms.length ? <span className="showing-chip">{platformLabel(activePlatforms)}</span> : null}
-          {hideOwned ? <span className="showing-chip">Not in library</span> : null}
-          {wideOpen ? <span className="showing-chip">Everything</span> : null}
+          <span className="showing-summary">
+            {wideOpen
+              ? 'Everything'
+              : [activePlatforms.length ? platformLabel(activePlatforms) : null, hideOwned ? 'Not in library' : null].filter(Boolean).join(' · ')}
+          </span>
           <button
             type="button"
             className="showing-clear"
             onClick={() => setWideOpen((v) => !v)}
             aria-pressed={wideOpen}
           >
-            {wideOpen ? 'Use my defaults' : 'Everything'}
+            {wideOpen ? 'Use defaults' : 'Show all'}
           </button>
         </div>
       ) : null}

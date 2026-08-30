@@ -214,7 +214,10 @@ test('Discover puts persistent search and Browse before For You', async () => {
   const forYouTab = source.indexOf('id="discover-tab-foryou"')
 
   assert.match(source, /className="discover-global-searchbar"/)
+  assert.match(source, /className="discover-search-shell"/)
+  assert.match(source, /className="discover-search-actions"/)
   assert.match(source, /placeholder="Search all games"/)
+  assert.doesNotMatch(source, /Browse, search, and tune your recommendations/)
   assert.match(source, /if \(value\.trim\(\) && mode !== 'browse'\) selectMode\('browse'\)/)
   assert.match(source, /sessionStorage\.getItem\(MODE_KEY\) === 'foryou' \? 'foryou' : 'browse'/)
   assert.ok(browseTab > 0)
