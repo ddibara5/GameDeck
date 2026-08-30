@@ -22,8 +22,32 @@
   flex-direction: column;
 }
 
+.discover-ask-view {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  max-width: 640px;
+  margin: 0 auto;
+  padding-top: var(--top-inset);
+  background: var(--bg);
+}
+
 .discover-base[hidden] {
   display: none;
+}
+
+.discover-mode-bar {
+  padding: var(--space-2) var(--screen-gutter) 0;
+}
+
+.discover-mode-seg {
+  width: min(100%, 280px);
+  margin: 0 auto;
+}
+
+.discover-mode-seg .seg-btn {
+  min-height: 34px;
+  padding: 6px var(--space-3);
 }
 
 .discover-topbar {
@@ -217,6 +241,102 @@
   place-items: center;
   color: var(--muted);
   font-size: var(--t-foot);
+}
+
+/* Browse is a child destination of Discover, not a peer tab. It replaces the
+   app header while open and leaves the dock visible, matching the approved
+   iPhone push-navigation model without adding a second heading inside the page. */
+.discover-browse-page {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  max-width: 640px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  animation: rail-in var(--overlay-in) var(--enter-ease);
+}
+
+.discover-browse-header {
+  flex: 0 0 auto;
+  min-height: calc(var(--app-header-h) + var(--top-inset));
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: end;
+  gap: var(--space-1);
+  padding: var(--top-inset) var(--screen-gutter) 0 4px;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--bg);
+}
+
+.discover-browse-header h1 {
+  min-width: 0;
+  margin: 0 0 9px;
+  font-size: var(--t-t1);
+  font-weight: var(--w-semi);
+  letter-spacing: var(--t-t1-tr);
+}
+
+.discover-browse-back {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 1px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.discover-browse-back svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.discover-browse-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: calc(var(--tabbar-height) + var(--safe-bottom) + var(--space-3));
+  -webkit-overflow-scrolling: touch;
+}
+
+.browse-local-toolbar {
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--screen-gutter);
+}
+
+.browse-local-toolbar > span {
+  color: var(--muted);
+  font-size: var(--t-foot);
+}
+
+.browse-local-toolbar .filter-btn {
+  position: relative;
+  width: auto;
+  min-width: 88px;
+  padding: 0 var(--space-3);
+  gap: 7px;
+  color: var(--text);
+  font-size: var(--t-foot);
+  font-weight: var(--w-semi);
+}
+
+.browse-local-toolbar .filter-btn.active {
+  color: var(--bg);
 }
 
 .chat-actions-row {
@@ -748,48 +868,86 @@ button.shelf-head:active {
   padding-bottom: 8px;
 }
 
-.fy-profile-bar {
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  padding: 0 var(--screen-gutter);
+.pull-refresh-host {
+  overscroll-behavior-y: contain;
 }
 
-.fy-scope-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: auto;
+.fy-refresh-gutter {
+  height: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: var(--muted);
+  transition: height var(--d-base) var(--ease-out);
 }
 
-.fy-profile-bar button {
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--accent);
-  font-size: var(--t-cap);
-  font-weight: var(--w-semi);
-  cursor: pointer;
+.fy-refresh-gutter.dragging {
+  transition: none;
 }
 
-.fy-profile-bar .fy-refresh {
+.fy-refresh-flag {
+  min-height: 28px;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-width: 44px;
-  padding: 0;
-  border: 1px solid color-mix(in oklab, var(--accent) 52%, var(--line));
+  gap: 7px;
+  padding: 4px 11px;
+  border: 1px solid var(--line-soft);
   border-radius: var(--r-pill);
-  background: color-mix(in oklab, var(--accent) 8%, transparent);
+  background: color-mix(in oklab, var(--surface) 88%, transparent);
+  color: var(--muted);
+  font-size: var(--t-cap2);
+  font-weight: var(--w-semi);
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity var(--d-fast) ease, transform var(--d-base) var(--ease-out);
 }
 
-.fy-refresh svg {
-  width: 15px;
-  height: 15px;
+.fy-refresh-gutter.on .fy-refresh-flag,
+.fy-refresh-gutter.working .fy-refresh-flag,
+.fy-refresh-gutter.done .fy-refresh-flag {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.fy-refresh-gutter.armed .fy-refresh-flag,
+.fy-refresh-gutter.working .fy-refresh-flag {
+  color: var(--accent);
+  border-color: color-mix(in oklab, var(--accent) 42%, var(--line-soft));
+}
+
+.fy-refresh-spinner {
+  width: 12px;
+  height: 12px;
+  display: none;
+  flex: 0 0 auto;
+  border: 1.5px solid color-mix(in oklab, currentColor 28%, transparent);
+  border-top-color: currentColor;
+  border-radius: 50%;
+}
+
+.fy-refresh-gutter.working .fy-refresh-spinner {
+  display: block;
+  animation: fy-pull-spin 0.75s linear infinite;
+}
+
+@keyframes fy-pull-spin {
+  to { transform: rotate(360deg); }
+}
+
+.fy-heading {
+  padding: var(--space-3) var(--screen-gutter) 2px;
+}
+
+.fy-heading h2 {
+  margin: 0;
+  font-size: var(--t-t2);
+  font-weight: var(--w-semi);
+  letter-spacing: var(--t-t2-tr);
+}
+
+.fy-ask-row svg {
+  width: 16px;
+  height: 16px;
   fill: none;
   stroke: currentColor;
   stroke-width: 2;
@@ -797,21 +955,19 @@ button.shelf-head:active {
   stroke-linejoin: round;
 }
 
-.fy-refresh:disabled {
-  opacity: 0.68;
-  cursor: default;
-}
-
-.fy-refresh:disabled svg {
-  animation: fy-refresh-spin 0.9s linear infinite;
-}
-
-@keyframes fy-refresh-spin {
-  to { transform: rotate(360deg); }
+.fy-profile-bar {
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 0 var(--screen-gutter);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fy-refresh:disabled svg { animation: none; }
+  .fy-refresh-gutter,
+  .fy-refresh-flag { transition: none; }
+  .fy-refresh-gutter.working .fy-refresh-spinner { animation: none; }
 }
 
 .fy-profile-note {
@@ -922,7 +1078,7 @@ button.shelf-head:active {
   position: relative;
 }
 
-.fy-feed .fy-row-wrap + .fy-row-wrap {
+.fy-feed > * + * {
   border-top: 1px solid var(--line-soft);
 }
 
@@ -1010,6 +1166,37 @@ button.shelf-head:active {
   color: var(--amber);
 }
 
+.fy-ask-row {
+  width: 100%;
+  min-height: 52px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-2);
+  border: 0;
+  background: color-mix(in oklab, var(--surface) 82%, transparent);
+  color: var(--text);
+  font-size: var(--t-foot);
+  font-weight: var(--w-semi);
+  text-align: left;
+  cursor: pointer;
+}
+
+.fy-ask-row > span {
+  color: var(--amber);
+}
+
+.fy-ask-row svg {
+  color: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .discover-browse-page {
+    animation: none;
+  }
+}
+
 /* In a list row the heart is not floating over artwork, so it drops the glass
    puck the base rule gives it and reads as a plain control. */
 .fy-row-wrap .wish-heart {
@@ -1032,7 +1219,6 @@ button.shelf-head:active {
   text-align: center;
 }
 
-[data-theme="light"] .fy-profile-bar button,
 [data-theme="light"] .fy-profile-note,
 [data-theme="light"] .fy-why {
   color: var(--walnut);
