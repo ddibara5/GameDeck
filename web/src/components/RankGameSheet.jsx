@@ -12,6 +12,7 @@ import {
 } from '../lib/ranking.js'
 import { useMountTransition } from '../lib/useMountTransition.js'
 import { lockScroll } from '../lib/scrollLock.js'
+import { useDialogA11y } from '../lib/useDialogA11y.js'
 import './rankings.css'
 
 export default function RankGameSheet({ open, game, ranks, gameById, existingRank = null, onClose, onSaved }) {
@@ -21,6 +22,7 @@ export default function RankGameSheet({ open, game, ranks, gameById, existingRan
   const [phase, setPhase] = useState('reaction')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const dialogRef = useDialogA11y({ active: mounted, closeOnEscape: false })
 
   useEffect(() => {
     if (!open || !game) return
@@ -101,7 +103,7 @@ export default function RankGameSheet({ open, game, ranks, gameById, existingRan
         if (event.target === event.currentTarget && !busy) onClose()
       }}
     >
-      <div className="modal-sheet rank-game-sheet" role="dialog" aria-modal="true" aria-label={`Rank ${displayGame.title}`}>
+      <div ref={dialogRef} className="modal-sheet rank-game-sheet" role="dialog" aria-modal="true" aria-label={`Rank ${displayGame.title}`}>
         <div className="modal-handle" />
         <button type="button" className="modal-close" aria-label="Close ranking" disabled={busy} onClick={onClose}>&times;</button>
         <Cover src={libraryCover(displayGame)} title={displayGame.title} size="lg" className="rank-sheet-cover" />

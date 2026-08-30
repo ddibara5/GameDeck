@@ -1,17 +1,33 @@
 import { GoTrueClient } from '@supabase/auth-js'
 import { PostgrestClient } from '@supabase/postgrest-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+// These are browser-publishable identifiers, not secrets. Environment values
+// remain the preferred override, while the checked-in fallback keeps Vercel
+// branch previews and local production builds connected to the same RLS-protected
+// project when Preview-scoped variables have not been configured.
+const PUBLIC_SUPABASE_URL = 'https://eiskobjlvxzwvucgpenk.supabase.co'
+const PUBLIC_SUPABASE_KEY = 'sb_publishable_Rfcg7pTWt0Vq7ep3WQYFvQ_anT_mnX7'
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error(
-    'GameDeck: missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY environment variables.'
-  )
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || PUBLIC_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || PUBLIC_SUPABASE_KEY
+
+const baseUrl = supabaseUrl.replace(/\/+$/, '')
+const apiKey = supabaseAnonKey
+const AUTH_REQUEST_TIMEOUT_MS = 15000
+
+async function authFetchWithTimeout(input, init = {}) {
+  const controller = new AbortController()
+  const upstreamSignal = init.signal
+  const forwardAbort = () => controller.abort(upstreamSignal?.reason)
+  if (upstreamSignal) upstreamSignal.addEventListener('abort', forwardAbort, { once: true })
+  const timeout = setTimeout(() => controller.abort(), AUTH_REQUEST_TIMEOUT_MS)
+  try {
+    return await fetch(input, { ...init, signal: controller.signal })
+  } finally {
+    clearTimeout(timeout)
+    if (upstreamSignal) upstreamSignal.removeEventListener('abort', forwardAbort)
+  }
 }
-
-const baseUrl = (supabaseUrl || 'https://invalid.local').replace(/\/+$/, '')
-const apiKey = supabaseAnonKey || 'missing'
 
 // Only the two Supabase subsystems GameDeck actually uses are instantiated.
 // This preserves the small, stable vendor chunk while adding passwordless auth;
@@ -19,6 +35,7 @@ const apiKey = supabaseAnonKey || 'missing'
 const auth = new GoTrueClient({
   url: `${baseUrl}/auth/v1`,
   headers: { apikey: apiKey },
+  fetch: authFetchWithTimeout,
   storageKey: 'gamedeck-auth-v1',
   persistSession: true,
   autoRefreshToken: true,

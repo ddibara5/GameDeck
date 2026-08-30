@@ -7,6 +7,7 @@ import { platformMeta } from '../lib/format.js'
 import { useLibraryGames, useVibeKeywords } from '../lib/useLibraryGames.js'
 import { VIBES, hasVibe, availableVibes } from '../lib/vibes.js'
 import { topGenres } from '../lib/shuffle.js'
+import { useDialogA11y } from '../lib/useDialogA11y.js'
 
 // Derived from platformMeta so this cannot drift from the labels on the cards it
 // filters. It used to say "PSN" and "Steam" while the cards beside it said
@@ -57,6 +58,7 @@ export default function LibraryTab() {
   const [vibe, setVibe] = useState('any')
   const [genre, setGenre] = useState('any')
   const [showFilters, setShowFilters] = useState(false)
+  const filterDialogRef = useDialogA11y({ active: showFilters, onClose: () => setShowFilters(false) })
   const [selectedGame, setSelectedGame] = useState(null)
   const [visibleCount, setVisibleCount] = useState(12)
   const statusMap = useStatusMap()
@@ -211,7 +213,7 @@ export default function LibraryTab() {
 
       {showFilters ? (
         <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && setShowFilters(false)}>
-          <div className="modal-sheet filter-sheet" role="dialog" aria-modal="true" aria-label="Filters">
+          <div ref={filterDialogRef} className="modal-sheet filter-sheet" role="dialog" aria-modal="true" aria-label="Filters">
             <div className="modal-handle" />
             <button type="button" className="modal-close" aria-label="Close filters" onClick={() => setShowFilters(false)}>&times;</button>
             <div className="detail-title">Filters</div>

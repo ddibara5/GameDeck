@@ -2,6 +2,7 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 import { useMountTransition } from '../lib/useMountTransition.js'
 import { lockScroll } from '../lib/scrollLock.js'
 import { useEdgeBack } from '../lib/useEdgeBack.js'
+import { useDialogA11y } from '../lib/useDialogA11y.js'
 import './customizeRows.css'
 
 // The reorder-and-toggle editor, shared by Discover's rows and Insights' cards.
@@ -67,6 +68,7 @@ export default function CustomizeList({
   const [enabled, setEnabled] = useState(() => getConfig().enabled)
   const [dragKey, setDragKey] = useState(null)
   const itemRefs = useRef({})
+  const dialogRef = useDialogA11y({ active: mounted, closeOnEscape: false })
   // Latest order/enabled for listeners that outlive a render.
   const live = useRef({ order, enabled })
   live.current = { order, enabled }
@@ -182,7 +184,7 @@ export default function CustomizeList({
   let lastGroup = null
 
   return (
-    <div className={`settings-page${closing ? ' closing' : ''}`} role="dialog" aria-label={title}>
+    <div ref={dialogRef} className={`settings-page${closing ? ' closing' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
       <div className="settings-hd">
         <button type="button" className="settings-back" onClick={onClose} aria-label="Back">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

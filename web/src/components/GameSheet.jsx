@@ -26,6 +26,8 @@ import {
   loadRankingState,
   tierForPosition,
 } from '../lib/ranking.js'
+import { safeExternalUrl } from '../lib/safeUrl.js'
+import { useDialogA11y } from '../lib/useDialogA11y.js'
 import './gameSheet.css'
 
 function reactionLabel(reaction) {
@@ -162,6 +164,7 @@ function MediaSkeleton({ owned }) {
 export default function GameSheet({ variant, game, onClose, inLibrary = false, onAsk, onMoreLikeThis }) {
   const owned = variant === 'owned'
   const { closing, requestClose } = useDelayedClose(onClose)
+  const dialogRef = useDialogA11y({ onClose: requestClose })
   const { ids: wishIds } = useWishlist()
 
   // Status (owned only). Two pieces of state, not one: which status is showing,
@@ -287,6 +290,8 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   const playtime = game.playtime_label || minutesToHhm(game.playtime_minutes)
 
   const wishActive = wishIds.has(Number(igdbId))
+  const safeAchievementsUrl = safeExternalUrl(achievementsUrl)
+  const safeGameUrl = safeExternalUrl(url)
   const seed = { id: igdbId, name: title, year, genres }
 
   const handleOverlayClick = (e) => {
@@ -300,6 +305,7 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   return createPortal(
     <div className={`modal-backdrop${closing ? ' closing' : ''}`} onClick={handleOverlayClick}>
       <div
+        ref={dialogRef}
         className="modal-sheet game-sheet"
         role="dialog"
         aria-modal="true"
@@ -501,13 +507,13 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
           </>
         )}
 
-        {owned && achievementsUrl ? (
-          <a className="detail-link" href={achievementsUrl} target="_blank" rel="noreferrer noopener">
+        {owned && safeAchievementsUrl ? (
+          <a className="detail-link" href={safeAchievementsUrl} target="_blank" rel="noreferrer noopener">
             View achievements
           </a>
         ) : null}
-        {!owned && url ? (
-          <a className="detail-link" href={url} target="_blank" rel="noreferrer noopener">
+        {!owned && safeGameUrl ? (
+          <a className="detail-link" href={safeGameUrl} target="_blank" rel="noreferrer noopener">
             View on IGDB
           </a>
         ) : null}

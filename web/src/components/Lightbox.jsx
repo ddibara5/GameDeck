@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import './lightbox.css'
+import { useDialogA11y } from '../lib/useDialogA11y.js'
 
 // Full-screen screenshot viewer. Opens from the game sheet's shot strip and shows
 // the image at IGDB 1080p (the strip itself only loads screenshot_med).
@@ -18,6 +19,7 @@ export default function Lightbox({ shots, index, title, onClose }) {
   const [zoomed, setZoomed] = useState(false)
   const stageRef = useRef(null)
   const imgRef = useRef(null)
+  const dialogRef = useDialogA11y({ onClose, closeOnEscape: false })
 
   // Committed transform + the in-flight gesture + last-tap (for double-tap).
   const tf = useRef({ scale: 1, tx: 0, ty: 0 })
@@ -216,6 +218,7 @@ export default function Lightbox({ shots, index, title, onClose }) {
 
   return (
     <div
+      ref={dialogRef}
       className="lb"
       role="dialog"
       aria-modal="true"

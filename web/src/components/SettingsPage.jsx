@@ -21,6 +21,7 @@ import { lockScroll } from '../lib/scrollLock.js'
 import { MenuItem, ICONS, relTime } from './menuUI.jsx'
 import { useNavConfig, setNavConfig } from '../lib/navConfig.js'
 import LogoMark from './LogoMark.jsx'
+import { useDialogA11y } from '../lib/useDialogA11y.js'
 
 const REPO = 'ddibara5/GameDeck'
 const SOURCE_URL = 'https://github.com/ddibara5/GameDeck'
@@ -94,6 +95,7 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
   const [chatsCleared, setChatsCleared] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [syncNote, setSyncNote] = useState('')
+  const dialogRef = useDialogA11y({ active: mounted, closeOnEscape: false })
   const [lockUntil, setLockUntil] = useState(() => {
     try {
       return Number(sessionStorage.getItem(SYNC_LOCK_KEY)) || 0
@@ -312,7 +314,7 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
   const sourcesValue = oldestSync ? `Oldest ${relTime(oldestSync)}` : '-'
 
   return (
-    <div className={`settings-page${closing ? ' closing' : ''}`} role="dialog" aria-label="Settings">
+    <div ref={dialogRef} className={`settings-page${closing ? ' closing' : ''}`} role="dialog" aria-modal="true" aria-label="Settings">
       <div className="settings-hd">
         <button type="button" className="settings-back" onClick={onClose} aria-label="Back">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -578,6 +580,7 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
 
 function SubPage({ open, depth = 0, title, onBack, children }) {
   const { mounted, closing } = useMountTransition(open)
+  const dialogRef = useDialogA11y({ active: mounted, onClose: onBack })
   if (!mounted) return null
   // z-index by position in the stack rather than a class per level, so a fourth
   // level is a number and not another CSS rule. Clamped at 0 so a page that is
@@ -586,9 +589,11 @@ function SubPage({ open, depth = 0, title, onBack, children }) {
   const z = 211 + Math.max(0, depth)
   return (
     <div
+      ref={dialogRef}
       className={`settings-page settings-sub${closing ? ' closing' : ''}`}
       style={{ zIndex: z }}
       role="dialog"
+      aria-modal="true"
       aria-label={title}
     >
       <div className="settings-hd">

@@ -11,6 +11,7 @@ import { groupByRelease } from '../lib/wishlistRelease.js'
 import { useDelayedClose } from '../lib/useDelayedClose.js'
 import { useEdgeBack } from '../lib/useEdgeBack.js'
 import { lockScroll } from '../lib/scrollLock.js'
+import { useDialogA11y } from '../lib/useDialogA11y.js'
 
 // Full "see all" page for a Discover rail: every game in the list, in a grid,
 // with a sort control and paging. Opened by tapping a rail heading. Portaled to
@@ -80,6 +81,7 @@ export default function DiscoverRailList({ row, seedItems, isOwned, hideOwned, w
 
   const [sort, setSort] = useState('')
   const [sortOpen, setSortOpen] = useState(false)
+  const sortDialogRef = useDialogA11y({ active: sortOpen, onClose: () => setSortOpen(false) })
   const [selected, setSelected] = useState(null)
 
   // Server (IGDB rail) state.
@@ -243,7 +245,7 @@ export default function DiscoverRailList({ row, seedItems, isOwned, hideOwned, w
 
       {sortOpen ? (
         <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && setSortOpen(false)}>
-          <div className="modal-sheet filter-sheet" role="dialog" aria-modal="true" aria-label="Sort">
+          <div ref={sortDialogRef} className="modal-sheet filter-sheet" role="dialog" aria-modal="true" aria-label="Sort">
             <div className="modal-handle" />
             <button type="button" className="modal-close" aria-label="Close sort options" onClick={() => setSortOpen(false)}>&times;</button>
             <div className="detail-title">Sort</div>

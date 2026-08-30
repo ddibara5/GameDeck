@@ -14,6 +14,7 @@
   "dependencies": {
     "@supabase/auth-js": "2.112.4",
     "@supabase/postgrest-js": "2.112.2",
+    "dompurify": "^3.4.14",
     "marked": "^12.0.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
