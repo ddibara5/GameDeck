@@ -153,6 +153,7 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
       const dy = t.clientY - startY
       // Only act on a clearly horizontal gesture, so vertical scrolling is untouched.
       if (Math.abs(dx) <= Math.abs(dy)) return
+      if (fromEdge && dx > 0 && e.cancelable) e.preventDefault()
       if (fromEdge && dx > BACK_DX) {
         if (stack.length) pop()
         else onClose()
@@ -164,7 +165,7 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
     }
 
     window.addEventListener('touchstart', onStart, { passive: true })
-    window.addEventListener('touchmove', onMove, { passive: true })
+    window.addEventListener('touchmove', onMove, { passive: false })
     window.addEventListener('touchend', onEnd, { passive: true })
     return () => {
       window.removeEventListener('touchstart', onStart)

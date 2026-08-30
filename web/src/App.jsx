@@ -134,30 +134,19 @@ function GameDeckApp() {
     )
   }, [])
 
-  // The drawer is temporary UI, but it still needs to participate in browser /
-  // PWA Back. A same-URL history entry lets Back dismiss it without navigating
-  // the page underneath. Destination navigation closes this entry first, then
-  // opens the selected screen after the drawer's exit animation.
+  // The drawer is an action available from every root tab, not another place in
+  // browser history. Root edge-swipes open it; only nested pages own Back.
   const openMenu = useCallback(() => {
-    if (!window.history.state?.gamedeckMenu) {
-      window.history.pushState(
-        { ...(window.history.state || {}), gamedeckShell: true, gamedeckMenu: true },
-        '',
-        window.location.href,
-      )
-    }
     setMenuOpen(true)
   }, [])
 
   const closeMenu = useCallback(() => {
-    if (window.history.state?.gamedeckMenu) {
-      window.history.back()
-      return
-    }
     setMenuOpen(false)
   }, [])
 
-  const navigateTab = useCallback((tab, { replace = false } = {}) => {
+  // Bottom-bar and drawer tabs are peers. Switching between them replaces the
+  // current root destination so browser Back never walks across the tab bar.
+  const navigateTab = useCallback((tab, { replace = true } = {}) => {
     if (!VALID_TABS.has(tab)) return
     if (viewTimer.current) {
       clearTimeout(viewTimer.current)
@@ -270,7 +259,8 @@ function GameDeckApp() {
 
   useEffect(() => {
     // Put the initial destination in the address bar without adding a history
-    // entry, then let browser/PWA Back restore tabs, list views, and Search.
+    // entry. Root tabs replace one another; nested list/Search pages may add an
+    // entry and are the only destinations that own Back.
     writeLocation({
       tab: activeTab,
       view,
@@ -281,7 +271,7 @@ function GameDeckApp() {
     const onPopState = () => {
       const fallback = visibleKeys(getNavConfig())[0] || 'home'
       const next = readAppLocation(window.location.href, VALID_TABS, fallback)
-      setMenuOpen(Boolean(window.history.state?.gamedeckMenu))
+      setMenuOpen(false)
       setActiveTab(next.tab)
       setView(next.view)
       setViewClosing(false)
@@ -360,6 +350,10 @@ function GameDeckApp() {
       const dy = t.clientY - startY
       // Only act on a clearly horizontal gesture, so vertical scrolling is untouched.
       if (Math.abs(dx) <= Math.abs(dy)) return
+      // Claim the gesture before the action threshold. Without this, iOS can
+      // perform its native history swipe while GameDeck opens the drawer or
+      // closes a nested view, producing two actions from one finger movement.
+      if (((fromEdge && dx > 0) || (menuOpen && dx < 0)) && e.cancelable) e.preventDefault()
       // A drawer-opened overlay (Wishlist, status/smart lists) is open: an edge
       // swipe-in goes back to close it instead of opening the app drawer.
       if (view) {
@@ -382,7 +376,7 @@ function GameDeckApp() {
     }
 
     window.addEventListener('touchstart', onStart, { passive: true })
-    window.addEventListener('touchmove', onMove, { passive: true })
+    window.addEventListener('touchmove', onMove, { passive: false })
     window.addEventListener('touchend', onEnd, { passive: true })
     return () => {
       window.removeEventListener('touchstart', onStart)

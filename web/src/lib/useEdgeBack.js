@@ -62,13 +62,19 @@ export function useEdgeBack(onBack, { disabled = false, register = true } = {}) 
       tracking = true
     }
     const onMove = (e) => {
-      if (!tracking || disabled) return
+      if (!tracking) return
       const t = e.touches && e.touches[0]
       if (!t) return
       const dx = t.clientX - startX
       const dy = t.clientY - startY
       // Only act on a clearly horizontal gesture, so vertical scrolling is untouched.
       if (Math.abs(dx) <= Math.abs(dy)) return
+      // Own the edge gesture once its horizontal intent is clear. Otherwise the
+      // browser can navigate history while the overlay also closes itself. A
+      // disabled nested interaction still claims the gesture; it suppresses
+      // Back rather than handing the same swipe to browser history underneath.
+      if (fromEdge && dx > 0 && e.cancelable) e.preventDefault()
+      if (disabled) return
       if (fromEdge && dx > BACK_DX) {
         onBack()
         tracking = false
@@ -79,7 +85,7 @@ export function useEdgeBack(onBack, { disabled = false, register = true } = {}) 
     }
 
     window.addEventListener('touchstart', onStart, { passive: true })
-    window.addEventListener('touchmove', onMove, { passive: true })
+    window.addEventListener('touchmove', onMove, { passive: false })
     window.addEventListener('touchend', onEnd, { passive: true })
     return () => {
       window.removeEventListener('touchstart', onStart)
