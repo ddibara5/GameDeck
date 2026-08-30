@@ -8,6 +8,7 @@ import { useWishlist } from '../lib/wishlist.js'
 import { useDiscoverPrefs, platformParam } from '../lib/discoverPrefs.js'
 import { useTasteProfile, NEW_LANE, laneReason, rankCandidates, interleave } from '../lib/discoverLanes.js'
 import { recordRecommendationDetailOpen, trackRecommendationFeed } from '../lib/recommendationLearning.js'
+import usePullRefresh from '../lib/usePullRefresh.js'
 
 // Pull a wider candidate pool than the feed displays. The server still returns
 // recent matching releases, then the client can balance freshness with
@@ -63,7 +64,7 @@ function refreshedLaneMap(result, keys) {
   return out
 }
 
-export default function DiscoverForYou({ onAsk, onOpenAsk, onBrowse }) {
+export default function DiscoverForYou({ onAsk, onOpenAsk }) {
   const prefs = useDiscoverPrefs()
   const platform = platformParam(prefs.platforms)
   const tasteProfile = useTasteProfile()
@@ -202,7 +203,7 @@ export default function DiscoverForYou({ onAsk, onOpenAsk, onBrowse }) {
   }, [feedSig, feedBatch])
 
   async function refreshPicks() {
-    if (refreshing || loading) return
+    if (refreshing || loading) return 'Still loading picks'
     const keys = [...new Set([NEW_LANE.key, ...(tasteLanes || []).map((lane) => lane.key)])]
     const currentIds = new Set(
       Object.values(rankedByLane)
@@ -220,10 +221,12 @@ export default function DiscoverForYou({ onAsk, onOpenAsk, onBrowse }) {
       setNewState('ready')
       setTasteState('ready')
       setFeedBatch(`refresh-${Date.now().toString(36)}`)
+      return 'Picks refreshed'
     } catch {
       // Keep the current feed intact. A manual refresh is never allowed to turn
       // a good last-known set into an error screen.
       setRefreshError(true)
+      return 'Couldn\'t refresh picks'
     } finally {
       setRefreshing(false)
     }
@@ -240,18 +243,37 @@ export default function DiscoverForYou({ onAsk, onOpenAsk, onBrowse }) {
       : evidence?.rankedGameCount
         ? 'Based on rankings'
         : 'Personalizing as you play'
+  const pullRefresh = usePullRefresh({
+    onRefresh: refreshPicks,
+    disabled: loading || refreshing,
+    workingLabel: 'Refreshing picks…',
+    doneLabel: 'Picks refreshed',
+    errorLabel: 'Couldn\'t refresh picks',
+  })
 
   return (
-    <div className="discover-foryou" aria-busy={loading || refreshing}>
+    <div
+      className={`discover-foryou ${pullRefresh.handlers.className}`}
+      aria-busy={loading || refreshing}
+      onTouchStart={pullRefresh.handlers.onTouchStart}
+      onTouchMove={pullRefresh.handlers.onTouchMove}
+      onTouchEnd={pullRefresh.handlers.onTouchEnd}
+      onTouchCancel={pullRefresh.handlers.onTouchCancel}
+    >
+      <div
+        ref={pullRefresh.gutterRef}
+        className={`fy-refresh-gutter ${pullRefresh.phase}`}
+        role="status"
+        aria-live="polite"
+      >
+        <span className="fy-refresh-flag">
+          <span className="fy-refresh-spinner" aria-hidden="true" />
+          <span ref={pullRefresh.labelRef} />
+        </span>
+      </div>
+
       <div className="fy-heading">
-        <div>
-          <span>For You</span>
-          <h2>Your picks</h2>
-        </div>
-        <button type="button" onClick={onBrowse}>
-          Browse catalog
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
-        </button>
+        <h2>Your picks</h2>
       </div>
 
       <div className="fy-profile-bar">
@@ -260,21 +282,6 @@ export default function DiscoverForYou({ onAsk, onOpenAsk, onBrowse }) {
             <path d="M12 2.5c.6 4.2 2.8 6.4 7 7-4.2.6-6.4 2.8-7 7-.6-4.2-2.8-6.4-7-7 4.2-.6 6.4-2.8 7-7Z" />
           </svg>
           <span>{profileNote}</span>
-        </div>
-        <div className="fy-scope-actions">
-          <button
-            type="button"
-            className="fy-refresh"
-            onClick={refreshPicks}
-            disabled={refreshing || loading}
-            aria-label={refreshing ? 'Refreshing picks' : 'Refresh picks'}
-            title={refreshing ? 'Refreshing picks' : 'Refresh picks'}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M20 6v5h-5" />
-              <path d="M18.5 15a7 7 0 1 1-1.2-8.3L20 11" />
-            </svg>
-          </button>
         </div>
       </div>
 

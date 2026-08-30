@@ -36,6 +36,20 @@
   display: none;
 }
 
+.discover-mode-bar {
+  padding: var(--space-2) var(--screen-gutter) 0;
+}
+
+.discover-mode-seg {
+  width: min(100%, 280px);
+  margin: 0 auto;
+}
+
+.discover-mode-seg .seg-btn {
+  min-height: 34px;
+  padding: 6px var(--space-3);
+}
+
 .discover-topbar {
   height: var(--disc-topbar-h);
   box-sizing: border-box;
@@ -854,26 +868,70 @@ button.shelf-head:active {
   padding-bottom: 8px;
 }
 
-.fy-heading {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--screen-gutter) var(--space-1);
+.fy-refresh-gutter {
+  height: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: var(--muted);
+  transition: height var(--d-base) var(--ease-out);
 }
 
-.fy-heading > div {
-  min-width: 0;
+.fy-refresh-gutter.dragging {
+  transition: none;
 }
 
-.fy-heading > div > span {
-  display: block;
-  margin-bottom: 5px;
+.fy-refresh-flag {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 11px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-pill);
+  background: color-mix(in oklab, var(--surface) 88%, transparent);
   color: var(--muted);
   font-size: var(--t-cap2);
-  font-weight: var(--w-bold);
-  letter-spacing: .12em;
-  text-transform: uppercase;
+  font-weight: var(--w-semi);
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity var(--d-fast) ease, transform var(--d-base) var(--ease-out);
+}
+
+.fy-refresh-gutter.on .fy-refresh-flag,
+.fy-refresh-gutter.working .fy-refresh-flag,
+.fy-refresh-gutter.done .fy-refresh-flag {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.fy-refresh-gutter.armed .fy-refresh-flag,
+.fy-refresh-gutter.working .fy-refresh-flag {
+  color: var(--accent);
+  border-color: color-mix(in oklab, var(--accent) 42%, var(--line-soft));
+}
+
+.fy-refresh-spinner {
+  width: 12px;
+  height: 12px;
+  display: none;
+  flex: 0 0 auto;
+  border: 1.5px solid color-mix(in oklab, currentColor 28%, transparent);
+  border-top-color: currentColor;
+  border-radius: 50%;
+}
+
+.fy-refresh-gutter.working .fy-refresh-spinner {
+  display: block;
+  animation: fy-pull-spin 0.75s linear infinite;
+}
+
+@keyframes fy-pull-spin {
+  to { transform: rotate(360deg); }
+}
+
+.fy-heading {
+  padding: var(--space-3) var(--screen-gutter) 2px;
 }
 
 .fy-heading h2 {
@@ -883,23 +941,6 @@ button.shelf-head:active {
   letter-spacing: var(--t-t2-tr);
 }
 
-.fy-heading > button {
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  margin: 0 -8px -7px 0;
-  padding: 0 8px;
-  border: 0;
-  background: none;
-  color: var(--accent);
-  font-size: var(--t-foot);
-  font-weight: var(--w-semi);
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.fy-heading > button svg,
 .fy-ask-row svg {
   width: 16px;
   height: 16px;
@@ -911,7 +952,7 @@ button.shelf-head:active {
 }
 
 .fy-profile-bar {
-  min-height: 44px;
+  min-height: 30px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -919,61 +960,10 @@ button.shelf-head:active {
   padding: 0 var(--screen-gutter);
 }
 
-.fy-scope-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: auto;
-}
-
-.fy-profile-bar button {
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--accent);
-  font-size: var(--t-cap);
-  font-weight: var(--w-semi);
-  cursor: pointer;
-}
-
-.fy-profile-bar .fy-refresh {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 44px;
-  padding: 0;
-  border: 1px solid color-mix(in oklab, var(--accent) 52%, var(--line));
-  border-radius: var(--r-pill);
-  background: color-mix(in oklab, var(--accent) 8%, transparent);
-}
-
-.fy-refresh svg {
-  width: 15px;
-  height: 15px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.fy-refresh:disabled {
-  opacity: 0.68;
-  cursor: default;
-}
-
-.fy-refresh:disabled svg {
-  animation: fy-refresh-spin 0.9s linear infinite;
-}
-
-@keyframes fy-refresh-spin {
-  to { transform: rotate(360deg); }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .fy-refresh:disabled svg { animation: none; }
+  .fy-refresh-gutter,
+  .fy-refresh-flag { transition: none; }
+  .fy-refresh-gutter.working .fy-refresh-spinner { animation: none; }
 }
 
 .fy-profile-note {
@@ -1225,7 +1215,6 @@ button.shelf-head:active {
   text-align: center;
 }
 
-[data-theme="light"] .fy-profile-bar button,
 [data-theme="light"] .fy-profile-note,
 [data-theme="light"] .fy-why {
   color: var(--walnut);

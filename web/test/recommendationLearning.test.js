@@ -28,7 +28,8 @@ test('manual refresh keeps the prior feed and creates a distinct learning batch'
   const learning = await readFile(new URL('../src/lib/recommendationLearning.js', import.meta.url), 'utf8')
   const discover = await readFile(new URL('../src/lib/discover.js', import.meta.url), 'utf8')
 
-  assert.match(component, /Refresh picks/)
+  assert.match(component, /usePullRefresh/)
+  assert.match(component, /Refreshing picks…/)
   assert.match(component, /force: true/)
   assert.match(component, /Showing your previous picks/)
   assert.match(component, /batchId: feedBatch/)

@@ -1,9 +1,7 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useRef, useState } from 'react'
 import DiscoverForYou from './DiscoverForYou.jsx'
 import { preloadMarkdown } from './ChatMessage.jsx'
 import { useDialogA11y } from '../lib/useDialogA11y.js'
-import { useEdgeBack } from '../lib/useEdgeBack.js'
-import { lockScroll } from '../lib/scrollLock.js'
 import './discover.css'
 
 const loadDiscoverBrowse = () => import('./DiscoverBrowse.jsx')
@@ -12,28 +10,30 @@ const DiscoverBrowse = lazy(loadDiscoverBrowse)
 const DiscoverAsk = lazy(loadDiscoverAsk)
 
 export default function DiscoverTab({ onCustomize }) {
-  const [browseOpen, setBrowseOpen] = useState(false)
+  const [mode, setMode] = useState('foryou')
+  const [browseVisited, setBrowseVisited] = useState(false)
   const [askOpen, setAskOpen] = useState(false)
   const [seedPrompt, setSeedPrompt] = useState(null)
+  const forYouTabRef = useRef(null)
+  const browseTabRef = useRef(null)
   const askDialogRef = useDialogA11y({ active: askOpen, onClose: () => setAskOpen(false) })
 
-  useEdgeBack(closeBrowse, {
-    register: browseOpen,
-    disabled: !browseOpen || askOpen,
-  })
-
-  useEffect(() => {
-    if (!browseOpen) return undefined
-    return lockScroll()
-  }, [browseOpen])
-
-  function openBrowse() {
-    loadDiscoverBrowse()
-    setBrowseOpen(true)
+  function selectMode(nextMode) {
+    if (nextMode === 'browse') setBrowseVisited(true)
+    setMode(nextMode)
   }
 
-  function closeBrowse() {
-    setBrowseOpen(false)
+  function warmBrowse() {
+    loadDiscoverBrowse()
+  }
+
+  function handleModeKeys(event) {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+    event.preventDefault()
+    const nextMode = event.key === 'ArrowRight' || event.key === 'End' ? 'browse' : 'foryou'
+    selectMode(nextMode)
+    const nextRef = nextMode === 'browse' ? browseTabRef : forYouTabRef
+    requestAnimationFrame(() => nextRef.current?.focus())
   }
 
   function warmAsk() {
@@ -55,19 +55,46 @@ export default function DiscoverTab({ onCustomize }) {
 
   return (
     <div className="discover-page">
-      <div className="discover-base" hidden={askOpen || browseOpen}>
-        <DiscoverForYou onAsk={askAbout} onOpenAsk={openAsk} onBrowse={openBrowse} />
-      </div>
-
-      {browseOpen ? (
-        <section className="discover-browse-page" aria-label="Browse games">
-          <header className="discover-browse-header">
-            <button type="button" className="discover-browse-back" aria-label="Back to Discover" onClick={closeBrowse}>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+      <div className="discover-base" hidden={askOpen}>
+        <div className="discover-mode-bar">
+          <div className="seg discover-mode-seg" role="tablist" aria-label="Discover view" onKeyDown={handleModeKeys}>
+            <button
+              id="discover-foryou-tab"
+              ref={forYouTabRef}
+              type="button"
+              className={`seg-btn${mode === 'foryou' ? ' active' : ''}`}
+              role="tab"
+              aria-selected={mode === 'foryou'}
+              aria-controls="discover-foryou-panel"
+              tabIndex={mode === 'foryou' ? 0 : -1}
+              onClick={() => selectMode('foryou')}
+            >
+              For You
             </button>
-            <h1>Browse</h1>
-          </header>
-          <div className="discover-browse-scroll">
+            <button
+              id="discover-browse-tab"
+              ref={browseTabRef}
+              type="button"
+              className={`seg-btn${mode === 'browse' ? ' active' : ''}`}
+              role="tab"
+              aria-selected={mode === 'browse'}
+              aria-controls="discover-browse-panel"
+              tabIndex={mode === 'browse' ? 0 : -1}
+              onPointerDown={warmBrowse}
+              onFocus={warmBrowse}
+              onClick={() => selectMode('browse')}
+            >
+              Browse
+            </button>
+          </div>
+        </div>
+
+        <div id="discover-foryou-panel" role="tabpanel" aria-labelledby="discover-foryou-tab" hidden={mode !== 'foryou'}>
+          <DiscoverForYou onAsk={askAbout} onOpenAsk={openAsk} />
+        </div>
+
+        {browseVisited ? (
+          <div id="discover-browse-panel" role="tabpanel" aria-labelledby="discover-browse-tab" hidden={mode !== 'browse'}>
             <Suspense fallback={<div className="discover-view-loading" role="status">Loading Browse…</div>}>
               <DiscoverBrowse
                 onAsk={askAbout}
@@ -75,8 +102,8 @@ export default function DiscoverTab({ onCustomize }) {
               />
             </Suspense>
           </div>
-        </section>
-      ) : null}
+        ) : null}
+      </div>
 
       {askOpen ? (
         <div ref={askDialogRef} className="discover-ask-view" role="dialog" aria-modal="true" aria-label="Ask GameDeck">
