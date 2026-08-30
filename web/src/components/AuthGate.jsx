@@ -24,13 +24,20 @@ export default function AuthGate() {
     setBusy(true)
     setTone('status')
     setMessage('')
-    const { error } = await sendSignInEmail()
-    setBusy(false)
+    let error
+    try {
+      const result = await sendSignInEmail()
+      error = result.error
+    } catch (caught) {
+      error = caught
+    } finally {
+      setBusy(false)
+    }
     if (error) {
       setTone('error')
       setMessage(isEmailRateLimitError(error)
         ? 'Too many sign-in emails were requested. Use the latest unused link, or try again in about an hour.'
-        : (error.message || 'Could not send the sign-in link.'))
+        : (error.message || 'Could not send the sign-in link. Check your connection and try again.'))
       return
     }
     setStep('verify')
