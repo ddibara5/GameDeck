@@ -127,7 +127,7 @@ export default function DiscoverBrowse({
   onAsk,
   onCustomize,
   openFiltersToken = 0,
-  hideOwnedToken = 0,
+  onFilterCountChange,
   query,
   onQueryChange,
 }) {
@@ -159,10 +159,6 @@ export default function DiscoverBrowse({
   const prefs = useDiscoverPrefs()
   const [wideOpen, setWideOpen] = useState(false)
 
-  useEffect(() => {
-    if (hideOwnedToken > 0) setWideOpen(false)
-  }, [hideOwnedToken])
-
   const activePlatforms = wideOpen ? ALL_PLATFORMS : prefs.platforms
   const hideOwned = wideOpen ? false : prefs.hideOwned
   const standing = !wideOpen && (prefs.hideOwned || prefs.platforms.length > 0)
@@ -176,6 +172,16 @@ export default function DiscoverBrowse({
     filters.year !== 'all' ||
     filters.status !== 'all' ||
     filters.sort !== 'popularity'
+  const temporaryFilterCount =
+    Number(Boolean(preset)) +
+    Number(filters.genre !== DEFAULT_FILTERS.genre) +
+    Number(filters.year !== DEFAULT_FILTERS.year) +
+    Number(filters.status !== DEFAULT_FILTERS.status) +
+    Number(filters.sort !== DEFAULT_FILTERS.sort)
+
+  useEffect(() => {
+    onFilterCountChange?.(temporaryFilterCount)
+  }, [onFilterCountChange, temporaryFilterCount])
   // Typing a title is a request for ranked matches, so search still collapses the
   // page into one flat list. Filters and the vibe preset are a different intent -
   // "show me the same shelves, but only RPGs" - so they narrow every rail in
@@ -723,6 +729,35 @@ export default function DiscoverBrowse({
                     </button>
                   )
                 })}
+              </div>
+            </div>
+
+            <div className="filter-group">
+              <span className="filter-label">Library</span>
+              <span className="filter-note">Remembered between visits</span>
+              <div className="filter-options">
+                <button
+                  type="button"
+                  aria-pressed={!prefs.hideOwned}
+                  className={`filter-opt${prefs.hideOwned ? '' : ' active'}`}
+                  onClick={() => {
+                    setWideOpen(false)
+                    setDiscoverPrefs({ ...prefs, hideOwned: false })
+                  }}
+                >
+                  Include library games
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={prefs.hideOwned}
+                  className={`filter-opt${prefs.hideOwned ? ' active' : ''}`}
+                  onClick={() => {
+                    setWideOpen(false)
+                    setDiscoverPrefs({ ...prefs, hideOwned: true })
+                  }}
+                >
+                  Hide library games
+                </button>
               </div>
             </div>
 
