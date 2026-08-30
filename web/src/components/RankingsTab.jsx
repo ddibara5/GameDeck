@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Cover from './Cover.jsx'
-import RankingReaction from './RankingReaction.jsx'
+import RankGameSheet from './RankGameSheet.jsx'
 import { libraryCover } from '../lib/format.js'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
 import { explicitStatus, useStatusMap } from '../lib/userStatus.js'
@@ -53,6 +53,10 @@ export default function RankingsTab() {
   const [loading, setLoading] = useState(() => !cachedState)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [rankQuery, setRankQuery] = useState('')
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [rankTarget, setRankTarget] = useState(null)
+  const searchRef = useRef(null)
 
   const refresh = async (force = false) => {
     setError('')
@@ -77,8 +81,36 @@ export default function RankingsTab() {
     [state.ranks, gameById],
   )
   const rankedIds = useMemo(() => new Set(explicitRanks.map((rank) => String(rank.master_id))), [explicitRanks])
-  const unseeded = eligible.filter((game) => !rankedIds.has(String(game.master_id)))
+  const eligibleIds = useMemo(() => new Set(eligible.map((game) => String(game.master_id))), [eligible])
+  const rankMetaById = useMemo(
+    () => new Map(explicitRanks.map((rank, index) => [String(rank.master_id), {
+      rank,
+      position: index + 1,
+      tier: tierForPosition(index, explicitRanks.length),
+    }])),
+    [explicitRanks],
+  )
+  const searchResults = useMemo(() => {
+    if (!searchOpen) return []
+    const query = rankQuery.trim().toLowerCase()
+    const candidates = query
+      ? games.filter((game) => String(game.title || '').toLowerCase().includes(query))
+      : eligible.filter((game) => !rankedIds.has(String(game.master_id)))
+    return candidates
+      .sort((a, b) => {
+        const aTitle = String(a.title || '').toLowerCase()
+        const bTitle = String(b.title || '').toLowerCase()
+        return Number(!aTitle.startsWith(query)) - Number(!bTitle.startsWith(query)) || aTitle.localeCompare(bTitle)
+      })
+      .slice(0, 8)
+  }, [searchOpen, rankQuery, games, eligible, rankedIds])
   const pair = useMemo(() => chooseComparisonPair(explicitRanks, state.comparisons), [explicitRanks, state.comparisons])
+
+  const focusRankSearch = () => {
+    setSection('ranking')
+    setSearchOpen(true)
+    window.setTimeout(() => searchRef.current?.focus(), 0)
+  }
 
   const compare = async (result) => {
     if (!pair || busy) return
@@ -104,9 +136,65 @@ export default function RankingsTab() {
       <header className="rank-head">
         <p className="page-subtitle">Your taste, ordered by your choices</p>
         <h2 id="rank-title">My Ranking</h2>
+        <button type="button" className="rank-primary-action" onClick={focusRankSearch}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8L12 3Z" /></svg>
+          Rank a game
+        </button>
+        <div className="rank-search-wrap">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6" /><path d="m16 16 4 4" /></svg>
+          <input
+            ref={searchRef}
+            type="search"
+            value={rankQuery}
+            placeholder="Search your library to rank"
+            aria-label="Search your library to rank"
+            onFocus={() => setSearchOpen(true)}
+            onChange={(event) => {
+              setRankQuery(event.target.value)
+              setSearchOpen(true)
+            }}
+          />
+          {searchOpen ? (
+            <div className="rank-search-results" role="listbox" aria-label="Library games">
+              {searchResults.length ? searchResults.map((game) => {
+                const meta = rankMetaById.get(String(game.master_id))
+                const canRank = eligibleIds.has(String(game.master_id)) && !meta
+                return (
+                  <button
+                    key={game.master_id}
+                    type="button"
+                    role="option"
+                    aria-selected="false"
+                    disabled={!canRank}
+                    onClick={() => {
+                      setRankTarget(game)
+                      setSearchOpen(false)
+                    }}
+                  >
+                    <Cover src={libraryCover(game)} title={game.title} />
+                    <span><strong>{game.title}</strong><small>{meta ? `Already ranked · ${Math.round(meta.rank.score)} · Tier ${meta.tier}` : canRank ? 'Ready to rank' : 'Not eligible yet'}</small></span>
+                  </button>
+                )
+              }) : (
+                <p>{rankQuery.trim() ? 'No matching library games.' : 'No eligible unranked games.'}</p>
+              )}
+            </div>
+          ) : null}
+        </div>
         <div className="rank-tabs" role="tablist" aria-label="Ranking sections">
           {SECTIONS.map((item) => (
-            <button key={item.key} type="button" role="tab" aria-selected={section === item.key} onClick={() => setSection(item.key)}>{item.label}</button>
+            <button
+              key={item.key}
+              type="button"
+              role="tab"
+              aria-selected={section === item.key}
+              onClick={() => {
+                setSection(item.key)
+                setSearchOpen(false)
+              }}
+            >
+              {item.label}
+            </button>
           ))}
         </div>
       </header>
@@ -121,15 +209,12 @@ export default function RankingsTab() {
                 <RankGame key={rank.master_id} game={gameById.get(String(rank.master_id))} rank={rank} position={index + 1} tier={tierForPosition(index, explicitRanks.length)} />
               ))}
             </ol>
-          ) : <p className="rank-empty">React to two games below to start your ranking.</p>}
-          {unseeded.length ? (
-            <section className="rank-seed">
-              <div className="rank-section-title"><h3>Add a game</h3><span>{unseeded.length} eligible</span></div>
-              <div className="rank-seed-card">
-                <Cover src={libraryCover(unseeded[0])} title={unseeded[0].title} />
-                <div><strong>{unseeded[0].title}</strong><RankingReaction masterId={unseeded[0].master_id} compact onSaved={refresh} /></div>
-              </div>
-            </section>
+          ) : <p className="rank-empty">Rank a game above to start your list.</p>}
+          {explicitRanks.length >= 2 ? (
+            <button type="button" className="rank-precision-card" onClick={() => setSection('compare')}>
+              <span><strong>Want more precision?</strong><small>Compare close neighbors when you feel like it.</small></span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+            </button>
           ) : null}
         </>
       ) : null}
@@ -161,6 +246,15 @@ export default function RankingsTab() {
           <p className="rank-note">My Ranking is your explicit opinion. Discover still uses a separate recommendation score for what you may want next.</p>
         </div>
       ) : null}
+
+      <RankGameSheet
+        open={Boolean(rankTarget)}
+        game={rankTarget}
+        ranks={explicitRanks}
+        gameById={gameById}
+        onClose={() => setRankTarget(null)}
+        onSaved={() => refresh(true)}
+      />
     </section>
   )
 }

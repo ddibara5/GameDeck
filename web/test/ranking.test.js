@@ -1,8 +1,11 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import {
+  closestRankNeighbor,
   chooseComparisonPair,
   eloChange,
+  estimateRankPlacement,
   isRankingEligible,
   seedForReaction,
   tierForPosition,
@@ -23,6 +26,26 @@ test('tiers are percentile based', () => {
   assert.equal(tierForPosition(1, 10), 'A')
   assert.equal(tierForPosition(4, 10), 'B')
   assert.equal(tierForPosition(8, 10), 'C')
+})
+
+test('a direct reaction previews insertion position, tier, and closest neighbor', () => {
+  const ranks = [
+    { master_id: 1, score: 1700, comparison_count: 5 },
+    { master_id: 2, score: 1560, comparison_count: 2 },
+    { master_id: 3, score: 1400, comparison_count: 0 },
+  ]
+  assert.deepEqual(estimateRankPlacement(ranks, 1650), { position: 2, tier: 'B' })
+  assert.equal(closestRankNeighbor(ranks, 1650).master_id, 1)
+})
+
+test('Rankings offers direct library search and makes comparison optional', () => {
+  const rankings = readFileSync(new URL('../src/components/RankingsTab.jsx', import.meta.url), 'utf8')
+  const sheet = readFileSync(new URL('../src/components/RankGameSheet.jsx', import.meta.url), 'utf8')
+  assert.match(rankings, /Rank a game/)
+  assert.match(rankings, /Search your library to rank/)
+  assert.doesNotMatch(rankings, /unseeded\[0\]/)
+  assert.match(sheet, /Save to My Ranking/)
+  assert.match(sheet, /Maybe later/)
 })
 
 test('eligibility accepts explicit finishes or enough real play', () => {

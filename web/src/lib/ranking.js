@@ -2,8 +2,10 @@ import { supabase } from './supabase.js'
 import { idbDel, idbSet, swr } from './idbCache.js'
 export {
   REACTIONS,
+  closestRankNeighbor,
   chooseComparisonPair,
   eloChange,
+  estimateRankPlacement,
   expectedScore,
   isRankingEligible,
   seedForReaction,
@@ -153,12 +155,13 @@ function invalidateRankingCaches(masterId) {
 }
 
 export async function setRankReaction(masterId, reaction) {
-  const { error } = await supabase.rpc('set_rank_reaction', {
+  const { data, error } = await supabase.rpc('set_rank_reaction', {
     p_master_id: Number(masterId),
     p_reaction: reaction,
   })
   if (error) throw new Error(error.message || 'Could not save reaction')
   invalidateRankingCaches(masterId)
+  return data
 }
 
 export async function recordComparison(leftId, rightId, result) {

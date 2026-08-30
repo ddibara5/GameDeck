@@ -28,6 +28,30 @@ export function tierForPosition(index, total) {
   return 'C'
 }
 
+export function estimateRankPlacement(ranks, score, masterId = null) {
+  const targetId = masterId == null ? null : String(masterId)
+  const ordered = (ranks || [])
+    .filter((rank) => targetId == null || String(rank.master_id) !== targetId)
+    .sort((a, b) => Number(b.score) - Number(a.score))
+  const index = ordered.findIndex((rank) => Number(rank.score) < Number(score))
+  const insertionIndex = index === -1 ? ordered.length : index
+  const total = ordered.length + 1
+  return {
+    position: insertionIndex + 1,
+    tier: tierForPosition(insertionIndex, total),
+  }
+}
+
+export function closestRankNeighbor(ranks, score, masterId = null) {
+  const targetId = masterId == null ? null : String(masterId)
+  return (ranks || [])
+    .filter((rank) => targetId == null || String(rank.master_id) !== targetId)
+    .sort((a, b) =>
+      Math.abs(Number(a.score) - Number(score)) - Math.abs(Number(b.score) - Number(score))
+      || Number(a.comparison_count || 0) - Number(b.comparison_count || 0)
+    )[0] || null
+}
+
 export function isRankingEligible(game, explicit) {
   if (!game) return false
   if (explicit === 'finished') return true
