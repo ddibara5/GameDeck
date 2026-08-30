@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import Cover from './Cover.jsx'
+import GameDetail from './GameDetail.jsx'
 import RankGameSheet from './RankGameSheet.jsx'
 import { libraryCover } from '../lib/format.js'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
@@ -20,16 +21,18 @@ const SECTIONS = [
   { key: 'how', label: 'How it works' },
 ]
 
-function RankGame({ game, rank, position, tier }) {
+function RankGame({ game, rank, position, tier, onSelect }) {
   return (
-    <li className="rank-row">
-      <div className={`rank-place tier-${tier.toLowerCase()}`}><b>{position}</b><span>{tier}</span></div>
-      <Cover src={libraryCover(game)} title={game.title} />
-      <div className="rank-row-copy">
-        <strong>{game.title}</strong>
-        <span>{rank.reaction.replaceAll('_', ' ')} · {rank.comparison_count} comparisons</span>
-      </div>
-      <div className="rank-score">{Math.round(rank.score)}</div>
+    <li className="rank-item">
+      <button type="button" className="rank-row" onClick={() => onSelect(game)} aria-label={`Open ${game.title}`}>
+        <div className={`rank-place tier-${tier.toLowerCase()}`}><b>{position}</b><span>{tier}</span></div>
+        <Cover src={libraryCover(game)} title={game.title} />
+        <div className="rank-row-copy">
+          <strong>{game.title}</strong>
+          <span>{rank.reaction.replaceAll('_', ' ')} · {rank.comparison_count} comparisons</span>
+        </div>
+        <div className="rank-score">{Math.round(rank.score)}</div>
+      </button>
     </li>
   )
 }
@@ -56,6 +59,7 @@ export default function RankingsTab() {
   const [rankQuery, setRankQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
   const [rankTarget, setRankTarget] = useState(null)
+  const [selectedGame, setSelectedGame] = useState(null)
 
   const refresh = async (force = false) => {
     setError('')
@@ -194,7 +198,7 @@ export default function RankingsTab() {
           {explicitRanks.length ? (
             <ol className="rank-list">
               {explicitRanks.map((rank, index) => (
-                <RankGame key={rank.master_id} game={gameById.get(String(rank.master_id))} rank={rank} position={index + 1} tier={tierForPosition(index, explicitRanks.length)} />
+                <RankGame key={rank.master_id} game={gameById.get(String(rank.master_id))} rank={rank} position={index + 1} tier={tierForPosition(index, explicitRanks.length)} onSelect={setSelectedGame} />
               ))}
             </ol>
           ) : <p className="rank-empty">Search above to rank a game and start your list.</p>}
@@ -243,6 +247,7 @@ export default function RankingsTab() {
         onClose={() => setRankTarget(null)}
         onSaved={() => refresh(true)}
       />
+      {selectedGame ? <GameDetail game={selectedGame} onClose={() => setSelectedGame(null)} /> : null}
     </section>
   )
 }

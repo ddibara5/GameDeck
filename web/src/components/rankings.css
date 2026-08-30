@@ -103,7 +103,13 @@
   background: transparent;
 }
 
+.rank-item {
+  margin: 0;
+  padding: 0;
+}
+
 .rank-row {
+  width: 100%;
   display: grid;
   grid-template-columns: 44px var(--game-art-row) minmax(0, 1fr) auto;
   gap: var(--space-3);
@@ -111,9 +117,17 @@
   min-height: 72px;
   padding: var(--space-2) 0;
   border-bottom: 1px solid var(--line-soft);
+  border-top: 0;
+  border-right: 0;
+  border-left: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
 }
 
-.rank-row:last-child { border-bottom: 0; }
+.rank-item:last-child .rank-row { border-bottom: 0; }
+.rank-row:active { opacity: 0.72; }
 
 .rank-row > .cover {
   width: var(--game-art-row);
