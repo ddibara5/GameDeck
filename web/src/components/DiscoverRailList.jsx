@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import Cover from './Cover.jsx'
 import WishHeart from './WishHeart.jsx'
 import Skeleton from './Skeleton.jsx'
+import { MessageState } from './AsyncState.jsx'
 import DiscoverDetail from './DiscoverDetail.jsx'
 import TimingOverlay from './TimingOverlay.jsx'
 import { fetchDiscover } from '../lib/discover.js'
@@ -200,10 +201,7 @@ export default function DiscoverRailList({ row, seedItems, isOwned, hideOwned, w
             <Skeleton count={6} />
           </div>
         ) : items.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-state-title">Nothing here yet</div>
-            <div>This list has no games right now. Try another.</div>
-          </div>
+          <MessageState title="Nothing here yet">This list has no games right now. Try another.</MessageState>
         ) : (
           <>
             {sections ? (

@@ -12,6 +12,10 @@
   margin: var(--space-5) var(--screen-gutter) var(--space-2);
 }
 
+.activity-group-label.first {
+  margin-top: var(--space-3);
+}
+
 /* ---------------------------------------------------------------- day groups */
 
 /* The date label already establishes each group, so the old rounded day slab

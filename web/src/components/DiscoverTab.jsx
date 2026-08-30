@@ -56,7 +56,7 @@ export default function DiscoverTab({ onCustomize }) {
   return (
     <div className="discover-page">
       <div className="discover-base" hidden={askOpen}>
-        <div className="discover-mode-bar">
+        <div className={`discover-mode-bar${mode === 'browse' ? ' browse-active' : ''}`}>
           <div className="seg discover-mode-seg" role="tablist" aria-label="Discover view" onKeyDown={handleModeKeys}>
             <button
               id="discover-foryou-tab"

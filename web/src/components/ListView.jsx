@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import GameCard from './GameCard.jsx'
 import GameDetail from './GameDetail.jsx'
 import Skeleton from './Skeleton.jsx'
+import { MessageState } from './AsyncState.jsx'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
 import { useStatusMap, effectiveStatus, includeInLists } from '../lib/userStatus.js'
 import './wishlist.css'
@@ -64,15 +65,9 @@ export default function ListView({ viewKey, onClose }) {
       {loading ? (
         <Skeleton count={6} />
       ) : error ? (
-        <div className="empty-state">
-          <div className="empty-state-title">Couldn’t load your library</div>
-          <div>{error}</div>
-        </div>
+        <MessageState title="Couldn’t load your library" error>{error}</MessageState>
       ) : count === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-title">Nothing here yet</div>
-          <div>{def.empty}</div>
-        </div>
+        <MessageState title="Nothing here yet">{def.empty}</MessageState>
       ) : (
         <div className="game-list">
           {list.map((game) => (

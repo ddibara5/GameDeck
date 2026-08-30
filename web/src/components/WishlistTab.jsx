@@ -4,6 +4,7 @@ import GameSheet from './GameSheet.jsx'
 import { useWishlist, removeFromWishlist, restoreToWishlist, reconcileWishlist } from '../lib/wishlist.js'
 import { loadLibraryTitles } from '../lib/discover.js'
 import NextUp from './NextUp.jsx'
+import { MessageState } from './AsyncState.jsx'
 import { relOf, effTs, isOut, byTitle, groupByRelease, groupByReleased, outChipOf, shortOf, MON, DAY } from '../lib/wishlistRelease.js'
 import './wishlist.css'
 
@@ -331,6 +332,12 @@ export default function WishlistTab({ onClose, mode = 'wishlist', initialScope =
   )
 
   const isGrid = density === 'grid'
+  const emptyTitle = isUpcomingScope ? 'Nothing is scheduled yet' : isOutScope ? 'Nothing has landed yet' : 'Your wishlist is empty'
+  const emptyCopy = isUpcomingScope
+    ? 'Saved games with a future release window show up here.'
+    : isOutScope
+      ? 'Games you are tracking show up here once they release, and leave again if you buy them.'
+      : 'Tap the heart on any game in Discover to start tracking it.'
 
   return (
     <div className="wl-page">
@@ -390,18 +397,7 @@ export default function WishlistTab({ onClose, mode = 'wishlist', initialScope =
       ) : null}
 
       {!loading && items.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-title">
-            {isUpcomingScope ? 'Nothing is scheduled yet' : isOutScope ? 'Nothing has landed yet' : 'Your wishlist is empty'}
-          </div>
-          <div>
-            {isUpcomingScope
-              ? 'Saved games with a future release window show up here.'
-              : isOutScope
-              ? 'Games you are tracking show up here once they release, and leave again if you buy them.'
-              : 'Tap the heart on any game in Discover to start tracking it.'}
-          </div>
-        </div>
+        <MessageState title={emptyTitle}>{emptyCopy}</MessageState>
       ) : null}
 
       {items.length > 1 ? (

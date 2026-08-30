@@ -14,7 +14,7 @@
   font-weight: var(--w-semi);
   color: var(--text);
   letter-spacing: var(--t-body-tr);
-  margin: var(--space-5) var(--screen-gutter) var(--space-2);
+  margin: var(--space-3) var(--screen-gutter) var(--space-2);
 }
 
 /* The week heading is the grouping. Stories sit directly on the continuous
@@ -463,39 +463,48 @@
   opacity: 0.55;
 }
 
-/* ---- refresh affordances ---- */
+/* ---- sort + refresh affordances ---- */
 
-.news-toolbar {
+.news-controls {
   display: flex;
-  justify-content: flex-end;
-  min-height: 44px;
-  padding: 0 var(--screen-gutter) var(--space-2);
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 var(--screen-gutter) var(--space-3);
 }
 
-.news-refresh-note {
-  display: inline-flex;
+.news-refresh-btn {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  display: flex;
   align-items: center;
-  gap: 5px;
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: none;
+  justify-content: center;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-sm);
+  background: var(--surface);
   color: var(--muted);
-  font-size: var(--t-cap);
   cursor: pointer;
 }
 
-.news-refresh-note svg {
-  width: 12px;
-  height: 12px;
+.news-refresh-btn svg {
+  width: 18px;
+  height: 18px;
 }
 
-.news-refresh-note:active {
+.news-refresh-btn:active {
   color: var(--accent);
 }
 
-.news-refresh-note[disabled] {
+.news-refresh-btn[disabled] {
   opacity: 0.6;
+}
+
+.news-refresh-btn.busy svg {
+  animation: news-refresh-spin 0.8s linear infinite;
+}
+
+@keyframes news-refresh-spin {
+  to { transform: rotate(360deg); }
 }
 
 /* Section headings. "For you" is the accent one because it is the section that
@@ -560,13 +569,18 @@
   z-index: 2;
 }
 
-/* Sort control. Sits between the page header and the first week rather than in
-   Settings: "For you" will put a four-day-old story above this morning's when
-   the older one is about a game you are playing, and an ordering rule you
-   cannot see is indistinguishable from a broken sort. Margin matches the
-   16px gutter every list on this tab uses. */
+/* Sort and refresh share one control row. "For you" can put a four-day-old
+   story above this morning's when the older one is about a game you are
+   playing, and an ordering rule you cannot see is indistinguishable from a
+   broken sort. */
 .news-seg {
-  margin: 0 var(--screen-gutter) var(--space-4);
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .news-refresh-btn.busy svg { animation: none; }
 }
 
 /* ---------------------------------------------------------------------------

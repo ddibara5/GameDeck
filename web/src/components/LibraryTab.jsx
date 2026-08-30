@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import GameCard from './GameCard.jsx'
 import GameDetail from './GameDetail.jsx'
 import Skeleton from './Skeleton.jsx'
+import { MessageState } from './AsyncState.jsx'
 import { useStatusMap, effectiveStatus } from '../lib/userStatus.js'
 import { platformMeta } from '../lib/format.js'
 import { useLibraryGames, useVibeKeywords } from '../lib/useLibraryGames.js'
@@ -145,12 +146,9 @@ export default function LibraryTab() {
 
   return (
     <div>
-      <div className="page-header">
-        <p className="page-subtitle">{librarySummary(games)}</p>
-      </div>
       <div className="library-sticky">
         <div className="library-toolbar">
-          <span className="library-toolbar-note">Organize your games</span>
+          <span className="library-toolbar-note">{librarySummary(games)}</span>
           <button
             type="button"
             className={`filter-btn${activeCount ? ' active' : ''}`}
@@ -169,15 +167,9 @@ export default function LibraryTab() {
       {loading ? (
         <Skeleton count={6} />
       ) : error ? (
-        <div className="empty-state">
-          <div className="empty-state-title">Couldn't load your library</div>
-          <div>{error}</div>
-        </div>
+        <MessageState title="Couldn't load your library" error>{error}</MessageState>
       ) : visibleGames.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-title">No games found</div>
-          <div>Try a different filter.</div>
-        </div>
+        <MessageState title="No games found">Try a different filter.</MessageState>
       ) : (
         <>
           <div className="game-list">

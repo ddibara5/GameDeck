@@ -3,6 +3,7 @@ import Cover from './Cover.jsx'
 import Hhm from './Hhm.jsx'
 import GameDetail from './GameDetail.jsx'
 import Skeleton from './Skeleton.jsx'
+import { MessageState } from './AsyncState.jsx'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
 import { getRecentActivityCache, loadRecentActivity } from '../lib/recentActivity.js'
 import { eventDay, daysBetween } from '../lib/playWeek.js'
@@ -114,20 +115,14 @@ export default function ActivityTab() {
       {loading ? (
         <Skeleton count={6} />
       ) : error ? (
-        <div className="empty-state">
-          <div className="empty-state-title">Couldn't load activity</div>
-          <div>{error}</div>
-        </div>
+        <MessageState title="Couldn't load activity" error>{error}</MessageState>
       ) : grouped.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-title">Nothing here yet</div>
-          <div>Your play history builds up daily, check back soon.</div>
-        </div>
+        <MessageState title="Nothing here yet">Your play history builds up daily. Check back soon.</MessageState>
       ) : (
         <>
-          {grouped.map((group) => (
+          {grouped.map((group, groupIndex) => (
             <section key={group.label}>
-              <div className="activity-group-label">{group.label}</div>
+              <div className={`activity-group-label${groupIndex === 0 ? ' first' : ''}`}>{group.label}</div>
               <div className="day-card">
                 {group.items.map((row, idx) => (
                   <ActivityRow

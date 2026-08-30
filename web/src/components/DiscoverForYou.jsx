@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react'
 import Cover from './Cover.jsx'
 import WishHeart from './WishHeart.jsx'
 import Skeleton from './Skeleton.jsx'
+import { MessageState } from './AsyncState.jsx'
 import DiscoverDetail from './DiscoverDetail.jsx'
 import { fetchDiscoverLanes, loadLibraryTitles, normTitle } from '../lib/discover.js'
 import { useWishlist } from '../lib/wishlist.js'
@@ -276,17 +277,11 @@ export default function DiscoverForYou({ onAsk, onOpenAsk }) {
 
       <div>
         {unavailable ? (
-          <div className="empty-state">
-            <div className="empty-state-title">Couldn't refresh your picks</div>
-            <div>Try again in a moment, or use Browse for the wider catalog.</div>
-          </div>
+          <MessageState title="Couldn't refresh your picks" error>Try again in a moment, or use Browse for the wider catalog.</MessageState>
         ) : loading ? (
           <Skeleton count={5} />
         ) : feed.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-state-title">Nothing new in your tastes</div>
-            <div>Everything these lanes found is already in your library. Browse has the wider catalog.</div>
-          </div>
+          <MessageState title="Nothing new in your tastes">Everything these tastes found is already in your library. Browse has the wider catalog.</MessageState>
         ) : (
           <div className="fy-feed">
             {feed.map((game, index) => {

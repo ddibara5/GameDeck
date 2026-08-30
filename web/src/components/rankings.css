@@ -18,7 +18,7 @@
   position: relative;
   display: flex;
   align-items: center;
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .rank-search-wrap > svg {
@@ -86,7 +86,7 @@
 .rank-search-results > p { margin: 0; padding: var(--space-4); text-align: center; }
 
 .rank-tabs {
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-3);
 }
 
 .rank-list {
@@ -120,6 +120,7 @@
   color: var(--text);
   font: inherit;
   text-align: left;
+  cursor: pointer;
 }
 
 .rank-item:last-child .rank-row { border-bottom: 0; }

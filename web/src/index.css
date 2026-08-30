@@ -1697,7 +1697,7 @@ textarea {
    fixed. This block is IN FLOW despite the name, so nothing passes behind it. */
 .library-sticky {
   background: transparent;
-  padding: 0 var(--screen-gutter) var(--space-3);
+  padding: 0 var(--screen-gutter) var(--space-2);
   border-bottom: 0;
 }
 
@@ -3204,9 +3204,10 @@ textarea {
   border-color: var(--accent);
 }
 
-/* Title lookup now belongs to the global dock search. The Library keeps only the
-   controls that organize owned games, so this row explains the page-local job
-   and exposes one compact filter action. */
+/* Title lookup now belongs to the global dock search. The Library keeps its
+   changing collection summary and one compact page-local filter action on the
+   same row, instead of spending two rows explaining that the library can be
+   organized. */
 .library-toolbar {
   display: flex;
   align-items: center;
@@ -3216,6 +3217,10 @@ textarea {
 }
 
 .library-toolbar-note {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--muted);
   font-size: var(--t-foot);
 }

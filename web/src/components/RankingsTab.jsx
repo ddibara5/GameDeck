@@ -131,46 +131,6 @@ export default function RankingsTab() {
   return (
     <section className="rank-page" aria-label="Rankings">
       <header className="rank-head">
-        <div className="rank-search-wrap">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6" /><path d="m16 16 4 4" /></svg>
-          <input
-            type="search"
-            value={rankQuery}
-            placeholder="Search your library to rank"
-            aria-label="Search your library to rank"
-            onFocus={() => setSearchOpen(true)}
-            onChange={(event) => {
-              setRankQuery(event.target.value)
-              setSearchOpen(true)
-            }}
-          />
-          {searchOpen ? (
-            <div className="rank-search-results" role="listbox" aria-label="Library games">
-              {searchResults.length ? searchResults.map((game) => {
-                const meta = rankMetaById.get(String(game.master_id))
-                const canRank = eligibleIds.has(String(game.master_id)) && !meta
-                return (
-                  <button
-                    key={game.master_id}
-                    type="button"
-                    role="option"
-                    aria-selected="false"
-                    disabled={!canRank}
-                    onClick={() => {
-                      setRankTarget(game)
-                      setSearchOpen(false)
-                    }}
-                  >
-                    <Cover src={libraryCover(game)} title={game.title} />
-                    <span><strong>{game.title}</strong><small>{meta ? `Already ranked · ${Math.round(meta.rank.score)} · Tier ${meta.tier}` : canRank ? 'Ready to rank' : 'Not eligible yet'}</small></span>
-                  </button>
-                )
-              }) : (
-                <p>{rankQuery.trim() ? 'No matching library games.' : 'No eligible unranked games.'}</p>
-              )}
-            </div>
-          ) : null}
-        </div>
         <div className="seg rank-tabs" role="tablist" aria-label="Ranking sections">
           {SECTIONS.map((item) => (
             <button
@@ -188,6 +148,48 @@ export default function RankingsTab() {
             </button>
           ))}
         </div>
+        {section === 'ranking' ? (
+          <div className="rank-search-wrap">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6" /><path d="m16 16 4 4" /></svg>
+            <input
+              type="search"
+              value={rankQuery}
+              placeholder="Search your library to rank"
+              aria-label="Search your library to rank"
+              onFocus={() => setSearchOpen(true)}
+              onChange={(event) => {
+                setRankQuery(event.target.value)
+                setSearchOpen(true)
+              }}
+            />
+            {searchOpen ? (
+              <div className="rank-search-results" role="listbox" aria-label="Library games">
+                {searchResults.length ? searchResults.map((game) => {
+                  const meta = rankMetaById.get(String(game.master_id))
+                  const canRank = eligibleIds.has(String(game.master_id)) && !meta
+                  return (
+                    <button
+                      key={game.master_id}
+                      type="button"
+                      role="option"
+                      aria-selected="false"
+                      disabled={!canRank}
+                      onClick={() => {
+                        setRankTarget(game)
+                        setSearchOpen(false)
+                      }}
+                    >
+                      <Cover src={libraryCover(game)} title={game.title} />
+                      <span><strong>{game.title}</strong><small>{meta ? `Already ranked · ${Math.round(meta.rank.score)} · Tier ${meta.tier}` : canRank ? 'Ready to rank' : 'Not eligible yet'}</small></span>
+                    </button>
+                  )
+                }) : (
+                  <p>{rankQuery.trim() ? 'No matching library games.' : 'No eligible unranked games.'}</p>
+                )}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </header>
 
       {error ? <p className="rank-error" role="alert">{error}</p> : null}

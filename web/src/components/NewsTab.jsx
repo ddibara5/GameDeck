@@ -30,6 +30,7 @@ import NewsSheet from './NewsSheet.jsx'
 import DiscoverDetail from './DiscoverDetail.jsx'
 import GameDetail from './GameDetail.jsx'
 import Skeleton from './Skeleton.jsx'
+import { MessageState } from './AsyncState.jsx'
 import './news.css'
 
 // Lifted out of usePullRefresh when the gesture was removed. The cooldown is a
@@ -184,31 +185,33 @@ export default function NewsTab() {
 
   return (
     <div>
-      <div className="news-toolbar">
-        {!loading && rows.length > 0 ? (
-          <button type="button" className="news-refresh-note" onClick={refreshNow} disabled={busy}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      {!loading && groups.length > 0 ? (
+        <div className="news-controls">
+          <div className="seg news-seg" role="group" aria-label="Sort stories">
+            {NEWS_SORTS.map((o) => (
+              <button
+                key={o.key}
+                type="button"
+                className={`seg-btn${sort === o.key ? ' active' : ''}`}
+                aria-pressed={sort === o.key}
+                onClick={() => chooseSort(o.key)}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            className={`news-refresh-btn${busy ? ' busy' : ''}`}
+            onClick={refreshNow}
+            disabled={busy}
+            aria-label={busy ? 'Fetching new stories' : note || 'Refresh stories'}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <path d="M21 12a9 9 0 1 1-3-6.7L21 8" strokeLinecap="round" strokeLinejoin="round" />
               <path d="M21 3v5h-5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            {busy ? 'Fetching new stories' : note || 'Tap to refresh'}
           </button>
-        ) : null}
-      </div>
-
-      {!loading && groups.length > 0 ? (
-        <div className="seg news-seg" role="group" aria-label="Sort stories">
-          {NEWS_SORTS.map((o) => (
-            <button
-              key={o.key}
-              type="button"
-              className={`seg-btn${sort === o.key ? ' active' : ''}`}
-              aria-pressed={sort === o.key}
-              onClick={() => chooseSort(o.key)}
-            >
-              {o.label}
-            </button>
-          ))}
         </div>
       ) : null}
 
@@ -217,10 +220,7 @@ export default function NewsTab() {
           <Skeleton count={4} />
         </div>
       ) : groups.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-title">No news yet</div>
-          <div>Your weekly gaming digest lands here every Sunday. Check back soon.</div>
-        </div>
+        <MessageState title="No news yet">Your weekly gaming digest lands here every Sunday. Check back soon.</MessageState>
       ) : (
         <>
           {groups.map((group, gi) => (
