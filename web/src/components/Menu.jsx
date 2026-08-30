@@ -1,4 +1,4 @@
-import { cloneElement, useEffect, useMemo } from 'react'
+import { cloneElement, useEffect, useMemo, useRef } from 'react'
 import { useWishlist } from '../lib/wishlist.js'
 import { useMountTransition } from '../lib/useMountTransition.js'
 import { lockScroll } from '../lib/scrollLock.js'
@@ -32,6 +32,7 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpen
   const nav = useNavConfig()
   const { mounted, closing } = useMountTransition(open)
   const dialogRef = useDialogA11y({ active: mounted, onClose })
+  const pendingAction = useRef(null)
 
   // How many rows each group holds, over the user's own order. A group split in
   // two by dragging counts as one, which is also how it folds: the fold is a
@@ -56,10 +57,24 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpen
     return lockScroll()
   }, [mounted])
 
+  // A destination used to mount in the same frame the drawer began closing.
+  // Both full-screen surfaces then animated over each other for 220ms. Hold the
+  // navigation until the shared drawer exit has fully unmounted instead.
+  useEffect(() => {
+    if (mounted || !pendingAction.current) return
+    const action = pendingAction.current
+    pendingAction.current = null
+    action()
+  }, [mounted])
+
+  useEffect(() => {
+    if (open) pendingAction.current = null
+  }, [open])
+
   if (!mounted) return null
 
   const go = (fn) => {
-    if (fn) fn()
+    pendingAction.current = fn || null
     onClose()
   }
 

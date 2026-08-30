@@ -34,13 +34,18 @@ test('legacy drawer state regroups surviving rows without resetting the bar', ()
 })
 
 test('drawer geometry and pinned actions stay compact', async () => {
-  const [css, menu] = await Promise.all([
+  const [css, menu, app] = await Promise.all([
     readFile(new URL('../src/index.css', import.meta.url), 'utf8'),
     readFile(new URL('../src/components/Menu.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/App.jsx', import.meta.url), 'utf8'),
   ])
   assert.match(css, /\.drawer\s*\{[\s\S]*?width:\s*min\(80vw, 320px\)/)
   assert.match(menu, /\n\s*Shuffle\s*\n\s*<\/button>/)
   assert.match(menu, /\n\s*Settings\s*\n\s*<\/button>/)
   assert.doesNotMatch(menu, /\n\s*Customize\s*\n\s*<\/button>/)
   assert.doesNotMatch(menu, /GameDeck · \{counts\.library\} games/)
+  assert.match(menu, /if \(mounted \|\| !pendingAction\.current\) return/)
+  assert.match(app, /gamedeckMenu: true/)
+  assert.match(app, /setMenuOpen\(Boolean\(window\.history\.state\?\.gamedeckMenu\)\)/)
+  assert.match(css, /\.tabbar\.icons-only \.tabbar-icon\s*\{[\s\S]*?width:\s*27px;[\s\S]*?height:\s*27px;/)
 })

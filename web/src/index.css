@@ -1335,6 +1335,19 @@ textarea {
   height: 22px;
 }
 
+.tabbar-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Icon-only mode has no label competing for vertical space. Increase the glyph,
+   not the button or dock, so the bar keeps its approved 62px geometry. */
+.tabbar.icons-only .tabbar-icon {
+  width: 27px;
+  height: 27px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .global-search-trigger,
   .global-search-trigger:active,

@@ -123,10 +123,38 @@ function GameDeckApp() {
   const writeLocation = useCallback((next, replace = false) => {
     const href = buildAppLocation(window.location.href, next)
     window.history[replace ? 'replaceState' : 'pushState'](
-      { ...(window.history.state || {}), gamedeckShell: true, gamedeckSearch: Boolean(next.searchOpen) },
+      {
+        ...(window.history.state || {}),
+        gamedeckShell: true,
+        gamedeckSearch: Boolean(next.searchOpen),
+        gamedeckMenu: false,
+      },
       '',
       href,
     )
+  }, [])
+
+  // The drawer is temporary UI, but it still needs to participate in browser /
+  // PWA Back. A same-URL history entry lets Back dismiss it without navigating
+  // the page underneath. Destination navigation closes this entry first, then
+  // opens the selected screen after the drawer's exit animation.
+  const openMenu = useCallback(() => {
+    if (!window.history.state?.gamedeckMenu) {
+      window.history.pushState(
+        { ...(window.history.state || {}), gamedeckShell: true, gamedeckMenu: true },
+        '',
+        window.location.href,
+      )
+    }
+    setMenuOpen(true)
+  }, [])
+
+  const closeMenu = useCallback(() => {
+    if (window.history.state?.gamedeckMenu) {
+      window.history.back()
+      return
+    }
+    setMenuOpen(false)
   }, [])
 
   const navigateTab = useCallback((tab, { replace = false } = {}) => {
@@ -253,6 +281,7 @@ function GameDeckApp() {
     const onPopState = () => {
       const fallback = visibleKeys(getNavConfig())[0] || 'home'
       const next = readAppLocation(window.location.href, VALID_TABS, fallback)
+      setMenuOpen(Boolean(window.history.state?.gamedeckMenu))
       setActiveTab(next.tab)
       setView(next.view)
       setViewClosing(false)
@@ -341,10 +370,10 @@ function GameDeckApp() {
         return
       }
       if (!menuOpen && fromEdge && dx > OPEN_DX) {
-        setMenuOpen(true)
+        openMenu()
         tracking = false
       } else if (menuOpen && dx < -CLOSE_DX) {
-        setMenuOpen(false)
+        closeMenu()
         tracking = false
       }
     }
@@ -360,7 +389,7 @@ function GameDeckApp() {
       window.removeEventListener('touchmove', onMove)
       window.removeEventListener('touchend', onEnd)
     }
-  }, [menuOpen, settingsOpen, customizeOpen, customizeNavOpen, customizeBarOpen, shuffleOpen, view, viewClosing])
+  }, [closeMenu, menuOpen, openMenu, settingsOpen, customizeOpen, customizeNavOpen, customizeBarOpen, shuffleOpen, view, viewClosing])
 
   return (
     // `bar-off` collapses --tabbar-height to zero for everything inside, which
@@ -380,10 +409,10 @@ function GameDeckApp() {
       <header className={`app-header${scrolled ? ' scrolled' : ''}`}>
         {headerTitle ? (
           <h1 className="page-title">
-            <Brand onOpen={() => setMenuOpen(true)} label={headerTitle} />
+            <Brand onOpen={openMenu} label={headerTitle} />
           </h1>
         ) : (
-          <Brand onOpen={() => setMenuOpen(true)} />
+          <Brand onOpen={openMenu} />
         )}
       </header>
       <main className="app-main">
@@ -443,7 +472,7 @@ function GameDeckApp() {
       ) : null}
       <Menu
         open={menuOpen}
-        onClose={() => setMenuOpen(false)}
+        onClose={closeMenu}
         activeTab={view ? null : activeTab}
         onOpenWishlist={() => openView('wishlist')}
         onOpenList={(key) => openView(key)}
