@@ -50,6 +50,7 @@ test('Rankings offers direct library search and makes comparison optional', () =
   assert.match(rankings, /ranked \$\{position\}, \$\{tier\} tier/)
   assert.doesNotMatch(rankings, /How it works|section === 'how'|rank-how/)
   assert.match(styles, /\.rank-place\.tier-c/)
+  assert.match(styles, /\.rank-tabs\s*\{[^}]*margin-top: var\(--space-2\)/s)
   assert.doesNotMatch(styles, /\.rank-how|\.rank-note/)
   assert.doesNotMatch(rankings, /unseeded\[0\]/)
   assert.match(sheet, /Save to rankings/)
