@@ -19,6 +19,9 @@ test('magic-link requests recover and route trusted GameDeck previews directly',
 
   assert.match(gate, /try \{[\s\S]*sendSignInEmail\(\)[\s\S]*catch \(caught\)[\s\S]*finally \{[\s\S]*setBusy\(false\)/)
   assert.match(gate, /It will return directly to this preview/)
+  assert.match(gate, /Email limit reached\. No new link was sent\./)
+  assert.match(gate, /setRateLimited\(limited\)/)
+  assert.ok(gate.indexOf('auth-message') < gate.indexOf("step === 'request'"))
   assert.match(auth, /signInRedirectUrl/)
   assert.match(auth, /emailRedirectTo: signInRedirectUrl\(\)/)
 })
