@@ -1382,22 +1382,21 @@ textarea {
 
 .global-search-header {
   flex: 0 0 auto;
-  min-height: calc(var(--app-header-h) + var(--top-inset));
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr);
-  align-items: end;
-  gap: var(--space-1);
-  padding: var(--top-inset) var(--screen-gutter) 0 4px;
-  border-bottom: 1px solid var(--line-soft);
-  background: var(--bg);
+  align-items: center;
+  gap: 10px;
+  padding: calc(var(--top-inset) + var(--space-3)) var(--screen-gutter) var(--space-3);
+  border-bottom: 1px solid var(--glass-line);
+  background: var(--glass);
 }
 
 .global-search-header h1 {
   min-width: 0;
-  margin: 0 0 9px;
-  font-size: var(--t-t2);
+  margin: 0;
+  font-size: var(--t-t3);
   font-weight: var(--w-semi);
-  letter-spacing: var(--t-t2-tr);
+  letter-spacing: var(--t-t3-tr);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1408,12 +1407,17 @@ textarea {
   height: 44px;
   display: grid;
   place-items: center;
-  margin-bottom: 1px;
+  margin-left: -10px;
   padding: 0;
   border: 0;
+  border-radius: var(--r-sm);
   background: none;
-  color: var(--text);
+  color: var(--accent);
   cursor: pointer;
+}
+
+.global-search-back:active {
+  background: var(--surface-2);
 }
 
 .global-search-back svg,
@@ -1431,8 +1435,15 @@ textarea {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: var(--space-4) var(--screen-gutter) calc(var(--space-6) + var(--safe-bottom));
+  padding: var(--space-3) var(--screen-gutter) calc(var(--space-6) + var(--safe-bottom));
   -webkit-overflow-scrolling: touch;
+}
+
+.global-search-body.ask {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: var(--space-3) 0 0;
 }
 
 .global-search-field {
@@ -1440,7 +1451,7 @@ textarea {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 14px;
+  padding: 0 4px 0 14px;
   border: 1px solid var(--line-soft);
   border-radius: var(--r-md);
   background: var(--surface);
@@ -1476,6 +1487,72 @@ textarea {
 
 .global-search-field input::placeholder {
   color: var(--muted);
+}
+
+.global-search-ask-toggle,
+.global-search-modebar button {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: calc(var(--r-md) - 4px);
+  background: transparent;
+  color: var(--accent);
+  font-size: var(--t-foot);
+  font-weight: var(--w-semi);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.global-search-ask-toggle:active,
+.global-search-modebar button:active {
+  background: var(--surface-2);
+}
+
+.global-search-ask-toggle svg,
+.global-search-modebar svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.global-search-modebar {
+  flex: 0 0 auto;
+  min-height: 48px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px;
+  margin: 0 var(--screen-gutter) var(--space-2);
+  padding: 3px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+
+.global-search-modebar button:first-child {
+  justify-content: flex-start;
+  color: var(--muted);
+}
+
+.global-search-modebar button.active {
+  background: var(--surface-2);
+  color: var(--accent);
+}
+
+.global-search-ask-loading {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: var(--t-foot);
 }
 
 .global-search-scopes {
@@ -1519,11 +1596,10 @@ textarea {
 
 .global-search-group h2 {
   margin: 0 0 var(--space-1);
-  color: var(--muted);
-  font-size: var(--t-cap2);
-  font-weight: var(--w-bold);
-  letter-spacing: .12em;
-  text-transform: uppercase;
+  color: var(--text);
+  font-size: var(--t-body);
+  font-weight: var(--w-semi);
+  letter-spacing: var(--t-body-tr);
 }
 
 .global-search-results {
@@ -2245,6 +2321,16 @@ textarea {
   min-height: 0;
 }
 
+.chat-actions-row {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 var(--screen-gutter) var(--space-2);
+}
+
 .chat-newchat-btn {
   display: inline-flex;
   align-items: center;
@@ -2337,8 +2423,8 @@ textarea {
 
 .chat-history-del {
   flex: 0 0 auto;
-  width: 28px;
-  height: 28px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   border: none;
   background: transparent;
@@ -2347,22 +2433,18 @@ textarea {
   letter-spacing: var(--t-body-tr);
   line-height: 1;
   cursor: pointer;
-  margin-right: 10px;
+  margin-right: 2px;
 }
 
 .chat-history-del:active {
   background: var(--surface-2);
 }
 
-.chat-intro {
-  padding: 16px 16px 4px;
-}
-
 .chat-suggestions {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 4px 16px 12px;
+  padding: var(--space-2) var(--screen-gutter) var(--space-3);
 }
 
 .suggestion-chip {

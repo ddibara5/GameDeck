@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import Cover from './Cover.jsx'
 import GameSheet from './GameSheet.jsx'
 import { LoadingState, MessageState } from './AsyncState.jsx'
@@ -12,6 +12,16 @@ import { useDialogA11y } from '../lib/useDialogA11y.js'
 import { useEdgeBack } from '../lib/useEdgeBack.js'
 import { lockScroll } from '../lib/scrollLock.js'
 
+const loadDiscoverAsk = () => import('./DiscoverAsk.jsx')
+const DiscoverAsk = lazy(loadDiscoverAsk)
+
+export function preloadGlobalAsk() {
+  return Promise.all([
+    loadDiscoverAsk(),
+    import('./ChatMessage.jsx').then((module) => module.preloadMarkdown()),
+  ])
+}
+
 const SCOPES = [
   { key: 'all', label: 'All' },
   { key: 'library', label: 'Library' },
@@ -24,6 +34,15 @@ function SearchIcon() {
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <circle cx="10.5" cy="10.5" r="6.5" />
       <path d="m15.5 15.5 5 5" />
+    </svg>
+  )
+}
+
+function AskIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 3l1.35 4.15L17.5 8.5l-4.15 1.35L12 14l-1.35-4.15L6.5 8.5l4.15-1.35L12 3Z" />
+      <path d="M18.5 14l.75 2.25L21.5 17l-2.25.75L18.5 20l-.75-2.25L15.5 17l2.25-.75L18.5 14Z" />
     </svg>
   )
 }
@@ -80,7 +99,16 @@ function SearchGroup({ label, results, onSelect }) {
   )
 }
 
-export default function GlobalSearch({ open, defaultScope = 'all', onClose, onScopeChange }) {
+export default function GlobalSearch({
+  open,
+  defaultScope = 'all',
+  defaultMode = 'search',
+  seedPrompt,
+  onClose,
+  onScopeChange,
+  onModeChange,
+  onSeedConsumed,
+}) {
   const { mounted, closing } = useMountTransition(open)
   const [query, setQuery] = useState('')
   const deferredQuery = useDeferredValue(query)
@@ -89,6 +117,9 @@ export default function GlobalSearch({ open, defaultScope = 'all', onClose, onSc
   const [catalogLoading, setCatalogLoading] = useState(false)
   const [catalogError, setCatalogError] = useState('')
   const [selected, setSelected] = useState(null)
+  const [mode, setMode] = useState(defaultMode)
+  const [askDraft, setAskDraft] = useState('')
+  const [askSeed, setAskSeed] = useState(null)
   const requestRef = useRef(0)
   const wasOpenRef = useRef(false)
   const dialogRef = useDialogA11y({ active: mounted, onClose })
@@ -109,9 +140,13 @@ export default function GlobalSearch({ open, defaultScope = 'all', onClose, onSc
       setCatalog([])
       setCatalogError('')
       setSelected(null)
+      setMode(defaultMode === 'ask' ? 'ask' : 'search')
+      setAskDraft('')
+      setAskSeed(null)
+      if (defaultMode === 'ask') preloadGlobalAsk().catch(() => {})
     }
     wasOpenRef.current = open
-  }, [open, defaultScope])
+  }, [open, defaultMode, defaultScope])
 
   useEffect(() => {
     if (onScopeChange) onScopeChange(scope)
@@ -120,7 +155,7 @@ export default function GlobalSearch({ open, defaultScope = 'all', onClose, onSc
   const normalized = deferredQuery.trim()
   const wantsCatalog = scope === 'all' || scope === 'catalog'
   useEffect(() => {
-    if (!open || !wantsCatalog || normalized.length < 2) {
+    if (!open || mode !== 'search' || !wantsCatalog || normalized.length < 2) {
       requestRef.current += 1
       setCatalog([])
       setCatalogLoading(false)
@@ -144,7 +179,38 @@ export default function GlobalSearch({ open, defaultScope = 'all', onClose, onSc
         })
     }, 240)
     return () => window.clearTimeout(timer)
-  }, [open, wantsCatalog, normalized])
+  }, [mode, open, wantsCatalog, normalized])
+
+  function warmAsk() {
+    preloadGlobalAsk().catch(() => {})
+  }
+
+  function showAsk() {
+    warmAsk()
+    setAskDraft(query.trim())
+    setMode('ask')
+    if (onModeChange) onModeChange('ask')
+  }
+
+  function showSearch() {
+    setMode('search')
+    if (onModeChange) onModeChange('search')
+  }
+
+  function askAboutGame(game) {
+    const title = game?.name || game?.title
+    if (!title) return
+    warmAsk()
+    setSelected(null)
+    setAskSeed(`Would I like ${title}? Explain why it fits my taste and what I should know before playing.`)
+    setMode('ask')
+    if (onModeChange) onModeChange('ask')
+  }
+
+  function consumeAskSeed() {
+    setAskSeed(null)
+    if (onSeedConsumed) onSeedConsumed()
+  }
 
   const libraryResults = useMemo(
     () => filterTitleMatches(games, deferredQuery, (game) => game.title, scope === 'all' ? 4 : 30)
@@ -175,61 +241,98 @@ export default function GlobalSearch({ open, defaultScope = 'all', onClose, onSc
   const settled = !localLoading && (!showCatalog || !catalogLoading)
 
   return (
-    <div ref={dialogRef} className={`global-search-page${closing ? ' closing' : ''}`} role="dialog" aria-modal="true" aria-label="Search GameDeck">
+    <div ref={dialogRef} className={`global-search-page${closing ? ' closing' : ''}`} role="dialog" aria-modal="true" aria-label="Search and Ask GameDeck">
       <header className="global-search-header">
-        <button type="button" className="global-search-back" aria-label="Close search" onClick={onClose}>
+        <button type="button" className="global-search-back" aria-label={`Close ${mode === 'ask' ? 'Ask GameDeck' : 'search'}`} onClick={onClose}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
         </button>
-        <h1>Search GameDeck</h1>
+        <h1>{mode === 'ask' ? 'Ask GameDeck' : 'Search GameDeck'}</h1>
       </header>
 
-      <div className="global-search-body">
-        <label className="global-search-field">
-          <span className="sr-only">Search games</span>
-          <SearchIcon />
-          <input
-            type="search"
-            name="gamedeck-search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search games…"
-            autoComplete="off"
-            spellCheck={false}
-          />
-        </label>
-
-        <div className="global-search-scopes" aria-label="Search scope">
-          {SCOPES.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              className={scope === item.key ? 'active' : ''}
-              aria-pressed={scope === item.key}
-              onClick={() => setScope(item.key)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-
-        {!normalized ? (
-          <MessageState title="Find any game in one place">Search your library, wishlist, and the complete catalog.</MessageState>
-        ) : normalized.length < 2 && showCatalog ? (
-          <MessageState title="Keep typing">Enter at least 2 characters to search the catalog.</MessageState>
+      <div className={`global-search-body${mode === 'ask' ? ' ask' : ''}`}>
+        {mode === 'ask' ? (
+          <>
+            <div className="global-search-modebar" aria-label="Global search mode">
+              <button type="button" onClick={showSearch}>
+                <SearchIcon />
+                Search games
+              </button>
+              <button type="button" className="active" aria-pressed={true}>
+                <AskIcon />
+                Ask
+              </button>
+            </div>
+            <Suspense fallback={<div className="global-search-ask-loading" role="status">Starting Ask GameDeck…</div>}>
+              <DiscoverAsk
+                seedPrompt={askSeed || seedPrompt}
+                initialInput={askDraft}
+                onSeedConsumed={consumeAskSeed}
+                onInitialInputConsumed={() => setAskDraft('')}
+              />
+            </Suspense>
+          </>
         ) : (
-          <div className="global-search-content" aria-busy={!settled}>
-            {showLibrary ? <SearchGroup label="Library" results={libraryResults} onSelect={setSelected} /> : null}
-            {showWishlist ? <SearchGroup label="Wishlist" results={wishlistResults} onSelect={setSelected} /> : null}
-            {showCatalog ? <SearchGroup label="Catalog" results={catalogResults} onSelect={setSelected} /> : null}
-            {!anyResults && !settled ? <LoadingState label="Searching GameDeck…" count={4} /> : null}
-            {!anyResults && settled && catalogError ? (
-              <MessageState title="Couldn’t search the catalog" error>{catalogError} Try again in a moment.</MessageState>
-            ) : null}
-            {!anyResults && settled && !catalogError ? (
-              <MessageState title="No games found">Try another title or search scope.</MessageState>
-            ) : null}
-            {anyResults && catalogError ? <p className="global-search-partial" role="status">Catalog search is unavailable. Showing your saved games.</p> : null}
-          </div>
+          <>
+            <div className="global-search-field">
+              <label className="sr-only" htmlFor="gamedeck-search">Search games</label>
+              <SearchIcon />
+              <input
+                id="gamedeck-search"
+                type="search"
+                name="gamedeck-search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search games…"
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <button
+                type="button"
+                className="global-search-ask-toggle"
+                aria-label="Ask GameDeck"
+                onPointerDown={warmAsk}
+                onFocus={warmAsk}
+                onClick={showAsk}
+              >
+                <AskIcon />
+                <span>Ask</span>
+              </button>
+            </div>
+
+            <div className="global-search-scopes" aria-label="Search scope">
+              {SCOPES.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  className={scope === item.key ? 'active' : ''}
+                  aria-pressed={scope === item.key}
+                  onClick={() => setScope(item.key)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+
+            {!normalized ? (
+              <MessageState title="Find any game in one place">Search your library, wishlist, and the complete catalog.</MessageState>
+            ) : normalized.length < 2 && showCatalog ? (
+              <MessageState title="Keep typing">Enter at least 2 characters to search the catalog.</MessageState>
+            ) : (
+              <div className="global-search-content" aria-busy={!settled}>
+                {showLibrary ? <SearchGroup label="Library" results={libraryResults} onSelect={setSelected} /> : null}
+                {showWishlist ? <SearchGroup label="Wishlist" results={wishlistResults} onSelect={setSelected} /> : null}
+                {showCatalog ? <SearchGroup label="Catalog" results={catalogResults} onSelect={setSelected} /> : null}
+                {!anyResults && !settled ? <LoadingState label="Searching GameDeck…" count={4} /> : null}
+                {!anyResults && settled && catalogError ? (
+                  <MessageState title="Couldn’t search the catalog" error>{catalogError} Try again in a moment.</MessageState>
+                ) : null}
+                {!anyResults && settled && !catalogError ? (
+                  <MessageState title="No games found">Try another title or search scope.</MessageState>
+                ) : null}
+                {anyResults && catalogError ? <p className="global-search-partial" role="status">Catalog search is unavailable. Showing your saved games.</p> : null}
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -239,6 +342,7 @@ export default function GlobalSearch({ open, defaultScope = 'all', onClose, onSc
           game={resultGame(selected)}
           inLibrary={selected.kind === 'library'}
           onClose={() => setSelected(null)}
+          onAsk={selected.kind === 'library' ? undefined : askAboutGame}
         />
       ) : null}
     </div>

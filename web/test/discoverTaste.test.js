@@ -229,7 +229,7 @@ test('For You collapses taste controls into the shared Discover filter pattern',
   assert.match(preferences, /Include owned/)
 })
 
-test('Discover keeps title search global and Ask GameDeck contextual', async () => {
+test('Discover keeps title search and Ask GameDeck in the global entry point', async () => {
   const [discover, browse, forYou] = await Promise.all([
     readFile(new URL('../src/components/DiscoverTab.jsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/components/DiscoverBrowse.jsx', import.meta.url), 'utf8'),
@@ -238,7 +238,9 @@ test('Discover keeps title search global and Ask GameDeck contextual', async () 
   assert.doesNotMatch(discover, /placeholder="Search all games"/)
   assert.doesNotMatch(browse, /fetchDiscover\(|query\.trim\(\)|DiscoverCard/)
   assert.doesNotMatch(forYou, /Browse catalog/)
-  assert.match(forYou, /Ask GameDeck about these picks/)
+  assert.doesNotMatch(forYou, /Ask GameDeck about these picks/)
+  assert.doesNotMatch(discover, /DiscoverAsk|discover-ask-view|askOpen/)
+  assert.match(discover, /<DiscoverForYou onAsk=\{askAbout\}/)
   assert.match(forYou, /Refreshing picks…/)
   assert.doesNotMatch(forYou, /className="fy-refresh"/)
   assert.doesNotMatch(discover, /sessionStorage/)

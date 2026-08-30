@@ -100,6 +100,8 @@ function GameDeckApp() {
   const [shuffleOpen, setShuffleOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(() => initialShell.current.searchOpen)
   const [searchVisited, setSearchVisited] = useState(() => initialShell.current.searchOpen)
+  const [searchMode, setSearchMode] = useState(() => initialShell.current.searchMode || 'search')
+  const [searchSeed, setSearchSeed] = useState(null)
   const [searchScope, setSearchScope] = useState(
     () => initialShell.current.searchScope || defaultSearchScope({ activeTab: initialShell.current.tab, view: initialShell.current.view }),
   )
@@ -136,8 +138,10 @@ function GameDeckApp() {
     setView(null)
     setViewClosing(false)
     setSearchOpen(false)
+    setSearchMode('search')
+    setSearchSeed(null)
     setActiveTab(tab)
-    writeLocation({ tab, view: null, searchOpen: false, searchScope: null }, replace)
+    writeLocation({ tab, view: null, searchOpen: false, searchScope: null, searchMode: null }, replace)
   }, [writeLocation])
 
   const openSearch = useCallback(() => {
@@ -145,8 +149,26 @@ function GameDeckApp() {
     loadGlobalSearch()
     setSearchVisited(true)
     setSearchScope(scope)
+    setSearchMode('search')
+    setSearchSeed(null)
     setSearchOpen(true)
-    writeLocation({ tab: activeTab, view, searchOpen: true, searchScope: scope })
+    writeLocation({ tab: activeTab, view, searchOpen: true, searchScope: scope, searchMode: 'search' })
+  }, [activeTab, view, writeLocation])
+
+  const openAsk = useCallback((game = null) => {
+    const scope = defaultSearchScope({ activeTab, view })
+    const prompt = game
+      ? `Would I like ${game.name || game.title}? Explain why it fits my taste and what I should know before playing.`
+      : null
+    loadGlobalSearch()
+      .then((module) => module.preloadGlobalAsk?.())
+      .catch(() => {})
+    setSearchVisited(true)
+    setSearchScope(scope)
+    setSearchMode('ask')
+    setSearchSeed(prompt)
+    setSearchOpen(true)
+    writeLocation({ tab: activeTab, view, searchOpen: true, searchScope: scope, searchMode: 'ask' })
   }, [activeTab, view, writeLocation])
 
   const closeSearch = useCallback(() => {
@@ -156,13 +178,22 @@ function GameDeckApp() {
       return
     }
     setSearchOpen(false)
-    writeLocation({ tab: activeTab, view, searchOpen: false, searchScope: null }, true)
+    setSearchMode('search')
+    setSearchSeed(null)
+    writeLocation({ tab: activeTab, view, searchOpen: false, searchScope: null, searchMode: null }, true)
   }, [activeTab, view, writeLocation])
 
   const changeSearchScope = useCallback((scope) => {
     setSearchScope(scope)
-    if (searchOpen) writeLocation({ tab: activeTab, view, searchOpen: true, searchScope: scope }, true)
-  }, [activeTab, view, searchOpen, writeLocation])
+    if (searchOpen) writeLocation({ tab: activeTab, view, searchOpen: true, searchScope: scope, searchMode }, true)
+  }, [activeTab, view, searchMode, searchOpen, writeLocation])
+
+  const changeSearchMode = useCallback((mode) => {
+    const nextMode = mode === 'ask' ? 'ask' : 'search'
+    setSearchMode(nextMode)
+    if (nextMode === 'search') setSearchSeed(null)
+    if (searchOpen) writeLocation({ tab: activeTab, view, searchOpen: true, searchScope, searchMode: nextMode }, true)
+  }, [activeTab, view, searchOpen, searchScope, writeLocation])
 
   const openView = (v) => {
     if (viewTimer.current) {
@@ -172,7 +203,9 @@ function GameDeckApp() {
     setViewClosing(false)
     setView(v)
     setSearchOpen(false)
-    writeLocation({ tab: activeTab, view: v, searchOpen: false, searchScope: null })
+    setSearchMode('search')
+    setSearchSeed(null)
+    writeLocation({ tab: activeTab, view: v, searchOpen: false, searchScope: null, searchMode: null })
   }
   // Animate the view out (slide + fade, like the drawer), then unmount it.
   const closeView = () => {
@@ -215,6 +248,7 @@ function GameDeckApp() {
       view,
       searchOpen,
       searchScope: searchOpen ? searchScope : null,
+      searchMode: searchOpen ? searchMode : null,
     }, true)
     const onPopState = () => {
       const fallback = visibleKeys(getNavConfig())[0] || 'home'
@@ -225,6 +259,8 @@ function GameDeckApp() {
       setSearchOpen(next.searchOpen)
       if (next.searchOpen) setSearchVisited(true)
       setSearchScope(next.searchScope || defaultSearchScope({ activeTab: next.tab, view: next.view }))
+      setSearchMode(next.searchMode || 'search')
+      setSearchSeed(null)
     }
     window.addEventListener('popstate', onPopState)
     return () => window.removeEventListener('popstate', onPopState)
@@ -364,7 +400,7 @@ function GameDeckApp() {
           {activeTab === 'library' && <LibraryTab />}
           {activeTab === 'activity' && <ActivityTab />}
           {activeTab === 'insights' && <InsightsTab />}
-          {activeTab === 'discover' && <DiscoverTab onCustomize={() => setCustomizeOpen(true)} />}
+          {activeTab === 'discover' && <DiscoverTab onCustomize={() => setCustomizeOpen(true)} onAsk={openAsk} />}
           {activeTab === 'news' && <NewsTab />}
           {activeTab === 'rankings' && <RankingsTab />}
         </Suspense>
@@ -438,8 +474,12 @@ function GameDeckApp() {
           <GlobalSearch
             open={searchOpen}
             defaultScope={searchScope}
+            defaultMode={searchMode}
+            seedPrompt={searchSeed}
             onClose={closeSearch}
             onScopeChange={changeSearchScope}
+            onModeChange={changeSearchMode}
+            onSeedConsumed={() => setSearchSeed(null)}
           />
         </Suspense>
       ) : null}

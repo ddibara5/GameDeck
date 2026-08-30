@@ -27,7 +27,29 @@ test('shell locations preserve unrelated auth parameters', () => {
   assert.equal(next, '/?code=auth-code&tab=discover&search=1&scope=catalog#session')
   assert.deepEqual(
     readAppLocation(`https://gamedeck.example${next}`, new Set(['home', 'discover']), 'home'),
-    { tab: 'discover', view: null, searchOpen: true, searchScope: 'catalog' },
+    { tab: 'discover', view: null, searchOpen: true, searchScope: 'catalog', searchMode: 'search' },
+  )
+})
+
+test('Ask mode is addressable only while global search is open', () => {
+  const href = 'https://gamedeck.example/?tab=discover'
+  const ask = buildAppLocation(href, {
+    tab: 'discover',
+    view: null,
+    searchOpen: true,
+    searchScope: 'catalog',
+    searchMode: 'ask',
+  })
+  assert.equal(ask, '/?tab=discover&search=1&scope=catalog&mode=ask')
+  assert.equal(
+    readAppLocation(`https://gamedeck.example${ask}`, new Set(['home', 'discover']), 'home').searchMode,
+    'ask',
+  )
+  assert.equal(
+    buildAppLocation(`https://gamedeck.example${ask}`, {
+      tab: 'discover', view: null, searchOpen: false, searchScope: null, searchMode: null,
+    }),
+    '/?tab=discover',
   )
 })
 
@@ -43,9 +65,13 @@ test('the detached search utility and full-screen search remain accessible', asy
     readFile(new URL('../src/App.jsx', import.meta.url), 'utf8'),
   ])
   assert.match(tabBar, /aria-label="Search GameDeck"/)
-  assert.match(search, /role="dialog" aria-modal="true" aria-label="Search GameDeck"/)
+  assert.match(search, /role="dialog" aria-modal="true" aria-label="Search and Ask GameDeck"/)
   assert.match(search, /name="gamedeck-search"/)
   assert.match(search, /autoComplete="off"/)
   assert.match(search, /spellCheck=\{false\}/)
+  assert.match(search, /className="global-search-ask-toggle"/)
+  assert.match(search, /const DiscoverAsk = lazy\(loadDiscoverAsk\)/)
+  assert.match(search, /onAsk=\{selected\.kind === 'library' \? undefined : askAboutGame\}/)
   assert.match(app, /defaultSearchScope/)
+  assert.match(app, /defaultMode=\{searchMode\}/)
 })

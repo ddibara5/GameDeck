@@ -68,7 +68,7 @@ function relTime(ts) {
   return `${Math.floor(hrs / 24)}d ago`
 }
 
-export default function DiscoverAsk({ seedPrompt, onSeedConsumed }) {
+export default function DiscoverAsk({ seedPrompt, onSeedConsumed, initialInput, onInitialInputConsumed }) {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
@@ -98,8 +98,8 @@ export default function DiscoverAsk({ seedPrompt, onSeedConsumed }) {
     }
   }, [messages, sending])
 
-  // When Browse hands over an "Ask AI about this game" seed, open a fresh chat
-  // and fire it automatically.
+  // A game detail can hand over an "Ask AI about this game" seed. Open a fresh
+  // chat and fire it automatically, regardless of where that detail was opened.
   useEffect(() => {
     if (!seedPrompt) return
     setShowHistory(false)
@@ -107,6 +107,12 @@ export default function DiscoverAsk({ seedPrompt, onSeedConsumed }) {
     if (onSeedConsumed) onSeedConsumed()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seedPrompt])
+
+  useEffect(() => {
+    if (!initialInput) return
+    setInput(initialInput)
+    if (onInitialInputConsumed) onInitialInputConsumed()
+  }, [initialInput, onInitialInputConsumed])
 
   function upsertChat(msgs, id) {
     const chatId = id || `c_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
@@ -262,18 +268,13 @@ export default function DiscoverAsk({ seedPrompt, onSeedConsumed }) {
       ) : (
         <>
           {!hasStarted && (
-            <>
-              <div className="chat-intro">
-                <p className="page-subtitle">Recommendations use your library, recent play, platforms, wishlist, and rankings.</p>
-              </div>
-              <div className="chat-suggestions">
-                {SUGGESTIONS.map((s) => (
-                  <button key={s} type="button" className="suggestion-chip" onClick={() => sendMessage(s)}>
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </>
+            <div className="chat-suggestions">
+              {SUGGESTIONS.map((s) => (
+                <button key={s} type="button" className="suggestion-chip" onClick={() => sendMessage(s)}>
+                  {s}
+                </button>
+              ))}
+            </div>
           )}
 
           <div className="chat-messages" ref={scrollRef}>

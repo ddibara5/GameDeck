@@ -1,12 +1,11 @@
 /* ============================================================
-   Discover 2.0 - For You + Browse + Ask
+   Discover 2.0 - For You + Browse
    Reuses the app's global tokens (--bg/--surface/--line/--accent...)
    so everything follows dark/light automatically. Only new elements
    are defined here; cards, shelves and sheets reuse global classes.
    ============================================================ */
 
 .discover-page {
-  --disc-topbar-h: 54px;
   position: relative;
   flex: 1;
   min-height: 0;
@@ -14,8 +13,7 @@
   flex-direction: column;
 }
 
-.discover-base,
-.discover-ask-view {
+.discover-base {
   flex: 1;
   min-height: 0;
   display: flex;
@@ -24,20 +22,6 @@
 
 .discover-base {
   position: relative;
-}
-
-.discover-ask-view {
-  position: fixed;
-  inset: 0;
-  z-index: 45;
-  max-width: 640px;
-  margin: 0 auto;
-  padding-top: var(--top-inset);
-  background: var(--bg);
-}
-
-.discover-base[hidden] {
-  display: none;
 }
 
 .discover-mode-bar {
@@ -58,191 +42,6 @@
   content: '';
   position: absolute;
   inset: -4px 0;
-}
-
-.discover-topbar {
-  height: var(--disc-topbar-h);
-  box-sizing: border-box;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--space-2);
-  padding: 4px var(--screen-gutter) 6px;
-  border-bottom: 0;
-  background: transparent;
-}
-
-.discover-global-searchbar {
-  padding: 0 var(--screen-gutter);
-}
-
-.discover-search-shell {
-  position: relative;
-  display: flex;
-  align-items: center;
-  min-height: 48px;
-  border: 1px solid var(--line-soft);
-  border-radius: var(--r-md);
-  background: var(--surface);
-  transition: border-color var(--d-fast) ease, box-shadow var(--d-fast) ease;
-}
-
-.discover-search-shell:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
-}
-
-.discover-search-icon {
-  position: absolute;
-  left: 14px;
-  width: 18px;
-  height: 18px;
-  fill: none;
-  stroke: var(--muted);
-  stroke-width: 2;
-  stroke-linecap: round;
-  pointer-events: none;
-}
-
-.discover-search-shell .search-input {
-  width: 100%;
-  min-width: 0;
-  min-height: 46px;
-  padding: 0 94px 0 42px;
-  border: 0;
-  border-radius: inherit;
-  background: transparent;
-  box-shadow: none;
-}
-
-.discover-search-shell .search-input:focus {
-  border-color: transparent;
-  box-shadow: none;
-}
-
-.discover-search-actions {
-  position: absolute;
-  top: 1px;
-  right: 2px;
-  bottom: 1px;
-  display: flex;
-  align-items: center;
-}
-
-.discover-search-action {
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  border: 0;
-  border-radius: var(--r-sm);
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-}
-
-.discover-search-action.active {
-  background: color-mix(in oklab, var(--accent) 10%, transparent);
-  color: var(--accent);
-}
-
-.discover-search-action svg {
-  width: 18px;
-  height: 18px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.discover-seg {
-  min-width: 0;
-  height: 44px;
-  margin: 0;
-}
-
-.discover-ask-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 44px;
-  padding: 0 13px;
-  border: 1px solid color-mix(in oklab, var(--accent) 44%, var(--line));
-  border-radius: var(--r-sm);
-  background: color-mix(in oklab, var(--accent) 7%, var(--surface));
-  color: var(--accent);
-  font-size: var(--t-foot);
-  font-weight: var(--w-bold);
-  cursor: pointer;
-  box-shadow: none;
-}
-
-.discover-ask-button svg {
-  width: 16px;
-  height: 16px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.discover-ask-view {
-  overflow: hidden;
-}
-
-.discover-ask-header {
-  flex: 0 0 auto;
-  min-height: 58px;
-  display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
-  align-items: center;
-  gap: 7px;
-  padding: 0 var(--screen-gutter) 0 8px;
-  border-bottom: 1px solid var(--line-soft);
-}
-
-.discover-ask-back {
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  background: none;
-  color: var(--text);
-  cursor: pointer;
-}
-
-.discover-ask-back svg {
-  width: 22px;
-  height: 22px;
-}
-
-.discover-ask-titles {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.discover-ask-titles strong {
-  font-size: var(--t-sub);
-}
-
-.discover-ask-titles span {
-  color: var(--muted);
-  font-size: var(--t-cap2);
-}
-
-.discover-ask-loading {
-  flex: 1;
-  display: grid;
-  place-items: center;
-  color: var(--muted);
-  font-size: var(--t-foot);
 }
 
 .discover-view-loading {
@@ -341,15 +140,6 @@
 
 .discover-filter-toolbar .filter-btn.active {
   color: var(--bg);
-}
-
-.chat-actions-row {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px 10px;
-  min-height: 0;
 }
 
 /* ---------- Browse: shared search + filter ---------- */
@@ -900,16 +690,6 @@ button.shelf-head:active {
   to { transform: rotate(360deg); }
 }
 
-.fy-ask-row svg {
-  width: 16px;
-  height: 16px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .fy-refresh-gutter,
   .fy-refresh-flag { transition: none; }
@@ -1043,31 +823,6 @@ button.shelf-head:active {
 
 .fy-why.wished {
   color: var(--amber);
-}
-
-.fy-ask-row {
-  width: 100%;
-  min-height: 52px;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--space-2);
-  padding: 0 var(--space-2);
-  border: 0;
-  background: color-mix(in oklab, var(--surface) 82%, transparent);
-  color: var(--text);
-  font-size: var(--t-foot);
-  font-weight: var(--w-semi);
-  text-align: left;
-  cursor: pointer;
-}
-
-.fy-ask-row > span {
-  color: var(--amber);
-}
-
-.fy-ask-row svg {
-  color: var(--accent);
 }
 
 @media (prefers-reduced-motion: reduce) {

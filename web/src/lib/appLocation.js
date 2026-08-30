@@ -1,4 +1,5 @@
 const SEARCH_SCOPES = new Set(['all', 'library', 'catalog', 'wishlist'])
+const SEARCH_MODES = new Set(['search', 'ask'])
 const VIEWS = new Set(['wishlist', 'releases', 'released', 'backlog', 'playing', 'finished'])
 
 export function defaultSearchScope({ activeTab, view } = {}) {
@@ -18,10 +19,11 @@ export function readAppLocation(href, validTabs, fallbackTab) {
     view: VIEWS.has(requestedView) ? requestedView : null,
     searchOpen: url.searchParams.get('search') === '1',
     searchScope: SEARCH_SCOPES.has(requestedScope) ? requestedScope : null,
+    searchMode: SEARCH_MODES.has(url.searchParams.get('mode')) ? url.searchParams.get('mode') : 'search',
   }
 }
 
-export function buildAppLocation(href, { tab, view, searchOpen, searchScope }) {
+export function buildAppLocation(href, { tab, view, searchOpen, searchScope, searchMode }) {
   const url = new URL(href, 'https://gamedeck.local')
   if (tab) url.searchParams.set('tab', tab)
   else url.searchParams.delete('tab')
@@ -31,9 +33,12 @@ export function buildAppLocation(href, { tab, view, searchOpen, searchScope }) {
     url.searchParams.set('search', '1')
     if (SEARCH_SCOPES.has(searchScope)) url.searchParams.set('scope', searchScope)
     else url.searchParams.delete('scope')
+    if (searchMode === 'ask') url.searchParams.set('mode', 'ask')
+    else url.searchParams.delete('mode')
   } else {
     url.searchParams.delete('search')
     url.searchParams.delete('scope')
+    url.searchParams.delete('mode')
   }
   return `${url.pathname}${url.search}${url.hash}`
 }

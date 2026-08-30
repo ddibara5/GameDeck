@@ -9,8 +9,8 @@ import { useEffect, useState } from 'react'
  * replies, so it belongs behind an import() that Ask AI triggers.
  *
  * Two callers keep the seam invisible: this component falls back to plain text
- * for the frame or two before the parser lands, and DiscoverTab calls preload()
- * when the Ask sub-tab is selected, so by the time a reply exists the parser
+ * for the frame or two before the parser lands, and global Search preloads the
+ * parser only after Ask is selected, so by the time a reply exists the parser
  * almost always does too.
  */
 let parse = null

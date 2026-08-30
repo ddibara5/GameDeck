@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Cover from './Cover.jsx'
 import WishHeart from './WishHeart.jsx'
 import Skeleton from './Skeleton.jsx'
@@ -68,7 +68,7 @@ function refreshedLaneMap(result, keys) {
   return out
 }
 
-export default function DiscoverForYou({ onAsk, onOpenAsk }) {
+export default function DiscoverForYou({ onAsk }) {
   const prefs = useDiscoverPrefs()
   const platform = platformParam(prefs.platforms)
   const tasteProfile = useTasteProfile()
@@ -290,43 +290,34 @@ export default function DiscoverForYou({ onAsk, onOpenAsk }) {
               const wished = wishIds.has(game.id)
               const platforms = preferredPlatforms(game.platforms, prefs.platforms)
               return (
-                <Fragment key={game.id}>
-                  <div className="fy-row-wrap">
-                    <button
-                      type="button"
-                      className="fy-row"
-                      onClick={() => {
-                        recordRecommendationDetailOpen(game, {
-                          lane: game.lane,
-                          position: index + 1,
-                          reason: laneReason(game.lane),
-                        })
-                        setSelected(game)
-                      }}
-                    >
-                      <Cover src={game.cover} title={game.name} size="sm" className="fy-cov" />
-                      <span className="fy-body">
-                        <span className="fy-name">{game.name}</span>
-                        <span className="fy-meta">
-                          {game.year ? <span>{game.year}</span> : null}
-                          {game.rating ? <span className="fy-rating">{` · ${game.rating}`}</span> : null}
-                          {platforms ? <span>{` · ${platforms}`}</span> : null}
-                        </span>
-                        <span className={`fy-why${wished ? ' wished' : ''}`}>
-                          {wished ? 'On your wishlist · available now' : laneReason(game.lane)}
-                        </span>
+                <div key={game.id} className="fy-row-wrap">
+                  <button
+                    type="button"
+                    className="fy-row"
+                    onClick={() => {
+                      recordRecommendationDetailOpen(game, {
+                        lane: game.lane,
+                        position: index + 1,
+                        reason: laneReason(game.lane),
+                      })
+                      setSelected(game)
+                    }}
+                  >
+                    <Cover src={game.cover} title={game.name} size="sm" className="fy-cov" />
+                    <span className="fy-body">
+                      <span className="fy-name">{game.name}</span>
+                      <span className="fy-meta">
+                        {game.year ? <span>{game.year}</span> : null}
+                        {game.rating ? <span className="fy-rating">{` · ${game.rating}`}</span> : null}
+                        {platforms ? <span>{` · ${platforms}`}</span> : null}
                       </span>
-                    </button>
-                    <WishHeart game={game} active={wished} />
-                  </div>
-                  {index === 2 && onOpenAsk ? (
-                    <button type="button" className="fy-ask-row" onClick={onOpenAsk}>
-                      <span aria-hidden="true">✦</span>
-                      Ask GameDeck about these picks
-                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
-                    </button>
-                  ) : null}
-                </Fragment>
+                      <span className={`fy-why${wished ? ' wished' : ''}`}>
+                        {wished ? 'On your wishlist · available now' : laneReason(game.lane)}
+                      </span>
+                    </span>
+                  </button>
+                  <WishHeart game={game} active={wished} />
+                </div>
               )
             })}
           </div>
