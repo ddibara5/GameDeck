@@ -12,7 +12,6 @@ import { VIBES } from '../lib/vibes.js'
 import {
   useDiscoverPrefs,
   platformParam,
-  platformLabel,
 } from '../lib/discoverPrefs.js'
 import { useDialogA11y } from '../lib/useDialogA11y.js'
 import DiscoverFilterButton from './DiscoverFilterButton.jsx'
@@ -84,9 +83,6 @@ const RAILS = [
 ]
 
 const YEARS = ['all', 2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2016, 2014, 2011]
-// Stable identity for "every platform", so the memo below does not recompute on
-// every render while the session override is on.
-const ALL_PLATFORMS = []
 // Cards shown per rail on the home. The full list lives behind each rail's
 // "see all" page, so a small inline preview keeps the home light (fewer mounted
 // Cover components + image requests) without losing anything.
@@ -120,20 +116,11 @@ function ShelfSkeleton({ label }) {
   )
 }
 
-export default function DiscoverBrowse({
-  onAsk,
-  onCustomize,
-  openFiltersToken = 0,
-  hideOwnedToken = 0,
-}) {
+export default function DiscoverBrowse({ onAsk, onCustomize }) {
   const [preset, setPreset] = useState(null)
   const [filters, setFilters] = useState(DEFAULT_FILTERS)
   const [showFilters, setShowFilters] = useState(false)
   const filterDialogRef = useDialogA11y({ active: showFilters, onClose: () => setShowFilters(false) })
-
-  useEffect(() => {
-    if (openFiltersToken > 0) setShowFilters(true)
-  }, [openFiltersToken])
 
   const [rails, setRails] = useState({}) // key -> games[]; a key is undefined until its batch resolves
 
@@ -142,19 +129,9 @@ export default function DiscoverBrowse({
   const [libTitles, setLibTitles] = useState(null)
   const [gamePass, setGamePass] = useState(null)
 
-  // The standing preferences, and the one-tap escape from them. `wideOpen` is
-  // session-only on purpose: "show me everything, just this once" must not
-  // quietly become the new default the next time Discover opens.
   const prefs = useDiscoverPrefs()
-  const [wideOpen, setWideOpen] = useState(false)
-
-  useEffect(() => {
-    if (hideOwnedToken > 0) setWideOpen(false)
-  }, [hideOwnedToken])
-
-  const activePlatforms = wideOpen ? ALL_PLATFORMS : prefs.platforms
-  const hideOwned = wideOpen ? false : prefs.hideOwned
-  const standing = !wideOpen && (prefs.hideOwned || prefs.platforms.length > 0)
+  const activePlatforms = prefs.platforms
+  const hideOwned = prefs.hideOwned
 
   const lastFilterSig = useRef(null)
 
@@ -407,24 +384,6 @@ export default function DiscoverBrowse({
       <div className="discover-filter-toolbar">
         <DiscoverFilterButton activeCount={activeFilterCount} onClick={() => setShowFilters(true)} />
       </div>
-      {standing || wideOpen ? (
-        <div className="showing-strip">
-          <span className="showing-summary">
-            {wideOpen
-              ? 'Everything'
-              : [activePlatforms.length ? platformLabel(activePlatforms) : null, hideOwned ? 'Not in library' : null].filter(Boolean).join(' · ')}
-          </span>
-          <button
-            type="button"
-            className="showing-clear"
-            onClick={() => setWideOpen((v) => !v)}
-            aria-pressed={wideOpen}
-          >
-            {wideOpen ? 'Use defaults' : 'Show all'}
-          </button>
-        </div>
-      ) : null}
-
       {narrowed ? (
         <div className="results-head">
           <span className="results-count">Filtering every row</span>
@@ -574,7 +533,7 @@ export default function DiscoverBrowse({
               </div>
             </div>
 
-            <DiscoverPreferenceFields prefs={prefs} onChange={() => setWideOpen(false)} />
+            <DiscoverPreferenceFields prefs={prefs} />
 
             <div className="filter-group">
               <span className="filter-label">Availability</span>

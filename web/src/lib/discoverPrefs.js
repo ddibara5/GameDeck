@@ -92,14 +92,3 @@ export function useDiscoverPrefs() {
 export function platformParam(platforms) {
   return platforms && platforms.length ? platforms.join(',') : 'all'
 }
-
-// How the standing set reads in the "Showing" strip. Never "Xbox + PlayStation +
-// Switch + PC", which is just a long way of writing "All platforms".
-export function platformLabel(platforms) {
-  if (!platforms || !platforms.length || platforms.length === CHOICE_KEYS.length) return 'All platforms'
-  return platforms
-    .slice()
-    .sort((a, b) => CHOICE_KEYS.indexOf(a) - CHOICE_KEYS.indexOf(b))
-    .map((k) => (PLATFORM_CHOICES.find((p) => p.key === k) || {}).label || k)
-    .join(' + ')
-}

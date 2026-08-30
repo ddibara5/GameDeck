@@ -815,47 +815,6 @@ button.shelf-head:active {
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- Standing preferences: the "Showing" strip ----------
-   Discover narrows itself before you arrive now, so it has to SAY so. A shelf
-   that is thin because of a remembered preference and a shelf that is thin
-   because IGDB had nothing look identical, and the second one is a bug report
-   while the first is the feature working.
-
-   Deliberately not a filter control. Tapping a chip does nothing; the only
-   button here widens to everything for the session, and says so in words rather
-   than by un-highlighting something. The preferences themselves are edited in
-   the filter sheet, where every other narrowing lives. */
-.showing-strip {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  min-height: 36px;
-  padding: 0 var(--screen-gutter) 2px;
-}
-
-.showing-summary {
-  min-width: 0;
-  overflow: hidden;
-  font-size: var(--t-cap2);
-  color: var(--muted);
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.showing-clear {
-  margin-left: auto;
-  min-width: 64px;
-  min-height: 44px;
-  background: none;
-  border: none;
-  padding: 0;
-  font-size: var(--t-cap);
-  font-weight: var(--w-semi);
-  color: var(--accent);
-  cursor: pointer;
-}
-
 /* A group whose value outlives the sheet needs to say so, or Reset reads as
    broken when it clears four groups and leaves the fifth. */
 .filter-note {

@@ -218,6 +218,8 @@ test('For You collapses taste controls into the shared Discover filter pattern',
     readFile(new URL('../src/components/DiscoverPreferenceFields.jsx', import.meta.url), 'utf8'),
   ])
   assert.match(browse, /className="discover-filter-toolbar"/)
+  assert.doesNotMatch(browse, /className="showing-strip"/)
+  assert.doesNotMatch(browse, />Show all</)
   assert.match(forYou, /className="discover-filter-toolbar"/)
   assert.match(forYou, /<DiscoverFilterButton/)
   assert.match(forYou, /Recommendation taste/)
