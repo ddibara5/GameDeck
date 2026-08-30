@@ -11,12 +11,12 @@ import { useRowsConfig, ROW_BY_KEY, getFilledRows, setFilledRows } from '../lib/
 import { VIBES } from '../lib/vibes.js'
 import {
   useDiscoverPrefs,
-  setDiscoverPrefs,
   platformParam,
   platformLabel,
-  PLATFORM_CHOICES,
 } from '../lib/discoverPrefs.js'
 import { useDialogA11y } from '../lib/useDialogA11y.js'
+import DiscoverFilterButton from './DiscoverFilterButton.jsx'
+import DiscoverPreferenceFields from './DiscoverPreferenceFields.jsx'
 
 const CURRENT_YEAR = new Date().getFullYear()
 
@@ -404,18 +404,8 @@ export default function DiscoverBrowse({
 
   return (
     <div className="discover-browse">
-      <div className="browse-local-toolbar">
-        <button
-          type="button"
-          className={`filter-btn${activeFilterCount ? ' active' : ''}`}
-          onClick={() => setShowFilters(true)}
-          aria-label={activeFilterCount ? `Filters, ${activeFilterCount} active` : 'Filters'}
-        >
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-            <path d="M4 6h16M7 12h10M10 18h4" />
-          </svg>
-          {activeFilterCount ? <span className="filter-count">{activeFilterCount}</span> : null}
-        </button>
+      <div className="discover-filter-toolbar">
+        <DiscoverFilterButton activeCount={activeFilterCount} onClick={() => setShowFilters(true)} />
       </div>
       {standing || wideOpen ? (
         <div className="showing-strip">
@@ -584,45 +574,7 @@ export default function DiscoverBrowse({
               </div>
             </div>
 
-            {/* Multi-select, and it PERSISTS. Every other group in this sheet is a
-                one-off narrowing cleared by Reset; this one is the standing
-                preference, which is why Reset below leaves it alone. */}
-            <div className="filter-group">
-              <span className="filter-label">Platforms</span>
-              <span className="filter-note">Remembered between visits</span>
-              <div className="filter-options">
-                <button
-                  type="button"
-                  className={`filter-opt${prefs.platforms.length === 0 ? ' active' : ''}`}
-                  onClick={() => {
-                    setWideOpen(false)
-                    setDiscoverPrefs({ ...prefs, platforms: [] })
-                  }}
-                >
-                  All platforms
-                </button>
-                {PLATFORM_CHOICES.map((o) => {
-                  const on = prefs.platforms.includes(o.key)
-                  return (
-                    <button
-                      key={o.key}
-                      type="button"
-                      aria-pressed={on}
-                      className={`filter-opt${on ? ' active' : ''}`}
-                      onClick={() => {
-                        setWideOpen(false)
-                        setDiscoverPrefs({
-                          ...prefs,
-                          platforms: on ? prefs.platforms.filter((k) => k !== o.key) : [...prefs.platforms, o.key],
-                        })
-                      }}
-                    >
-                      {o.label}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
+            <DiscoverPreferenceFields prefs={prefs} onChange={() => setWideOpen(false)} />
 
             <div className="filter-group">
               <span className="filter-label">Availability</span>

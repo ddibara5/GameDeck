@@ -42,11 +42,7 @@
 
 .discover-mode-bar {
   display: flex;
-  padding: var(--space-2) var(--screen-gutter) 0;
-}
-
-.discover-mode-bar.browse-active {
-  padding-right: calc(var(--screen-gutter) + 52px);
+  padding: var(--space-2) calc(var(--screen-gutter) + 52px) 0 var(--screen-gutter);
 }
 
 .discover-mode-seg {
@@ -324,7 +320,7 @@
   -webkit-overflow-scrolling: touch;
 }
 
-.browse-local-toolbar {
+.discover-filter-toolbar {
   position: absolute;
   z-index: 2;
   top: var(--space-2);
@@ -336,14 +332,14 @@
   padding: 0;
 }
 
-.browse-local-toolbar .filter-btn {
+.discover-filter-toolbar .filter-btn {
   position: relative;
   width: 44px;
   min-width: 44px;
   padding: 0;
 }
 
-.browse-local-toolbar .filter-btn.active {
+.discover-filter-toolbar .filter-btn.active {
   color: var(--bg);
 }
 
@@ -959,46 +955,6 @@ button.shelf-head:active {
   .fy-refresh-gutter,
   .fy-refresh-flag { transition: none; }
   .fy-refresh-gutter.working .fy-refresh-spinner { animation: none; }
-}
-
-.lane-chips {
-  display: flex;
-  gap: 6px;
-  padding: var(--space-2) var(--screen-gutter) 6px;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.lane-chips::-webkit-scrollbar {
-  display: none;
-}
-
-.lane-chip {
-  position: relative;
-  flex: 0 0 auto;
-  font-size: var(--t-foot);
-  font-weight: var(--w-med);
-  color: var(--muted);
-  background: var(--glass-chip);
-  border: 1px solid var(--glass-line);
-  border-radius: var(--r-pill);
-  min-height: 36px;
-  padding: 0 13px;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.lane-chip::before {
-  content: '';
-  position: absolute;
-  inset: -4px 0;
-}
-
-.lane-chip.active {
-  background: var(--surface-2);
-  border-color: var(--line-soft);
-  color: var(--accent);
-  font-weight: var(--w-semi);
 }
 
 .fy-feed-head {

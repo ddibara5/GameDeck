@@ -68,6 +68,10 @@ export function setDiscoverPrefs(next) {
   window.dispatchEvent(new Event(EVENT))
 }
 
+export function resetDiscoverPrefs() {
+  setDiscoverPrefs({ ...DEFAULTS, platforms: [...DEFAULTS.platforms] })
+}
+
 export function useDiscoverPrefs() {
   const [prefs, setPrefs] = useState(load)
   useEffect(() => {

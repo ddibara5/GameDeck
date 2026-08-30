@@ -3,13 +3,16 @@ import Cover from './Cover.jsx'
 import WishHeart from './WishHeart.jsx'
 import Skeleton from './Skeleton.jsx'
 import { MessageState } from './AsyncState.jsx'
+import DiscoverFilterButton from './DiscoverFilterButton.jsx'
+import DiscoverPreferenceFields from './DiscoverPreferenceFields.jsx'
 import DiscoverDetail from './DiscoverDetail.jsx'
 import { fetchDiscoverLanes, loadLibraryTitles, normTitle } from '../lib/discover.js'
 import { useWishlist } from '../lib/wishlist.js'
-import { useDiscoverPrefs, platformParam } from '../lib/discoverPrefs.js'
+import { resetDiscoverPrefs, useDiscoverPrefs, platformParam } from '../lib/discoverPrefs.js'
 import { useTasteProfile, NEW_LANE, laneReason, rankCandidates, interleave } from '../lib/discoverLanes.js'
 import { recordRecommendationDetailOpen, trackRecommendationFeed } from '../lib/recommendationLearning.js'
 import usePullRefresh from '../lib/usePullRefresh.js'
+import { useDialogA11y } from '../lib/useDialogA11y.js'
 
 // Pull a wider candidate pool than the feed displays. The server still returns
 // recent matching releases, then the client can balance freshness with
@@ -78,10 +81,12 @@ export default function DiscoverForYou({ onAsk, onOpenAsk }) {
   const [libTitles, setLibTitles] = useState(null)
   const [selected, setSelected] = useState(null)
   const [only, setOnly] = useState(null)
+  const [showFilters, setShowFilters] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [refreshError, setRefreshError] = useState(false)
   const [deprioritizeIds, setDeprioritizeIds] = useState(() => new Set())
   const [feedBatch, setFeedBatch] = useState('initial')
+  const filterDialogRef = useDialogA11y({ active: showFilters, onClose: () => setShowFilters(false) })
 
   const { ids: wishIds } = useWishlist()
 
@@ -189,8 +194,10 @@ export default function DiscoverForYou({ onAsk, onOpenAsk }) {
 
   const feed = useMemo(() => {
     const active = only ? lanes.filter((lane) => lane.key === only) : lanes
-    return interleave(active, rankedByLane, { drop: (game) => isOwned(game.name) })
-  }, [lanes, rankedByLane, only, isOwned])
+    return interleave(active, rankedByLane, { drop: (game) => prefs.hideOwned && isOwned(game.name) })
+  }, [lanes, rankedByLane, only, isOwned, prefs.hideOwned])
+
+  const activeFilterCount = (only ? 1 : 0) + (prefs.platforms.length ? 1 : 0) + (prefs.hideOwned ? 1 : 0)
 
   const feedSig = feed.map((game) => `${game.id}:${game.lane?.key || 'new'}`).join(',')
   useEffect(() => {
@@ -262,18 +269,13 @@ export default function DiscoverForYou({ onAsk, onOpenAsk }) {
         </span>
       </div>
 
-      {lanes.length ? (
-        <div className="lane-chips" aria-label="Recommendation tastes">
-          <button type="button" className={`lane-chip${only === null ? ' active' : ''}`} onClick={() => setOnly(null)} aria-pressed={only === null}>
-            All picks
-          </button>
-          {lanes.map((lane) => (
-            <button key={lane.key} type="button" className={`lane-chip${only === lane.key ? ' active' : ''}`} onClick={() => setOnly(only === lane.key ? null : lane.key)} aria-pressed={only === lane.key}>
-              {lane.key === NEW_LANE.key ? 'New' : lane.label}
-            </button>
-          ))}
-        </div>
-      ) : null}
+      <div className="discover-filter-toolbar">
+        <DiscoverFilterButton
+          activeCount={activeFilterCount}
+          label="For You filters"
+          onClick={() => setShowFilters(true)}
+        />
+      </div>
 
       <div>
         {unavailable ? (
@@ -337,6 +339,59 @@ export default function DiscoverForYou({ onAsk, onOpenAsk }) {
 
       {refreshError && feed.length ? (
         <p className="fy-partial-note">Couldn't refresh right now. Showing your previous picks.</p>
+      ) : null}
+
+      {showFilters ? (
+        <div className="modal-backdrop" onClick={(event) => event.target === event.currentTarget && setShowFilters(false)}>
+          <div ref={filterDialogRef} className="modal-sheet filter-sheet" role="dialog" aria-modal="true" aria-label="For You filters">
+            <div className="modal-handle" />
+            <button type="button" className="modal-close" aria-label="Close filters" onClick={() => setShowFilters(false)}>&times;</button>
+            <div className="detail-title">For You filters</div>
+
+            <div className="filter-group">
+              <span className="filter-label">Recommendation taste</span>
+              <div className="filter-options">
+                <button
+                  type="button"
+                  className={`filter-opt${only === null ? ' active' : ''}`}
+                  aria-pressed={only === null}
+                  onClick={() => setOnly(null)}
+                >
+                  All picks
+                </button>
+                {lanes.map((lane) => (
+                  <button
+                    key={lane.key}
+                    type="button"
+                    className={`filter-opt${only === lane.key ? ' active' : ''}`}
+                    aria-pressed={only === lane.key}
+                    onClick={() => setOnly(only === lane.key ? null : lane.key)}
+                  >
+                    {lane.key === NEW_LANE.key ? 'New' : lane.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <DiscoverPreferenceFields prefs={prefs} />
+
+            <div className="filter-sheet-actions">
+              <button
+                type="button"
+                className="discover-action"
+                onClick={() => {
+                  setOnly(null)
+                  resetDiscoverPrefs()
+                }}
+              >
+                Reset
+              </button>
+              <button type="button" className="discover-action primary" onClick={() => setShowFilters(false)}>
+                Show picks
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
 
       {selected ? (

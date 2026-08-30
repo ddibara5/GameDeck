@@ -211,6 +211,22 @@ test('Discover keeps For You and Browse in a compact accessible selector', async
   assert.doesNotMatch(source, /className="discover-browse-back"/)
 })
 
+test('For You collapses taste controls into the shared Discover filter pattern', async () => {
+  const [browse, forYou, preferences] = await Promise.all([
+    readFile(new URL('../src/components/DiscoverBrowse.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/DiscoverForYou.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/DiscoverPreferenceFields.jsx', import.meta.url), 'utf8'),
+  ])
+  assert.match(browse, /className="discover-filter-toolbar"/)
+  assert.match(forYou, /className="discover-filter-toolbar"/)
+  assert.match(forYou, /<DiscoverFilterButton/)
+  assert.match(forYou, /Recommendation taste/)
+  assert.match(forYou, /<DiscoverPreferenceFields prefs=\{prefs\}/)
+  assert.doesNotMatch(forYou, /className="lane-chips"/)
+  assert.match(preferences, /Hide owned/)
+  assert.match(preferences, /Include owned/)
+})
+
 test('Discover keeps title search global and Ask GameDeck contextual', async () => {
   const [discover, browse, forYou] = await Promise.all([
     readFile(new URL('../src/components/DiscoverTab.jsx', import.meta.url), 'utf8'),
