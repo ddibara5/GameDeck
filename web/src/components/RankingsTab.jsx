@@ -21,7 +21,6 @@ const SECTIONS = [
 ]
 
 function RankGame({ game, rank, position, tier, onSelect }) {
-  const score = Math.round(rank.score)
   const comparisonLabel = `${rank.comparison_count} ${rank.comparison_count === 1 ? 'comparison' : 'comparisons'}`
 
   return (
@@ -30,7 +29,7 @@ function RankGame({ game, rank, position, tier, onSelect }) {
         type="button"
         className="rank-row"
         onClick={() => onSelect(game)}
-        aria-label={`Open ${game.title}, ranked ${position}, ${tier} tier, score ${score}`}
+        aria-label={`Open ${game.title}, ranked ${position}, ${tier} tier`}
       >
         <div className={`rank-place tier-${tier.toLowerCase()}`} aria-hidden="true">{position}</div>
         <Cover src={libraryCover(game)} title={game.title} />
@@ -41,7 +40,6 @@ function RankGame({ game, rank, position, tier, onSelect }) {
             <span className="rank-summary">{rank.reaction.replaceAll('_', ' ')} · {comparisonLabel}</span>
           </div>
         </div>
-        <div className="rank-score" aria-hidden="true">{score}</div>
       </button>
     </li>
   )

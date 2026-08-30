@@ -108,7 +108,7 @@
 .rank-row {
   width: 100%;
   display: grid;
-  grid-template-columns: 36px var(--game-art-row) minmax(0, 1fr) auto;
+  grid-template-columns: 36px var(--game-art-row) minmax(0, 1fr);
   gap: var(--space-3);
   align-items: center;
   min-height: 72px;
@@ -166,11 +166,14 @@
 }
 
 .rank-row-copy strong {
+  display: -webkit-box;
   overflow: hidden;
   font-size: var(--t-sub);
   font-weight: var(--w-semi);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.25;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .rank-row-meta {
@@ -202,13 +205,6 @@
   text-overflow: ellipsis;
   text-transform: capitalize;
   white-space: nowrap;
-}
-
-.rank-score {
-  color: var(--muted);
-  font-size: var(--t-sub);
-  font-variant-numeric: tabular-nums;
-  font-weight: var(--w-semi);
 }
 
 .rank-precision-card {
