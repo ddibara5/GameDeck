@@ -712,6 +712,10 @@
   background: color-mix(in srgb, var(--surface-2) 72%, transparent);
 }
 
+.menu-foot-acts.has-search {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .menu-fb {
   display: flex;
   align-items: center;
@@ -1183,14 +1187,28 @@ textarea {
 
 /* ---------- Tab bar ---------- */
 
-/* Floating "liquid glass" bar: frosted, detached, safe-area aware. The blur
-   reads from whatever content scrolls beneath it. */
-.tabbar {
+/* The dock holds destination navigation and one pinned global utility. Search is
+   deliberately detached: it is available everywhere but does not pretend to be
+   another place in the app. The default four-tab arrangement leaves every tab
+   comfortably above the 44px touch floor at the primary phone width. */
+.app-dock {
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
   bottom: calc(var(--safe-bottom) + var(--space-3));
-  width: min(calc(100% - var(--space-6)), 608px);
+  width: min(calc(100% - var(--space-6)), 680px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 62px;
+  align-items: stretch;
+  gap: var(--space-2);
+  z-index: 50;
+}
+
+/* Floating "liquid glass" bar: frosted, detached, safe-area aware. The blur
+   reads from whatever content scrolls beneath it. */
+.tabbar {
+  position: relative;
+  width: 100%;
   display: flex;
   min-height: 62px;
   gap: 0;
@@ -1203,7 +1221,48 @@ textarea {
   backdrop-filter: var(--glass-blur);
   overflow: hidden;
   isolation: isolate;
-  z-index: 50;
+  z-index: 0;
+}
+
+.global-search-trigger {
+  width: 62px;
+  height: 62px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--glass-line);
+  border-radius: 50%;
+  background: var(--glass);
+  color: var(--muted);
+  box-shadow: var(--e-nav);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--d-base) var(--ease-spring), background var(--d-fast) var(--ease-out);
+}
+
+.global-search-trigger:active {
+  transform: scale(0.95);
+}
+
+.global-search-trigger:hover {
+  background: color-mix(in oklab, var(--glass) 78%, var(--accent));
+}
+
+.global-search-trigger svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.global-search-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
 /* One continuous lens moves through the glass instead of drawing a smaller
@@ -1277,12 +1336,288 @@ textarea {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .global-search-trigger,
+  .global-search-trigger:active,
   .tabbar-btn,
   .tabbar-btn:active,
   .tabbar-lens,
   .tabbar-btn.active .tabbar-icon {
     transition: color var(--d-fast) var(--ease-out);
     transform: none;
+    animation: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .app-dock {
+    grid-template-columns: minmax(0, 1fr) 58px;
+    gap: 6px;
+  }
+
+  .global-search-trigger {
+    width: 58px;
+    height: 58px;
+    align-self: center;
+  }
+}
+
+/* ---------- Global search ---------- */
+
+.global-search-page {
+  position: fixed;
+  inset: 0;
+  z-index: 215;
+  max-width: 640px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  overscroll-behavior: contain;
+  animation: settings-in var(--overlay-in) var(--enter-ease);
+}
+
+.global-search-page.closing {
+  animation: settings-out var(--overlay-out) var(--exit-ease) forwards;
+}
+
+.global-search-header {
+  flex: 0 0 auto;
+  min-height: calc(var(--app-header-h) + var(--top-inset));
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: end;
+  gap: var(--space-1);
+  padding: var(--top-inset) var(--screen-gutter) 0 4px;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--bg);
+}
+
+.global-search-header h1 {
+  min-width: 0;
+  margin: 0 0 9px;
+  font-size: var(--t-t2);
+  font-weight: var(--w-semi);
+  letter-spacing: var(--t-t2-tr);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.global-search-back {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 1px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.global-search-back svg,
+.global-search-caret {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.global-search-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-4) var(--screen-gutter) calc(var(--space-6) + var(--safe-bottom));
+  -webkit-overflow-scrolling: touch;
+}
+
+.global-search-field {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  transition: border-color var(--d-fast) var(--ease-out), box-shadow var(--d-fast) var(--ease-out);
+}
+
+.global-search-field:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.global-search-field > svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.global-search-field input {
+  flex: 1;
+  min-width: 0;
+  height: 46px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: var(--t-body);
+}
+
+.global-search-field input::placeholder {
+  color: var(--muted);
+}
+
+.global-search-scopes {
+  display: flex;
+  gap: 6px;
+  padding: var(--space-3) 0 var(--space-4);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.global-search-scopes::-webkit-scrollbar {
+  display: none;
+}
+
+.global-search-scopes button {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: var(--t-foot);
+  font-weight: var(--w-semi);
+  cursor: pointer;
+}
+
+.global-search-scopes button.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.global-search-content {
+  min-height: 180px;
+}
+
+.global-search-group + .global-search-group {
+  margin-top: var(--space-5);
+}
+
+.global-search-group h2 {
+  margin: 0 0 var(--space-1);
+  color: var(--muted);
+  font-size: var(--t-cap2);
+  font-weight: var(--w-bold);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.global-search-results {
+  display: flex;
+  flex-direction: column;
+}
+
+.global-search-result {
+  width: 100%;
+  min-height: 96px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.global-search-result + .global-search-result {
+  border-top: 1px solid var(--line-soft);
+}
+
+.cover.global-search-cover {
+  width: var(--game-art-row);
+  min-width: var(--game-art-row);
+  height: auto;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--r-sm);
+}
+
+.global-search-result-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.global-search-result-body strong,
+.global-search-result-body > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.global-search-result-body strong {
+  font-size: var(--t-sub);
+  font-weight: var(--w-semi);
+}
+
+.global-search-result-body > span {
+  color: var(--muted);
+  font-size: var(--t-cap);
+}
+
+.global-search-badge {
+  align-self: flex-start;
+  margin-top: 3px;
+  padding: 3px 8px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  color: var(--accent);
+  font-size: var(--t-cap2);
+  font-weight: var(--w-semi);
+}
+
+.global-search-badge.wishlist {
+  color: var(--amber);
+}
+
+.global-search-caret {
+  width: 17px;
+  height: 17px;
+  flex: none;
+  color: var(--accent);
+}
+
+.global-search-partial {
+  margin: var(--space-4) 0 0;
+  color: var(--muted);
+  font-size: var(--t-cap);
+  text-align: center;
+}
+
+.async-state .game-list {
+  margin-inline: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .global-search-page,
+  .global-search-page.closing {
     animation: none;
   }
 }
@@ -1357,9 +1692,9 @@ textarea {
   margin: 0;
 }
 
-/* ---------- Sticky search / filter header (Library) ---------- */
+/* ---------- Library filter header ---------- */
 
-/* Library search + filters scroll away with the list; only the app header stays
+/* Library filters scroll away with the list; only the app header stays
    fixed. This block is IN FLOW despite the name, so nothing passes behind it. */
 .library-sticky {
   background: transparent;
@@ -2870,19 +3205,20 @@ textarea {
   border-color: var(--accent);
 }
 
-/* ---------- Library search bar ----------
-   Search and the filter button share a row, matching Discover. The three selects
-   and the keyword chip row that used to live under here moved into the sheet, so
-   the header is one line again. */
-.library-searchbar {
+/* Title lookup now belongs to the global dock search. The Library keeps only the
+   controls that organize owned games, so this row explains the page-local job
+   and exposes one compact filter action. */
+.library-toolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 44px;
 }
 
-.library-searchbar .search-input {
-  flex: 1;
-  min-width: 0;
+.library-toolbar-note {
+  color: var(--muted);
+  font-size: var(--t-foot);
 }
 
 /* Count of applied filters. The controls used to be visible, so what was narrowing
@@ -2905,9 +3241,20 @@ textarea {
   text-align: center;
 }
 
-.library-searchbar .filter-btn {
+.library-toolbar .filter-btn {
   position: relative;
   overflow: visible;
+  width: auto;
+  min-width: 88px;
+  padding: 0 var(--space-3);
+  gap: 7px;
+  color: var(--text);
+  font-size: var(--t-foot);
+  font-weight: var(--w-semi);
+}
+
+.library-toolbar .filter-btn.active {
+  color: var(--bg);
 }
 
 
