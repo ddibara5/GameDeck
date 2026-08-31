@@ -14,6 +14,8 @@ import {
 import { bars, compactHm, daysBetween, startOfDay } from '../lib/playWeek.js'
 import {
   comparisonAvailableOn,
+  genreInsights,
+  INSIGHT_GENRE_DAYS,
   INSIGHT_MONTH_DAYS,
   INSIGHT_QUERY_DAYS,
   INSIGHT_WEEK_DAYS,
@@ -175,24 +177,44 @@ function Momentum({ insight, firstRecorded }) {
   )
 }
 
-function milestoneCopy(milestone, span) {
-  if (milestone.type === 'completed') return `${milestone.game.days} active ${milestone.game.days === 1 ? 'day' : 'days'} · ${minutesToHhm(milestone.game.minutes)} in period`
-  if (milestone.type === 'progress') return `+${Math.round(milestone.game.progressGain)}% over the last ${span} days`
-  if (milestone.type === 'achievements') return `Across your play in the last ${span} days`
-  return `${milestone.game.days} ${milestone.game.days === 1 ? 'day' : 'days'} played so far`
+const GENRE_COLORS = ['var(--genre-1)', 'var(--genre-2)', 'var(--genre-3)', 'var(--genre-4)', 'var(--genre-5)']
+
+function genreGradient(genres) {
+  let cursor = 0
+  return `conic-gradient(${genres.map((genre, index) => {
+    const start = cursor
+    cursor += genre.share * 100
+    return `${GENRE_COLORS[index]} ${start}% ${cursor}%`
+  }).join(', ')})`
 }
 
-function Milestones({ insight, gamesById, onOpenGame }) {
+function GenresLately({ genres, firstRecorded }) {
+  const lead = genres[0]
+  const label = genres.map((genre) => `${genre.genre} ${Math.round(genre.share * 100)} percent`).join(', ')
+  const coverage = firstRecorded && daysBetween(new Date(), firstRecorded) < INSIGHT_GENRE_DAYS - 1
+    ? `Since ${firstRecorded.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
+    : `Last ${INSIGHT_GENRE_DAYS} days`
   return (
-    <section className="ins-milestones">
-      <div className="ins-section-head"><h2>Recent milestones</h2><span>Activity, not lifetime records</span></div>
-      {insight.milestones.length ? insight.milestones.map((milestone, index) => {
-        const game = milestone.master_id != null ? gamesById.get(String(milestone.master_id)) || null : null
-        const content = <><span className={`milestone-icon${milestone.type === 'progress' ? ' brass' : ''}`}>{milestone.type === 'completed' ? '✓' : milestone.type === 'progress' ? '↗' : '★'}</span><span className="milestone-copy"><b>{milestone.title}</b><small>{milestoneCopy(milestone, insight.span)}</small></span></>
-        return game ? (
-          <button type="button" className="milestone-row" key={`${milestone.type}-${milestone.master_id}`} onClick={() => onOpenGame(game)}>{content}</button>
-        ) : <div className="milestone-row flat" key={`${milestone.type}-${index}`}>{content}</div>
-      }) : <div className="chart-empty">Milestones will appear as new progress is recorded.</div>}
+    <section className="chart-card genre-card">
+      <div className="ins-card-head"><h2 className="chart-title">Genres lately</h2><span>{coverage}</span></div>
+      <p className="genre-sub">Share of playtime by primary genre</p>
+      {genres.length ? (
+        <>
+          <div className="genre-layout">
+            <div className="genre-pie" role="img" aria-label={label} style={{ background: genreGradient(genres) }} />
+            <ol className="genre-legend">
+              {genres.map((genre, index) => (
+                <li key={genre.genre}>
+                  <span className="genre-dot" style={{ background: GENRE_COLORS[index] }} aria-hidden="true" />
+                  <span className="genre-name">{genre.genre}</span>
+                  <span className="genre-share">{Math.round(genre.share * 100)}%</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+          <p className="genre-take">{lead.genre} led {Math.round(lead.share * 100)}% of your recent playtime.</p>
+        </>
+      ) : <div className="chart-empty">Genre trends will appear after playtime is recorded.</div>}
     </section>
   )
 }
@@ -231,6 +253,7 @@ export default function InsightsTab() {
   const gamesById = useMemo(() => new Map(games.map((game) => [String(game.master_id), game])), [games])
   const insight = useMemo(() => periodInsights(events, new Date(), span, activityStart), [events, span, activityStart])
   const month = useMemo(() => periodInsights(events, new Date(), INSIGHT_MONTH_DAYS, activityStart), [events, activityStart])
+  const genres = useMemo(() => genreInsights(events, games, new Date()), [events, games])
 
   if (loading) {
     return <div><Skeleton count={4} /></div>
@@ -240,7 +263,7 @@ export default function InsightsTab() {
     week_chart: () => <PeriodSummary insight={insight} firstRecorded={activityStart} key="week_chart" />,
     week_games: () => <TimeSplit insight={insight} gamesById={gamesById} onOpenGame={setSelected} key="week_games" />,
     momentum: () => <Momentum insight={month} firstRecorded={activityStart} key="momentum" />,
-    milestones: () => <Milestones insight={month} gamesById={gamesById} onOpenGame={setSelected} key="milestones" />,
+    genres: () => <GenresLately genres={genres} firstRecorded={activityStart} key="genres" />,
   }
   const rendered = cards.order.filter((key) => cards.enabled[key] && renderers[key]).map((key) => renderers[key]())
 

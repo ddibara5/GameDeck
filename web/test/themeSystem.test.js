@@ -97,3 +97,15 @@ test('the bottom bar has complete light and dark theme materials', () => {
     }
   }
 })
+
+test('the genre pie has a complete palette in every theme and appearance', () => {
+  const css = readFileSync(new URL('../src/components/insights.css', import.meta.url), 'utf8')
+
+  for (const token of ['--genre-1', '--genre-2', '--genre-3', '--genre-4', '--genre-5']) {
+    assert.match(css, new RegExp(token))
+  }
+  for (const family of ['curator', 'obsidian', 'neon', 'blueprint', 'cartridge']) {
+    if (family !== 'curator') assert.match(css, new RegExp(`\\[data-theme-family=["']${family}["']\\].*\\.genre-card`))
+    assert.match(css, new RegExp(`\\[data-theme-family=["']${family}["']\\]\\[data-theme=["']light["']\\] \\.genre-card`))
+  }
+})

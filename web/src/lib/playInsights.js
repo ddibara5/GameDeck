@@ -2,7 +2,8 @@ import { dayKey, daysBetween, eventDay, startOfDay, weekStats } from './playWeek
 
 export const INSIGHT_WEEK_DAYS = 7
 export const INSIGHT_MONTH_DAYS = 30
-export const INSIGHT_QUERY_DAYS = INSIGHT_MONTH_DAYS * 2
+export const INSIGHT_GENRE_DAYS = 90
+export const INSIGHT_QUERY_DAYS = Math.max(INSIGHT_MONTH_DAYS * 2, INSIGHT_GENRE_DAYS)
 
 const num = (value) => Number(value) || 0
 
@@ -99,22 +100,6 @@ export function periodInsights(rows, now = new Date(), span = INSIGHT_WEEK_DAYS,
     .sort((a, b) => b.progressGain - a.progressGain)
   const progressGain = progressGames.reduce((total, game) => total + game.progressGain, 0)
 
-  const milestones = []
-  for (const game of completedGames.slice(0, 1)) {
-    milestones.push({ type: 'completed', master_id: game.master_id, title: `Finished ${game.title}`, game })
-  }
-  const progress = progressGames.find((game) => !completedGames.some((done) => done.master_id === game.master_id))
-  if (progress) {
-    milestones.push({
-      type: 'progress',
-      master_id: progress.master_id,
-      title: `${progress.title} reached ${Math.round(progress.lastPercent)}%`,
-      game: progress,
-    })
-  }
-  if (base.achievements > 0) {
-    milestones.push({ type: 'achievements', title: `${base.achievements} achievements unlocked` })
-  }
   const bucketCount = span <= INSIGHT_WEEK_DAYS ? span : 4
   return {
     ...base,
@@ -122,7 +107,6 @@ export function periodInsights(rows, now = new Date(), span = INSIGHT_WEEK_DAYS,
     completedGames,
     progressGames,
     progressGain,
-    milestones: milestones.slice(0, 3),
     buckets: trendBuckets(rows || [], now, span, bucketCount),
     comparisonDelta: base.hasPrev ? base.minutes - base.prevMinutes : null,
     comparisonPercent:
@@ -130,6 +114,38 @@ export function periodInsights(rows, now = new Date(), span = INSIGHT_WEEK_DAYS,
         ? Math.round(((base.minutes - base.prevMinutes) / base.prevMinutes) * 100)
         : null,
   }
+}
+
+// One primary genre per library game keeps the pie mutually exclusive. The top
+// four remain named and the long tail (plus missing genres) rolls into Other, so
+// the mobile legend stays readable and every slice still sums to the period.
+export function genreInsights(rows, games, now = new Date(), span = INSIGHT_GENRE_DAYS, namedLimit = 4) {
+  const genreByGame = new Map(
+    (games || []).map((game) => [String(game.master_id), String(game.genre || '').trim() || 'Other']),
+  )
+  const totals = new Map()
+
+  for (const row of rows || []) {
+    if (!isInside(row, now, span)) continue
+    const minutes = Math.max(0, num(row.minutes_delta))
+    if (!minutes) continue
+    const genre = genreByGame.get(String(row.master_id)) || 'Other'
+    totals.set(genre, (totals.get(genre) || 0) + minutes)
+  }
+
+  const named = [...totals.entries()]
+    .filter(([genre]) => genre !== 'Other')
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+  const top = named.slice(0, namedLimit)
+  const otherMinutes = (totals.get('Other') || 0) + named.slice(namedLimit).reduce((sum, [, minutes]) => sum + minutes, 0)
+  if (otherMinutes > 0) top.push(['Other', otherMinutes])
+
+  const totalMinutes = top.reduce((sum, [, minutes]) => sum + minutes, 0)
+  return top.map(([genre, minutes]) => ({
+    genre,
+    minutes,
+    share: totalMinutes > 0 ? minutes / totalMinutes : 0,
+  }))
 }
 
 export function comparisonAvailableOn(firstRecorded, span) {

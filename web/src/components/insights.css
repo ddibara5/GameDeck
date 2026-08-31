@@ -263,57 +263,103 @@
   white-space: nowrap;
 }
 
-/* Milestones sit directly on the page so recent events feel like a feed rather
-   than a collection of increasingly small cards. */
-.ins-milestones {
-  margin: var(--space-4) var(--screen-gutter) var(--space-2);
+/* A compact composition chart replaces the milestone feed. Each visual family
+   owns a five-color series so the pie belongs to the selected theme in both
+   appearances instead of carrying Curator's palette everywhere. */
+.genre-card {
+  --genre-1: #d8aa62;
+  --genre-2: #9a6b4d;
+  --genre-3: #738b76;
+  --genre-4: #9a7080;
+  --genre-5: #71665a;
 }
-.ins-section-head { margin-bottom: 6px; }
-.ins-section-head h2 {
-  margin: 0;
-  font-size: var(--t-body);
-  font-weight: var(--w-bold);
+[data-theme-family="curator"][data-theme="light"] .genre-card {
+  --genre-1: #8a5d25; --genre-2: #b37745; --genre-3: #5f795f; --genre-4: #885e70; --genre-5: #988a79;
 }
-.milestone-row {
-  display: flex;
+[data-theme-family="obsidian"] .genre-card {
+  --genre-1: #9ab4ff; --genre-2: #c1a5ff; --genre-3: #6ac9d6; --genre-4: #e28ab9; --genre-5: #65708c;
+}
+[data-theme-family="obsidian"][data-theme="light"] .genre-card {
+  --genre-1: #3f61bd; --genre-2: #7651bd; --genre-3: #39828f; --genre-4: #a74778; --genre-5: #8791a8;
+}
+[data-theme-family="neon"] .genre-card {
+  --genre-1: #00e6c7; --genre-2: #ff63d0; --genre-3: #b6e65b; --genre-4: #8d82ff; --genre-5: #617188;
+}
+[data-theme-family="neon"][data-theme="light"] .genre-card {
+  --genre-1: #00756e; --genre-2: #a62082; --genre-3: #63821d; --genre-4: #6554b1; --genre-5: #7a8b92;
+}
+[data-theme-family="blueprint"] .genre-card {
+  --genre-1: #70d1ff; --genre-2: #f2c14e; --genre-3: #54a8c8; --genre-4: #ab91dc; --genre-5: #668ba3;
+}
+[data-theme-family="blueprint"][data-theme="light"] .genre-card {
+  --genre-1: #12678e; --genre-2: #8a6300; --genre-3: #3d829d; --genre-4: #72599d; --genre-5: #7894a3;
+}
+[data-theme-family="cartridge"] .genre-card {
+  --genre-1: #ff875e; --genre-2: #f3c84b; --genre-3: #58a58e; --genre-4: #d55757; --genre-5: #8d8266;
+}
+[data-theme-family="cartridge"][data-theme="light"] .genre-card {
+  --genre-1: #aa3516; --genre-2: #806200; --genre-3: #367563; --genre-4: #9c3d43; --genre-5: #8f8365;
+}
+.genre-sub {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: var(--t-cap);
+}
+.genre-layout {
+  display: grid;
+  grid-template-columns: minmax(112px, 132px) minmax(0, 1fr);
   align-items: center;
-  gap: 12px;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+.genre-pie {
   width: 100%;
-  min-height: 56px;
-  padding: 8px 0;
-  border: 0;
-  border-bottom: 1px solid var(--line);
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.milestone-row.flat { cursor: default; }
-.milestone-row:not(.flat):active { opacity: 0.65; }
-.milestone-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  flex: none;
+  aspect-ratio: 1;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--accent) 16%, transparent);
-  color: var(--accent);
-  font-weight: var(--w-bold);
+  box-shadow: var(--e1);
 }
-.milestone-icon.brass { background: var(--surface-2); color: var(--walnut-light); }
-.milestone-copy { min-width: 0; }
-.milestone-copy b,
-.milestone-copy small {
-  display: block;
+.genre-legend {
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.genre-legend li {
+  display: grid;
+  grid-template-columns: 9px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: var(--t-cap);
+}
+.genre-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.genre-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.milestone-copy b { font-size: var(--t-foot); font-weight: var(--w-semi); }
-.milestone-copy small { margin-top: 3px; color: var(--muted); font-size: var(--t-cap); }
+.genre-share {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.genre-take {
+  margin: var(--space-4) 0 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: var(--t-cap);
+  line-height: 1.4;
+}
+
+@media (max-width: 350px) {
+  .genre-layout { grid-template-columns: 106px minmax(0, 1fr); gap: var(--space-3); }
+}
 
 /* ---------- short-term cards ---------- */
 

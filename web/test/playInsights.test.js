@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { comparisonAvailableOn, periodInsights } from '../src/lib/playInsights.js'
+import { comparisonAvailableOn, genreInsights, periodInsights } from '../src/lib/playInsights.js'
 
 const NOW = new Date(2026, 7, 25, 12)
 const day = (daysAgo) => {
@@ -49,7 +49,30 @@ test('progress and completion use the last reading before the period', () => {
   ], NOW, 7, new Date(2026, 6, 1))
   assert.equal(result.byGame[0].progressGain, 28)
   assert.equal(result.byGame[0].completed, true)
-  assert.match(result.milestones[0].title, /^Finished /)
+})
+
+test('genre insights use playtime share and roll the long tail into Other', () => {
+  const games = [
+    { master_id: 1, genre: 'Tactical RPG' },
+    { master_id: 2, genre: 'Action' },
+    { master_id: 3, genre: 'Strategy' },
+    { master_id: 4, genre: 'Adventure' },
+    { master_id: 5, genre: 'Puzzle' },
+    { master_id: 6, genre: null },
+  ]
+  const result = genreInsights([
+    row({ master_id: 1, minutes_delta: 360 }),
+    row({ master_id: 2, minutes_delta: 260 }),
+    row({ master_id: 3, minutes_delta: 180 }),
+    row({ master_id: 4, minutes_delta: 120 }),
+    row({ master_id: 5, minutes_delta: 40 }),
+    row({ master_id: 6, minutes_delta: 40 }),
+    row({ master_id: 1, event_date: day(91), minutes_delta: 500 }),
+  ], games, NOW)
+
+  assert.deepEqual(result.map((genre) => genre.genre), ['Tactical RPG', 'Action', 'Strategy', 'Adventure', 'Other'])
+  assert.deepEqual(result.map((genre) => genre.minutes), [360, 260, 180, 120, 80])
+  assert.equal(result.reduce((sum, genre) => sum + genre.share, 0), 1)
 })
 
 test('comparison waits for two fully covered periods', () => {

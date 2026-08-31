@@ -5,7 +5,7 @@ import { parseDayOrInstant } from './format.js'
 
 // One definition of the activity read. Two surfaces want it for different reasons
 // and over different windows - the Activity feed lists every row, Insights rolls
-// up the last 60 days - so the WINDOW is a parameter and the query shape
+// up the last 90 days - so the WINDOW is a parameter and the query shape
 // is not. The alternative was the same select written twice, which is how the
 // Library ended up with two drifting column lists.
 export const ACTIVITY_VIEW = 'v_recent_activity'

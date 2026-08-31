@@ -10,7 +10,7 @@ const EVENT = 'gd-insights-cards-change'
 // Insights is recent by definition now. Lifetime snapshots were removed rather
 // than left as disabled catalog clutter: a number that is the same next Tuesday
 // does not earn a permanent analytics card. The four remaining cards explain a
-// rolling period, where it went, what changed, and which milestones happened.
+// rolling period, where it went, what changed, and which genres are leading.
 //
 // Five keys left on 20 Aug 2026 (week_totals, now_playing, pace, coming_up,
 // leaving_gp). The current continuation and release views moved to Home; Pace
@@ -20,7 +20,7 @@ export const CARD_CATALOG = [
   { key: 'week_chart', group: 'recent', label: 'Play overview', sub: '7- or 30-day total, chart and comparison' },
   { key: 'week_games', group: 'recent', label: 'Where your time went', sub: 'Share, progress and achievements by game' },
   { key: 'momentum', group: 'recent', label: 'Recent momentum', sub: 'Progress, rotation, finishes and longest run' },
-  { key: 'milestones', group: 'recent', label: 'Recent milestones', sub: 'Meaningful changes from tracked activity' },
+  { key: 'genres', group: 'recent', label: 'Genres lately', sub: '90-day share of playtime by primary genre' },
 ]
 
 export const CARD_BY_KEY = CARD_CATALOG.reduce((m, c) => ((m[c.key] = c), m), {})
