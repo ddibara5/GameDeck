@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Cover from './Cover.jsx'
 import GameSheet from './GameSheet.jsx'
 import { useWishlist, removeFromWishlist, restoreToWishlist, reconcileWishlist } from '../lib/wishlist.js'
-import { loadLibraryTitles } from '../lib/discover.js'
+import { fetchGamesByIds, loadLibraryTitles } from '../lib/discover.js'
 import NextUp from './NextUp.jsx'
 import { MessageState } from './AsyncState.jsx'
 import { relOf, effTs, isOut, byTitle, groupByRelease, groupByReleased, outChipOf, shortOf, MON, DAY } from '../lib/wishlistRelease.js'
+import { filterWishlistByGenre, wishlistGenreOptions } from '../lib/wishlistGenres.js'
+import { useMountTransition } from '../lib/useMountTransition.js'
+import { useDialogA11y } from '../lib/useDialogA11y.js'
+import { lockScroll } from '../lib/scrollLock.js'
 import './wishlist.css'
 
 const SORT_KEY = 'gamedeck_wishlist_sort'
@@ -230,6 +235,68 @@ function GridCard({ r, onOpen, scope }) {
   )
 }
 
+function GenreSheet({ open, scopeLabel, options, value, loading, onChange, onClose }) {
+  const { mounted, closing } = useMountTransition(open)
+  const dialogRef = useDialogA11y({ active: mounted, onClose })
+
+  useEffect(() => {
+    if (!mounted) return undefined
+    return lockScroll()
+  }, [mounted])
+
+  if (!mounted) return null
+
+  return createPortal(
+    <div
+      className={`modal-backdrop${closing ? ' closing' : ''}`}
+      onClick={(event) => event.target === event.currentTarget && onClose()}
+    >
+      <div ref={dialogRef} className="modal-sheet wl-genre-sheet" role="dialog" aria-modal="true" aria-label="Game type">
+        <div className="modal-handle" />
+        <button type="button" className="modal-close" aria-label="Close game type filter" onClick={onClose}>&times;</button>
+        <div className="detail-title">Game type</div>
+        <p className="wl-genre-intro">Filter {scopeLabel} by any matching genre.</p>
+        <div className="wl-genre-options" role="listbox" aria-label="Game type">
+          <button
+            type="button"
+            role="option"
+            aria-selected={value === 'all'}
+            className={value === 'all' ? 'on' : ''}
+            onClick={() => {
+              onChange('all')
+              onClose()
+            }}
+          >
+            <span className="wl-genre-check" aria-hidden="true">{value === 'all' ? '✓' : ''}</span>
+            <span>All genres</span>
+            <b>{options.allCount}</b>
+          </button>
+          {options.rows.map((option) => (
+            <button
+              type="button"
+              role="option"
+              aria-selected={value === option.label}
+              className={value === option.label ? 'on' : ''}
+              disabled={option.count === 0}
+              key={option.label}
+              onClick={() => {
+                onChange(option.label)
+                onClose()
+              }}
+            >
+              <span className="wl-genre-check" aria-hidden="true">{value === option.label ? '✓' : ''}</span>
+              <span>{option.label}</span>
+              <b>{option.count}</b>
+            </button>
+          ))}
+        </div>
+        {loading ? <p className="wl-genre-foot">Refreshing game types…</p> : <p className="wl-genre-foot">The selection stays active when you switch release views.</p>}
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
 // One list implementation, with a release-focused mode for Home.
 //
 // A scope rather than a second component, deliberately. Everything below the
@@ -246,12 +313,20 @@ function GridCard({ r, onOpen, scope }) {
 export default function WishlistTab({ onClose, mode = 'wishlist', initialScope = 'all' }) {
   const { items: allItems, loading } = useWishlist()
   const [scope, setScope] = useState(initialScope)
+  const [genre, setGenre] = useState('all')
+  const [genreOpen, setGenreOpen] = useState(false)
+  const [genreMetadata, setGenreMetadata] = useState({})
+  const [genreLoading, setGenreLoading] = useState(false)
   const isReleaseMode = mode === 'releases'
   const isOutScope = scope === 'out'
   const isUpcomingScope = scope === 'upcoming'
-  const items = useMemo(
+  const scopeItems = useMemo(
     () => allItems.filter((r) => (isOutScope ? isOut(relOf(r)) : isUpcomingScope ? !isOut(relOf(r)) : true)),
     [allItems, isOutScope, isUpcomingScope]
+  )
+  const items = useMemo(
+    () => filterWishlistByGenre(scopeItems, genreMetadata, genre),
+    [scopeItems, genreMetadata, genre],
   )
   const scopeCounts = useMemo(() => {
     const out = allItems.filter((r) => isOut(relOf(r))).length
@@ -276,6 +351,34 @@ export default function WishlistTab({ onClose, mode = 'wishlist', initialScope =
       return 'list'
     }
   })
+
+  const itemIdSignature = allItems.map((r) => r.igdb_id).filter(Boolean).join(',')
+  useEffect(() => {
+    const ids = allItems.map((r) => r.igdb_id).filter(Boolean)
+    if (!ids.length) {
+      setGenreMetadata({})
+      setGenreLoading(false)
+      return undefined
+    }
+    let alive = true
+    setGenreLoading(true)
+    fetchGamesByIds(ids)
+      .then((metadata) => {
+        if (alive) setGenreMetadata(metadata || {})
+      })
+      .catch(() => {
+        if (alive) setGenreMetadata({})
+      })
+      .finally(() => {
+        if (alive) setGenreLoading(false)
+      })
+    return () => {
+      alive = false
+    }
+    // The rows themselves are intentionally not a dependency: their stable id
+    // set is the identity of the cached metadata request.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [itemIdSignature])
 
   useEffect(() => {
     try {
@@ -308,6 +411,20 @@ export default function WishlistTab({ onClose, mode = 'wishlist', initialScope =
 
   useEffect(() => () => clearTimeout(undoTimer.current), [])
 
+  const genreLabels = useMemo(() => wishlistGenreOptions(allItems, genreMetadata), [allItems, genreMetadata])
+  useEffect(() => {
+    if (genre !== 'all' && !genreLoading && !genreLabels.includes(genre)) setGenre('all')
+  }, [genre, genreLoading, genreLabels])
+  const genreOptions = useMemo(
+    () => ({
+      allCount: scopeItems.length,
+      rows: genreLabels.map((label) => ({
+        label,
+        count: filterWishlistByGenre(scopeItems, genreMetadata, label).length,
+      })),
+    }),
+    [scopeItems, genreMetadata, genreLabels],
+  )
   const sections = useMemo(() => buildSections(items, sort, scope), [items, sort, scope])
 
   function handleRemove(row) {
@@ -332,6 +449,13 @@ export default function WishlistTab({ onClose, mode = 'wishlist', initialScope =
   )
 
   const isGrid = density === 'grid'
+  const sortLabel = SORTS.find((option) => option.k === sort)?.label || 'Release'
+  const scopeLabel = isUpcomingScope ? 'upcoming releases' : isOutScope ? 'games that are out now' : 'all saved games'
+  const itemSummary = isUpcomingScope
+    ? `upcoming wishlisted ${scopeItems.length === 1 ? 'game' : 'games'}`
+    : isOutScope
+      ? `wishlisted ${scopeItems.length === 1 ? 'game' : 'games'} you don't own yet`
+      : `${scopeItems.length === 1 ? 'saved game' : 'saved games'}`
   const emptyTitle = isUpcomingScope ? 'Nothing is scheduled yet' : isOutScope ? 'Nothing has landed yet' : 'Your wishlist is empty'
   const emptyCopy = isUpcomingScope
     ? 'Saved games with a future release window show up here.'
@@ -349,11 +473,9 @@ export default function WishlistTab({ onClose, mode = 'wishlist', initialScope =
           <div className="wl-sub">
             {loading
               ? 'Loading…'
-              : isUpcomingScope
-                ? `${items.length} upcoming wishlisted ${items.length === 1 ? 'game' : 'games'}`
-                : isOutScope
-                ? `${items.length} wishlisted ${items.length === 1 ? 'game' : 'games'} you don't own yet`
-                : `${items.length} ${items.length === 1 ? 'saved game' : 'saved games'}`}
+              : genre === 'all'
+                ? `${scopeItems.length} ${itemSummary}`
+                : `${items.length} of ${scopeItems.length} · ${genre}`}
           </div>
         </div>
       </div>
@@ -396,26 +518,32 @@ export default function WishlistTab({ onClose, mode = 'wishlist', initialScope =
         </div>
       ) : null}
 
-      {!loading && items.length === 0 ? (
+      {!loading && scopeItems.length === 0 ? (
         <MessageState title={emptyTitle}>{emptyCopy}</MessageState>
       ) : null}
 
-      {items.length > 1 ? (
+      {scopeItems.length > 1 ? (
         <div className="wl-controls">
-          <div className="wl-sort" role="tablist" aria-label="Sort saved games">
-            {SORTS.map((s) => (
-              <button
-                key={s.k}
-                type="button"
-                role="tab"
-                aria-selected={sort === s.k}
-                className={`wl-sort-b${sort === s.k ? ' on' : ''}`}
-                onClick={() => setSort(s.k)}
-              >
-                {isOutScope && s.k === 'release' ? 'Released' : s.label}
-              </button>
-            ))}
-          </div>
+          <label className="wl-select-pill">
+            <span className="sr-only">Sort saved games</span>
+            <select value={sort} onChange={(event) => setSort(event.target.value)} aria-label="Sort saved games">
+              {SORTS.map((option) => <option value={option.k} key={option.k}>{option.label}</option>)}
+            </select>
+            <span>{isOutScope && sort === 'release' ? 'Released' : sortLabel}</span>
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4" /></svg>
+          </label>
+          <button
+            type="button"
+            className={`wl-genre-btn${genre !== 'all' ? ' on' : ''}`}
+            disabled={genreLoading && !genreLabels.length}
+            aria-haspopup="dialog"
+            aria-expanded={genreOpen}
+            onClick={() => setGenreOpen(true)}
+          >
+            <svg className="wl-filter-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4" /></svg>
+            <span>{genre === 'all' ? 'Genre' : genre}</span>
+            <svg className="wl-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4" /></svg>
+          </button>
           <div className="wl-dens" role="group" aria-label="Density">
             <button type="button" className={`wl-dbtn${!isGrid ? ' on' : ''}`} aria-label="List view" aria-pressed={!isGrid} onClick={() => setDensity('list')}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" /></svg>
@@ -425,6 +553,13 @@ export default function WishlistTab({ onClose, mode = 'wishlist', initialScope =
             </button>
           </div>
         </div>
+      ) : null}
+
+      {!loading && scopeItems.length > 0 && items.length === 0 ? (
+        <MessageState title={`No ${genre} games here`}>
+          <span>Try another game type or </span>
+          <button type="button" className="wl-clear-filter" onClick={() => setGenre('all')}>clear the filter</button>.
+        </MessageState>
       ) : null}
 
       {/* Countdown cards over a list where every row has already released would
@@ -465,6 +600,16 @@ export default function WishlistTab({ onClose, mode = 'wishlist', initialScope =
       {selected ? (
         <GameSheet variant="wishlist" game={selected} onClose={() => setSelected(null)} />
       ) : null}
+
+      <GenreSheet
+        open={genreOpen}
+        scopeLabel={scopeLabel}
+        options={genreOptions}
+        value={genre}
+        loading={genreLoading}
+        onChange={setGenre}
+        onClose={() => setGenreOpen(false)}
+      />
     </div>
   )
 }
