@@ -164,34 +164,84 @@
   color: var(--amber);
 }
 
-/* ---------- Sort control ---------- */
-.wl-sort {
-  display: flex;
-  gap: 6px;
-  padding: 10px 16px 4px;
-}
-
-.wl-sort-b {
+/* ---------- Compact sort + genre controls ---------- */
+.wl-select-pill,
+.wl-genre-btn {
+  position: relative;
   flex: none;
+  height: 34px;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 10px;
   border: 1px solid var(--line);
+  border-radius: var(--r-pill);
   background: var(--surface);
-  color: var(--muted);
+  color: var(--text);
   font-size: var(--t-cap);
   font-weight: var(--w-semi);
-  padding: 6px 13px;
-  border-radius: var(--r-pill);
   cursor: pointer;
-  transition: background var(--d-fast) ease, color var(--d-fast) ease, border-color var(--d-fast) ease;
 }
 
-.wl-sort-b.on {
-  color: var(--text);
-  background: var(--surface-2);
-  border-color: var(--text-dim, var(--line));
+.wl-select-pill select {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
 }
 
-.wl-sort-b:active {
-  background: var(--surface-2);
+.wl-select-pill svg,
+.wl-chevron {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.wl-genre-btn {
+  margin-right: auto;
+  max-width: 142px;
+  color: var(--muted);
+}
+
+.wl-genre-btn > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wl-genre-btn.on {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 72%, var(--line));
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+
+.wl-genre-btn.on .wl-chevron {
+  stroke: var(--accent);
+}
+
+.wl-genre-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.wl-filter-icon {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
 }
 
 /* ---------- Swipe-to-delete row ---------- */
@@ -341,13 +391,9 @@
 .wl-controls {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  justify-content: flex-start;
+  gap: 6px;
   padding: 10px 16px 4px;
-}
-
-.wl-controls .wl-sort {
-  padding: 0;
 }
 
 .wl-dens {
@@ -381,6 +427,99 @@
 .wl-dbtn svg {
   width: 16px;
   height: 16px;
+}
+
+.wl-clear-filter {
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: var(--w-semi);
+  padding: 0;
+  cursor: pointer;
+}
+
+/* Genre stays off the page until requested. The sheet reuses GameDeck's shared
+   elevated modal material, so the new control does not add another permanent
+   row of category chips above the wishlist. */
+.wl-genre-sheet {
+  max-width: 430px;
+  padding-left: 18px;
+  padding-right: 18px;
+}
+
+.wl-genre-intro {
+  margin: 4px 48px 14px 0;
+  color: var(--muted);
+  font-size: var(--t-foot);
+  line-height: 1.4;
+}
+
+.wl-genre-options {
+  margin: 0 -2px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.wl-genre-options button {
+  width: 100%;
+  min-height: 50px;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font-size: var(--t-sub);
+  cursor: pointer;
+}
+
+.wl-genre-options button.on {
+  color: var(--accent);
+  font-weight: var(--w-semi);
+}
+
+.wl-genre-options button:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.wl-genre-check {
+  color: var(--accent);
+  font-size: var(--t-sub);
+  font-weight: var(--w-bold);
+  text-align: center;
+}
+
+.wl-genre-options b {
+  min-width: 28px;
+  padding: 3px 8px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: var(--t-cap2);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.wl-genre-foot {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: var(--t-cap2);
+  line-height: 1.35;
+}
+
+@media (max-width: 350px) {
+  .wl-select-pill,
+  .wl-genre-btn {
+    padding: 0 8px;
+  }
+  .wl-genre-btn {
+    max-width: 116px;
+  }
 }
 
 /* ---------- Proximity chip ---------- */
