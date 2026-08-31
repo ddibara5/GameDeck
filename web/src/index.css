@@ -1180,10 +1180,10 @@ textarea {
   width: calc(100% / var(--tab-count));
   border-radius: var(--r-pill);
   transform: translateX(calc(var(--active-index) * 100%));
-  background: rgba(245, 240, 232, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    0 1px 8px rgba(0, 0, 0, 0.12);
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in oklab, var(--accent) 22%, var(--glass-line));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 18%, transparent),
+    0 1px 8px color-mix(in srgb, var(--bg) 32%, transparent);
   transition: transform var(--d-base) var(--ease-out);
   pointer-events: none;
 }
@@ -1226,7 +1226,7 @@ textarea {
 }
 
 .tabbar-btn.active {
-  color: #ece7df;
+  color: var(--text);
 }
 
 .tabbar-btn.active .tabbar-icon {
@@ -2827,19 +2827,16 @@ textarea {
 [data-theme="light"] .tabbar {
   box-shadow: var(--e-nav);
 }
-/* Measured, not guessed: #6a655d rendered at 5.01:1 against the bar's actual
-   backdrop, where the same label in dark mode reads 6.6:1. Light was the
-   outlier, and at 11px that gap is the difference between reading a label and
-   working it out. #4f4a42 measures 7.62:1, which puts the two themes on the
-   same footing without closing on the active tab (13.9:1 on its pill). The
-   icons take it too, since they stroke with currentColor. */
-[data-theme="light"] .tabbar-btn { color: #4f4a42; }
-[data-theme="light"] .tabbar-btn.active { color: #232020; }
+/* Keep the labels tied to each family's semantic ink colors. Every muted token
+   clears normal-text contrast against its matching glass material, while the
+   active tab uses the family's strongest ink. Icons follow via currentColor. */
+[data-theme="light"] .tabbar-btn { color: var(--muted); }
+[data-theme="light"] .tabbar-btn.active { color: var(--text); }
 [data-theme="light"] .tabbar-lens {
-  background: rgba(255, 255, 255, 0.46);
-  border-color: rgba(40, 38, 36, 0.08);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7),
-    0 1px 8px rgba(60, 45, 30, 0.08);
+  background: color-mix(in srgb, var(--surface-2) 56%, transparent);
+  border-color: color-mix(in oklab, var(--accent) 16%, var(--glass-line));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 72%, transparent),
+    0 1px 8px color-mix(in srgb, var(--bg) 18%, transparent);
 }
 [data-theme="light"] .status-badge.status-finished {
   color: #0f7a58;
@@ -2924,6 +2921,8 @@ textarea {
   --bg: #eef2f3; --surface: #fbfdfe; --surface-2: #ffffff; --line: #9fbdc2;
   --text: #101a20; --muted: #4f626b; --walnut: #00716c; --walnut-light: #009b8f;
   --accent: #00756e; --amber: #a62082;
+  --glass: rgba(251, 253, 254, 0.72); --glass-chip: rgba(255, 255, 255, 0.84);
+  --glass-line: rgba(0, 117, 110, 0.22);
   --theme-ground:
     radial-gradient(60% 48% at 5% 2%, rgba(0, 166, 151, 0.13), transparent 72%),
     radial-gradient(55% 45% at 100% 96%, rgba(209, 47, 157, 0.1), transparent 74%), #eef2f3;
@@ -2958,6 +2957,8 @@ textarea {
   --bg: #e7f1f7; --surface: #f7fbfe; --surface-2: #ffffff; --line: #9fc3d5;
   --text: #0b263a; --muted: #446678; --walnut: #1b6789; --walnut-light: #318bad;
   --accent: #12678e; --amber: #8a6300;
+  --glass: rgba(247, 251, 254, 0.76); --glass-chip: rgba(255, 255, 255, 0.86);
+  --glass-line: rgba(18, 103, 142, 0.22);
   --theme-ground: linear-gradient(160deg, #e7f1f7, #f2f8fb 52%, #dfedf4);
   --theme-texture:
     linear-gradient(rgba(18,103,142,.07) 1px, transparent 1px),
@@ -2993,7 +2994,10 @@ textarea {
   --bg: #e9e1c8; --surface: #f8f2df; --surface-2: #fffaf0; --line: #aa9b75;
   --text: #242016; --muted: #625a46; --walnut: #8b432d; --walnut-light: #b75c3a;
   --accent: #aa3516; --amber: #806200;
+  --glass: rgba(248, 242, 223, 0.96); --glass-chip: rgba(255, 250, 240, 0.98);
+  --glass-line: rgba(36, 32, 22, 0.18);
   --e1: 3px 3px 0 #b8ad8c; --e2: 5px 5px 0 #b8ad8c; --e3: 8px 8px 0 #b8ad8c;
+  --e-nav: 4px 4px 0 #b8ad8c, inset 0 1px 0 rgba(255,255,255,.64);
   --theme-ground:
     radial-gradient(80% 55% at 8% -4%, rgba(182,61,27,.09), transparent 72%),
     linear-gradient(155deg, #e9e1c8, #f0e9d3 58%, #e3dac0);

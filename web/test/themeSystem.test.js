@@ -82,3 +82,18 @@ test('ranking numbers and tier badges inherit each visual family', () => {
   }
   assert.doesNotMatch(css, /#d99a2b|#6f8dc8|#718b53|#9b725f/)
 })
+
+test('the bottom bar has complete light and dark theme materials', () => {
+  const css = readFileSync(new URL('../src/index.css', import.meta.url), 'utf8')
+
+  assert.match(css, /\.tabbar-btn\.active\s*\{[^}]*color:\s*var\(--text\)/s)
+  assert.match(css, /\[data-theme="light"\] \.tabbar-btn\s*\{[^}]*color:\s*var\(--muted\)/s)
+  assert.match(css, /\.tabbar-lens\s*\{[^}]*var\(--accent\)[^}]*var\(--glass-line\)/s)
+
+  for (const family of ['obsidian', 'neon', 'blueprint', 'cartridge']) {
+    const block = css.match(new RegExp(`:root\\[data-theme-family="${family}"\\]\\[data-theme="light"\\]\\s*\\{([^}]*)\\}`))?.[1] || ''
+    for (const token of ['--glass', '--glass-chip', '--glass-line']) {
+      assert.match(block, new RegExp(`${token}:`), `${family} light mode must define ${token}`)
+    }
+  }
+})
