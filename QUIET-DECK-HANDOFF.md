@@ -249,6 +249,14 @@ windows and opens individual rows directly in that sheet. A precise release
 dated today belongs to **Out now** from the start of the user's local calendar
 day; only future days belong to **Coming up**.
 
+Release watch and the full Wishlist now keep the control row compact: sorting is
+one native selector with Release as the fallback default (then Added and A-Z),
+while one Genre button opens an elevated game-type sheet. The genre list is built
+from the same cached IGDB metadata used by game details, shows counts for the
+current Upcoming / Out now / All saved scope, and remains selected while moving
+between those scopes. It needs no wishlist schema change and adds no permanent
+row of genre chips.
+
 The Game Pass card, its Home catalog read, and its Customize cards entry were
 removed from Home. Game Pass remains available in Discover and Shuffle; its
 catalog, sync, database recovery, and non-Home behavior are unchanged.
