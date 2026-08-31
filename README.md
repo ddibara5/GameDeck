@@ -8,7 +8,7 @@ Every 6 hours, **n8n Cloud** pulls the library and play history from the platfor
 
 A second n8n workflow enriches each game with **genre, release year, story length, and cover art from IGDB**.
 
-The **React PWA on Vercel** uses passwordless owner sign-in and reads through Supabase RLS. Its Discover tab calls an authenticated serverless function that runs **Claude (Haiku) with web search** to recommend what to play next, grounded in the games I own and my explicit ranking.
+The **React PWA on Vercel** uses owner-only email/password sign-in and reads through Supabase RLS. Its Discover tab calls an authenticated serverless function that runs **Claude (Haiku) with web search** to recommend what to play next, grounded in the games I own and my explicit ranking.
 
 ```
 Exophase API ──6h──> n8n Cloud ──> FlareSolverr (Oracle VM)  [Cloudflare cleared]

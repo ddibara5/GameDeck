@@ -1,72 +1,33 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Brand from './Brand.jsx'
 import { OWNER_EMAIL } from '../lib/supabase.js'
-import { isEmailRateLimitError, sendSignInEmail, verifyCopiedSignInLink } from '../lib/appAuth.js'
-import { isDirectPreviewSignIn } from '../lib/authRedirect.js'
+import {
+  PASSWORD_MIN_LENGTH,
+  isEmailRateLimitError,
+  sendPasswordRecoveryEmail,
+  signInWithPassword,
+  updatePassword,
+} from '../lib/appAuth.js'
 import './auth.css'
 
-export default function AuthGate() {
-  const directPreview = isDirectPreviewSignIn()
-  const [step, setStep] = useState('request')
+export default function AuthGate({ recovery = false, onRecoveryComplete }) {
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [signInLink, setSignInLink] = useState('')
-  const [cooldown, setCooldown] = useState(0)
-  const [rateLimited, setRateLimited] = useState(false)
+  const [resetSent, setResetSent] = useState(false)
   const [tone, setTone] = useState('status')
   const [message, setMessage] = useState('')
 
-  useEffect(() => {
-    if (!cooldown) return undefined
-    const timer = window.setInterval(() => {
-      setCooldown((seconds) => Math.max(0, seconds - 1))
-    }, 1000)
-    return () => window.clearInterval(timer)
-  }, [cooldown])
-
-  const requestLink = async () => {
-    setBusy(true)
-    setRateLimited(false)
-    setTone('status')
-    setMessage('')
-    let error
-    try {
-      const result = await sendSignInEmail()
-      error = result.error
-    } catch (caught) {
-      error = caught
-    } finally {
-      setBusy(false)
-    }
-    if (error) {
-      const limited = isEmailRateLimitError(error)
-      setTone('error')
-      setRateLimited(limited)
-      if (limited) setStep(directPreview ? 'waiting' : 'verify')
-      setMessage(limited
-        ? 'Email limit reached. No new link was sent. Use the latest unused email, or try again in about an hour.'
-        : (error.message || 'Could not send the sign-in link. Check your connection and try again.'))
-      return
-    }
-    setStep(directPreview ? 'waiting' : 'verify')
-    setCooldown(60)
-    setMessage(directPreview
-      ? 'Open the email and tap its sign-in button. It will return directly to this preview.'
-      : 'Long-press the sign-in button in the email to copy its link. Do not open it in Safari.')
-  }
-
-  const verifyLink = async (link) => {
-    if (!link.trim()) {
-      setTone('error')
-      setMessage('Copy the sign-in link from the email, then paste it here.')
-      return
-    }
-
+  const submitSignIn = async (event) => {
+    event.preventDefault()
+    if (!password) return
     setBusy(true)
     setTone('status')
     setMessage('Signing in…')
     let error
     try {
-      const result = await verifyCopiedSignInLink(link)
+      const result = await signInWithPassword(password)
       error = result.error
     } catch (caught) {
       error = caught
@@ -74,29 +35,66 @@ export default function AuthGate() {
     setBusy(false)
     if (error) {
       setTone('error')
-      setMessage(error.message || 'That link is invalid or expired. Request a new link and try again.')
+      setMessage('That password is incorrect. Try again or reset it below.')
     }
   }
 
-  const submitLink = (event) => {
-    event.preventDefault()
-    verifyLink(signInLink)
-  }
-
-  const pasteLink = async () => {
-    if (!navigator.clipboard?.readText) {
+  const requestReset = async () => {
+    setBusy(true)
+    setTone('status')
+    setMessage('Sending a secure password link…')
+    let error
+    try {
+      const result = await sendPasswordRecoveryEmail()
+      error = result.error
+    } catch (caught) {
+      error = caught
+    }
+    setBusy(false)
+    if (error) {
       setTone('error')
-      setMessage('Paste the copied link into the field below.')
+      setMessage(isEmailRateLimitError(error)
+        ? 'A password email was sent recently. Use the latest email or try again later.'
+        : (error.message || 'Could not send the password email. Try again.'))
       return
     }
-    try {
-      const copied = await navigator.clipboard.readText()
-      setSignInLink(copied)
-      await verifyLink(copied)
-    } catch {
+    setResetSent(true)
+    setTone('status')
+    setMessage('Check your email. The secure link will return here so you can choose a password.')
+  }
+
+  const submitPassword = async (event) => {
+    event.preventDefault()
+    if (password.length < PASSWORD_MIN_LENGTH) {
       setTone('error')
-      setMessage('Clipboard access was blocked. Paste the copied link into the field below.')
+      setMessage(`Use at least ${PASSWORD_MIN_LENGTH} characters.`)
+      return
     }
+    if (password !== confirmPassword) {
+      setTone('error')
+      setMessage('The passwords do not match.')
+      return
+    }
+
+    setBusy(true)
+    setTone('status')
+    setMessage('Saving your password…')
+    let error
+    try {
+      const result = await updatePassword(password)
+      error = result.error
+    } catch (caught) {
+      error = caught
+    }
+    setBusy(false)
+    if (error) {
+      setTone('error')
+      setMessage(error.message || 'Could not save that password. Try another one.')
+      return
+    }
+    setPassword('')
+    setConfirmPassword('')
+    onRecoveryComplete?.()
   }
 
   return (
@@ -104,54 +102,82 @@ export default function AuthGate() {
       <section className="auth-card" aria-labelledby="auth-title">
         <div className="auth-brand"><Brand /></div>
         <p className="auth-kicker">Private access</p>
-        <h1 id="auth-title">Sign in</h1>
+        <h1 id="auth-title">{recovery ? 'Set password' : 'Sign in'}</h1>
         <p className="auth-copy">
-          GameDeck is private. We’ll email a one-time sign-in link to your authorized account.
+          {recovery
+            ? `Choose the password you’ll use for GameDeck from now on.`
+            : 'Use your private GameDeck account. New accounts cannot be created.'}
         </p>
-        <p className="auth-target">Send to <strong>{OWNER_EMAIL}</strong></p>
+
         {message ? <p className={`auth-message ${tone}`} role={tone === 'error' ? 'alert' : 'status'}>{message}</p> : null}
-        {step === 'request' ? (
-          <button type="button" className="auth-button" disabled={busy || rateLimited} onClick={requestLink}>
-            {busy ? 'Sending link…' : 'Email me a sign-in link'}
-          </button>
-        ) : step === 'waiting' ? (
-          <div className="auth-form">
-            <button type="button" className="auth-button" disabled>
-              {rateLimited ? 'Use your latest email' : 'Check your email'}
-            </button>
-            <button type="button" className="auth-secondary auth-secondary-strong" onClick={() => setStep('verify')}>
-              Use a copied link instead
-            </button>
-            <button type="button" className="auth-secondary" disabled={busy || rateLimited || cooldown > 0} onClick={requestLink}>
-              {rateLimited ? 'Try sending again later' : cooldown > 0 ? `Send another link in ${cooldown}s` : 'Send another link'}
+
+        <form className="auth-form auth-password-form" onSubmit={recovery ? submitPassword : submitSignIn}>
+          <label className="auth-link-label" htmlFor="auth-email">Email</label>
+          <input
+            id="auth-email"
+            className="auth-link-input"
+            type="email"
+            value={OWNER_EMAIL}
+            autoComplete="username"
+            readOnly
+          />
+
+          <label className="auth-link-label" htmlFor="auth-password">
+            {recovery ? 'New password' : 'Password'}
+          </label>
+          <div className="auth-password-wrap">
+            <input
+              id="auth-password"
+              className="auth-link-input auth-password-input"
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              minLength={recovery ? PASSWORD_MIN_LENGTH : undefined}
+              autoComplete={recovery ? 'new-password' : 'current-password'}
+              onChange={(event) => setPassword(event.target.value)}
+              autoFocus
+              required
+            />
+            <button
+              type="button"
+              className="auth-password-toggle"
+              onClick={() => setShowPassword((shown) => !shown)}
+              aria-pressed={showPassword}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? 'Hide' : 'Show'}
             </button>
           </div>
-        ) : (
-          <form className="auth-form" onSubmit={submitLink}>
-            <button type="button" className="auth-button" disabled={busy} onClick={pasteLink}>
-              {busy ? 'Signing in…' : 'Paste copied link & sign in'}
+
+          {recovery ? (
+            <>
+              <p className="auth-password-hint">At least {PASSWORD_MIN_LENGTH} characters</p>
+              <label className="auth-link-label" htmlFor="auth-password-confirm">Confirm password</label>
+              <input
+                id="auth-password-confirm"
+                className="auth-link-input"
+                type={showPassword ? 'text' : 'password'}
+                value={confirmPassword}
+                minLength={PASSWORD_MIN_LENGTH}
+                autoComplete="new-password"
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                required
+              />
+            </>
+          ) : null}
+
+          <button type="submit" className="auth-button" disabled={busy || !password || (recovery && !confirmPassword)}>
+            {busy ? (recovery ? 'Saving…' : 'Signing in…') : (recovery ? 'Save password' : 'Sign in')}
+          </button>
+        </form>
+
+        {!recovery ? (
+          <div className="auth-recovery">
+            <button type="button" className="auth-secondary auth-secondary-strong" disabled={busy || resetSent} onClick={requestReset}>
+              {resetSent ? 'Password email sent' : 'Set or reset password'}
             </button>
-            <label className="auth-link-label" htmlFor="auth-link">Or paste the link here</label>
-            <input
-              id="auth-link"
-              className="auth-link-input"
-              type="url"
-              inputMode="url"
-              autoComplete="off"
-              enterKeyHint="go"
-              placeholder="https://…"
-              value={signInLink}
-              onChange={(event) => setSignInLink(event.target.value)}
-              spellCheck="false"
-            />
-            <button type="submit" className="auth-secondary auth-secondary-strong" disabled={busy || !signInLink.trim()}>
-              Sign in with pasted link
-            </button>
-            <button type="button" className="auth-secondary" disabled={busy || rateLimited || cooldown > 0} onClick={requestLink}>
-              {rateLimited ? 'Try sending again later' : cooldown > 0 ? `Send another link in ${cooldown}s` : 'Send another link'}
-            </button>
-          </form>
-        )}
+            <p className="auth-security-note">Only the existing owner account can receive a password link.</p>
+          </div>
+        ) : null}
       </section>
     </main>
   )

@@ -1,24 +1,32 @@
 import { useEffect, useState } from 'react'
 import { OWNER_EMAIL, supabase } from './supabase.js'
-import { parseSupabaseEmailLink } from './authLink.js'
-import { signInRedirectUrl } from './authRedirect.js'
+import { passwordRecoveryRedirectUrl } from './authRedirect.js'
+
+export const PASSWORD_MIN_LENGTH = 12
 
 export function isOwnerSession(session) {
   return session?.user?.email?.toLowerCase() === OWNER_EMAIL
 }
 
 export function useAppSession() {
-  const [state, setState] = useState({ loading: true, session: null })
+  const [state, setState] = useState({ loading: true, session: null, recovery: false })
 
   useEffect(() => {
     let alive = true
     supabase.auth.getSession().then(({ data, error }) => {
       if (!alive) return
       if (error) console.error('GameDeck auth session read failed', error)
-      setState({ loading: false, session: isOwnerSession(data?.session) ? data.session : null })
+      const session = isOwnerSession(data?.session) ? data.session : null
+      setState({ loading: false, session, recovery: Boolean(session && isPasswordRecoveryLocation()) })
     })
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (alive) setState({ loading: false, session: isOwnerSession(session) ? session : null })
+    const { data: listener } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (!alive) return
+      const session = isOwnerSession(nextSession) ? nextSession : null
+      setState((current) => ({
+        loading: false,
+        session,
+        recovery: Boolean(session && (event === 'PASSWORD_RECOVERY' || current.recovery)),
+      }))
     })
     return () => {
       alive = false
@@ -26,21 +34,43 @@ export function useAppSession() {
     }
   }, [])
 
-  return state
+  const finishRecovery = () => {
+    try {
+      window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}`)
+    } catch {
+      /* URL cleanup is cosmetic; the updated session is already valid */
+    }
+    setState((current) => ({ ...current, recovery: false }))
+  }
+
+  return { ...state, finishRecovery }
 }
 
-export function sendSignInEmail() {
-  return supabase.auth.signInWithOtp({
+function isPasswordRecoveryLocation() {
+  try {
+    const query = new URLSearchParams(window.location.search)
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+    return query.get('type') === 'recovery' || hash.get('type') === 'recovery'
+  } catch {
+    return false
+  }
+}
+
+export function signInWithPassword(password) {
+  return supabase.auth.signInWithPassword({
     email: OWNER_EMAIL,
-    options: {
-      shouldCreateUser: false,
-      emailRedirectTo: signInRedirectUrl(),
-    },
+    password,
   })
 }
 
-export function verifyCopiedSignInLink(link) {
-  return supabase.auth.verifyOtp(parseSupabaseEmailLink(link))
+export function sendPasswordRecoveryEmail() {
+  return supabase.auth.resetPasswordForEmail(OWNER_EMAIL, {
+    redirectTo: passwordRecoveryRedirectUrl(),
+  })
+}
+
+export function updatePassword(password) {
+  return supabase.auth.updateUser({ password })
 }
 
 export function isEmailRateLimitError(error) {

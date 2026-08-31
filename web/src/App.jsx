@@ -77,8 +77,9 @@ const CLOSE_DX = 60
 const VIEW_EXIT_MS = 220
 
 export default function App() {
-  const { loading, session } = useAppSession()
+  const { loading, session, recovery, finishRecovery } = useAppSession()
   if (loading) return <div className="auth-loading" role="status">Opening GameDeck…</div>
+  if (recovery) return <AuthGate recovery onRecoveryComplete={finishRecovery} />
   if (!session) return <AuthGate />
   return <AppErrorBoundary><GameDeckApp /></AppErrorBoundary>
 }

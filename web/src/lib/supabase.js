@@ -30,7 +30,7 @@ async function authFetchWithTimeout(input, init = {}) {
 }
 
 // Only the two Supabase subsystems GameDeck actually uses are instantiated.
-// This preserves the small, stable vendor chunk while adding passwordless auth;
+// This preserves the small, stable vendor chunk while adding owner-only password auth;
 // the full client also eagerly includes realtime, storage, and edge functions.
 const auth = new GoTrueClient({
   url: `${baseUrl}/auth/v1`,

@@ -5,7 +5,7 @@ const PRODUCTION_ORIGIN = 'https://gamedeck-kappa.vercel.app'
 const GAMEDECK_PREVIEW_HOST = /^gamedeck-git-[a-z0-9-]+-dave-0d82\.vercel\.app$/i
 const SHARE_TOKEN = /^[A-Za-z0-9_-]{16,128}$/
 
-export function isDirectPreviewSignIn(href = window.location.href) {
+export function isTrustedPreview(href = window.location.href) {
   try {
     const url = new URL(href)
     return url.protocol === 'https:' && GAMEDECK_PREVIEW_HOST.test(url.hostname)
@@ -14,8 +14,8 @@ export function isDirectPreviewSignIn(href = window.location.href) {
   }
 }
 
-export function signInRedirectUrl(href = window.location.href) {
-  if (!isDirectPreviewSignIn(href)) return PRODUCTION_ORIGIN
+export function passwordRecoveryRedirectUrl(href = window.location.href) {
+  if (!isTrustedPreview(href)) return PRODUCTION_ORIGIN
   const current = new URL(href)
   const redirect = new URL('/', current.origin)
   // Keep the short-lived Vercel share grant so the email can reopen a protected

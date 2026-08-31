@@ -11,17 +11,20 @@ test('preview auth has public configuration and a bounded request path', async (
   assert.match(source, /fetch: authFetchWithTimeout/)
 })
 
-test('magic-link requests recover and route trusted GameDeck previews directly', async () => {
+test('password auth uses a fixed owner and routes recovery back to trusted previews', async () => {
   const [gate, auth] = await Promise.all([
     readFile(new URL('../src/components/AuthGate.jsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/lib/appAuth.js', import.meta.url), 'utf8'),
   ])
 
-  assert.match(gate, /try \{[\s\S]*sendSignInEmail\(\)[\s\S]*catch \(caught\)[\s\S]*finally \{[\s\S]*setBusy\(false\)/)
-  assert.match(gate, /It will return directly to this preview/)
-  assert.match(gate, /Email limit reached\. No new link was sent\./)
-  assert.match(gate, /setRateLimited\(limited\)/)
-  assert.ok(gate.indexOf('auth-message') < gate.indexOf("step === 'request'"))
-  assert.match(auth, /signInRedirectUrl/)
-  assert.match(auth, /emailRedirectTo: signInRedirectUrl\(\)/)
+  assert.match(gate, /type="email"[\s\S]*value=\{OWNER_EMAIL\}[\s\S]*readOnly/)
+  assert.match(gate, /autoComplete=\{recovery \? 'new-password' : 'current-password'\}/)
+  assert.match(gate, /Set or reset password/)
+  assert.match(gate, /New accounts cannot be created/)
+  assert.match(auth, /signInWithPassword\(\{[\s\S]*email: OWNER_EMAIL,[\s\S]*password/)
+  assert.match(auth, /resetPasswordForEmail\(OWNER_EMAIL/)
+  assert.match(auth, /redirectTo: passwordRecoveryRedirectUrl\(\)/)
+  assert.match(auth, /updateUser\(\{ password \}\)/)
+  assert.match(auth, /event === 'PASSWORD_RECOVERY'/)
+  assert.doesNotMatch(auth, /signInWithOtp|signUp\(/)
 })
