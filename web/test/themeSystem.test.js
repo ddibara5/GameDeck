@@ -70,3 +70,15 @@ test('legacy accents migrate and retired background state is removed', () => {
     globalThis.localStorage = priorStorage
   }
 })
+
+test('ranking numbers and tier badges inherit each visual family', () => {
+  const css = readFileSync(new URL('../src/components/rankings.css', import.meta.url), 'utf8')
+
+  for (const token of ['--amber', '--accent', '--walnut-light', '--muted', '--font-display', '--font-label']) {
+    assert.match(css, new RegExp(`var\\(${token}\\)`))
+  }
+  for (const family of ['obsidian', 'neon', 'blueprint', 'cartridge']) {
+    assert.match(css, new RegExp(`data-theme-family=["']${family}["']`))
+  }
+  assert.doesNotMatch(css, /#d99a2b|#6f8dc8|#718b53|#9b725f/)
+})

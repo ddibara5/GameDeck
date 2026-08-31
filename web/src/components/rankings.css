@@ -136,6 +136,7 @@
 .rank-place {
   width: 36px;
   color: var(--muted);
+  font-family: var(--font-display);
   font-size: var(--t-t1);
   font-variant-numeric: tabular-nums;
   font-weight: var(--w-bold);
@@ -145,13 +146,13 @@
 }
 
 .rank-place.tier-s,
-.rank-tier.tier-s { --rank-tier-color: #d99a2b; }
+.rank-tier.tier-s { --rank-tier-color: var(--amber); }
 .rank-place.tier-a,
-.rank-tier.tier-a { --rank-tier-color: #6f8dc8; }
+.rank-tier.tier-a { --rank-tier-color: var(--accent); }
 .rank-place.tier-b,
-.rank-tier.tier-b { --rank-tier-color: #718b53; }
+.rank-tier.tier-b { --rank-tier-color: var(--walnut-light); }
 .rank-place.tier-c,
-.rank-tier.tier-c { --rank-tier-color: #9b725f; }
+.rank-tier.tier-c { --rank-tier-color: var(--muted); }
 
 .rank-place[class*="tier-"],
 .rank-tier[class*="tier-"] {
@@ -187,14 +188,39 @@
   flex: 0 0 auto;
   padding: 3px 7px;
   border: 1px solid color-mix(in oklab, var(--rank-tier-color) 36%, transparent);
-  border-radius: var(--r-pill);
+  border-radius: var(--r-sm);
   background: color-mix(in oklab, var(--rank-tier-color) 13%, transparent);
+  font-family: var(--font-label);
   font-size: var(--t-cap2);
   font-weight: var(--w-bold);
   letter-spacing: 0.045em;
   line-height: 1.2;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+/* Ranking hierarchy belongs to the active visual family rather than carrying
+   one fixed amber/blue/green palette across every theme. The shared tier colors
+   above come from each family's semantic ramp; these restrained material cues
+   complete the voice without changing the compact row layout. */
+:root[data-theme-family="obsidian"] .rank-tier {
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 18%, transparent);
+}
+
+:root[data-theme-family="neon"] .rank-tier {
+  box-shadow: 0 0 10px color-mix(in oklab, var(--rank-tier-color) 24%, transparent);
+}
+
+:root[data-theme-family="neon"] .rank-place {
+  text-shadow: 0 0 14px color-mix(in oklab, var(--rank-tier-color) 28%, transparent);
+}
+
+:root[data-theme-family="blueprint"] .rank-tier {
+  border-style: dashed;
+}
+
+:root[data-theme-family="cartridge"] .rank-tier {
+  box-shadow: 1px 1px 0 color-mix(in oklab, var(--rank-tier-color) 28%, var(--bg));
 }
 
 .rank-summary {
