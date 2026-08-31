@@ -2,8 +2,7 @@ import { dayKey, daysBetween, eventDay, startOfDay, weekStats } from './playWeek
 
 export const INSIGHT_WEEK_DAYS = 7
 export const INSIGHT_MONTH_DAYS = 30
-export const INSIGHT_GENRE_DAYS = 90
-export const INSIGHT_QUERY_DAYS = Math.max(INSIGHT_MONTH_DAYS * 2, INSIGHT_GENRE_DAYS)
+export const INSIGHT_QUERY_DAYS = INSIGHT_MONTH_DAYS * 2
 
 const num = (value) => Number(value) || 0
 
@@ -119,7 +118,7 @@ export function periodInsights(rows, now = new Date(), span = INSIGHT_WEEK_DAYS,
 // One primary genre per library game keeps the pie mutually exclusive. The top
 // four remain named and the long tail (plus missing genres) rolls into Other, so
 // the mobile legend stays readable and every slice still sums to the period.
-export function genreInsights(rows, games, now = new Date(), span = INSIGHT_GENRE_DAYS, namedLimit = 4) {
+export function genreInsights(rows, games, now = new Date(), span = INSIGHT_MONTH_DAYS, namedLimit = 4) {
   const genreByGame = new Map(
     (games || []).map((game) => [String(game.master_id), String(game.genre || '').trim() || 'Other']),
   )

@@ -20,7 +20,7 @@ export const CARD_CATALOG = [
   { key: 'week_chart', group: 'recent', label: 'Play overview', sub: '7- or 30-day total, chart and comparison' },
   { key: 'week_games', group: 'recent', label: 'Where your time went', sub: 'Share, progress and achievements by game' },
   { key: 'momentum', group: 'recent', label: 'Recent momentum', sub: 'Progress, rotation, finishes and longest run' },
-  { key: 'genres', group: 'recent', label: 'Genres lately', sub: '90-day share of playtime by primary genre' },
+  { key: 'genres', group: 'recent', label: 'Genres lately', sub: 'Selected-period share of playtime by primary genre' },
 ]
 
 export const CARD_BY_KEY = CARD_CATALOG.reduce((m, c) => ((m[c.key] = c), m), {})

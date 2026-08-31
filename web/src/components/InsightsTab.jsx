@@ -15,7 +15,6 @@ import { bars, compactHm, daysBetween, startOfDay } from '../lib/playWeek.js'
 import {
   comparisonAvailableOn,
   genreInsights,
-  INSIGHT_GENRE_DAYS,
   INSIGHT_MONTH_DAYS,
   INSIGHT_QUERY_DAYS,
   INSIGHT_WEEK_DAYS,
@@ -188,15 +187,12 @@ function genreGradient(genres) {
   }).join(', ')})`
 }
 
-function GenresLately({ genres, firstRecorded }) {
+function GenresLately({ genres, span }) {
   const lead = genres[0]
   const label = genres.map((genre) => `${genre.genre} ${Math.round(genre.share * 100)} percent`).join(', ')
-  const coverage = firstRecorded && daysBetween(new Date(), firstRecorded) < INSIGHT_GENRE_DAYS - 1
-    ? `Since ${firstRecorded.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
-    : `Last ${INSIGHT_GENRE_DAYS} days`
   return (
     <section className="chart-card genre-card">
-      <div className="ins-card-head"><h2 className="chart-title">Genres lately</h2><span>{coverage}</span></div>
+      <div className="ins-card-head"><h2 className="chart-title">Genres lately</h2><span>Last {span} days</span></div>
       <p className="genre-sub">Share of playtime by primary genre</p>
       {genres.length ? (
         <>
@@ -253,7 +249,7 @@ export default function InsightsTab() {
   const gamesById = useMemo(() => new Map(games.map((game) => [String(game.master_id), game])), [games])
   const insight = useMemo(() => periodInsights(events, new Date(), span, activityStart), [events, span, activityStart])
   const month = useMemo(() => periodInsights(events, new Date(), INSIGHT_MONTH_DAYS, activityStart), [events, activityStart])
-  const genres = useMemo(() => genreInsights(events, games, new Date()), [events, games])
+  const genres = useMemo(() => genreInsights(events, games, new Date(), span), [events, games, span])
 
   if (loading) {
     return <div><Skeleton count={4} /></div>
@@ -263,7 +259,7 @@ export default function InsightsTab() {
     week_chart: () => <PeriodSummary insight={insight} firstRecorded={activityStart} key="week_chart" />,
     week_games: () => <TimeSplit insight={insight} gamesById={gamesById} onOpenGame={setSelected} key="week_games" />,
     momentum: () => <Momentum insight={month} firstRecorded={activityStart} key="momentum" />,
-    genres: () => <GenresLately genres={genres} firstRecorded={activityStart} key="genres" />,
+    genres: () => <GenresLately genres={genres} span={span} key="genres" />,
   }
   const rendered = cards.order.filter((key) => cards.enabled[key] && renderers[key]).map((key) => renderers[key]())
 

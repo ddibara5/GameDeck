@@ -75,6 +75,20 @@ test('genre insights use playtime share and roll the long tail into Other', () =
   assert.equal(result.reduce((sum, genre) => sum + genre.share, 0), 1)
 })
 
+test('genre insights follow the selected 7- or 30-day period', () => {
+  const games = [
+    { master_id: 1, genre: 'Strategy' },
+    { master_id: 2, genre: 'Action' },
+  ]
+  const rows = [
+    row({ master_id: 1, event_date: day(10), minutes_delta: 120 }),
+    row({ master_id: 2, event_date: day(2), minutes_delta: 60 }),
+  ]
+
+  assert.deepEqual(genreInsights(rows, games, NOW, 7).map((genre) => genre.genre), ['Action'])
+  assert.deepEqual(genreInsights(rows, games, NOW, 30).map((genre) => genre.genre), ['Strategy', 'Action'])
+})
+
 test('comparison waits for two fully covered periods', () => {
   const first = new Date(2026, 7, 8)
   const available = comparisonAvailableOn(first, 30)
