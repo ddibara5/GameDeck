@@ -1,79 +1,175 @@
-// Theme preference controller. Stores the user's choice ('dark' | 'light' |
-// 'system') and applies the resolved theme by setting data-theme on <html>.
-// The actual colors live in index.css under :root and :root[data-theme="light"].
+// GameDeck appearance preferences. A visual theme owns the whole art direction
+// while light/dark and accessibility preferences remain user controls.
 
-const KEY = 'gamedeck_theme_v1'
-const VALID = new Set(['dark', 'light', 'system'])
-
-// Color theme (accent + tuned neutrals), independent of light/dark. Applied by
-// setting data-accent on <html>; palettes live in index.css. Walnut is default.
-const ACCENT_KEY = 'gamedeck_accent_v1'
-const ACCENTS = new Set(['walnut', 'slate', 'sage', 'plum', 'graphite'])
-
-// In-app brand treatment. This is intentionally separate from the installed
-// PWA icon, which iOS caches and cannot switch reliably at runtime.
+const MODE_KEY = 'gamedeck_theme_v1'
+const FAMILY_KEY = 'gamedeck_visual_theme_v2'
+const LEGACY_ACCENT_KEY = 'gamedeck_accent_v1'
 const LOGO_STYLE_KEY = 'gamedeck_logo_style_v1'
-const LOGO_STYLES = new Set(['classic', 'glass'])
+const MOTION_KEY = 'gamedeck_motion_v1'
+const CONTRAST_KEY = 'gamedeck_contrast_v1'
+const TRANSPARENCY_KEY = 'gamedeck_transparency_v1'
+
+const MODES = new Set(['dark', 'light', 'system'])
+const FAMILIES = new Set(['curator', 'obsidian', 'neon', 'blueprint', 'cartridge'])
+const LOGO_STYLES = new Set(['theme', 'classic', 'glass'])
+const DISPLAY_VALUES = new Set(['system', 'standard', 'reduced'])
+const CONTRAST_VALUES = new Set(['system', 'standard', 'high'])
+
+const LEGACY_FAMILY_MAP = {
+  walnut: 'curator',
+  slate: 'obsidian',
+  graphite: 'obsidian',
+  sage: 'blueprint',
+  plum: 'neon',
+}
+
+const RETIRED_GROUND_KEYS = [
+  'gamedeck_ground_v1',
+  'gamedeck_ground_pin_v1',
+  'gamedeck_ground_intensity_v1',
+  'gamedeck_ground_paint_v1',
+  'gamedeck_accent_art_v1',
+]
+
+export const THEME_FAMILIES = [
+  {
+    key: 'curator', label: 'Curator', eyebrow: 'Editorial archive',
+    description: 'Warm paper, walnut details, bookish type and restrained movement.',
+    dark: ['#18130e', '#251d16', '#d8aa62'], light: ['#f1e8d8', '#fbf6ed', '#8a5d25'],
+  },
+  {
+    key: 'obsidian', label: 'Obsidian Glass', eyebrow: 'Premium cinematic',
+    description: 'Prismatic glass, soft depth and deliberate gallery-like pacing.',
+    dark: ['#0a0b0f', '#171923', '#82a3ff'], light: ['#edf1f8', '#f9fbff', '#3f61bd'],
+  },
+  {
+    key: 'neon', label: 'Neon Cabinet', eyebrow: 'Arcade energy',
+    description: 'Electric cyan and magenta, crisp corners and responsive snap.',
+    dark: ['#080b12', '#111725', '#00e6c7'], light: ['#eef2f3', '#fbfdfe', '#00756e'],
+  },
+  {
+    key: 'blueprint', label: 'Blueprint', eyebrow: 'Analytical studio',
+    description: 'Technical grid, precise metrics and calm information density.',
+    dark: ['#07182c', '#0d2742', '#5cc8ff'], light: ['#e7f1f7', '#f7fbfe', '#12678e'],
+  },
+  {
+    key: 'cartridge', label: 'Cartridge', eyebrow: 'Tactile retro',
+    description: 'Printed labels, hard shadows, warm plastic and pixel-era wit.',
+    dark: ['#1c1a16', '#29251e', '#ff7542'], light: ['#e9e1c8', '#f8f2df', '#aa3516'],
+  },
+]
+
+function read(key) {
+  try { return localStorage.getItem(key) } catch { return null }
+}
+
+function write(key, value) {
+  try { localStorage.setItem(key, value) } catch { /* session-only preference */ }
+}
+
+function remove(key) {
+  try { localStorage.removeItem(key) } catch { /* storage unavailable */ }
+}
+
+const root = () => document.documentElement
+
+function cleanupRetiredAppearance() {
+  RETIRED_GROUND_KEYS.forEach(remove)
+  if (typeof document === 'undefined') return
+  const el = root()
+  for (const attr of ['data-accent', 'data-ground', 'data-ground-art', 'data-accent-art']) el.removeAttribute(attr)
+  for (const property of ['--ground-src', '--ground-veil-a']) el.style.removeProperty(property)
+}
+
+function updateThemeColor() {
+  if (typeof document === 'undefined' || typeof getComputedStyle !== 'function') return
+  const meta = document.querySelector('meta[name="theme-color"]')
+  const color = getComputedStyle(root()).getPropertyValue('--bg').trim()
+  if (meta && color) meta.setAttribute('content', color)
+}
+
+export function getTheme() {
+  const value = read(MODE_KEY)
+  return MODES.has(value) ? value : 'dark'
+}
+
+export function resolveTheme(pref) {
+  const value = pref || getTheme()
+  if (value === 'system') return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+  return value === 'light' ? 'light' : 'dark'
+}
+
+export function applyTheme(pref) {
+  root().setAttribute('data-theme', resolveTheme(pref))
+  updateThemeColor()
+}
+
+export function setTheme(pref) {
+  const next = MODES.has(pref) ? pref : 'dark'
+  write(MODE_KEY, next)
+  applyTheme(next)
+  return next
+}
+
+export function getThemeFamily() {
+  const saved = read(FAMILY_KEY)
+  if (FAMILIES.has(saved)) return saved
+  const migrated = LEGACY_FAMILY_MAP[read(LEGACY_ACCENT_KEY)] || 'curator'
+  write(FAMILY_KEY, migrated)
+  remove(LEGACY_ACCENT_KEY)
+  return migrated
+}
+
+export function applyThemeFamily(value) {
+  const next = FAMILIES.has(value) ? value : 'curator'
+  cleanupRetiredAppearance()
+  root().setAttribute('data-theme-family', next)
+  updateThemeColor()
+  return next
+}
+
+export function setThemeFamily(value) {
+  const next = FAMILIES.has(value) ? value : 'curator'
+  write(FAMILY_KEY, next)
+  return applyThemeFamily(next)
+}
 
 export function getLogoStyle() {
-  try {
-    const value = localStorage.getItem(LOGO_STYLE_KEY)
-    return LOGO_STYLES.has(value) ? value : 'classic'
-  } catch {
-    return 'classic'
-  }
+  const value = read(LOGO_STYLE_KEY)
+  return LOGO_STYLES.has(value) ? value : 'theme'
 }
 
 export function applyLogoStyle(value) {
-  const next = LOGO_STYLES.has(value) ? value : 'classic'
-  document.documentElement.setAttribute('data-logo-style', next)
+  const next = LOGO_STYLES.has(value) ? value : 'theme'
+  root().setAttribute('data-logo-style', next)
   return next
 }
 
 export function setLogoStyle(value) {
-  const next = LOGO_STYLES.has(value) ? value : 'classic'
-  try {
-    localStorage.setItem(LOGO_STYLE_KEY, next)
-  } catch {
-    /* storage unavailable - preference just won't persist */
-  }
-  applyLogoStyle(next)
+  const next = LOGO_STYLES.has(value) ? value : 'theme'
+  write(LOGO_STYLE_KEY, next)
+  return applyLogoStyle(next)
+}
+
+function getPreference(key, allowed, fallback = 'system') {
+  const value = read(key)
+  return allowed.has(value) ? value : fallback
+}
+
+function setPreference(key, attribute, allowed, value, fallback = 'system') {
+  const next = allowed.has(value) ? value : fallback
+  write(key, next)
+  root().setAttribute(attribute, next)
   return next
 }
 
-export function getAccent() {
-  try {
-    const v = localStorage.getItem(ACCENT_KEY)
-    return ACCENTS.has(v) ? v : 'walnut'
-  } catch {
-    return 'walnut'
-  }
-}
+export const getMotion = () => getPreference(MOTION_KEY, DISPLAY_VALUES)
+export const setMotion = (value) => setPreference(MOTION_KEY, 'data-motion', DISPLAY_VALUES, value)
+export const getContrast = () => getPreference(CONTRAST_KEY, CONTRAST_VALUES)
+export const setContrast = (value) => setPreference(CONTRAST_KEY, 'data-contrast', CONTRAST_VALUES, value)
+export const getTransparency = () => getPreference(TRANSPARENCY_KEY, DISPLAY_VALUES)
+export const setTransparency = (value) => setPreference(TRANSPARENCY_KEY, 'data-transparency', DISPLAY_VALUES, value)
 
-export function applyAccent(name) {
-  const a = ACCENTS.has(name) ? name : 'walnut'
-  document.documentElement.setAttribute('data-accent', a)
-}
-
-export function setAccent(name) {
-  const a = ACCENTS.has(name) ? name : 'walnut'
-  try {
-    localStorage.setItem(ACCENT_KEY, a)
-  } catch {
-    /* storage unavailable - preference just won't persist */
-  }
-  applyAccent(a)
-  return a
-}
-
-// One artwork scale for every repeatable game-card surface. The two preferences
-// this replaces split horizontal shelves from list rows, which is why changing
-// Settings only affected part of the app. A single data-artwork attribute now
-// drives the semantic cover tokens in cardSize.css.
-//
-// The legacy keys are read only when the new preference does not exist. Taking
-// the larger of the two preserves the user's most spacious existing choice and
-// avoids shrinking one of their views during migration.
 const ARTWORK_KEY = 'gamedeck_artwork_size_v1'
 const SHELF_KEY = 'gamedeck_shelf_size_v1'
 const LIST_KEY = 'gamedeck_list_size_v1'
@@ -83,83 +179,38 @@ const LIST_RANK = { compact: 0, comfortable: 1, large: 2 }
 const SIZE_BY_RANK = ['s', 'm', 'l']
 
 export function getArtworkSize() {
-  try {
-    const saved = localStorage.getItem(ARTWORK_KEY)
-    if (ARTWORK_SIZES.has(saved)) return saved
-
-    const shelf = localStorage.getItem(SHELF_KEY)
-    const list = localStorage.getItem(LIST_KEY)
-    const migrated = SIZE_BY_RANK[Math.max(SHELF_RANK[shelf] ?? 1, LIST_RANK[list] ?? 1)]
-    localStorage.setItem(ARTWORK_KEY, migrated)
-    return migrated
-  } catch {
-    return 'm'
-  }
+  const saved = read(ARTWORK_KEY)
+  if (ARTWORK_SIZES.has(saved)) return saved
+  const migrated = SIZE_BY_RANK[Math.max(SHELF_RANK[read(SHELF_KEY)] ?? 1, LIST_RANK[read(LIST_KEY)] ?? 1)]
+  write(ARTWORK_KEY, migrated)
+  return migrated
 }
 
-export function applyArtworkSize(v) {
-  const size = ARTWORK_SIZES.has(v) ? v : 'm'
-  document.documentElement.setAttribute('data-artwork', size)
-  return size
+export function applyArtworkSize(value) {
+  const next = ARTWORK_SIZES.has(value) ? value : 'm'
+  root().setAttribute('data-artwork', next)
+  return next
 }
 
-export function setArtworkSize(v) {
-  const size = ARTWORK_SIZES.has(v) ? v : 'm'
-  try {
-    localStorage.setItem(ARTWORK_KEY, size)
-  } catch {
-    /* storage unavailable - preference just won't persist */
-  }
-  return applyArtworkSize(size)
+export function setArtworkSize(value) {
+  const next = ARTWORK_SIZES.has(value) ? value : 'm'
+  write(ARTWORK_KEY, next)
+  return applyArtworkSize(next)
 }
 
-export function getTheme() {
-  try {
-    const v = localStorage.getItem(KEY)
-    return VALID.has(v) ? v : 'dark'
-  } catch {
-    return 'dark'
-  }
-}
-
-// Resolve a preference to a concrete theme ('dark' | 'light').
-export function resolveTheme(pref) {
-  const p = pref || getTheme()
-  if (p === 'system') {
-    return window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
-  }
-  return p === 'light' ? 'light' : 'dark'
-}
-
-export function applyTheme(pref) {
-  document.documentElement.setAttribute('data-theme', resolveTheme(pref))
-}
-
-export function setTheme(pref) {
-  const p = VALID.has(pref) ? pref : 'dark'
-  try {
-    localStorage.setItem(KEY, p)
-  } catch {
-    /* storage unavailable - preference just won't persist */
-  }
-  applyTheme(p)
-  return p
-}
-
-// Apply on startup and keep 'system' in sync with OS appearance changes.
 export function initTheme() {
   applyTheme(getTheme())
-  applyAccent(getAccent())
+  applyThemeFamily(getThemeFamily())
   applyLogoStyle(getLogoStyle())
   applyArtworkSize(getArtworkSize())
+  root().setAttribute('data-motion', getMotion())
+  root().setAttribute('data-contrast', getContrast())
+  root().setAttribute('data-transparency', getTransparency())
+
   try {
     const mq = window.matchMedia('(prefers-color-scheme: light)')
-    const onChange = () => {
-      if (getTheme() === 'system') applyTheme('system')
-    }
+    const onChange = () => { if (getTheme() === 'system') applyTheme('system') }
     if (mq.addEventListener) mq.addEventListener('change', onChange)
     else if (mq.addListener) mq.addListener(onChange)
-  } catch {
-    /* matchMedia unavailable - system option just won't live-update */
-  }
+  } catch { /* System simply keeps its startup resolution */ }
 }

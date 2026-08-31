@@ -4,18 +4,20 @@ import { authFetch, signOut } from '../lib/appAuth.js'
 import {
   getTheme,
   setTheme,
-  getAccent,
-  setAccent,
+  THEME_FAMILIES,
+  getThemeFamily,
+  setThemeFamily,
   getLogoStyle,
   setLogoStyle,
   getArtworkSize,
   setArtworkSize,
+  getMotion,
+  setMotion,
+  getContrast,
+  setContrast,
+  getTransparency,
+  setTransparency,
 } from '../lib/theme.js'
-import {
-  getGround,
-  setGround,
-  GROUND_OPTIONS,
-} from '../lib/ground.js'
 import { useMountTransition } from '../lib/useMountTransition.js'
 import { lockScroll } from '../lib/scrollLock.js'
 import { MenuItem, ICONS, relTime } from './menuUI.jsx'
@@ -41,29 +43,14 @@ const ACTIVE_CHAT_KEY = 'gamedeck_active_chat_v1'
 const SYNC_LOCK_KEY = 'gamedeck_sync_lock_v1'
 const LOCK_MS = 6 * 60 * 1000
 
-const THEME_OPTIONS = [
+const MODE_OPTIONS = [
   { key: 'dark', label: 'Dark' },
   { key: 'light', label: 'Light' },
   { key: 'system', label: 'System' },
 ]
 
-// Color themes. `ring` is the swatch's outer disc (a theme neutral), `dot` the
-// inner accent. Palettes live in index.css under :root[data-accent="..."].
-//
-// Each theme carries BOTH modes, because a swatch should preview the theme as it
-// will actually look right now. The single dark-only set these replaced meant
-// light mode showed a dark disc - the "dark ring" - around a pale dark-mode
-// accent that was never the colour you would get. Which pair is used is decided
-// in CSS off data-theme, not here, so "System" resolves for free.
-const ACCENT_OPTIONS = [
-  { key: 'walnut', label: 'Walnut', ring: '#232120', dot: '#c8a97e', ringLight: '#efe8dd', dotLight: '#9c7449' },
-  { key: 'slate', label: 'Slate', ring: '#1d2026', dot: '#86a0c2', ringLight: '#e7eaef', dotLight: '#4d6d95' },
-  { key: 'sage', label: 'Sage', ring: '#1e211a', dot: '#9aab83', ringLight: '#e9ebe0', dotLight: '#5e7046' },
-  { key: 'plum', label: 'Plum', ring: '#201d23', dot: '#b191b0', ringLight: '#ece6ed', dotLight: '#7c567b' },
-  { key: 'graphite', label: 'Graphite', ring: '#202124', dot: '#98a2ae', ringLight: '#e8e9ec', dotLight: '#59626f' },
-]
-
 const LOGO_STYLE_OPTIONS = [
+  { key: 'theme', label: 'Theme default', sub: 'Chosen by each theme' },
   { key: 'classic', label: 'Classic', sub: 'Clean, flat layers' },
   { key: 'glass', label: 'Glass', sub: 'Translucent depth and highlights' },
 ]
@@ -74,6 +61,24 @@ const ARTWORK_SIZE_OPTIONS = [
   { key: 'l', label: 'Large' },
 ]
 
+const MOTION_OPTIONS = [
+  { key: 'system', label: 'System' },
+  { key: 'standard', label: 'Standard' },
+  { key: 'reduced', label: 'Reduced' },
+]
+
+const CONTRAST_OPTIONS = [
+  { key: 'system', label: 'System' },
+  { key: 'standard', label: 'Standard' },
+  { key: 'high', label: 'High' },
+]
+
+const TRANSPARENCY_OPTIONS = [
+  { key: 'system', label: 'System' },
+  { key: 'standard', label: 'Standard' },
+  { key: 'reduced', label: 'Reduced' },
+]
+
 export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer }) {
   const { mounted, closing } = useMountTransition(open)
   const nav = useNavConfig()
@@ -82,10 +87,12 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
   const [sourceSync, setSourceSync] = useState({})
   const [version, setVersion] = useState(null)
   const [theme, setThemeState] = useState(() => getTheme())
-  const [accent, setAccentState] = useState(() => getAccent())
+  const [family, setFamily] = useState(() => getThemeFamily())
   const [logoStyle, setLogoStyleState] = useState(() => getLogoStyle())
   const [artworkSize, setArtworkSizeState] = useState(() => getArtworkSize())
-  const [ground, setGroundState] = useState(() => getGround())
+  const [motion, setMotionState] = useState(() => getMotion())
+  const [contrast, setContrastState] = useState(() => getContrast())
+  const [transparency, setTransparencyState] = useState(() => getTransparency())
   // The open sub-pages, outermost first. Escape and the back-swipe pop one level
   // rather than dismissing Settings, and the stack keeps that behavior uniform.
   const [stack, setStack] = useState([])
@@ -276,8 +283,8 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
     setThemeState(setTheme(pref))
   }
 
-  function changeAccent(key) {
-    setAccentState(setAccent(key))
+  function changeFamily(key) {
+    setFamily(setThemeFamily(key))
   }
 
   function changeLogoStyle(key) {
@@ -286,10 +293,6 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
 
   function changeArtworkSize(key) {
     setArtworkSizeState(setArtworkSize(key))
-  }
-
-  function changeGround(key) {
-    setGroundState(setGround(key))
   }
 
   if (!mounted) return null
@@ -302,10 +305,13 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
   // "what is my theme" without opening anything. That is the whole reason these
   // three moved behind rows instead of staying a wall of controls: a sub-page you
   // have to open to read is worse than the wall it replaced.
-  const themeValue = `${labelOf(THEME_OPTIONS, theme)} · ${labelOf(ACCENT_OPTIONS, accent)}`
+  const familyValue = labelOf(THEME_FAMILIES, family)
+  const themeValue = `${familyValue} · ${labelOf(MODE_OPTIONS, theme)}`
   const logoStyleValue = labelOf(LOGO_STYLE_OPTIONS, logoStyle)
   const artworkValue = labelOf(ARTWORK_SIZE_OPTIONS, artworkSize)
-  const groundValue = labelOf(GROUND_OPTIONS, ground)
+  const displayValue = [motion, contrast, transparency].every((value) => value === 'system')
+    ? 'Follow System'
+    : 'Customized'
   // The oldest of the four sync stamps, because the question this section answers
   // is "is anything stale", and the answer to that is never the freshest one.
   const syncStamps = [...DIRECT_SOURCES.map((s2) => sourceSync[s2.key]), fallbackSync].filter(Boolean)
@@ -329,10 +335,13 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
         <div className="settings-section">
           <div className="menu-sec-label">Appearance</div>
           <div className="settings-group">
-            <MenuItem glyph={ICONS.appear} label="Theme" sub="Light or dark, and the color" value={themeValue} onClick={() => push('theme')} />
-            <MenuItem glyph={ICONS.layers} label="Logo style" sub="The mark used inside GameDeck" value={logoStyleValue} onClick={() => push('logo')} />
-            <MenuItem glyph={ICONS.image} label="Background" sub="What sits behind every tab" value={groundValue} onClick={() => push('background')} />
-            <MenuItem glyph={ICONS.layers} label="Game artwork" sub="One cover size across every tab" value={artworkValue} onClick={() => push('cards')} />
+            <MenuItem
+              glyph={ICONS.appear}
+              label="Appearance"
+              sub="Theme, display and motion"
+              value={themeValue}
+              onClick={() => push('appearance')}
+            />
           </div>
         </div>
 
@@ -435,38 +444,67 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
         </div>
       </div>
 
-      <SubPage open={stack.includes('theme')} depth={depthOf('theme')} title="Theme" onBack={pop}>
-        <Field label="Appearance">
-          <Seg options={THEME_OPTIONS} value={theme} onPick={changeTheme} name="Appearance" />
-        </Field>
-        <Field label="Color">
-          <div className="accent-row" role="group" aria-label="Color theme">
-            {ACCENT_OPTIONS.map((opt) => (
-              <button
-                key={opt.key}
-                type="button"
-                className={`accent-opt${accent === opt.key ? ' on' : ''}`}
-                onClick={() => changeAccent(opt.key)}
-                aria-pressed={accent === opt.key}
-                title={opt.label}
-              >
-                <span
-                  className="accent-dot"
-                  style={{
-                    '--sw-ring': opt.ring,
-                    '--sw-dot': opt.dot,
-                    '--sw-ring-l': opt.ringLight,
-                    '--sw-dot-l': opt.dotLight,
-                  }}
-                >
-                  <i />
-                </span>
-                <span className="accent-name">{opt.label}</span>
-              </button>
-            ))}
-          </div>
-        </Field>
+      <SubPage open={stack.includes('appearance')} depth={depthOf('appearance')} title="Appearance" onBack={pop}>
+        <div className="settings-group">
+          <MenuItem glyph={ICONS.appear} label="Theme" sub="The complete visual language" value={familyValue} onClick={() => push('themes')} />
+          <MenuItem glyph={ICONS.spark} label="Light & dark" sub="Choose a mode or follow your device" value={labelOf(MODE_OPTIONS, theme)} onClick={() => push('mode')} />
+          <MenuItem glyph={ICONS.eye} label="Display & motion" sub="Motion, contrast and transparency" value={displayValue} onClick={() => push('display')} />
+          <MenuItem glyph={ICONS.layers} label="Logo style" sub="The mark used inside GameDeck" value={logoStyleValue} onClick={() => push('logo')} />
+          <MenuItem glyph={ICONS.image} label="Game artwork" sub="One cover size across every tab" value={artworkValue} onClick={() => push('cards')} />
+        </div>
+        <p className="settings-note">
+          A theme controls its own atmosphere, material, typography, shapes and motion. Background is no longer a separate setting.
+        </p>
+      </SubPage>
 
+      <SubPage open={stack.includes('themes')} depth={depthOf('themes')} title="Theme" onBack={pop}>
+        <div className="theme-gallery" role="radiogroup" aria-label="Visual theme">
+          {THEME_FAMILIES.map((opt) => (
+            <button
+              key={opt.key}
+              type="button"
+              className={`theme-card theme-card-${opt.key}${family === opt.key ? ' on' : ''}`}
+              onClick={() => changeFamily(opt.key)}
+              role="radio"
+              aria-checked={family === opt.key}
+            >
+              <span className="theme-card-preview" aria-hidden="true">
+                <span className="theme-card-grid" />
+                <span className="theme-card-panel" />
+                <span className="theme-card-chip" />
+              </span>
+              <span className="theme-card-copy">
+                <span className="theme-card-eyebrow">{opt.eyebrow}</span>
+                <b>{opt.label}</b>
+                <span>{opt.description}</span>
+              </span>
+              <span className="theme-palette" aria-hidden="true">
+                {(theme === 'light' ? opt.light : opt.dark).map((color) => (
+                  <i key={color} style={{ background: color }} />
+                ))}
+              </span>
+              <span className="theme-card-check" aria-hidden="true">✓</span>
+            </button>
+          ))}
+        </div>
+      </SubPage>
+
+      <SubPage open={stack.includes('mode')} depth={depthOf('mode')} title="Light & dark" onBack={pop}>
+        <Field label="Appearance mode" hint="System follows your device and updates automatically.">
+          <Seg options={MODE_OPTIONS} value={theme} onPick={changeTheme} name="Light and dark mode" />
+        </Field>
+      </SubPage>
+
+      <SubPage open={stack.includes('display')} depth={depthOf('display')} title="Display & motion" onBack={pop}>
+        <Field label="Motion" hint="Reduced removes decorative movement and shortens transitions.">
+          <Seg options={MOTION_OPTIONS} value={motion} onPick={(key) => setMotionState(setMotion(key))} name="Motion" />
+        </Field>
+        <Field label="Contrast" hint="High strengthens text, dividers and control boundaries.">
+          <Seg options={CONTRAST_OPTIONS} value={contrast} onPick={(key) => setContrastState(setContrast(key))} name="Contrast" />
+        </Field>
+        <Field label="Transparency" hint="Reduced replaces glass with opaque surfaces.">
+          <Seg options={TRANSPARENCY_OPTIONS} value={transparency} onPick={(key) => setTransparencyState(setTransparency(key))} name="Transparency" />
+        </Field>
       </SubPage>
 
       <SubPage open={stack.includes('logo')} depth={depthOf('logo')} title="Logo style" onBack={pop}>
@@ -481,7 +519,7 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
               aria-checked={logoStyle === opt.key}
             >
               <span className="logo-style-preview">
-                <LogoMark variant={opt.key} className="logo-style-mark" />
+                <LogoMark variant={opt.key === 'theme' ? undefined : opt.key} className="logo-style-mark" />
               </span>
               <span className="logo-style-copy">
                 <b>{opt.label}</b>
@@ -492,34 +530,8 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
           ))}
         </div>
         <p className="settings-note">
-          Both styles automatically use your selected color theme. This changes the logo inside
-          GameDeck; the installed Home Screen icon stays the amber glass design.
-        </p>
-      </SubPage>
-
-      {/* The page remains the full-size live preview, while the swatches make the
-          four deliberately subtle styles scannable before the user taps them. */}
-      <SubPage open={stack.includes('background')} depth={depthOf('background')} title="Background" onBack={pop}>
-        <div className="settings-group">
-          {GROUND_OPTIONS.map((opt) => (
-            <MenuItem
-              key={opt.key}
-              glyph={
-                <span className={`ground-swatch ground-swatch-${opt.key}`} aria-hidden="true">
-                  {ground === opt.key ? <span className="ground-swatch-check">✓</span> : null}
-                </span>
-              }
-              label={opt.label}
-              sub={opt.sub}
-              onClick={() => changeGround(opt.key)}
-              chevron={false}
-            />
-          ))}
-        </div>
-
-        <p className="settings-note">
-          Background colors follow your selected theme. Each preset is tuned to stay quiet behind
-          game covers, titles, and lists.
+          Theme default uses glass in Obsidian and the classic mark elsewhere. This changes the logo
+          inside GameDeck; the installed Home Screen icon stays unchanged.
         </p>
       </SubPage>
 

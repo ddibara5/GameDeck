@@ -1,15 +1,28 @@
 :root {
-  --bg: #1a1917;
-  --surface: #232120;
-  --surface-2: #2b2825;
-  --line: #38332e;
+  --bg: #18130e;
+  --surface: #251d16;
+  --surface-2: #33271d;
+  --line: #594431;
   --line-soft: color-mix(in srgb, var(--line) 72%, transparent);
-  --text: #ece7df;
-  --muted: #a89f92;
-  --walnut: #6f4e37;
-  --walnut-light: #8a6a4f;
-  --accent: #c8a97e;
-  --amber: #e0871a;
+  --text: #f4eadc;
+  --muted: #b8a793;
+  --walnut: #65462f;
+  --walnut-light: #8b684c;
+  --accent: #d8aa62;
+  --amber: #e1a84f;
+
+  /* Theme-level expressive tokens. Existing components continue to consume the
+     semantic palette and geometry below; these variables let each family also
+     change voice, material and atmosphere without forking component CSS. */
+  --font-body: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: ui-serif, Georgia, 'Times New Roman', serif;
+  --font-label: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --theme-ground:
+    radial-gradient(110% 72% at 12% -8%, rgba(139, 104, 76, 0.28), transparent 67%),
+    linear-gradient(165deg, #18130e 0%, #1d1711 54%, #17120d 100%);
+  --theme-texture: var(--grain);
+  --theme-texture-opacity: 0.75;
+  --theme-texture-size: 140px 140px;
 
   /* Brand logo isometric-stack ramp, darkest (l1) to brightest (l7).
      Recolored per theme by the :root[data-accent] blocks below. */
@@ -372,6 +385,10 @@
 .gd-logo .logo-glass { display: none; }
 :root[data-logo-style="glass"] .gd-logo:not(.logo-force-classic) .logo-classic { display: none; }
 :root[data-logo-style="glass"] .gd-logo:not(.logo-force-classic) .logo-glass { display: inline; }
+/* Theme Default is classic everywhere except Obsidian, whose material language
+   is intentionally expressed by the glass mark. Explicit choices always win. */
+:root[data-logo-style="theme"][data-theme-family="obsidian"] .gd-logo:not(.logo-force-classic) .logo-classic { display: none; }
+:root[data-logo-style="theme"][data-theme-family="obsidian"] .gd-logo:not(.logo-force-classic) .logo-glass { display: inline; }
 .gd-logo.logo-force-classic .logo-classic { display: inline; }
 .gd-logo.logo-force-classic .logo-glass { display: none; }
 .gd-logo.logo-force-glass .logo-classic { display: none; }
@@ -883,63 +900,6 @@
   padding: 8px 2px 0;
 }
 
-/* ---------- Background preset swatches ----------
-
-   The Settings page is still the full-size live preview. These small samples
-   make the deliberately subtle presets distinguishable before a tap without
-   introducing a second color picker or a thumbnail-heavy gallery. */
-.ground-swatch {
-  flex: 0 0 auto;
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  position: relative;
-  overflow: hidden;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-.ground-swatch-off {
-  background: var(--bg);
-}
-
-.ground-swatch-wash {
-  background: radial-gradient(130% 95% at 18% -10%, var(--walnut), var(--bg) 72%);
-}
-
-.ground-swatch-glow {
-  background:
-    radial-gradient(80% 75% at 8% 0%, color-mix(in oklab, var(--walnut-light) 48%, transparent), transparent 74%),
-    radial-gradient(85% 80% at 100% 100%, color-mix(in oklab, var(--accent) 30%, transparent), transparent 76%),
-    var(--bg);
-}
-
-.ground-swatch-horizon {
-  background: linear-gradient(
-    165deg,
-    color-mix(in oklab, var(--walnut) 32%, var(--bg)) 0%,
-    var(--bg) 52%,
-    color-mix(in oklab, var(--surface-2) 76%, var(--bg)) 100%
-  );
-}
-
-.ground-swatch-check {
-  position: absolute;
-  right: 3px;
-  bottom: 3px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: var(--accent);
-  color: var(--bg);
-  font-size: 11px;
-  font-weight: var(--w-bold);
-  line-height: 1;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-}
-
 /* A consistent label row above appearance controls. */
 .settings-field-hd {
   display: flex;
@@ -991,7 +951,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   /* system-ui resolves to SF on every Apple device, and SF is a variable font
@@ -999,6 +959,13 @@ body {
      free: no webfont to download, no licence, and the 20px crossover is exactly
      where the type scale above changes character. */
   font-optical-sizing: auto;
+}
+
+h1,
+h2,
+h3,
+.brand-title {
+  font-family: var(--font-display);
 }
 
 #root {
@@ -1084,96 +1051,32 @@ textarea {
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.028'/%3E%3C/svg%3E");
 }
 
-/* Full-screen overlays carry their own copy of the ground rather than letting
-   the app's show through, and their own background stays OPAQUE while doing it.
-   Making the overlay transparent instead is the version that looks right in one
-   screenshot and is wrong: with a sub-page open it was three translucent sheets
-   stacked, and the Home title read straight through the Background list. */
-
-/* BELOW the content, not above it lifted back over.
-   The first version put the two layers at z-index 0 and gave .app-main z-index 1
-   to climb back over them, which quietly made .app-main a stacking context and
-   trapped every fixed overlay rendered inside it - the Discover filter sheet
-   stopped being clickable, and three harnesses that had never touched the ground
-   failed. A negative z-index paints between the surface's own background and its
-   in-flow content, which is where a ground belongs, and then nothing else on the
-   page has to know the ground exists.
-   It needs the surface to BE a stacking context, or -1 escapes to the root and
-   lands under .app's own --bg. .settings-page already is one (fixed, z-index
-   210); .app is given one only while a ground is on, so the default flat app
-   keeps exactly the stacking it has always had. */
-/* .settings-page and .view-page are already fixed and z-indexed, so they are
-   stacking contexts and the -1 layer stays inside them. .app is not, and is
-   given one only while a ground is on. */
-:root:not([data-ground='off']) .app {
+/* Every family authors its own atmosphere. It is a fixed CSS layer so it paints
+   synchronously, works offline and never competes with cover art. Full-screen
+   pages repeat it rather than becoming translucent over the page beneath. */
+.app {
   z-index: 0;
 }
 
-:root:not([data-ground='off']) :is(.app, .settings-page, .view-page)::before {
+:is(.app, .settings-page, .view-page)::before {
   content: '';
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
+  background: var(--theme-ground);
 }
 
-/* One asymmetric bloom. This is the existing Theme wash, softened and retained
-   as the migration target for every retired artwork background. */
-:root[data-ground='wash'] :is(.app, .settings-page, .view-page)::before {
-  background: radial-gradient(
-    130% 92% at 18% -8%,
-    color-mix(in oklab, var(--walnut) 52%, var(--bg)) 0%,
-    var(--bg) 72%
-  );
-}
-
-/* Two broad color pools stay near opposite corners so the center remains calm
-   under the title and primary list content. */
-:root[data-ground='glow'] :is(.app, .settings-page, .view-page)::before {
-  background:
-    radial-gradient(
-      82% 68% at 5% -4%,
-      color-mix(in oklab, var(--walnut-light) 30%, transparent) 0%,
-      transparent 74%
-    ),
-    radial-gradient(
-      88% 74% at 104% 102%,
-      color-mix(in oklab, var(--accent) 18%, transparent) 0%,
-      transparent 76%
-    ),
-    var(--bg);
-}
-
-/* A gentle atmospheric shift rather than a visible band. The middle returns to
-   the base canvas before the lower neutral arrives, preserving list hierarchy. */
-:root[data-ground='horizon'] :is(.app, .settings-page, .view-page)::before {
-  background: linear-gradient(
-    165deg,
-    color-mix(in oklab, var(--walnut) 24%, var(--bg)) 0%,
-    var(--bg) 50%,
-    color-mix(in oklab, var(--surface-2) 70%, var(--bg)) 100%
-  );
-}
-
-/* The drawer, the menu labels, the chevrons and the caret were hardcoded walnut
-   neutrals with a second hardcoded set for light mode, so Slate, Sage, Plum and
-   Graphite changed the app and left the drawer and every menu behind. They read
-   --surface / --surface-2 / --line / --muted now, which every palette already
-   defines, so all five themes reach them and the light-mode duplicates are gone
-   rather than maintained. --muted is also BRIGHTER than the greys it replaces
-   (#a89f92 against #6f665a and #8a8073), and it is the one grey in the app whose
-   contrast is measured per theme. */
-
-/* All three gradients share the same low-cost dither layer. */
-:root:not([data-ground='off']) :is(.app, .settings-page, .view-page)::after {
+:is(.app, .settings-page, .view-page)::after {
   content: '';
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background-image: var(--grain);
+  background-image: var(--theme-texture);
   background-repeat: repeat;
-  background-size: 140px 140px;
+  background-size: var(--theme-texture-size);
+  opacity: var(--theme-texture-opacity);
 }
 
 /* Bottom bar switched off in Settings. One variable, set on the app root, so
@@ -2883,22 +2786,19 @@ textarea {
 :root[data-theme="light"] {
   color-scheme: light;
 
-  --bg: #efe8dd;
-  --surface: #f6f1e9;
-  --surface-2: #fdfaf4;
-  --line: #e3dacb;
-  --text: #2c2823;
-  /* Was #857b6d, which measured 3.70:1 against --surface: below the 4.5 floor
-     for the body text it carries, and it had been that way since light mode
-     shipped. #675f52 is 5.60:1 on the surface and 4.76:1 under the sheet's key
-     art veil, which is the tightest ground it has to hold. It is the lightest
-     value that clears 4.5 in BOTH places; #6d6456 passes the first and misses
-     the second at 4.40. Sampled from rendered pixels, worst case in the box. */
-  --muted: #675f52;
-  --walnut: #6f4e37;
-  --walnut-light: #8a6a4f;
-  --accent: #9c7449;
-  --amber: #c2700f;
+  --bg: #f1e8d8;
+  --surface: #fbf6ed;
+  --surface-2: #fffdf8;
+  --line: #d1c0a8;
+  --text: #2c251d;
+  --muted: #655b4e;
+  --walnut: #765334;
+  --walnut-light: #9b7350;
+  --accent: #8a5d25;
+  --amber: #9a5d0c;
+  --theme-ground:
+    radial-gradient(100% 70% at 10% -8%, rgba(155, 115, 80, 0.18), transparent 68%),
+    linear-gradient(165deg, #f1e8d8 0%, #f5eddf 54%, #eee3d1 100%);
   --xbox: #107c10;
   --psn: #0f3fa8;
   --steam: #2f83bd;
@@ -2908,21 +2808,6 @@ textarea {
 
 /* Hardcoded-color selectors that don't read from tokens */
 [data-theme="light"] .drawer-scrim { background: rgba(40, 34, 28, 0.32); }
-/* Light mode swaps to each theme's LIGHT pair. Without this the picker drew a
-   dark disc on a cream drawer - a heavy dark ring - around the dark-mode accent,
-   which is not the colour light mode actually uses. The discs are close in tone
-   to the drawer by design, so a hairline gives them an edge without reinstating
-   a ring; the selected state keeps its accent halo and adds the hairline rather
-   than replacing it, since one box-shadow would otherwise overwrite the other. */
-[data-theme="light"] .accent-dot {
-  background: var(--sw-ring-l);
-  box-shadow: inset 0 0 0 1px rgba(60, 45, 30, 0.14);
-}
-[data-theme="light"] .accent-dot i { background: var(--sw-dot-l); }
-[data-theme="light"] .accent-opt.on .accent-dot {
-  box-shadow: 0 0 0 2px var(--accent), inset 0 0 0 1px rgba(60, 45, 30, 0.14);
-}
-
 [data-theme="light"] .chat-bubble.error { border-color: #d8a3a3; color: #b04a4a; }
 
 /* Tab bar + header glass, light mode: neutral near-white frosted (matches the
@@ -2963,77 +2848,162 @@ textarea {
 }
 
 /* ============================================================
-   COLOR THEMES  (accent + tuned neutrals, applied via data-accent
-   on <html>, persisted by src/lib/theme.js). Walnut is the default,
-   defined by the base :root / [data-theme="light"] blocks above.
-   Each theme sets an identical token set for dark and light so the
-   more-specific light block always wins in light mode.
+   COMPLETE VISUAL THEMES
+   Each family controls palette, typography, geometry, elevation, motion,
+   material, logo ramp and authored atmosphere. Curator is the base above.
    ============================================================ */
 
-/* ---- Slate: cool steel blue ---- */
-:root[data-accent="slate"] {
-  --bg: #15171b; --surface: #1d2026; --surface-2: #252932; --line: #333a45;
-  --text: #e5e8ee; --muted: #98a1b1; --walnut: #41506a; --walnut-light: #5f7799;
-  --accent: #86a0c2; --amber: #7fb0e0;
-  --logo-1: #26385a; --logo-2: #314a74; --logo-3: #3d5e90; --logo-4: #4a72aa;
-  --logo-5: #5a86c0; --logo-6: #6f9ed6; --logo-7: #86b4e8;
-}
-:root[data-accent="slate"][data-theme="light"] {
-  --bg: #e7eaef; --surface: #f0f3f7; --surface-2: #fbfcff; --line: #d4dbe6;
-  --text: #232830; --muted: #697384; --walnut: #41506a; --walnut-light: #5f7799;
-  --accent: #4d6d95; --amber: #3f74ab;
+:root[data-theme-family="curator"] {
+  --r-xs: 7px; --r-sm: 12px; --r-md: 16px; --r-lg: 22px;
+  --e1: 0 1px 2px rgba(22, 13, 6, 0.34);
+  --e2: 0 2px 3px rgba(22, 13, 6, 0.28), 0 12px 30px rgba(22, 13, 6, 0.2);
+  --ease-out: cubic-bezier(0.2, 0.75, 0.28, 1);
 }
 
-/* ---- Sage: warm olive green ---- */
-:root[data-accent="sage"] {
-  --bg: #161814; --surface: #1e211a; --surface-2: #262a22; --line: #353b2f;
-  --text: #e8eae1; --muted: #a0a690; --walnut: #48543a; --walnut-light: #6b7a55;
-  --accent: #9aab83; --amber: #bcc77e;
-  --logo-1: #3c4724; --logo-2: #4f5c2f; --logo-3: #64723a; --logo-4: #7a8848;
-  --logo-5: #909d58; --logo-6: #a9b56c; --logo-7: #c2cd84;
+/* Obsidian Glass — broad radii, cool prismatic light and floating material. */
+:root[data-theme-family="obsidian"] {
+  --bg: #0a0b0f; --surface: #171923; --surface-2: #242738; --line: #41465c;
+  --text: #f5f7ff; --muted: #a9afc2; --walnut: #34456f; --walnut-light: #617cc2;
+  --accent: #9ab4ff; --amber: #c1a5ff;
+  --font-display: ui-rounded, 'SF Pro Rounded', system-ui, sans-serif;
+  --font-body: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --r-xs: 12px; --r-sm: 18px; --r-md: 25px; --r-lg: 34px;
+  --glass: rgba(23, 25, 35, 0.46); --glass-chip: rgba(36, 39, 56, 0.62);
+  --glass-line: rgba(197, 211, 255, 0.22); --glass-blur: blur(30px) saturate(170%);
+  --e1: 0 8px 24px rgba(0, 0, 0, 0.24);
+  --e2: 0 18px 48px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --e3: 0 28px 80px rgba(0, 0, 0, 0.46), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  --d-fast: 0.2s; --d-base: 0.32s; --d-slow: 0.5s;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --theme-ground:
+    radial-gradient(85% 60% at 8% -6%, rgba(92, 200, 255, 0.18), transparent 70%),
+    radial-gradient(80% 62% at 105% 82%, rgba(179, 140, 255, 0.16), transparent 72%),
+    linear-gradient(145deg, #090a0e, #11131b 58%, #090a0f);
+  --theme-texture: linear-gradient(118deg, transparent 28%, rgba(255,255,255,.025) 49%, transparent 70%), var(--grain);
+  --logo-1: #1d2850; --logo-2: #293b73; --logo-3: #38529b; --logo-4: #4e6dc0;
+  --logo-5: #6688dd; --logo-6: #83a4f2; --logo-7: #b39cff;
 }
-:root[data-accent="sage"][data-theme="light"] {
-  --bg: #e9ebe0; --surface: #f2f4ea; --surface-2: #fcfdf5; --line: #d7dcc8;
-  --text: #262a20; --muted: #6c7360; --walnut: #48543a; --walnut-light: #6b7a55;
-  --accent: #5e7046; --amber: #69793b;
+:root[data-theme-family="obsidian"][data-theme="light"] {
+  --bg: #edf1f8; --surface: #f9fbff; --surface-2: #ffffff; --line: #bdc7da;
+  --text: #171a24; --muted: #596174; --walnut: #4d6196; --walnut-light: #7185bc;
+  --accent: #3f61bd; --amber: #7651bd;
+  --glass: rgba(249, 251, 255, 0.58); --glass-chip: rgba(255, 255, 255, 0.74);
+  --glass-line: rgba(54, 71, 112, 0.16);
+  --theme-ground:
+    radial-gradient(80% 58% at 5% -4%, rgba(92, 160, 255, 0.18), transparent 70%),
+    radial-gradient(80% 65% at 105% 88%, rgba(157, 104, 220, 0.12), transparent 72%),
+    linear-gradient(145deg, #edf1f8, #f7f9fd 58%, #e9edf6);
 }
 
-/* ---- Plum: dusty mauve ---- */
-:root[data-accent="plum"] {
-  --bg: #18151a; --surface: #201d23; --surface-2: #29242e; --line: #383140;
-  --text: #ebe5ec; --muted: #a89aac; --walnut: #4d3b4f; --walnut-light: #6f5670;
-  --accent: #b191b0; --amber: #caa2d2;
-  --logo-1: #422c47; --logo-2: #573a5d; --logo-3: #6f4b76; --logo-4: #895e90;
-  --logo-5: #a173a8; --logo-6: #b98cc0; --logo-7: #cfa6d6;
+/* Neon Cabinet — electric duotone, grid energy and fast, crisp response. */
+:root[data-theme-family="neon"] {
+  --bg: #080b12; --surface: #111725; --surface-2: #1a2336; --line: #30405a;
+  --text: #f5f7ff; --muted: #9cabc1; --walnut: #006e75; --walnut-light: #00a9a0;
+  --accent: #00e6c7; --amber: #ff63d0;
+  --font-display: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  --font-label: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  --r-xs: 3px; --r-sm: 6px; --r-md: 8px; --r-lg: 12px;
+  --glass: rgba(10, 17, 30, 0.72); --glass-chip: rgba(17, 23, 37, 0.82);
+  --glass-line: rgba(0, 230, 199, 0.24); --glass-blur: blur(18px) saturate(150%);
+  --e1: 0 0 0 1px rgba(0, 230, 199, 0.1), 0 6px 18px rgba(0,0,0,.3);
+  --e2: 0 0 24px rgba(0, 230, 199, 0.1), 0 14px 34px rgba(0,0,0,.4);
+  --d-fast: 0.1s; --d-base: 0.18s; --d-slow: 0.28s;
+  --ease-out: cubic-bezier(0.16, 0.84, 0.2, 1);
+  --theme-ground:
+    radial-gradient(60% 48% at 5% 2%, rgba(0, 230, 199, 0.16), transparent 72%),
+    radial-gradient(55% 45% at 100% 96%, rgba(255, 78, 205, 0.13), transparent 74%), #080b12;
+  --theme-texture:
+    linear-gradient(rgba(0,230,199,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,230,199,.035) 1px, transparent 1px);
+  --theme-texture-opacity: 1;
+  --theme-texture-size: 28px 28px;
+  --logo-1: #003c47; --logo-2: #005b64; --logo-3: #007c7d; --logo-4: #009e91;
+  --logo-5: #00c0a8; --logo-6: #00e6c7; --logo-7: #ff63d0;
 }
-:root[data-accent="plum"][data-theme="light"] {
-  --bg: #ece6ed; --surface: #f4eff5; --surface-2: #fdf9fe; --line: #ddd2de;
-  --text: #2a252c; --muted: #776c78; --walnut: #4d3b4f; --walnut-light: #6f5670;
-  --accent: #7c567b; --amber: #8a5c90;
+:root[data-theme-family="neon"][data-theme="light"] {
+  --bg: #eef2f3; --surface: #fbfdfe; --surface-2: #ffffff; --line: #9fbdc2;
+  --text: #101a20; --muted: #4f626b; --walnut: #00716c; --walnut-light: #009b8f;
+  --accent: #00756e; --amber: #a62082;
+  --theme-ground:
+    radial-gradient(60% 48% at 5% 2%, rgba(0, 166, 151, 0.13), transparent 72%),
+    radial-gradient(55% 45% at 100% 96%, rgba(209, 47, 157, 0.1), transparent 74%), #eef2f3;
+  --theme-texture:
+    linear-gradient(rgba(0,110,105,.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,110,105,.055) 1px, transparent 1px);
 }
 
-/* ---- Graphite: near-mono steel ---- */
-:root[data-accent="graphite"] {
-  --bg: #17181a; --surface: #202124; --surface-2: #292a2e; --line: #3a3c41;
-  --text: #e8e9ec; --muted: #9b9ea6; --walnut: #464a52; --walnut-light: #646973;
-  --accent: #98a2ae; --amber: #b2b8c2;
-  --logo-1: #363a42; --logo-2: #484d56; --logo-3: #5e646f; --logo-4: #767c88;
-  --logo-5: #9096a2; --logo-6: #a9afba; --logo-7: #c2c8d2;
+/* Blueprint — measured grid, compact geometry and technical labels. */
+:root[data-theme-family="blueprint"] {
+  --bg: #07182c; --surface: #0d2742; --surface-2: #153956; --line: #2b6384;
+  --text: #eaf6ff; --muted: #9bc1d8; --walnut: #164b6b; --walnut-light: #257ba3;
+  --accent: #70d1ff; --amber: #f2c14e;
+  --font-display: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  --font-label: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  --r-xs: 4px; --r-sm: 7px; --r-md: 9px; --r-lg: 12px;
+  --glass: rgba(7, 24, 44, 0.78); --glass-chip: rgba(13, 39, 66, 0.86);
+  --glass-line: rgba(112, 209, 255, 0.24); --glass-blur: blur(14px);
+  --e1: 0 1px 0 rgba(92, 200, 255, 0.12), 0 6px 16px rgba(0,0,0,.22);
+  --e2: 0 1px 0 rgba(92, 200, 255, 0.16), 0 12px 28px rgba(0,0,0,.3);
+  --d-fast: 0.12s; --d-base: 0.2s; --d-slow: 0.32s;
+  --theme-ground: linear-gradient(160deg, #07182c, #09213a 52%, #061527);
+  --theme-texture:
+    linear-gradient(rgba(92,200,255,.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(92,200,255,.055) 1px, transparent 1px);
+  --theme-texture-opacity: 1;
+  --theme-texture-size: 24px 24px;
+  --logo-1: #0e3857; --logo-2: #145070; --logo-3: #1c6b8d; --logo-4: #2786aa;
+  --logo-5: #35a2c8; --logo-6: #4ec0e9; --logo-7: #f2c14e;
 }
-:root[data-accent="graphite"][data-theme="light"] {
-  --bg: #e8e9ec; --surface: #f1f2f5; --surface-2: #fbfcfe; --line: #d7d9de;
-  --text: #24262b; --muted: #6b6e76; --walnut: #464a52; --walnut-light: #646973;
-  --accent: #59626f; --amber: #69707c;
+:root[data-theme-family="blueprint"][data-theme="light"] {
+  --bg: #e7f1f7; --surface: #f7fbfe; --surface-2: #ffffff; --line: #9fc3d5;
+  --text: #0b263a; --muted: #446678; --walnut: #1b6789; --walnut-light: #318bad;
+  --accent: #12678e; --amber: #8a6300;
+  --theme-ground: linear-gradient(160deg, #e7f1f7, #f2f8fb 52%, #dfedf4);
+  --theme-texture:
+    linear-gradient(rgba(18,103,142,.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(18,103,142,.07) 1px, transparent 1px);
+}
+
+/* Cartridge — warm plastic, hard edges, offset shadows and scan lines. */
+:root[data-theme-family="cartridge"] {
+  --bg: #1c1a16; --surface: #29251e; --surface-2: #3a3429; --line: #746951;
+  --text: #f4edd7; --muted: #bbb093; --walnut: #73422e; --walnut-light: #aa5838;
+  --accent: #ff875e; --amber: #f3c84b;
+  --font-display: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  --font-label: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  --r-xs: 1px; --r-sm: 2px; --r-md: 3px; --r-lg: 5px;
+  --glass: rgba(41, 37, 30, 0.94); --glass-chip: rgba(58, 52, 41, 0.96);
+  --glass-line: rgba(244, 237, 215, 0.2); --glass-blur: none;
+  --e1: 3px 3px 0 #0d0c0a;
+  --e2: 5px 5px 0 #0d0c0a;
+  --e3: 8px 8px 0 #0d0c0a;
+  --e-nav: 4px 4px 0 rgba(13,12,10,.9), inset 0 1px 0 rgba(255,255,255,.09);
+  --d-fast: 0.08s; --d-base: 0.14s; --d-slow: 0.22s;
+  --ease-out: steps(4, end); --ease-spring: steps(2, end);
+  --theme-ground:
+    radial-gradient(80% 55% at 8% -4%, rgba(255,117,66,.09), transparent 72%),
+    linear-gradient(155deg, #1c1a16, #242018 58%, #181713);
+  --theme-texture: repeating-linear-gradient(0deg, rgba(255,255,255,.022) 0 1px, transparent 1px 4px), var(--grain);
+  --theme-texture-opacity: 1;
+  --theme-texture-size: 140px 4px, 140px 140px;
+  --logo-1: #5b2418; --logo-2: #7a3020; --logo-3: #9c3f27; --logo-4: #c24f2e;
+  --logo-5: #e25f34; --logo-6: #ff7542; --logo-7: #f3c84b;
+}
+:root[data-theme-family="cartridge"][data-theme="light"] {
+  --bg: #e9e1c8; --surface: #f8f2df; --surface-2: #fffaf0; --line: #aa9b75;
+  --text: #242016; --muted: #625a46; --walnut: #8b432d; --walnut-light: #b75c3a;
+  --accent: #aa3516; --amber: #806200;
+  --e1: 3px 3px 0 #b8ad8c; --e2: 5px 5px 0 #b8ad8c; --e3: 8px 8px 0 #b8ad8c;
+  --theme-ground:
+    radial-gradient(80% 55% at 8% -4%, rgba(182,61,27,.09), transparent 72%),
+    linear-gradient(155deg, #e9e1c8, #f0e9d3 58%, #e3dac0);
 }
 
 /* ============================================================
    Appearance controls
    ============================================================
-   These lived in a bespoke .menu-appearance block at the top of Settings: a
-   segmented control, a swatch row and two more segmented controls stacked above
-   a page where every other section was a list of rows. They now sit on sub-pages
-   (Theme, Background, Card sizing) reached from three rows in the Appearance
-   card, so the root list is one kind of thing all the way down. */
+   The root Settings page stays short. Appearance opens one index, then focused
+   pages for theme, mode, display preferences, logo and artwork size. */
 .seg {
   display: flex;
   gap: 4px;
@@ -3053,7 +3023,7 @@ textarea {
   font-size: var(--t-foot);
   font-weight: var(--w-semi);
   padding: 8px 0;
-  min-height: 36px;
+  min-height: 44px;
   border-radius: var(--r-xs);
   cursor: pointer;
   transition: background var(--d-fast) ease, color var(--d-fast) ease;
@@ -3069,8 +3039,9 @@ textarea {
    visible before selection instead of being reduced to two abstract labels. */
 .logo-style-options {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: var(--space-3);
+  margin: var(--space-3) var(--screen-gutter) 0;
 }
 
 .logo-style-option {
@@ -3145,7 +3116,6 @@ textarea {
   background: var(--accent);
 }
 
-/* Color theme (accent) swatch picker */
 .menu-accent-label {
   font-size: var(--t-cap2);
   font-weight: var(--w-bold);
@@ -3155,55 +3125,124 @@ textarea {
   padding: 0 0 10px;
 }
 
-.accent-row {
-  display: flex;
-  gap: 14px;
+/* Theme gallery. Each card is intentionally more than a color swatch: its
+   preview mirrors the family's geometry, material and atmosphere. */
+.theme-gallery {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-3) var(--screen-gutter) 0;
 }
 
-.accent-opt {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
+.theme-card {
   appearance: none;
-  border: none;
-  background: none;
-  padding: 0;
-  cursor: pointer;
-}
-
-/* The swatch is a small preview of the theme: outer disc is that theme's page
-   neutral, inner dot its accent. Both pairs arrive as custom properties from
-   SettingsPage and the mode is chosen HERE rather than in JS, so "System"
-   resolves without the component having to watch the OS preference. */
-.accent-dot {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  position: relative;
-  background: var(--sw-ring);
-  transition: box-shadow var(--d-fast) ease;
-}
-
-.accent-dot i {
-  position: absolute;
-  inset: 6px;
-  border-radius: 50%;
-  background: var(--sw-dot);
-}
-
-.accent-opt.on .accent-dot {
-  box-shadow: 0 0 0 2px var(--accent);
-}
-
-.accent-name {
-  font-size: var(--t-cap2);
-  color: var(--muted);
-}
-
-.accent-opt.on .accent-name {
+  width: 100%;
+  min-height: 146px;
+  padding: var(--space-3);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
   color: var(--text);
-  font-weight: var(--w-semi);
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr) auto;
+  grid-template-rows: 1fr auto;
+  gap: var(--space-2) var(--space-3);
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--e1);
+  transition: transform var(--d-fast) var(--ease-out), border-color var(--d-fast) var(--ease-out), background var(--d-fast) var(--ease-out);
+}
+
+.theme-card:active { transform: scale(0.985); }
+.theme-card.on {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--surface) 88%, var(--accent));
+}
+
+.theme-card-preview {
+  grid-row: 1 / 3;
+  width: 116px;
+  min-height: 120px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  position: relative;
+  overflow: hidden;
+  background: #18130e;
+}
+
+.theme-card-grid,
+.theme-card-panel,
+.theme-card-chip { position: absolute; display: block; }
+.theme-card-grid { inset: 0; }
+.theme-card-panel { left: 12px; right: 12px; bottom: 14px; height: 56px; background: #251d16; border: 1px solid #594431; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,.28); }
+.theme-card-chip { left: 24px; right: 34px; bottom: 26px; height: 12px; background: #d8aa62; border-radius: 999px; }
+
+.theme-card-copy { min-width: 0; display: flex; flex-direction: column; align-self: center; }
+.theme-card-eyebrow {
+  color: var(--accent);
+  font-family: var(--font-label);
+  font-size: var(--t-cap2);
+  font-weight: var(--w-bold);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.theme-card-copy b { margin-top: 3px; font-family: var(--font-display); font-size: var(--t-t3); line-height: 1.12; }
+.theme-card-copy > span:last-child { margin-top: 7px; color: var(--muted); font-size: var(--t-foot); line-height: 1.35; }
+.theme-palette { display: flex; align-self: end; }
+.theme-palette i { width: 24px; height: 12px; border: 1px solid rgba(255,255,255,.15); }
+.theme-palette i:first-child { border-radius: 999px 0 0 999px; }
+.theme-palette i:last-child { border-radius: 0 999px 999px 0; }
+.theme-card-check {
+  width: 22px; height: 22px; border: 1px solid var(--line); border-radius: 50%;
+  display: grid; place-items: center; color: transparent; font-weight: var(--w-bold);
+}
+.theme-card.on .theme-card-check { color: var(--bg); background: var(--accent); border-color: var(--accent); }
+
+.theme-card-obsidian .theme-card-preview {
+  border-radius: 25px;
+  background: radial-gradient(circle at 12% 5%, rgba(92,200,255,.28), transparent 55%), radial-gradient(circle at 90% 95%, rgba(179,140,255,.25), transparent 58%), #0a0b0f;
+}
+.theme-card-obsidian .theme-card-panel { background: rgba(36,39,56,.66); border-color: rgba(197,211,255,.26); border-radius: 22px; backdrop-filter: blur(10px); }
+.theme-card-obsidian .theme-card-chip { background: linear-gradient(90deg, #82a3ff, #b38cff); }
+
+.theme-card-neon .theme-card-preview { border-radius: 6px; background: #080b12; }
+.theme-card-neon .theme-card-grid { background-image: linear-gradient(rgba(0,230,199,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,230,199,.1) 1px, transparent 1px); background-size: 14px 14px; }
+.theme-card-neon .theme-card-panel { background: #111725; border-color: #30405a; border-radius: 5px; box-shadow: 0 0 20px rgba(0,230,199,.15); }
+.theme-card-neon .theme-card-chip { background: linear-gradient(90deg, #00e6c7 60%, #ff4ecd 60%); border-radius: 2px; }
+
+.theme-card-blueprint .theme-card-preview { border-radius: 9px; background: #07182c; }
+.theme-card-blueprint .theme-card-grid { background-image: linear-gradient(rgba(92,200,255,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(92,200,255,.12) 1px, transparent 1px); background-size: 12px 12px; }
+.theme-card-blueprint .theme-card-panel { background: #0d2742; border-color: #2b6384; border-radius: 7px; box-shadow: none; }
+.theme-card-blueprint .theme-card-chip { background: linear-gradient(90deg, #5cc8ff 74%, #f2c14e 74%); border-radius: 3px; }
+
+.theme-card-cartridge .theme-card-preview { border-radius: 2px; background: repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 1px, transparent 1px 4px), #1c1a16; }
+.theme-card-cartridge .theme-card-panel { background: #29251e; border-color: #746951; border-radius: 2px; box-shadow: 4px 4px 0 #0d0c0a; }
+.theme-card-cartridge .theme-card-chip { background: linear-gradient(90deg, #ff7542 72%, #f3c84b 72%); border-radius: 1px; }
+
+[data-theme='light'] .theme-card-curator .theme-card-preview { background: #f1e8d8; border-color: #d1c0a8; }
+[data-theme='light'] .theme-card-curator .theme-card-panel { background: #fbf6ed; border-color: #d1c0a8; box-shadow: 0 8px 20px rgba(80,55,30,.14); }
+[data-theme='light'] .theme-card-curator .theme-card-chip { background: #8a5d25; }
+[data-theme='light'] .theme-card-obsidian .theme-card-preview { background: radial-gradient(circle at 12% 5%, rgba(92,160,255,.22), transparent 55%), radial-gradient(circle at 90% 95%, rgba(157,104,220,.18), transparent 58%), #edf1f8; border-color: #bdc7da; }
+[data-theme='light'] .theme-card-obsidian .theme-card-panel { background: rgba(249,251,255,.7); border-color: #bdc7da; }
+[data-theme='light'] .theme-card-neon .theme-card-preview { background: #eef2f3; border-color: #9fbdc2; }
+[data-theme='light'] .theme-card-neon .theme-card-panel { background: #fbfdfe; border-color: #9fbdc2; }
+[data-theme='light'] .theme-card-neon .theme-card-chip { background: linear-gradient(90deg, #00756e 60%, #a62082 60%); }
+[data-theme='light'] .theme-card-blueprint .theme-card-preview { background: #e7f1f7; border-color: #9fc3d5; }
+[data-theme='light'] .theme-card-blueprint .theme-card-panel { background: #f7fbfe; border-color: #9fc3d5; }
+[data-theme='light'] .theme-card-blueprint .theme-card-chip { background: linear-gradient(90deg, #12678e 74%, #8a6300 74%); }
+[data-theme='light'] .theme-card-cartridge .theme-card-preview { background: repeating-linear-gradient(0deg, rgba(36,32,22,.025) 0 1px, transparent 1px 4px), #e9e1c8; border-color: #aa9b75; }
+[data-theme='light'] .theme-card-cartridge .theme-card-panel { background: #f8f2df; border-color: #aa9b75; box-shadow: 4px 4px 0 #b8ad8c; }
+[data-theme='light'] .theme-card-cartridge .theme-card-chip { background: linear-gradient(90deg, #aa3516 72%, #806200 72%); }
+
+@media (min-width: 540px) {
+  .logo-style-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 420px) {
+  .theme-card { grid-template-columns: 92px minmax(0, 1fr) auto; }
+  .theme-card-preview { width: 92px; }
+  .theme-card-copy > span:last-child { font-size: var(--t-cap); }
 }
 
 /* ---------- Filter sheet primitives (shared) ----------
@@ -3371,10 +3410,75 @@ textarea {
    block sits, so light mode would have kept its translucent material while dark
    mode went opaque. */
 @media (prefers-reduced-transparency: reduce) {
-  :root,
-  :root[data-theme='light'] {
+  :root[data-transparency='system'],
+  :root[data-transparency='system'][data-theme='light'] {
     --glass: var(--surface);
     --glass-chip: var(--surface-2);
     --glass-blur: none;
   }
+}
+
+/* ---------- Theme expression and display preferences ---------- */
+.menu-sec-label,
+.menu-accent-label,
+.status-badge,
+.tabbar-label {
+  font-family: var(--font-label);
+}
+
+:root[data-theme-family='obsidian'] :is(.settings-group, .logo-style-option, .theme-card) {
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+
+:root[data-theme-family='neon'] :is(.settings-group, .filter-btn, .seg),
+:root[data-theme-family='blueprint'] :is(.settings-group, .filter-btn, .seg) {
+  border-color: color-mix(in srgb, var(--accent) 32%, var(--line));
+}
+
+:root[data-theme-family='cartridge'] :is(.settings-group, .logo-style-option, .theme-card) {
+  box-shadow: var(--e1);
+}
+
+:root[data-transparency='reduced'],
+:root[data-transparency='reduced'][data-theme='light'] {
+  --glass: var(--surface);
+  --glass-chip: var(--surface-2);
+  --glass-blur: none;
+}
+
+:root[data-contrast='high'] {
+  --line-soft: var(--line);
+  --muted: color-mix(in srgb, var(--text) 82%, var(--bg));
+  --glass-line: color-mix(in srgb, var(--text) 35%, transparent);
+}
+
+@media (prefers-contrast: more) {
+  :root[data-contrast='system'] {
+    --line-soft: var(--line);
+    --muted: color-mix(in srgb, var(--text) 82%, var(--bg));
+    --glass-line: color-mix(in srgb, var(--text) 35%, transparent);
+  }
+}
+
+:root[data-motion='reduced'] {
+  --d-fast: 0.01ms;
+  --d-base: 0.01ms;
+  --d-slow: 0.01ms;
+  --overlay-in: 0.01ms;
+  --overlay-out: 0.01ms;
+}
+
+:root[data-motion='reduced'] *,
+:root[data-motion='reduced'] *::before,
+:root[data-motion='reduced'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: 0.01ms !important;
+}
+
+:is(button, a, input, select, textarea):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 82%, white);
+  outline-offset: 3px;
 }

@@ -20,14 +20,14 @@ test('logo style defaults safely and persists a valid choice', () => {
   }
 
   try {
-    assert.equal(getLogoStyle(), 'classic')
+    assert.equal(getLogoStyle(), 'theme')
     assert.equal(setLogoStyle('glass'), 'glass')
     assert.equal(getLogoStyle(), 'glass')
     assert.equal(attrs.get('data-logo-style'), 'glass')
 
-    assert.equal(setLogoStyle('unknown'), 'classic')
-    assert.equal(values.get('gamedeck_logo_style_v1'), 'classic')
-    assert.equal(attrs.get('data-logo-style'), 'classic')
+    assert.equal(setLogoStyle('unknown'), 'theme')
+    assert.equal(values.get('gamedeck_logo_style_v1'), 'theme')
+    assert.equal(attrs.get('data-logo-style'), 'theme')
   } finally {
     globalThis.document = priorDocument
     globalThis.localStorage = priorStorage
@@ -45,5 +45,6 @@ test('all in-app brand surfaces use the shared theme-aware mark', () => {
   assert.match(mark, /logo-classic/)
   assert.match(mark, /logo-glass/)
   assert.match(css, /data-logo-style=["']glass["']/)
+  assert.match(css, /data-logo-style=["']theme["']/)
   for (let i = 1; i <= 7; i += 1) assert.match(css, new RegExp(`--logo-${i}`))
 })

@@ -2,14 +2,11 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import { initTheme } from './lib/theme.js'
-import { initGround } from './lib/ground.js'
 import './index.css'
 import './cardSize.css'
 
-// Apply the saved theme (and keep 'system' synced to the OS) before first paint.
+// Apply the complete saved appearance before first paint.
 initTheme()
-// The palette-aware ground goes on synchronously in the same first-paint pass.
-initGround()
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
