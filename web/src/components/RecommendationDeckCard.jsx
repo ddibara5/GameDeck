@@ -1,6 +1,7 @@
 import Cover from './Cover.jsx'
 import WishHeart from './WishHeart.jsx'
 import { gameDescriptor, laneReason } from '../lib/discoverLanes.js'
+import { optImg, originalIgdbImage } from '../lib/format.js'
 
 const KIND_LABELS = {
   strong: 'Strong match',
@@ -34,6 +35,8 @@ export default function RecommendationDeckCard({
   const descriptor = gameDescriptor(game)
   const tags = descriptor ? descriptor.split(' · ').filter(Boolean).slice(0, 3) : []
   const releaseMeta = [game.year || null, platforms].filter(Boolean)
+  const cover = originalIgdbImage(game.cover)
+  const backdrop = optImg(cover, 640)
   const kind = surprise ? 'surprise' : (game.recommendationKind || 'strong')
   const reason = surprise
     ? 'An adventurous pick outside the main deck, still grounded in the parts of games you tend to enjoy.'
@@ -43,7 +46,14 @@ export default function RecommendationDeckCard({
     <div className={`fy-deck-card${motion ? ` ${motion}` : ''}`}>
       <button type="button" className="fy-deck-open" onClick={onOpen} disabled={busy}>
         <span className="fy-deck-art">
-          <Cover src={game.cover} title={game.name} size="lg" className="fy-deck-cover" />
+          {backdrop ? (
+            <span
+              className="fy-deck-art-backdrop"
+              style={{ backgroundImage: `url(${JSON.stringify(backdrop)})` }}
+              aria-hidden="true"
+            />
+          ) : null}
+          <Cover src={cover} title={game.name} size="lg" className="fy-deck-cover" />
           <span className={`fy-deck-kind ${kind}`}>{KIND_LABELS[kind] || KIND_LABELS.strong}</span>
         </span>
 

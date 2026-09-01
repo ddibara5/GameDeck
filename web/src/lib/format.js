@@ -288,6 +288,17 @@ export function igdbCover(imageId, size = 't_cover_big') {
   return `https://images.igdb.com/igdb/image/upload/${size}/${imageId}.jpg`
 }
 
+/**
+ * Upgrade an IGDB image URL to its original source asset. Large feature art can
+ * then be resized once by optImg for the actual Retina slot instead of being
+ * permanently capped by the 264px cover_big rendition returned by Discover.
+ * Non-IGDB artwork is left untouched.
+ */
+export function originalIgdbImage(url) {
+  if (!url || !String(url).includes('images.igdb.com')) return url
+  return String(url).replace(/\/t_[a-z0-9_]+\//i, '/t_original/')
+}
+
 // Native pixel width of each IGDB size bucket, so we never ask the CDN to upscale
 // past the source (upscaling is the only thing that would make an image blurry).
 const IGDB_BUCKET_W = {

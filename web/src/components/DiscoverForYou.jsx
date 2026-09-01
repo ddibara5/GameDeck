@@ -49,7 +49,7 @@ import {
   restoreRecommendationDeck,
   saveRecommendationDeck,
 } from '../lib/recommendationDeck.js'
-import { optImg } from '../lib/format.js'
+import { optImg, originalIgdbImage } from '../lib/format.js'
 
 // Pull a wider candidate pool than the feed displays. The server still returns
 // recent matching releases, then the client can balance freshness with
@@ -342,7 +342,7 @@ export default function DiscoverForYou({ onAsk, onBrowse }) {
     const nextGame = surpriseGame ? null : deck[deckAt + 1]
     if (!nextGame?.cover || typeof Image === 'undefined') return
     const image = new Image()
-    image.src = optImg(nextGame.cover, 640)
+    image.src = optImg(originalIgdbImage(nextGame.cover), 640)
   }, [deck, deckAt, surpriseGame])
 
   const remaining = Math.max(0, deck.length - deckAt)

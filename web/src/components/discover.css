@@ -719,31 +719,49 @@ button.shelf-head:active {
 
 .fy-deck-art {
   position: relative;
-  height: clamp(250px, 68vw, 306px);
-  display: block;
+  height: clamp(330px, 94vw, 390px);
+  display: grid;
+  place-items: center;
   overflow: hidden;
   background: var(--surface-2);
+  isolation: isolate;
 }
 
-.fy-deck-art::after {
+.fy-deck-art::before {
   content: '';
   position: absolute;
-  inset: 45% 0 0;
-  background: linear-gradient(180deg, transparent, color-mix(in oklab, var(--surface) 92%, transparent));
+  z-index: -1;
+  inset: 0;
+  background: color-mix(in oklab, var(--surface-2) 48%, rgba(10, 8, 7, .52));
   pointer-events: none;
 }
 
+.fy-deck-art-backdrop {
+  position: absolute;
+  z-index: -2;
+  inset: -28px;
+  background-position: center;
+  background-size: cover;
+  filter: blur(22px) saturate(.86);
+  opacity: .6;
+  transform: scale(1.08);
+}
+
 .fy-deck-art .cover.fy-deck-cover {
-  width: 100%;
-  max-width: none;
-  height: 100%;
+  z-index: 1;
+  width: auto;
+  max-width: calc(100% - 32px);
+  height: calc(100% - 24px);
   margin: 0;
-  aspect-ratio: auto;
-  border-radius: 0;
+  aspect-ratio: 264 / 374;
+  border: 1px solid color-mix(in oklab, white 18%, transparent);
+  border-radius: var(--r-sm);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .32);
 }
 
 .fy-deck-art .cover.fy-deck-cover img {
-  object-position: center 24%;
+  object-fit: contain;
+  object-position: center;
 }
 
 .fy-deck-kind {
@@ -779,7 +797,7 @@ button.shelf-head:active {
 
 .fy-deck-copy {
   display: block;
-  padding: 0 var(--space-4) var(--space-4);
+  padding: var(--space-4);
 }
 
 .fy-deck-name {
@@ -787,7 +805,7 @@ button.shelf-head:active {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
-  margin-top: -2px;
+  margin-top: 0;
   font-size: var(--t-t2);
   line-height: 1.08;
   font-weight: var(--w-bold);

@@ -17,6 +17,7 @@ globalThis.document = {
 }
 
 const { getArtworkSize, setArtworkSize } = await import('../src/lib/theme.js')
+const { originalIgdbImage } = await import('../src/lib/format.js')
 
 test('legacy shelf and list preferences migrate to their larger global size', () => {
   values.clear()
@@ -61,4 +62,13 @@ test('Settings exposes one artwork control and an informational scope list', () 
   assert.match(settings, /label="Cover size"/)
   assert.match(settings, /Applies everywhere/)
   assert.doesNotMatch(settings, /Shelf posters|List rows|getShelfSize|getListSize/)
+})
+
+test('large feature covers can request the original IGDB source without changing external art', () => {
+  const cover = 'https://images.igdb.com/igdb/image/upload/t_cover_big/co1234.jpg'
+  assert.equal(
+    originalIgdbImage(cover),
+    'https://images.igdb.com/igdb/image/upload/t_original/co1234.jpg',
+  )
+  assert.equal(originalIgdbImage('https://example.com/cover.jpg'), 'https://example.com/cover.jpg')
 })
