@@ -82,11 +82,12 @@ test('Discover filter defaults preserve shared scale and surface-specific choice
 })
 
 test('Browse and For You expose explicit saved-default controls', async () => {
-  const [browse, forYou, control, prefs] = await Promise.all([
+  const [browse, forYou, control, prefs, styles] = await Promise.all([
     readFile(new URL('../src/components/DiscoverBrowse.jsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/components/DiscoverForYou.jsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/components/DiscoverDefaultControl.jsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/components/DiscoverPreferenceFields.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/discover.css', import.meta.url), 'utf8'),
   ])
 
   for (const source of [browse, forYou]) {
@@ -105,4 +106,5 @@ test('Browse and For You expose explicit saved-default controls', async () => {
   assert.match(control, /Restore GameDeck Defaults/)
   assert.match(control, /aria-live="polite"/)
   assert.match(prefs, />Shared</)
+  assert.match(styles, /@media \(max-width: 480px\)[\s\S]*?\.filter-default-meta\s*{[\s\S]*?position: static/)
 })

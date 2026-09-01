@@ -10,7 +10,7 @@ export default function DiscoverDefaultControl({ checked, onChange, onRestore, r
         />
         <span className="filter-default-copy">
           <span className="filter-default-title">Save as My Default</span>
-          <span className="filter-default-note">Remember these filters; production scale is shared.</span>
+          <span className="filter-default-note">Remember these filters. Scale applies to both pages.</span>
         </span>
       </label>
       <div className="filter-default-meta">

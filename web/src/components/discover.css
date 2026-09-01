@@ -687,14 +687,25 @@ button.shelf-head:active {
   color: var(--accent);
 }
 
-@media (max-width: 370px) {
+/* On phones the restore action gets its own row. Reserving width for it beside
+   two lines of copy made the controls collide at real iPhone text sizes. */
+@media (max-width: 480px) {
   .filter-default-row {
-    padding-right: 94px;
+    padding-right: 0;
+  }
+
+  .filter-default-note {
+    text-wrap: pretty;
+  }
+
+  .filter-default-meta {
+    position: static;
+    margin-top: -2px;
+    padding-left: 31px;
   }
 
   .filter-default-meta button {
-    width: 94px;
-    line-height: 1.2;
+    padding: 0;
   }
 }
 
