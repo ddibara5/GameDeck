@@ -1,0 +1,674 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#18130e" />
+  <title>GameDeck — For You deck concept</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #18130e;
+      --surface: #251d16;
+      --surface-2: #33271d;
+      --line: rgba(216, 170, 98, .27);
+      --text: #f4eadc;
+      --muted: #b8a793;
+      --accent: #d8aa62;
+      --danger: #d9917f;
+      --ease: cubic-bezier(.22, 1, .36, 1);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { min-height: 100%; }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(75% 48% at 16% 0%, rgba(139, 104, 76, .3), transparent 68%),
+        linear-gradient(165deg, #18130e 0%, #1d1711 54%, #17120d 100%);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button { font: inherit; -webkit-tap-highlight-color: transparent; }
+
+    .preview-note {
+      max-width: 430px;
+      margin: 16px auto 10px;
+      padding: 0 18px;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .phone {
+      position: relative;
+      width: min(100%, 430px);
+      min-height: min(900px, 100dvh);
+      margin: 0 auto;
+      overflow: hidden;
+      background: rgba(24, 19, 14, .96);
+      box-shadow: 0 28px 80px rgba(0, 0, 0, .34);
+    }
+
+    .header {
+      min-height: 82px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      padding: max(18px, env(safe-area-inset-top)) 18px 10px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 32px;
+      line-height: 1;
+      letter-spacing: -.8px;
+    }
+
+    .icon-btn {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 50%;
+      background: rgba(38, 38, 42, .42);
+      color: var(--text);
+      backdrop-filter: blur(20px) saturate(160%);
+    }
+
+    .seg {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3px;
+      margin: 8px 68px 16px 18px;
+      padding: 3px;
+      border-radius: 13px;
+      background: rgba(255, 255, 255, .07);
+    }
+
+    .seg button {
+      min-height: 34px;
+      border: 0;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .seg .active {
+      background: var(--surface-2);
+      color: var(--text);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, .28);
+    }
+
+    .deck-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px 10px;
+    }
+
+    .eyebrow {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .progress-copy {
+      color: var(--muted);
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .progress {
+      height: 3px;
+      margin: 0 18px 14px;
+      overflow: hidden;
+      border-radius: 99px;
+      background: rgba(255, 255, 255, .08);
+    }
+
+    .progress > span {
+      display: block;
+      width: 8.33%;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--accent);
+      transition: width .45s var(--ease);
+    }
+
+    .card-wrap {
+      position: relative;
+      min-height: 531px;
+      padding: 0 18px;
+      perspective: 900px;
+    }
+
+    .card-shadow {
+      position: absolute;
+      inset: 9px 29px auto;
+      height: 500px;
+      border: 1px solid rgba(255, 255, 255, .06);
+      border-radius: 27px;
+      background: #211a14;
+      transform: scale(.965) translateY(7px);
+      opacity: .74;
+    }
+
+    .card {
+      position: relative;
+      min-height: 516px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 27px;
+      background: var(--surface);
+      box-shadow: 0 18px 45px rgba(0, 0, 0, .33);
+      transform-origin: center 70%;
+    }
+
+    .card.out-left { animation: out-left .24s ease-in forwards; }
+    .card.out-right { animation: out-right .24s ease-in forwards; }
+    .card.enter { animation: enter .43s var(--ease) both; }
+
+    @keyframes out-left { to { transform: translateX(-112%) rotate(-6deg); opacity: 0; } }
+    @keyframes out-right { to { transform: translateX(112%) rotate(6deg); opacity: 0; } }
+    @keyframes enter { from { transform: translateY(18px) scale(.965); opacity: 0; } }
+
+    .art {
+      position: relative;
+      height: 286px;
+      overflow: hidden;
+      background: #35271e;
+    }
+
+    .art::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, transparent 52%, rgba(37, 29, 22, .2) 72%, var(--surface) 100%);
+      pointer-events: none;
+    }
+
+    .art img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      object-position: center 22%;
+      transition: opacity .2s ease;
+    }
+
+    .badge-row {
+      position: absolute;
+      z-index: 2;
+      top: 15px;
+      left: 15px;
+      right: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .badge {
+      min-height: 29px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 11px;
+      border: 1px solid rgba(255, 255, 255, .16);
+      border-radius: 999px;
+      background: rgba(21, 18, 15, .58);
+      color: #fff7ec;
+      font-size: 12px;
+      font-weight: 700;
+      backdrop-filter: blur(18px) saturate(160%);
+    }
+
+    .badge.surprise { color: #ffe5af; }
+
+    .heart {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, .16);
+      border-radius: 50%;
+      background: rgba(21, 18, 15, .58);
+      color: #fff7ec;
+      backdrop-filter: blur(18px) saturate(160%);
+    }
+
+    .heart.saved { color: var(--accent); }
+
+    .copy { padding: 0 18px 18px; }
+
+    .title {
+      margin: -2px 0 7px;
+      font-size: 26px;
+      line-height: 1.08;
+      letter-spacing: -.55px;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 13px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .meta span:not(:last-child)::after {
+      content: "·";
+      margin-left: 6px;
+      opacity: .65;
+    }
+
+    .tags {
+      display: flex;
+      gap: 7px;
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+
+    .tag {
+      flex: 0 0 auto;
+      padding: 6px 9px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: #e5d3bb;
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .why {
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 10px;
+      margin: 0;
+      color: #d8c7b2;
+      font-size: 13px;
+      line-height: 1.42;
+    }
+
+    .why-mark {
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      border-radius: 9px;
+      background: rgba(216, 170, 98, .13);
+      color: var(--accent);
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 48px minmax(0, 1fr) minmax(0, 1.18fr);
+      gap: 9px;
+      padding: 0 18px 9px;
+    }
+
+    .action {
+      min-height: 48px;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 15px;
+      background: rgba(255, 255, 255, .055);
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .action.primary {
+      border-color: transparent;
+      background: var(--accent);
+      color: #21160b;
+    }
+
+    .surprise-btn {
+      width: calc(100% - 36px);
+      min-height: 45px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin: 0 18px 112px;
+      border: 0;
+      background: transparent;
+      color: var(--accent);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .tabbar {
+      position: fixed;
+      z-index: 8;
+      left: 50%;
+      bottom: max(12px, env(safe-area-inset-bottom));
+      width: min(calc(100% - 24px), 406px);
+      height: 72px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      padding: 7px;
+      border: 1px solid rgba(255, 255, 255, .15);
+      border-radius: 25px;
+      background: rgba(37, 37, 41, .7);
+      box-shadow: 0 12px 34px rgba(0, 0, 0, .35), inset 0 1px rgba(255, 255, 255, .13);
+      transform: translateX(-50%);
+      backdrop-filter: blur(28px) saturate(180%);
+    }
+
+    .tabbar button {
+      display: grid;
+      place-items: center;
+      gap: 2px;
+      border: 0;
+      border-radius: 19px;
+      background: transparent;
+      color: #b7aca0;
+      font-size: 10px;
+      font-weight: 650;
+    }
+
+    .tabbar .on { background: rgba(216, 170, 98, .17); color: var(--accent); }
+    .tabbar svg { width: 20px; height: 20px; }
+
+    .toast {
+      position: fixed;
+      z-index: 15;
+      left: 50%;
+      bottom: calc(max(12px, env(safe-area-inset-bottom)) + 82px);
+      width: min(calc(100% - 44px), 382px);
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 13px 15px;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 15px;
+      background: rgba(45, 43, 42, .92);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, .34);
+      color: var(--text);
+      font-size: 13px;
+      transform: translate(-50%, 14px);
+      opacity: 0;
+      pointer-events: none;
+      transition: .25s var(--ease);
+      backdrop-filter: blur(20px);
+    }
+
+    .toast.show { transform: translate(-50%, 0); opacity: 1; }
+    .toast b { color: var(--accent); }
+
+    .sheet {
+      position: fixed;
+      z-index: 20;
+      inset: 0;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 0;
+      background: rgba(0, 0, 0, .42);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .23s ease;
+    }
+
+    .sheet.open { opacity: 1; pointer-events: auto; }
+
+    .sheet-inner {
+      width: min(100%, 430px);
+      max-height: 68dvh;
+      padding: 9px 18px calc(24px + env(safe-area-inset-bottom));
+      border-radius: 28px 28px 0 0;
+      background: #201a15;
+      box-shadow: 0 -18px 50px rgba(0, 0, 0, .42);
+      transform: translateY(105%);
+      transition: transform .32s var(--ease);
+    }
+
+    .sheet.open .sheet-inner { transform: translateY(0); }
+    .handle { width: 38px; height: 5px; margin: 0 auto 20px; border-radius: 99px; background: rgba(255,255,255,.25); }
+    .sheet h2 { margin: 0 0 8px; font-size: 25px; }
+    .sheet p { color: var(--muted); line-height: 1.5; }
+    .sheet .action { width: 100%; margin-top: 8px; }
+
+    @media (min-width: 500px) {
+      body { padding: 18px 0 40px; }
+      .phone { min-height: 890px; border: 1px solid rgba(255,255,255,.12); border-radius: 42px; }
+      .tabbar { position: absolute; }
+      .toast { position: absolute; }
+      .sheet { position: absolute; border-radius: 42px; overflow: hidden; }
+    }
+
+    @media (max-width: 499px) { .preview-note { display: none; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <p class="preview-note">Interactive concept — tap Next, Not interested, Surprise me, or the card.</p>
+  <main class="phone" id="app">
+    <header class="header">
+      <h1>Discover</h1>
+      <button class="icon-btn" type="button" aria-label="Filters">
+        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+      </button>
+    </header>
+
+    <nav class="seg" aria-label="Discover view">
+      <button class="active" type="button">For You</button>
+      <button type="button">Browse</button>
+    </nav>
+
+    <section aria-labelledby="deck-title">
+      <div class="deck-head">
+        <span class="eyebrow" id="deck-title">Today’s deck</span>
+        <span class="progress-copy"><b id="position">1</b> of 12</span>
+      </div>
+      <div class="progress" aria-hidden="true"><span id="progress"></span></div>
+
+      <div class="card-wrap">
+        <div class="card-shadow" aria-hidden="true"></div>
+        <article class="card" id="card" tabindex="0" aria-label="Open recommendation details">
+          <div class="art">
+            <img id="cover" alt="" />
+            <div class="badge-row">
+              <span class="badge" id="match-badge">Strong match</span>
+              <button class="heart" id="save" type="button" aria-label="Save to wishlist">
+                <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.7-7.5 1.1-1.1a5.5 5.5 0 0 0 0-7.8Z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="copy">
+            <h2 class="title" id="title"></h2>
+            <div class="meta" id="meta"></div>
+            <div class="tags" id="tags"></div>
+            <p class="why"><span class="why-mark">✦</span><span id="why"></span></p>
+          </div>
+        </article>
+      </div>
+
+      <div class="actions">
+        <button class="action" id="dismiss" type="button" aria-label="Not interested">
+          <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+        <button class="action" id="details" type="button">Details</button>
+        <button class="action primary" id="next" type="button">Next <span aria-hidden="true">→</span></button>
+      </div>
+
+      <button class="surprise-btn" id="surprise" type="button">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+        Surprise me
+      </button>
+    </section>
+
+    <nav class="tabbar" aria-label="Primary navigation">
+      <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11.5 12 4l9 7.5V21H3Z"/><path d="M9 21v-6h6v6"/></svg><span>Home</span></button>
+      <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span>Library</span></button>
+      <button class="on" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m12 3 2.1 5.2L19 10l-4.2 3.2L15 19l-3-2-3 2 .2-5.8L5 10l4.9-1.8Z"/></svg><span>Discover</span></button>
+      <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V9M10 19V5M16 19v-7M22 19V3"/></svg><span>Insights</span></button>
+    </nav>
+
+    <div class="toast" id="toast" role="status"><span id="toast-copy">Removed from your recommendations</span><b>Undo</b></div>
+
+    <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+      <div class="sheet-inner">
+        <div class="handle"></div>
+        <h2 id="sheet-title"></h2>
+        <p id="sheet-copy"></p>
+        <button class="action primary" id="close-sheet" type="button">Done</button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const games = [
+      {
+        title: 'Clair Obscur: Expedition 33',
+        cover: 'https://newcdn.igromania.ru/games/383684/57b1f359-ee10-458b-888f-a4392f5e36fe.jpg',
+        meta: ['2025', '92', 'Xbox Series X|S'],
+        tags: ['Turn-based RPG', 'Dark fantasy', 'Story rich'],
+        why: 'A high-confidence match for your interest in tactical battles, meaningful upgrades, and distinctive worlds.',
+        details: 'A focused RPG recommendation led by tactical combat and a striking fantasy setting. Open the full game sheet for trailers, release details, platforms, and your recommendation history.'
+      },
+      {
+        title: 'Avowed',
+        cover: 'https://www.buygames.ps/2228-thickbox_default/avowed-standard-edition-xbox-series-xs.jpg',
+        meta: ['2025', '84', 'Xbox Series X|S'],
+        tags: ['Action RPG', 'Open world', 'Fantasy'],
+        why: 'Close to the exploration and character-building you enjoy, with a more action-driven combat loop.',
+        details: 'An adjacent discovery based on your RPG and open-world preferences. This is a slightly broader recommendation than the strongest matches in today’s deck.'
+      },
+      {
+        title: 'South of Midnight',
+        cover: 'https://pisces.bbystatic.com/image2/BestBuy_US/images/products/fcaec2e7-a301-4f76-88f9-fb8acd08baa0.jpg',
+        meta: ['2025', '82', 'Xbox Series X|S'],
+        tags: ['Action adventure', 'Atmospheric', 'Folklore'],
+        why: 'A shorter, atmospheric change of pace that still fits your taste for strong settings and progression.',
+        details: 'This recommendation expands your normal lane without becoming random. Its atmosphere and compact structure earn it an adjacent slot in the deck.'
+      },
+      {
+        title: 'Metaphor: ReFantazio',
+        cover: 'https://store-images.s-microsoft.com/image/apps.35405.14035448967936250.445c003a-4263-4f96-a690-a1d654384020.86b8b3f8-1044-4daa-8e83-49be14c55a5e?h=900&w=600',
+        meta: ['2024', '94', 'Xbox Series X|S'],
+        tags: ['JRPG', 'Turn-based', 'Stylized'],
+        why: 'A deeper strategic RPG with extensive party building, customization, and a highly distinctive world.',
+        details: 'A strong taste match informed by tactical combat and progression. It stays in normal rotation until you open it, save it, dismiss it, or its exposure cooldown begins.'
+      },
+      {
+        title: 'Kingdom Come: Deliverance II',
+        cover: 'https://cdn.cdkeys.com/496x700/media/catalog/product/k/i/kingdom_come_deliverance_ii_1_1_1.png',
+        meta: ['2025', '89', 'Xbox Series X|S'],
+        tags: ['Action RPG', 'Open world', 'Historical'],
+        why: 'A systems-heavy open world with meaningful character growth and a strong sense of place.',
+        details: 'A recommendation selected from your open-world and RPG tastes. It is intentionally different enough to add variety without becoming a random pick.'
+      },
+      {
+        title: 'Blue Prince',
+        cover: 'https://www.gematsu.com/wp-content/uploads/2024/03/Game-Page-Box-Art_Blue-Prince-Inits.jpg',
+        meta: ['2025', '90', 'Xbox Series X|S'],
+        tags: ['Puzzle', 'Mystery', 'Atmospheric'],
+        why: 'A deliberate wildcard: less combat-focused, but strong on discovery, systems, and solving an evolving space.',
+        details: 'This is one of two wildcard slots. Surprise me can surface picks like this immediately without replacing or scrambling the rest of today’s deck.'
+      },
+      {
+        title: 'DOOM: The Dark Ages',
+        cover: 'https://image.jeuxvideo.com/medias-sm/174342/1743423601-684-jaquette-avant.png',
+        meta: ['2025', '86', 'Xbox Series X|S'],
+        tags: ['Shooter', 'Fast-paced', 'Dark fantasy'],
+        why: 'A combat-first wildcard with upgrade depth, satisfying battles, and a setting far outside your usual RPG lane.',
+        details: 'A wildcard recommendation. It broadens the deck while still matching your preference for combat, progression, and memorable settings.'
+      }
+    ]
+
+    let index = 0
+    let saved = false
+    let surpriseMode = false
+    let toastTimer
+
+    const el = (id) => document.getElementById(id)
+    const card = el('card')
+
+    function render({ animate = false } = {}) {
+      const game = games[index % games.length]
+      if (animate) {
+        card.classList.remove('enter')
+        void card.offsetWidth
+        card.classList.add('enter')
+      }
+      el('cover').src = game.cover
+      el('cover').alt = `${game.title} cover art`
+      el('title').textContent = game.title
+      el('meta').innerHTML = game.meta.map(item => `<span>${item}</span>`).join('')
+      el('tags').innerHTML = game.tags.map(item => `<span class="tag">${item}</span>`).join('')
+      el('why').textContent = game.why
+      el('sheet-title').textContent = game.title
+      el('sheet-copy').textContent = game.details
+      el('position').textContent = (index % 12) + 1
+      el('progress').style.width = `${((index % 12) + 1) / 12 * 100}%`
+      el('match-badge').textContent = surpriseMode ? '✦ Surprise pick' : (index % 6 >= 4 ? 'Explore a little' : 'Strong match')
+      el('match-badge').classList.toggle('surprise', surpriseMode)
+      saved = false
+      el('save').classList.remove('saved')
+      el('save').setAttribute('aria-label', 'Save to wishlist')
+    }
+
+    function advance(direction = 'left') {
+      card.classList.remove('enter')
+      card.classList.add(direction === 'right' ? 'out-right' : 'out-left')
+      window.setTimeout(() => {
+        card.classList.remove('out-left', 'out-right')
+        index = (index + 1) % 12
+        surpriseMode = false
+        render({ animate: true })
+      }, 220)
+    }
+
+    function showToast(message) {
+      window.clearTimeout(toastTimer)
+      el('toast-copy').textContent = message
+      el('toast').classList.add('show')
+      toastTimer = window.setTimeout(() => el('toast').classList.remove('show'), 2200)
+    }
+
+    function openSheet() { el('sheet').classList.add('open') }
+    function closeSheet() { el('sheet').classList.remove('open') }
+
+    el('next').addEventListener('click', () => advance('left'))
+    el('dismiss').addEventListener('click', () => {
+      showToast('Removed from your recommendations')
+      advance('right')
+    })
+    el('details').addEventListener('click', openSheet)
+    card.addEventListener('click', (event) => {
+      if (!event.target.closest('button')) openSheet()
+    })
+    card.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openSheet() }
+    })
+    el('close-sheet').addEventListener('click', closeSheet)
+    el('sheet').addEventListener('click', (event) => { if (event.target === el('sheet')) closeSheet() })
+    el('save').addEventListener('click', (event) => {
+      event.stopPropagation()
+      saved = !saved
+      el('save').classList.toggle('saved', saved)
+      el('save').setAttribute('aria-label', saved ? 'Remove from wishlist' : 'Save to wishlist')
+      showToast(saved ? 'Saved to your wishlist' : 'Removed from your wishlist')
+    })
+    el('surprise').addEventListener('click', () => {
+      surpriseMode = true
+      index = index % 2 === 0 ? 5 : 6
+      render({ animate: true })
+      showToast('A wildcard from beyond your usual tastes')
+    })
+
+    render()
+  </script>
+</body>
+</html>
