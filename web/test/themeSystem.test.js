@@ -109,6 +109,13 @@ test('the PlayStation bottom bar uses a translucent blue lens with mode-aware ic
   assert.match(css, /data-theme-family='playstation'\] \.tabbar-icon svg\s*\{[^}]*stroke-width:\s*2\.05/s)
 })
 
+test('Xbox ranking tabs have distinct selected and unselected colors', () => {
+  const css = readFileSync(new URL('../src/index.css', import.meta.url), 'utf8')
+
+  assert.match(css, /data-theme-family='xbox'\] \.rank-tabs \.seg-btn\s*\{[^}]*color:\s*color-mix\([^}]*var\(--muted\)[^}]*var\(--accent\)/s)
+  assert.match(css, /data-theme-family='xbox'\] \.rank-tabs \.seg-btn\.active\s*\{[^}]*background:\s*var\(--accent\)[^}]*color:\s*var\(--bg\)/s)
+})
+
 test('the genre pie has a complete palette in every theme and appearance', () => {
   const css = readFileSync(new URL('../src/components/insights.css', import.meta.url), 'utf8')
 

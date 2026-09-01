@@ -4009,6 +4009,20 @@ textarea {
   box-shadow: inset 4px 0 0 color-mix(in srgb, white 42%, transparent);
 }
 
+/* The generic segmented control uses neutral text for both states. On Xbox's
+   dark graphite surface that made Ranking and Compare read as two white labels
+   instead of a selected control. Keep the idle label restrained and give the
+   active ranking section the same green selection language as Xbox filters. */
+:root[data-theme-family='xbox'] .rank-tabs .seg-btn {
+  color: color-mix(in srgb, var(--muted) 84%, var(--accent));
+}
+
+:root[data-theme-family='xbox'] .rank-tabs .seg-btn.active {
+  background: var(--accent);
+  color: var(--bg);
+  box-shadow: inset 4px 0 0 color-mix(in srgb, white 42%, transparent);
+}
+
 :root[data-theme-family='xbox'] :is(.discover-section-label, .menu-sec-label, .hm-tk) {
   color: color-mix(in srgb, var(--accent) 64%, var(--muted));
 }
