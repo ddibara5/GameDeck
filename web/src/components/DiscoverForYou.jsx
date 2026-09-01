@@ -14,7 +14,7 @@ import {
   platformParam,
   setDiscoverPrefs,
 } from '../lib/discoverPrefs.js'
-import { useTasteProfile, NEW_LANE, laneReason, rankCandidates, interleave } from '../lib/discoverLanes.js'
+import { useTasteProfile, NEW_LANE, gameDescriptor, laneReason, rankCandidates, interleave } from '../lib/discoverLanes.js'
 import { recordRecommendationDetailOpen, trackRecommendationFeed } from '../lib/recommendationLearning.js'
 import usePullRefresh from '../lib/usePullRefresh.js'
 import { useDialogA11y } from '../lib/useDialogA11y.js'
@@ -341,6 +341,8 @@ export default function DiscoverForYou({ onAsk }) {
             {feed.map((game, index) => {
               const wished = wishIds.has(game.id)
               const platforms = preferredPlatforms(game.platforms, prefs.platforms)
+              const descriptor = gameDescriptor(game)
+              const releaseMeta = [game.year || null, platforms].filter(Boolean).join(' · ')
               return (
                 <div key={game.id} className="fy-row-wrap">
                   <button
@@ -358,11 +360,14 @@ export default function DiscoverForYou({ onAsk }) {
                     <Cover src={game.cover} title={game.name} size="sm" className="fy-cov" />
                     <span className="fy-body">
                       <span className="fy-name">{game.name}</span>
-                      <span className="fy-meta">
-                        {game.year ? <span>{game.year}</span> : null}
-                        {game.rating ? <span className="fy-rating">{` · ${game.rating}`}</span> : null}
-                        {platforms ? <span>{` · ${platforms}`}</span> : null}
-                      </span>
+                      {descriptor ? <span className="fy-descriptor">{descriptor}</span> : null}
+                      {game.rating || releaseMeta ? (
+                        <span className="fy-meta">
+                          {game.rating ? <span className="fy-rating">★ {game.rating}</span> : null}
+                          {game.rating && releaseMeta ? <span> · </span> : null}
+                          {releaseMeta ? <span>{releaseMeta}</span> : null}
+                        </span>
+                      ) : null}
                       <span className={`fy-why${wished ? ' wished' : ''}`}>
                         {wished ? 'On your wishlist · available now' : laneReason(game.lane)}
                       </span>

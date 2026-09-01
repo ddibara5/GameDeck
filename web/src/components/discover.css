@@ -747,8 +747,8 @@ button.shelf-head:active {
 .fy-row {
   display: flex;
   gap: 11px;
-  /* Centred, not top-aligned: against an 88px poster the three text lines are
-     55px, and flex-start left all of that slack under the last line. */
+  /* Centred, not top-aligned: the compact metadata stack stays visually tied
+     to the poster instead of leaving all of its slack under the reason line. */
   align-items: center;
   width: 100%;
   min-height: calc(var(--game-art-row) * 4 / 3 + 20px);
@@ -781,6 +781,7 @@ button.shelf-head:active {
 /* Every line clamps. A feed is scanned down the left edge, and one three-line
    title puts the row below it out of rhythm. */
 .fy-name,
+.fy-descriptor,
 .fy-meta {
   display: block;
   white-space: nowrap;
@@ -790,6 +791,13 @@ button.shelf-head:active {
 
 .fy-name {
   font-size: var(--t-sub);
+  font-weight: var(--w-semi);
+}
+
+.fy-descriptor {
+  margin-top: 3px;
+  color: color-mix(in oklab, var(--text) 72%, var(--muted));
+  font-size: var(--t-cap);
   font-weight: var(--w-semi);
 }
 
@@ -812,7 +820,7 @@ button.shelf-head:active {
   -webkit-line-clamp: 2;
   overflow: hidden;
   max-width: 100%;
-  margin-top: 6px;
+  margin-top: 5px;
   font-size: var(--t-cap);
   line-height: 1.3;
   color: color-mix(in oklab, var(--accent) 84%, var(--text));

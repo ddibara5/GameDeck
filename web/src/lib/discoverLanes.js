@@ -17,7 +17,15 @@ import { loadRecentActivity } from './recentActivity.js'
 import { loadWishlist } from './wishlist.js'
 import { buildTasteProfile } from './gameIntelligence.js'
 
-export { LANE_CATALOG, NEW_LANE, MAX_TASTE_LANES, laneReason, rankCandidates, interleave } from './discoverTaste.js'
+export {
+  LANE_CATALOG,
+  NEW_LANE,
+  MAX_TASTE_LANES,
+  gameDescriptor,
+  laneReason,
+  rankCandidates,
+  interleave,
+} from './discoverTaste.js'
 
 const PROBE_KEY = 'discover:tasteProfile:v3'
 const PROBE_TTL = 6 * 60 * 60 * 1000

@@ -5,6 +5,7 @@ import test from 'node:test'
 import {
   NEW_LANE,
   candidateOutcomeAdjustment,
+  gameDescriptor,
   interleave,
   laneOutcomeMultiplier,
   laneReason,
@@ -101,6 +102,21 @@ test('taste attribution wins over the generic New lane for duplicate games', () 
   assert.equal(feed[0].lane.key, 'soulslike')
   assert.equal(feed.filter((game) => game.id === 1).length, 1)
   assert.equal(feed[2].lane.key, 'new')
+})
+
+test('For You describes game type and verified vibe without inventing metadata', () => {
+  assert.equal(gameDescriptor({
+    genres: ['Role-playing (RPG)', 'Adventure'],
+    themes: ['Fantasy'],
+    lane: { key: 'soulslike', label: 'Soulslike' },
+  }), 'RPG · Soulslike')
+  assert.equal(gameDescriptor({
+    genres: ['Strategy'],
+    keywords: ['turn-based combat'],
+    lane: NEW_LANE,
+  }), 'Strategy · Turn-based')
+  assert.equal(gameDescriptor({ genres: ['Adventure'], lane: NEW_LANE }), 'Adventure')
+  assert.equal(gameDescriptor({ genres: ['Indie'], lane: NEW_LANE }), '')
 })
 
 test('candidate ranking balances freshness with confidence-weighted quality', () => {

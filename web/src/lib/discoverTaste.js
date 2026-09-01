@@ -17,6 +17,40 @@ export const LANE_CATALOG = [
 export const NEW_LANE = { key: 'new', label: 'New on your platforms' }
 export const MAX_TASTE_LANES = 4
 
+const GENRE_LABELS = new Map([
+  ['role-playing (rpg)', 'RPG'],
+  ["hack and slash/beat 'em up", 'Hack & slash'],
+  ['hack and slash/beat ’em up', 'Hack & slash'],
+  ['real time strategy (rts)', 'RTS'],
+  ['turn-based strategy (tbs)', 'Turn-based strategy'],
+  ['point-and-click', 'Point & click'],
+  ['card & board game', 'Card/Board'],
+  ['simulator', 'Simulation'],
+  ['platform', 'Platformer'],
+])
+
+const VIBE_TERMS = [
+  ['soulslike', 'Soulslike'],
+  ['souls-like', 'Soulslike'],
+  ['turn-based combat', 'Turn-based'],
+  ['turn-based', 'Turn-based'],
+  ['open world', 'Open world'],
+  ['post-apocalyptic', 'Post-apocalyptic'],
+  ['story rich', 'Story rich'],
+  ['survival horror', 'Horror'],
+  ['survival', 'Survival'],
+  ['horror', 'Horror'],
+  ['stealth', 'Stealth'],
+  ['science fiction', 'Sci-fi'],
+  ['fantasy', 'Fantasy'],
+  ['metroidvania', 'Metroidvania'],
+  ['jrpg', 'JRPG'],
+  ['mystery', 'Mystery'],
+  ['thriller', 'Thriller'],
+  ['historical', 'Historical'],
+  ['warfare', 'Warfare'],
+]
+
 const DAY_MS = 24 * 60 * 60 * 1000
 const RECENCY_HALF_LIFE_DAYS = 120
 
@@ -139,6 +173,39 @@ export function laneReason(lane) {
   if (lane.exemplar && lane.exemplarReaction === 'loved') return `Because you loved ${lane.exemplar}`
   if (lane.exemplar && lane.exemplarReaction === 'liked') return `Because you liked ${lane.exemplar}`
   return lane.exemplar ? `${lane.label}, like ${lane.exemplar}` : lane.label
+}
+
+function compactGenre(value) {
+  const label = String(value || '').trim()
+  return GENRE_LABELS.get(label.toLowerCase()) || label
+}
+
+function metadataVibe(game) {
+  const values = [...(game?.themes || []), ...(game?.keywords || [])]
+    .map((value) => String(value || '').trim().toLowerCase())
+    .filter(Boolean)
+  for (const [term, label] of VIBE_TERMS) {
+    if (values.some((value) => value === term || value.includes(term))) return label
+  }
+  return ''
+}
+
+// A single scan line for the compact For You feed. The personalized lane is a
+// stronger, verified description than a generic theme (a soulslike lane only
+// contains games that matched that IGDB query), while the New lane falls back
+// to the game's own themes and curated keywords. Never invent a label when the
+// catalog has no useful signal.
+export function gameDescriptor(game) {
+  const genre = (game?.genres || [])
+    .map(compactGenre)
+    .find((label) => label && label.toLowerCase() !== 'indie') || ''
+  const laneVibe = game?.lane?.key && game.lane.key !== NEW_LANE.key
+    ? String(game.lane.label || '').trim()
+    : ''
+  const vibe = laneVibe || metadataVibe(game)
+  if (!genre) return vibe
+  if (!vibe || genre.toLowerCase() === vibe.toLowerCase()) return genre
+  return `${genre} · ${vibe}`
 }
 
 function candidateScore(game, now, wishlistIds, gameFeedback) {
