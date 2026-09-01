@@ -142,34 +142,6 @@
   cursor: pointer;
 }
 
-/* Entry point at the bottom of the Discover home. */
-.customize-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-  width: calc(100% - 32px);
-  margin: 14px 16px calc(16px + var(--safe-bottom));
-  padding: 13px;
-  border-radius: var(--r-sm);
-  border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--accent);
-  font-size: var(--t-sub);
-  font-weight: var(--w-semi);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.customize-btn:active {
-  background: var(--surface-2);
-}
-
-.customize-btn svg {
-  width: 18px;
-  height: 18px;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .cz-toggle,
   .cz-toggle i {

@@ -3128,6 +3128,37 @@ textarea {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
+/* Shared entry point for the Discover row and Insights card editors. This must
+   stay in the always-loaded stylesheet: the editors themselves are lazy, so
+   keeping this rule in their chunk made the button render as an unstyled native
+   control until an editor had been opened at least once. */
+.customize-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: calc(100% - 32px);
+  margin: 14px 16px calc(16px + var(--safe-bottom));
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--accent);
+  font-size: var(--t-sub);
+  font-weight: var(--w-semi);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.customize-btn:active {
+  background: var(--surface-2);
+}
+
+.customize-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
 /* In-app logo picker. The option itself is the preview, so the difference is
    visible before selection instead of being reduced to two abstract labels. */
 .logo-style-options {
