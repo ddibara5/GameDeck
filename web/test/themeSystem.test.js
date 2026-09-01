@@ -3,13 +3,15 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { THEME_FAMILIES, getThemeFamily, setThemeFamily } from '../src/lib/theme.js'
 
-test('the five visual families each have complete CSS token systems', () => {
+test('the seven visual families each have complete CSS token systems', () => {
   const css = readFileSync(new URL('../src/index.css', import.meta.url), 'utf8')
   assert.deepEqual(
     THEME_FAMILIES.map(({ key, label }) => [key, label]),
     [
       ['curator', 'Curator'],
       ['obsidian', 'Obsidian Glass'],
+      ['xbox', 'Xbox'],
+      ['playstation', 'PlayStation'],
       ['neon', 'Neon Cabinet'],
       ['blueprint', 'Blueprint'],
       ['cartridge', 'Cartridge'],
@@ -77,7 +79,7 @@ test('ranking numbers and tier badges inherit each visual family', () => {
   for (const token of ['--amber', '--accent', '--walnut-light', '--muted', '--font-display', '--font-label']) {
     assert.match(css, new RegExp(`var\\(${token}\\)`))
   }
-  for (const family of ['obsidian', 'neon', 'blueprint', 'cartridge']) {
+  for (const family of ['obsidian', 'xbox', 'playstation', 'neon', 'blueprint', 'cartridge']) {
     assert.match(css, new RegExp(`data-theme-family=["']${family}["']`))
   }
   assert.doesNotMatch(css, /#d99a2b|#6f8dc8|#718b53|#9b725f/)
@@ -90,7 +92,7 @@ test('the bottom bar has complete light and dark theme materials', () => {
   assert.match(css, /\[data-theme="light"\] \.tabbar-btn\s*\{[^}]*color:\s*var\(--muted\)/s)
   assert.match(css, /\.tabbar-lens\s*\{[^}]*var\(--accent\)[^}]*var\(--glass-line\)/s)
 
-  for (const family of ['obsidian', 'neon', 'blueprint', 'cartridge']) {
+  for (const family of ['obsidian', 'xbox', 'playstation', 'neon', 'blueprint', 'cartridge']) {
     const block = css.match(new RegExp(`:root\\[data-theme-family="${family}"\\]\\[data-theme="light"\\]\\s*\\{([^}]*)\\}`))?.[1] || ''
     for (const token of ['--glass', '--glass-chip', '--glass-line']) {
       assert.match(block, new RegExp(`${token}:`), `${family} light mode must define ${token}`)
@@ -104,7 +106,7 @@ test('the genre pie has a complete palette in every theme and appearance', () =>
   for (const token of ['--genre-1', '--genre-2', '--genre-3', '--genre-4', '--genre-5']) {
     assert.match(css, new RegExp(token))
   }
-  for (const family of ['curator', 'obsidian', 'neon', 'blueprint', 'cartridge']) {
+  for (const family of ['curator', 'obsidian', 'xbox', 'playstation', 'neon', 'blueprint', 'cartridge']) {
     if (family !== 'curator') assert.match(css, new RegExp(`\\[data-theme-family=["']${family}["']\\].*\\.genre-card`))
     assert.match(css, new RegExp(`\\[data-theme-family=["']${family}["']\\]\\[data-theme=["']light["']\\] \\.genre-card`))
   }

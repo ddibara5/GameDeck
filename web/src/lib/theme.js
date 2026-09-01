@@ -10,7 +10,7 @@ const CONTRAST_KEY = 'gamedeck_contrast_v1'
 const TRANSPARENCY_KEY = 'gamedeck_transparency_v1'
 
 const MODES = new Set(['dark', 'light', 'system'])
-const FAMILIES = new Set(['curator', 'obsidian', 'neon', 'blueprint', 'cartridge'])
+const FAMILIES = new Set(['curator', 'obsidian', 'xbox', 'playstation', 'neon', 'blueprint', 'cartridge'])
 const LOGO_STYLES = new Set(['theme', 'classic', 'glass'])
 const DISPLAY_VALUES = new Set(['system', 'standard', 'reduced'])
 const CONTRAST_VALUES = new Set(['system', 'standard', 'high'])
@@ -41,6 +41,16 @@ export const THEME_FAMILIES = [
     key: 'obsidian', label: 'Obsidian Glass', eyebrow: 'Premium cinematic',
     description: 'Prismatic glass, soft depth and deliberate gallery-like pacing.',
     dark: ['#0a0b0f', '#171923', '#82a3ff'], light: ['#edf1f8', '#f9fbff', '#3f61bd'],
+  },
+  {
+    key: 'xbox', label: 'Xbox', eyebrow: 'Console dashboard',
+    description: 'Velocity green, graphite tiles, crisp geometry and confident motion.',
+    dark: ['#070a08', '#121714', '#69c350'], light: ['#eef3ee', '#fbfdfb', '#107c10'],
+  },
+  {
+    key: 'playstation', label: 'PlayStation', eyebrow: 'Console atmosphere',
+    description: 'Deep blue light, floating layers, refined curves and cinematic calm.',
+    dark: ['#050b18', '#0c1830', '#64a9ff'], light: ['#edf4fb', '#fbfdff', '#0068bd'],
   },
   {
     key: 'neon', label: 'Neon Cabinet', eyebrow: 'Arcade energy',

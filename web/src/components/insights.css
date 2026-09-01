@@ -282,6 +282,18 @@
 [data-theme-family="obsidian"][data-theme="light"] .genre-card {
   --genre-1: #3f61bd; --genre-2: #7651bd; --genre-3: #39828f; --genre-4: #a74778; --genre-5: #8791a8;
 }
+[data-theme-family="xbox"] .genre-card {
+  --genre-1: #69c350; --genre-2: #f1c75b; --genre-3: #47a6a0; --genre-4: #9b82d2; --genre-5: #607665;
+}
+[data-theme-family="xbox"][data-theme="light"] .genre-card {
+  --genre-1: #107c10; --genre-2: #866600; --genre-3: #277873; --genre-4: #684a9d; --genre-5: #738276;
+}
+[data-theme-family="playstation"] .genre-card {
+  --genre-1: #64a9ff; --genre-2: #a594ff; --genre-3: #4ed0cf; --genre-4: #df7fb5; --genre-5: #657b99;
+}
+[data-theme-family="playstation"][data-theme="light"] .genre-card {
+  --genre-1: #0068bd; --genre-2: #5844a8; --genre-3: #248387; --genre-4: #a54879; --genre-5: #788ca5;
+}
 [data-theme-family="neon"] .genre-card {
   --genre-1: #00e6c7; --genre-2: #ff63d0; --genre-3: #b6e65b; --genre-4: #8d82ff; --genre-5: #617188;
 }

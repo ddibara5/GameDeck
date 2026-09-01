@@ -2890,6 +2890,89 @@ textarea {
     linear-gradient(145deg, #edf1f8, #f7f9fd 58%, #e9edf6);
 }
 
+/* Xbox — graphite dashboard tiles, velocity green and quick directional motion. */
+:root[data-theme-family="xbox"] {
+  --bg: #070a08; --surface: #121714; --surface-2: #1b251d; --line: #38533b;
+  --text: #f3f8f3; --muted: #a5b7a7; --walnut: #1f5f29; --walnut-light: #3e9a45;
+  --accent: #69c350; --amber: #f1c75b;
+  --font-display: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-body: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --r-xs: 4px; --r-sm: 8px; --r-md: 12px; --r-lg: 18px;
+  --glass: rgba(10, 16, 11, 0.78); --glass-chip: rgba(18, 27, 20, 0.88);
+  --glass-line: rgba(105, 195, 80, 0.23); --glass-blur: blur(20px) saturate(145%);
+  --e1: 0 1px 0 rgba(105, 195, 80, 0.12), 0 6px 18px rgba(0, 0, 0, 0.3);
+  --e2: 0 1px 0 rgba(105, 195, 80, 0.16), 0 14px 36px rgba(0, 0, 0, 0.38);
+  --e3: 0 2px 0 rgba(105, 195, 80, 0.18), 0 24px 58px rgba(0, 0, 0, 0.46);
+  --e-nav: 0 12px 34px rgba(0, 0, 0, 0.44), inset 0 1px 0 rgba(140, 222, 116, 0.18);
+  --d-fast: 0.11s; --d-base: 0.2s; --d-slow: 0.32s;
+  --ease-out: cubic-bezier(0.18, 0.82, 0.2, 1);
+  --theme-ground:
+    radial-gradient(72% 50% at 4% -4%, rgba(82, 176, 66, 0.2), transparent 72%),
+    radial-gradient(52% 42% at 104% 82%, rgba(32, 112, 48, 0.12), transparent 74%),
+    linear-gradient(150deg, #070a08, #0d120f 56%, #060907);
+  --theme-texture:
+    linear-gradient(rgba(105,195,80,.026) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(105,195,80,.026) 1px, transparent 1px);
+  --theme-texture-opacity: 1;
+  --theme-texture-size: 48px 48px;
+  --logo-1: #0a3811; --logo-2: #10521a; --logo-3: #176d21; --logo-4: #238b2d;
+  --logo-5: #36a93d; --logo-6: #52c64a; --logo-7: #8cdd70;
+}
+:root[data-theme-family="xbox"][data-theme="light"] {
+  --bg: #eef3ee; --surface: #fbfdfb; --surface-2: #ffffff; --line: #a8baa9;
+  --text: #152018; --muted: #536555; --walnut: #176b22; --walnut-light: #2d8c36;
+  --accent: #107c10; --amber: #866600;
+  --glass: rgba(248, 252, 248, 0.76); --glass-chip: rgba(255, 255, 255, 0.88);
+  --glass-line: rgba(16, 124, 16, 0.2);
+  --e-nav: 0 10px 30px rgba(35, 70, 39, 0.17), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  --theme-ground:
+    radial-gradient(72% 50% at 4% -4%, rgba(16, 124, 16, 0.13), transparent 72%),
+    radial-gradient(52% 42% at 104% 82%, rgba(73, 154, 63, 0.08), transparent 74%),
+    linear-gradient(150deg, #eef3ee, #f7faf7 56%, #e9f0e9);
+  --theme-texture:
+    linear-gradient(rgba(16,124,16,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16,124,16,.035) 1px, transparent 1px);
+}
+
+/* PlayStation — deep blue atmosphere, floating layers and restrained glow. */
+:root[data-theme-family="playstation"] {
+  --bg: #050b18; --surface: #0c1830; --surface-2: #142745; --line: #31527b;
+  --text: #f2f7ff; --muted: #a4b5ca; --walnut: #164b86; --walnut-light: #3478bd;
+  --accent: #64a9ff; --amber: #a594ff;
+  --font-display: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-body: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --r-xs: 9px; --r-sm: 15px; --r-md: 21px; --r-lg: 29px;
+  --glass: rgba(7, 18, 39, 0.58); --glass-chip: rgba(13, 30, 58, 0.72);
+  --glass-line: rgba(116, 181, 255, 0.22); --glass-blur: blur(27px) saturate(165%);
+  --e1: 0 8px 22px rgba(0, 8, 28, 0.3);
+  --e2: 0 18px 46px rgba(0, 7, 27, 0.4), inset 0 1px 0 rgba(142, 198, 255, 0.08);
+  --e3: 0 28px 76px rgba(0, 6, 24, 0.52), inset 0 1px 0 rgba(142, 198, 255, 0.1);
+  --e-nav: 0 14px 40px rgba(0, 7, 27, 0.48), inset 0 1px 0 rgba(145, 201, 255, 0.2);
+  --d-fast: 0.16s; --d-base: 0.28s; --d-slow: 0.44s;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --theme-ground:
+    radial-gradient(82% 58% at 5% -7%, rgba(0, 112, 209, 0.26), transparent 70%),
+    radial-gradient(70% 56% at 104% 75%, rgba(80, 78, 200, 0.16), transparent 72%),
+    linear-gradient(150deg, #040a17, #08152b 58%, #050b18);
+  --theme-texture: linear-gradient(120deg, transparent 30%, rgba(95,171,255,.035) 50%, transparent 70%), var(--grain);
+  --theme-texture-opacity: .8;
+  --theme-texture-size: 220px 220px, 140px 140px;
+  --logo-1: #071e52; --logo-2: #0a2e75; --logo-3: #0d439d; --logo-4: #145dc0;
+  --logo-5: #2379dc; --logo-6: #4b9af1; --logo-7: #8bc5ff;
+}
+:root[data-theme-family="playstation"][data-theme="light"] {
+  --bg: #edf4fb; --surface: #fbfdff; --surface-2: #ffffff; --line: #aac0da;
+  --text: #10233e; --muted: #536b86; --walnut: #075a9f; --walnut-light: #2f78b8;
+  --accent: #0068bd; --amber: #5844a8;
+  --glass: rgba(247, 251, 255, 0.7); --glass-chip: rgba(255, 255, 255, 0.84);
+  --glass-line: rgba(0, 104, 189, 0.18);
+  --e-nav: 0 12px 34px rgba(24, 72, 122, 0.17), inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  --theme-ground:
+    radial-gradient(82% 58% at 5% -7%, rgba(0, 112, 209, 0.15), transparent 70%),
+    radial-gradient(70% 56% at 104% 75%, rgba(80, 78, 200, 0.09), transparent 72%),
+    linear-gradient(150deg, #edf4fb, #f8fbff 58%, #e8f1fa);
+}
+
 /* Neon Cabinet — electric duotone, grid energy and fast, crisp response. */
 :root[data-theme-family="neon"] {
   --bg: #080b12; --surface: #111725; --surface-2: #1a2336; --line: #30405a;
@@ -3208,6 +3291,16 @@ textarea {
 .theme-card-obsidian .theme-card-panel { background: rgba(36,39,56,.66); border-color: rgba(197,211,255,.26); border-radius: 22px; backdrop-filter: blur(10px); }
 .theme-card-obsidian .theme-card-chip { background: linear-gradient(90deg, #82a3ff, #b38cff); }
 
+.theme-card-xbox .theme-card-preview { border-radius: 8px; background: radial-gradient(circle at 5% 0, rgba(82,176,66,.25), transparent 62%), #070a08; }
+.theme-card-xbox .theme-card-grid { background-image: linear-gradient(rgba(105,195,80,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(105,195,80,.035) 1px, transparent 1px); background-size: 22px 22px; }
+.theme-card-xbox .theme-card-panel { background: #121714; border-color: #38533b; border-radius: 7px; box-shadow: 0 10px 24px rgba(0,0,0,.38); }
+.theme-card-xbox .theme-card-chip { background: linear-gradient(90deg, #69c350 72%, #f1c75b 72%); border-radius: 3px; }
+
+.theme-card-playstation .theme-card-preview { border-radius: 16px; background: radial-gradient(circle at 8% 0, rgba(0,112,209,.34), transparent 62%), radial-gradient(circle at 100% 100%, rgba(80,78,200,.2), transparent 60%), #050b18; }
+.theme-card-playstation .theme-card-grid { background: linear-gradient(120deg, transparent 28%, rgba(100,169,255,.08) 50%, transparent 72%); }
+.theme-card-playstation .theme-card-panel { background: rgba(12,24,48,.76); border-color: rgba(100,169,255,.25); border-radius: 18px; box-shadow: 0 14px 30px rgba(0,7,27,.42); backdrop-filter: blur(9px); }
+.theme-card-playstation .theme-card-chip { background: linear-gradient(90deg, #64a9ff 70%, #a594ff 70%); border-radius: 999px; }
+
 .theme-card-neon .theme-card-preview { border-radius: 6px; background: #080b12; }
 .theme-card-neon .theme-card-grid { background-image: linear-gradient(rgba(0,230,199,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,230,199,.1) 1px, transparent 1px); background-size: 14px 14px; }
 .theme-card-neon .theme-card-panel { background: #111725; border-color: #30405a; border-radius: 5px; box-shadow: 0 0 20px rgba(0,230,199,.15); }
@@ -3227,6 +3320,12 @@ textarea {
 [data-theme='light'] .theme-card-curator .theme-card-chip { background: #8a5d25; }
 [data-theme='light'] .theme-card-obsidian .theme-card-preview { background: radial-gradient(circle at 12% 5%, rgba(92,160,255,.22), transparent 55%), radial-gradient(circle at 90% 95%, rgba(157,104,220,.18), transparent 58%), #edf1f8; border-color: #bdc7da; }
 [data-theme='light'] .theme-card-obsidian .theme-card-panel { background: rgba(249,251,255,.7); border-color: #bdc7da; }
+[data-theme='light'] .theme-card-xbox .theme-card-preview { background: radial-gradient(circle at 5% 0, rgba(16,124,16,.16), transparent 62%), #eef3ee; border-color: #a8baa9; }
+[data-theme='light'] .theme-card-xbox .theme-card-panel { background: #fbfdfb; border-color: #a8baa9; box-shadow: 0 9px 22px rgba(35,70,39,.14); }
+[data-theme='light'] .theme-card-xbox .theme-card-chip { background: linear-gradient(90deg, #107c10 72%, #866600 72%); }
+[data-theme='light'] .theme-card-playstation .theme-card-preview { background: radial-gradient(circle at 8% 0, rgba(0,112,209,.18), transparent 62%), radial-gradient(circle at 100% 100%, rgba(80,78,200,.1), transparent 60%), #edf4fb; border-color: #aac0da; }
+[data-theme='light'] .theme-card-playstation .theme-card-panel { background: rgba(251,253,255,.78); border-color: #aac0da; box-shadow: 0 12px 26px rgba(24,72,122,.14); }
+[data-theme='light'] .theme-card-playstation .theme-card-chip { background: linear-gradient(90deg, #0068bd 70%, #5844a8 70%); }
 [data-theme='light'] .theme-card-neon .theme-card-preview { background: #eef2f3; border-color: #9fbdc2; }
 [data-theme='light'] .theme-card-neon .theme-card-panel { background: #fbfdfe; border-color: #9fbdc2; }
 [data-theme='light'] .theme-card-neon .theme-card-chip { background: linear-gradient(90deg, #00756e 60%, #a62082 60%); }
@@ -3689,8 +3788,14 @@ textarea {
   -webkit-backdrop-filter: var(--glass-blur);
 }
 
+:root[data-theme-family='playstation'] :is(.settings-group, .logo-style-option, .theme-card) {
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+
 :root[data-theme-family='neon'] :is(.settings-group, .filter-btn, .seg),
-:root[data-theme-family='blueprint'] :is(.settings-group, .filter-btn, .seg) {
+:root[data-theme-family='blueprint'] :is(.settings-group, .filter-btn, .seg),
+:root[data-theme-family='xbox'] :is(.settings-group, .filter-btn, .seg) {
   border-color: color-mix(in srgb, var(--accent) 32%, var(--line));
 }
 
