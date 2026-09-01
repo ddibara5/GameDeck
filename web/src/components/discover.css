@@ -164,31 +164,6 @@
   border-color: var(--line-soft);
 }
 
-/* ---------- Browse: results ---------- */
-
-.results-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 2px 16px 8px;
-}
-
-.results-count {
-  font-size: var(--t-foot);
-  color: var(--muted);
-  font-weight: var(--w-semi);
-}
-
-.results-clear {
-  border: none;
-  background: none;
-  color: var(--accent);
-  font-size: var(--t-foot);
-  font-weight: var(--w-semi);
-  cursor: pointer;
-  padding: 6px;
-}
-
 .discover-card {
   position: relative;
 }

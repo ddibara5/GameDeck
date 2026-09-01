@@ -405,11 +405,6 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [railKeySig, railFilterSig])
 
-  function resetAll() {
-    setPreset(null)
-    setFilters(makeDefaultFilters())
-  }
-
   function openFilters() {
     setDraftFilters({ ...filters, scales: [...filters.scales] })
     setDraftPreset(preset)
@@ -501,15 +496,6 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
         <span className="discover-section-label">Browse games</span>
         <DiscoverFilterButton activeCount={activeFilterCount} onClick={openFilters} />
       </div>
-      {narrowed ? (
-        <div className="results-head">
-          <span className="results-count">Filtering every row</span>
-          <button type="button" className="results-clear" onClick={resetAll}>
-            Clear
-          </button>
-        </div>
-      ) : null}
-
       {rowsConfig.order.map((key) => {
             if (!rowsConfig.enabled[key]) return null
             const row = ROW_BY_KEY[key]

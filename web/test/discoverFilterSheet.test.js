@@ -21,6 +21,7 @@ test('Discover keeps quick filters visible and long lists behind summaries', asy
   assert.match(source, /label="Release year"/)
   assert.match(source, /label="Sort by"/)
   assert.match(source, /applyDraftFilters/)
+  assert.doesNotMatch(source, /Filtering every row|results-head|resetAll/)
 })
 
 test('For You uses the same staged, compact production-scale filter pattern', async () => {
