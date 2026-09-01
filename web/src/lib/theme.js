@@ -43,13 +43,13 @@ export const THEME_FAMILIES = [
     dark: ['#0a0b0f', '#171923', '#82a3ff'], light: ['#edf1f8', '#f9fbff', '#3f61bd'],
   },
   {
-    key: 'xbox', label: 'Xbox', eyebrow: 'Console dashboard',
-    description: 'Velocity green, graphite tiles, crisp geometry and confident motion.',
+    key: 'xbox', label: 'Xbox', eyebrow: 'Velocity dashboard',
+    description: 'Graphite tiles, directional green rails and achievement-inspired energy.',
     dark: ['#070a08', '#121714', '#69c350'], light: ['#eef3ee', '#fbfdfb', '#107c10'],
   },
   {
-    key: 'playstation', label: 'PlayStation', eyebrow: 'Console atmosphere',
-    description: 'Deep blue light, floating layers, refined curves and cinematic calm.',
+    key: 'playstation', label: 'PlayStation', eyebrow: 'Midnight wave',
+    description: 'Cobalt atmosphere, floating glass layers and cinematic spotlight motion.',
     dark: ['#050b18', '#0c1830', '#64a9ff'], light: ['#edf4fb', '#fbfdff', '#0068bd'],
   },
   {

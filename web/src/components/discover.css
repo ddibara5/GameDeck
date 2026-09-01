@@ -1040,3 +1040,96 @@ button.shelf-head:active {
 [data-theme="light"] .fy-deck-why {
   color: var(--walnut);
 }
+
+/* The focused deck is where each console family gets its clearest motion cue.
+   These overrides preserve the same card size and controls; only the transition
+   and decorative art layer change. */
+@keyframes xbox-deck-out-left {
+  to { opacity: 0; transform: translateX(-30%) scale(.975); }
+}
+
+@keyframes xbox-deck-out-right {
+  to { opacity: 0; transform: translateX(30%) scale(.975); }
+}
+
+@keyframes xbox-deck-in {
+  from { opacity: 0; transform: translateX(18px) scale(.985); }
+}
+
+@keyframes playstation-deck-out-left {
+  to { opacity: 0; transform: translate(-18%, -8px) rotate(-1deg) scale(.985); }
+}
+
+@keyframes playstation-deck-out-right {
+  to { opacity: 0; transform: translate(18%, -8px) rotate(1deg) scale(.985); }
+}
+
+@keyframes playstation-deck-in {
+  from { opacity: 0; transform: translateY(22px) scale(.965); }
+}
+
+:root[data-theme-family='xbox'] .fy-deck-card.leaving-left {
+  animation-name: xbox-deck-out-left;
+  animation-duration: 150ms;
+}
+
+:root[data-theme-family='xbox'] .fy-deck-card.leaving-right {
+  animation-name: xbox-deck-out-right;
+  animation-duration: 150ms;
+}
+
+:root[data-theme-family='xbox'] .fy-deck-card.entering {
+  animation-name: xbox-deck-in;
+  animation-duration: 220ms;
+}
+
+:root[data-theme-family='xbox'] .fy-deck-art::after {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  inset: auto -10% -26% 36%;
+  height: 58%;
+  transform: skewX(-18deg);
+  background: linear-gradient(110deg, transparent, rgba(105,195,80,.16), transparent 68%);
+  pointer-events: none;
+}
+
+:root[data-theme-family='xbox'] .fy-deck-action {
+  border-radius: 9px;
+}
+
+:root[data-theme-family='playstation'] .fy-deck-card.leaving-left {
+  animation-name: playstation-deck-out-left;
+  animation-duration: 250ms;
+}
+
+:root[data-theme-family='playstation'] .fy-deck-card.leaving-right {
+  animation-name: playstation-deck-out-right;
+  animation-duration: 250ms;
+}
+
+:root[data-theme-family='playstation'] .fy-deck-card.entering {
+  animation-name: playstation-deck-in;
+  animation-duration: 440ms;
+}
+
+:root[data-theme-family='playstation'] .fy-deck-art::after {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  left: 7%;
+  right: 7%;
+  bottom: -25%;
+  height: 52%;
+  border: 1px solid rgba(139,202,255,.22);
+  border-radius: 50%;
+  box-shadow: 0 0 34px rgba(87,164,255,.13), inset 0 0 32px rgba(87,164,255,.08);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme-family='xbox'] .fy-deck-card,
+  :root[data-theme-family='playstation'] .fy-deck-card {
+    animation: none;
+  }
+}

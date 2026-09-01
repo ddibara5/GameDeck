@@ -431,3 +431,34 @@
 .game-sheet-rank strong { overflow: hidden; font-size: var(--t-foot); text-overflow: ellipsis; white-space: nowrap; }
 .game-sheet-rank svg { width: 18px; height: 18px; flex: 0 0 auto; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .game-sheet-rank:disabled { opacity: 0.62; }
+
+/* Console families carry their signature reward language into ranking without
+   introducing branded assets or changing any tier meaning. */
+:root[data-theme-family='xbox'] .rank-tier {
+  border-radius: 4px;
+  border-left-width: 3px;
+  background: linear-gradient(90deg,
+    color-mix(in oklab, var(--rank-tier-color) 21%, transparent),
+    color-mix(in oklab, var(--rank-tier-color) 8%, transparent));
+  letter-spacing: .075em;
+}
+
+:root[data-theme-family='xbox'] :is(.rank-duel-card, .rank-precision-card, .game-sheet-rank) {
+  border-left: 3px solid color-mix(in srgb, var(--accent) 48%, var(--line));
+}
+
+:root[data-theme-family='playstation'] .rank-tier {
+  border-radius: var(--r-pill);
+  background: radial-gradient(circle at 50% 0,
+    color-mix(in oklab, var(--rank-tier-color) 24%, transparent),
+    color-mix(in oklab, var(--rank-tier-color) 9%, transparent) 72%);
+  border-color: color-mix(in oklab, var(--rank-tier-color) 46%, transparent);
+}
+
+:root[data-theme-family='playstation'] :is(.rank-duel-card, .rank-precision-card, .game-sheet-rank) {
+  background: linear-gradient(145deg,
+    color-mix(in srgb, var(--surface) 86%, rgba(84,157,241,.1)),
+    color-mix(in srgb, var(--surface) 76%, transparent));
+  border-color: color-mix(in srgb, var(--accent) 22%, var(--line-soft));
+  box-shadow: inset 0 1px 0 rgba(202,231,255,.12), 0 12px 32px rgba(0,12,43,.13);
+}

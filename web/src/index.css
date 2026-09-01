@@ -2907,14 +2907,15 @@ textarea {
   --d-fast: 0.11s; --d-base: 0.2s; --d-slow: 0.32s;
   --ease-out: cubic-bezier(0.18, 0.82, 0.2, 1);
   --theme-ground:
-    radial-gradient(72% 50% at 4% -4%, rgba(82, 176, 66, 0.2), transparent 72%),
-    radial-gradient(52% 42% at 104% 82%, rgba(32, 112, 48, 0.12), transparent 74%),
+    radial-gradient(72% 50% at 4% -4%, rgba(82, 176, 66, 0.24), transparent 72%),
+    linear-gradient(118deg, transparent 0 52%, rgba(105, 195, 80, 0.055) 52.5% 57%, transparent 57.5%),
+    radial-gradient(52% 42% at 104% 82%, rgba(32, 112, 48, 0.14), transparent 74%),
     linear-gradient(150deg, #070a08, #0d120f 56%, #060907);
   --theme-texture:
-    linear-gradient(rgba(105,195,80,.026) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(105,195,80,.026) 1px, transparent 1px);
+    repeating-radial-gradient(circle at 106% -8%, transparent 0 76px, rgba(105,195,80,.035) 77px 78px, transparent 79px 126px),
+    repeating-linear-gradient(118deg, transparent 0 112px, rgba(105,195,80,.026) 113px 114px, transparent 115px 230px);
   --theme-texture-opacity: 1;
-  --theme-texture-size: 48px 48px;
+  --theme-texture-size: 100% 100%, 320px 320px;
   --logo-1: #0a3811; --logo-2: #10521a; --logo-3: #176d21; --logo-4: #238b2d;
   --logo-5: #36a93d; --logo-6: #52c64a; --logo-7: #8cdd70;
 }
@@ -2926,12 +2927,13 @@ textarea {
   --glass-line: rgba(16, 124, 16, 0.2);
   --e-nav: 0 10px 30px rgba(35, 70, 39, 0.17), inset 0 1px 0 rgba(255, 255, 255, 0.8);
   --theme-ground:
-    radial-gradient(72% 50% at 4% -4%, rgba(16, 124, 16, 0.13), transparent 72%),
+    radial-gradient(72% 50% at 4% -4%, rgba(16, 124, 16, 0.16), transparent 72%),
+    linear-gradient(118deg, transparent 0 52%, rgba(16, 124, 16, 0.045) 52.5% 57%, transparent 57.5%),
     radial-gradient(52% 42% at 104% 82%, rgba(73, 154, 63, 0.08), transparent 74%),
     linear-gradient(150deg, #eef3ee, #f7faf7 56%, #e9f0e9);
   --theme-texture:
-    linear-gradient(rgba(16,124,16,.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(16,124,16,.035) 1px, transparent 1px);
+    repeating-radial-gradient(circle at 106% -8%, transparent 0 76px, rgba(16,124,16,.045) 77px 78px, transparent 79px 126px),
+    repeating-linear-gradient(118deg, transparent 0 112px, rgba(16,124,16,.035) 113px 114px, transparent 115px 230px);
 }
 
 /* PlayStation — deep blue atmosphere, floating layers and restrained glow. */
@@ -2951,12 +2953,17 @@ textarea {
   --d-fast: 0.16s; --d-base: 0.28s; --d-slow: 0.44s;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --theme-ground:
-    radial-gradient(82% 58% at 5% -7%, rgba(0, 112, 209, 0.26), transparent 70%),
-    radial-gradient(70% 56% at 104% 75%, rgba(80, 78, 200, 0.16), transparent 72%),
+    radial-gradient(82% 58% at 5% -7%, rgba(0, 112, 209, 0.32), transparent 70%),
+    radial-gradient(72% 50% at 105% 78%, rgba(80, 78, 200, 0.22), transparent 72%),
+    radial-gradient(60% 35% at 48% 108%, rgba(60, 150, 255, 0.12), transparent 74%),
     linear-gradient(150deg, #040a17, #08152b 58%, #050b18);
-  --theme-texture: linear-gradient(120deg, transparent 30%, rgba(95,171,255,.035) 50%, transparent 70%), var(--grain);
+  --theme-texture:
+    radial-gradient(120% 24% at 50% 108%, transparent 62%, rgba(118,188,255,.095) 63%, transparent 65%),
+    radial-gradient(105% 22% at 45% 111%, transparent 68%, rgba(111,143,255,.07) 69%, transparent 71%),
+    linear-gradient(120deg, transparent 30%, rgba(95,171,255,.035) 50%, transparent 70%),
+    var(--grain);
   --theme-texture-opacity: .8;
-  --theme-texture-size: 220px 220px, 140px 140px;
+  --theme-texture-size: 100% 100%, 100% 100%, 220px 220px, 140px 140px;
   --logo-1: #071e52; --logo-2: #0a2e75; --logo-3: #0d439d; --logo-4: #145dc0;
   --logo-5: #2379dc; --logo-6: #4b9af1; --logo-7: #8bc5ff;
 }
@@ -2968,8 +2975,9 @@ textarea {
   --glass-line: rgba(0, 104, 189, 0.18);
   --e-nav: 0 12px 34px rgba(24, 72, 122, 0.17), inset 0 1px 0 rgba(255, 255, 255, 0.82);
   --theme-ground:
-    radial-gradient(82% 58% at 5% -7%, rgba(0, 112, 209, 0.15), transparent 70%),
-    radial-gradient(70% 56% at 104% 75%, rgba(80, 78, 200, 0.09), transparent 72%),
+    radial-gradient(82% 58% at 5% -7%, rgba(0, 112, 209, 0.18), transparent 70%),
+    radial-gradient(72% 50% at 105% 78%, rgba(80, 78, 200, 0.12), transparent 72%),
+    radial-gradient(60% 35% at 48% 108%, rgba(60, 150, 255, 0.1), transparent 74%),
     linear-gradient(150deg, #edf4fb, #f8fbff 58%, #e8f1fa);
 }
 
@@ -3291,15 +3299,110 @@ textarea {
 .theme-card-obsidian .theme-card-panel { background: rgba(36,39,56,.66); border-color: rgba(197,211,255,.26); border-radius: 22px; backdrop-filter: blur(10px); }
 .theme-card-obsidian .theme-card-chip { background: linear-gradient(90deg, #82a3ff, #b38cff); }
 
-.theme-card-xbox .theme-card-preview { border-radius: 8px; background: radial-gradient(circle at 5% 0, rgba(82,176,66,.25), transparent 62%), #070a08; }
-.theme-card-xbox .theme-card-grid { background-image: linear-gradient(rgba(105,195,80,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(105,195,80,.035) 1px, transparent 1px); background-size: 22px 22px; }
-.theme-card-xbox .theme-card-panel { background: #121714; border-color: #38533b; border-radius: 7px; box-shadow: 0 10px 24px rgba(0,0,0,.38); }
-.theme-card-xbox .theme-card-chip { background: linear-gradient(90deg, #69c350 72%, #f1c75b 72%); border-radius: 3px; }
+.theme-card-xbox .theme-card-preview {
+  border-radius: 8px;
+  background: radial-gradient(circle at 5% 0, rgba(82,176,66,.3), transparent 62%), #070a08;
+}
+.theme-card-xbox .theme-card-grid {
+  background:
+    repeating-radial-gradient(circle at 118% -12%, transparent 0 24px, rgba(105,195,80,.08) 25px 26px, transparent 27px 41px),
+    linear-gradient(116deg, transparent 0 42%, rgba(105,195,80,.08) 43% 51%, transparent 52%);
+}
+.theme-card-xbox .theme-card-grid::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 34px;
+  height: 20px;
+  border-left: 4px solid #69c350;
+  background: rgba(27,37,29,.92);
+  box-shadow: 39px 0 0 rgba(27,37,29,.75);
+}
+.theme-card-xbox .theme-card-panel {
+  background: #121714;
+  border-color: #38533b;
+  border-left: 4px solid #69c350;
+  border-radius: 7px;
+  box-shadow: 0 10px 24px rgba(0,0,0,.38);
+}
+.theme-card-xbox .theme-card-panel::after {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 9px;
+  width: 36px;
+  height: 17px;
+  background: #253329;
+  box-shadow: 41px 0 0 #1c271f;
+}
+.theme-card-xbox .theme-card-chip {
+  left: 26px;
+  right: 39px;
+  bottom: 25px;
+  height: 5px;
+  background: linear-gradient(90deg, #69c350 76%, #2a392d 76%);
+  border-radius: 2px;
+}
 
-.theme-card-playstation .theme-card-preview { border-radius: 16px; background: radial-gradient(circle at 8% 0, rgba(0,112,209,.34), transparent 62%), radial-gradient(circle at 100% 100%, rgba(80,78,200,.2), transparent 60%), #050b18; }
-.theme-card-playstation .theme-card-grid { background: linear-gradient(120deg, transparent 28%, rgba(100,169,255,.08) 50%, transparent 72%); }
-.theme-card-playstation .theme-card-panel { background: rgba(12,24,48,.76); border-color: rgba(100,169,255,.25); border-radius: 18px; box-shadow: 0 14px 30px rgba(0,7,27,.42); backdrop-filter: blur(9px); }
-.theme-card-playstation .theme-card-chip { background: linear-gradient(90deg, #64a9ff 70%, #a594ff 70%); border-radius: 999px; }
+.theme-card-playstation .theme-card-preview {
+  border-radius: 18px;
+  background: radial-gradient(circle at 8% 0, rgba(0,112,209,.4), transparent 62%), radial-gradient(circle at 100% 100%, rgba(80,78,200,.26), transparent 60%), #050b18;
+}
+.theme-card-playstation .theme-card-grid {
+  background:
+    radial-gradient(115% 28% at 48% 108%, transparent 62%, rgba(117,190,255,.18) 64%, transparent 67%),
+    radial-gradient(96% 25% at 42% 110%, transparent 68%, rgba(137,128,255,.12) 70%, transparent 73%);
+}
+.theme-card-playstation .theme-card-grid::before,
+.theme-card-playstation .theme-card-grid::after {
+  content: '';
+  position: absolute;
+  border: 1px solid rgba(151,205,255,.34);
+  filter: drop-shadow(0 0 7px rgba(100,169,255,.25));
+}
+.theme-card-playstation .theme-card-grid::before {
+  top: 15px;
+  right: 17px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+}
+.theme-card-playstation .theme-card-grid::after {
+  top: 35px;
+  right: 42px;
+  width: 11px;
+  height: 11px;
+  transform: rotate(45deg);
+}
+.theme-card-playstation .theme-card-panel {
+  transform: translateY(-2px);
+  background: linear-gradient(145deg, rgba(24,48,88,.82), rgba(8,20,43,.68));
+  border-color: rgba(126,190,255,.3);
+  border-radius: 19px;
+  box-shadow: 0 16px 32px rgba(0,7,27,.48), inset 0 1px 0 rgba(186,222,255,.12);
+  backdrop-filter: blur(9px);
+}
+.theme-card-playstation .theme-card-panel::after {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 11px;
+  width: 28px;
+  height: 30px;
+  border-radius: 8px;
+  background: linear-gradient(155deg, #277bd0, #172858);
+  box-shadow: 36px 4px 0 rgba(54,94,151,.45);
+}
+.theme-card-playstation .theme-card-chip {
+  left: 24px;
+  right: 50px;
+  bottom: 23px;
+  height: 4px;
+  background: linear-gradient(90deg, #91c7ff, #8d7fff);
+  border-radius: 999px;
+  box-shadow: 0 0 10px rgba(100,169,255,.38);
+}
 
 .theme-card-neon .theme-card-preview { border-radius: 6px; background: #080b12; }
 .theme-card-neon .theme-card-grid { background-image: linear-gradient(rgba(0,230,199,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,230,199,.1) 1px, transparent 1px); background-size: 14px 14px; }
@@ -3322,10 +3425,13 @@ textarea {
 [data-theme='light'] .theme-card-obsidian .theme-card-panel { background: rgba(249,251,255,.7); border-color: #bdc7da; }
 [data-theme='light'] .theme-card-xbox .theme-card-preview { background: radial-gradient(circle at 5% 0, rgba(16,124,16,.16), transparent 62%), #eef3ee; border-color: #a8baa9; }
 [data-theme='light'] .theme-card-xbox .theme-card-panel { background: #fbfdfb; border-color: #a8baa9; box-shadow: 0 9px 22px rgba(35,70,39,.14); }
-[data-theme='light'] .theme-card-xbox .theme-card-chip { background: linear-gradient(90deg, #107c10 72%, #866600 72%); }
+[data-theme='light'] .theme-card-xbox .theme-card-grid::before { background: rgba(215,230,216,.94); box-shadow: 39px 0 0 rgba(221,234,222,.9); border-left-color: #107c10; }
+[data-theme='light'] .theme-card-xbox .theme-card-panel::after { background: #d9e8da; box-shadow: 41px 0 0 #e5eee6; }
+[data-theme='light'] .theme-card-xbox .theme-card-chip { background: linear-gradient(90deg, #107c10 76%, #d7e3d8 76%); }
 [data-theme='light'] .theme-card-playstation .theme-card-preview { background: radial-gradient(circle at 8% 0, rgba(0,112,209,.18), transparent 62%), radial-gradient(circle at 100% 100%, rgba(80,78,200,.1), transparent 60%), #edf4fb; border-color: #aac0da; }
 [data-theme='light'] .theme-card-playstation .theme-card-panel { background: rgba(251,253,255,.78); border-color: #aac0da; box-shadow: 0 12px 26px rgba(24,72,122,.14); }
-[data-theme='light'] .theme-card-playstation .theme-card-chip { background: linear-gradient(90deg, #0068bd 70%, #5844a8 70%); }
+[data-theme='light'] .theme-card-playstation .theme-card-panel::after { background: linear-gradient(155deg, #70b8f3, #d7e9fa); box-shadow: 36px 4px 0 rgba(135,177,220,.42); }
+[data-theme='light'] .theme-card-playstation .theme-card-chip { background: linear-gradient(90deg, #0068bd, #7767c7); }
 [data-theme='light'] .theme-card-neon .theme-card-preview { background: #eef2f3; border-color: #9fbdc2; }
 [data-theme='light'] .theme-card-neon .theme-card-panel { background: #fbfdfe; border-color: #9fbdc2; }
 [data-theme='light'] .theme-card-neon .theme-card-chip { background: linear-gradient(90deg, #00756e 60%, #a62082 60%); }
@@ -3801,6 +3907,255 @@ textarea {
 
 :root[data-theme-family='cartridge'] :is(.settings-group, .logo-style-option, .theme-card) {
   box-shadow: var(--e1);
+}
+
+/* ---------- Console signature systems ----------
+
+   Xbox and PlayStation intentionally change interaction character, not just
+   palette. Both stay on the shared component geometry so a theme switch never
+   changes information density or touch targets. Decorative motion is isolated
+   to the already-existing fixed ground layer and disabled by either motion
+   preference. */
+
+@keyframes xbox-velocity-ground {
+  from { transform: translate3d(-22px, 0, 0); }
+  to { transform: translate3d(22px, 0, 0); }
+}
+
+@keyframes playstation-wave-ground {
+  0%, 100% { transform: translate3d(0, -5px, 0) scale(1.01); }
+  50% { transform: translate3d(0, 12px, 0) scale(1.025); }
+}
+
+:root[data-theme-family='xbox']:not([data-motion='reduced'])
+  :is(.app, .settings-page, .view-page)::after {
+  inset: -32px;
+  animation: xbox-velocity-ground 18s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+:root[data-theme-family='playstation']:not([data-motion='reduced'])
+  :is(.app, .settings-page, .view-page)::after {
+  inset: -24px;
+  animation: playstation-wave-ground 18s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Xbox: tile rails, fast horizontal response and achievement-style meters. */
+:root[data-theme-family='xbox'] .app-header.scrolled {
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--accent) 52%, transparent);
+}
+
+:root[data-theme-family='xbox'] .brand-mark {
+  filter: drop-shadow(0 0 9px color-mix(in srgb, var(--accent) 24%, transparent));
+}
+
+:root[data-theme-family='xbox'] .tabbar {
+  border-radius: 14px;
+  border-color: color-mix(in srgb, var(--accent) 22%, var(--line));
+}
+
+:root[data-theme-family='xbox'] .tabbar-lens {
+  border-radius: 10px;
+  background: linear-gradient(110deg,
+    color-mix(in srgb, var(--accent) 25%, transparent),
+    color-mix(in srgb, var(--accent) 10%, transparent));
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--glass-line));
+  box-shadow: inset 4px 0 0 var(--accent), inset 0 1px 0 rgba(255,255,255,.12),
+    0 5px 16px rgba(0,0,0,.24);
+}
+
+:root[data-theme-family='xbox'] :is(.global-search-trigger, .filter-btn, .modal-close) {
+  border-radius: 12px;
+}
+
+:root[data-theme-family='xbox'] :is(.chart-card, .hm-tile, .fy-deck-open, .settings-group) {
+  border-left: 3px solid color-mix(in srgb, var(--accent) 46%, var(--line));
+  box-shadow: inset 1px 0 0 color-mix(in srgb, var(--accent) 8%, transparent), var(--e1);
+}
+
+:root[data-theme-family='xbox'] .fy-deck-open {
+  border-radius: 12px;
+}
+
+:root[data-theme-family='xbox'] :is(.game-card, .rank-row, .news-row, .hm-release-item, .np) {
+  transition: transform var(--d-fast) var(--ease-out), opacity var(--d-fast) ease,
+    background var(--d-fast) ease;
+}
+
+:root[data-theme-family='xbox'] :is(.game-card, .rank-row, .news-row, .hm-release-item):active,
+:root[data-theme-family='xbox'] .np:active:not(.flat) {
+  transform: translateX(4px);
+}
+
+:root[data-theme-family='xbox'] :is(
+  .completion-bar-fill,
+  .fy-deck-progress > span,
+  .np-fill,
+  .wk-gfill,
+  .bar-fill
+) {
+  background: linear-gradient(90deg, #107c10, var(--accent) 72%, #9ee57f);
+  border-radius: 2px;
+}
+
+:root[data-theme-family='xbox'] :is(
+  .filter-opt.active,
+  .filter-btn.active,
+  .chip.active,
+  .discover-action.primary,
+  .fy-deck-action.primary
+) {
+  box-shadow: inset 4px 0 0 color-mix(in srgb, white 42%, transparent);
+}
+
+:root[data-theme-family='xbox'] :is(.discover-section-label, .menu-sec-label, .hm-tk) {
+  color: color-mix(in srgb, var(--accent) 64%, var(--muted));
+}
+
+/* PlayStation: luminous depth, floating materials and artwork spotlights. */
+:root[data-theme-family='playstation'] .app-header.scrolled {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--glass-chip) 92%, #0b3e78),
+    var(--glass-chip));
+  box-shadow: inset 0 -1px 0 rgba(139,197,255,.28), 0 10px 34px rgba(0,16,49,.16);
+}
+
+:root[data-theme-family='playstation'] .brand-mark {
+  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--accent) 34%, transparent));
+}
+
+:root[data-theme-family='playstation'] :is(.tabbar, .global-search-trigger) {
+  border-color: rgba(132,194,255,.25);
+  box-shadow: var(--e-nav), inset 0 1px 0 rgba(202,230,255,.16),
+    0 0 28px rgba(44,121,209,.1);
+}
+
+:root[data-theme-family='playstation'] .tabbar-lens {
+  background: radial-gradient(circle at 50% 0,
+    color-mix(in srgb, white 15%, var(--accent)),
+    color-mix(in srgb, var(--accent) 17%, transparent) 46%,
+    transparent 78%);
+  border-color: rgba(137,199,255,.32);
+  box-shadow: inset 0 1px 0 rgba(232,245,255,.24), 0 0 22px rgba(76,154,246,.18);
+}
+
+:root[data-theme-family='playstation'] :is(
+  .chart-card,
+  .hm-tile,
+  .fy-deck-open,
+  .settings-group,
+  .logo-style-option,
+  .theme-card,
+  .seg,
+  .rank-search-results
+) {
+  background: linear-gradient(145deg,
+    color-mix(in srgb, var(--surface) 82%, rgba(84,157,241,.12)),
+    color-mix(in srgb, var(--surface) 72%, transparent));
+  border-color: color-mix(in srgb, var(--accent) 24%, var(--line-soft));
+  box-shadow: inset 0 1px 0 rgba(197,227,255,.12), var(--e1);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+:root[data-theme-family='playstation'] .modal-sheet {
+  background: linear-gradient(165deg,
+    color-mix(in srgb, var(--surface) 94%, #164a82),
+    var(--surface) 42%);
+  box-shadow: 0 -18px 60px rgba(0,7,30,.46), inset 0 1px 0 rgba(177,218,255,.16);
+}
+
+:root[data-theme-family='playstation'] .fy-deck-art {
+  background:
+    radial-gradient(56% 62% at 50% 38%, rgba(96,174,255,.24), transparent 76%),
+    linear-gradient(155deg, var(--surface-2), color-mix(in srgb, var(--surface) 82%, #153b76));
+}
+
+:root[data-theme-family='playstation'] .fy-deck-art .cover.fy-deck-cover {
+  border-color: rgba(183,222,255,.34);
+  box-shadow: 0 20px 50px rgba(0,9,35,.48), 0 0 30px rgba(68,146,237,.15);
+}
+
+:root[data-theme-family='playstation'] :is(.game-card, .rank-row, .news-row, .hm-release-item, .np) {
+  transition: transform var(--d-base) var(--ease-out), opacity var(--d-fast) ease,
+    background var(--d-fast) ease;
+}
+
+:root[data-theme-family='playstation'] :is(.game-card, .rank-row, .news-row, .hm-release-item):active,
+:root[data-theme-family='playstation'] .np:active:not(.flat) {
+  transform: translateY(-2px) scale(.995);
+}
+
+:root[data-theme-family='playstation'] :is(
+  .completion-bar-fill,
+  .fy-deck-progress > span,
+  .np-fill,
+  .wk-gfill,
+  .bar-fill
+) {
+  background: linear-gradient(90deg, #2b81d8, #75bdff 62%, #a99bff);
+  box-shadow: 0 0 12px rgba(100,169,255,.28);
+}
+
+:root[data-theme-family='playstation'] :is(.filter-btn.active, .discover-action.primary, .fy-deck-action.primary) {
+  background: linear-gradient(145deg, #1178ce, #4e94e4);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.26), 0 8px 22px rgba(0,84,170,.24);
+}
+
+:root[data-theme-family='playstation'] :is(.discover-section-label, .menu-sec-label, .hm-tk) {
+  color: color-mix(in srgb, var(--accent) 54%, var(--muted));
+  text-shadow: 0 0 18px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+:root[data-theme-family='playstation'] :is(.wish-heart, .fy-deck-kind) {
+  border-color: rgba(157,207,255,.26);
+  box-shadow: inset 0 1px 0 rgba(225,243,255,.16), 0 8px 24px rgba(0,9,37,.22);
+}
+
+/* Accessibility preferences remain authoritative over theme materials. */
+:root[data-theme-family='playstation'][data-transparency='reduced'] :is(
+  .chart-card,
+  .hm-tile,
+  .fy-deck-open,
+  .settings-group,
+  .logo-style-option,
+  .theme-card,
+  .seg,
+  .rank-search-results
+) {
+  background: var(--surface);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root[data-theme-family='playstation'][data-transparency='system'] :is(
+    .chart-card,
+    .hm-tile,
+    .fy-deck-open,
+    .settings-group,
+    .logo-style-option,
+    .theme-card,
+    .seg,
+    .rank-search-results
+  ) {
+    background: var(--surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme-family='xbox'] :is(.app, .settings-page, .view-page)::after,
+  :root[data-theme-family='playstation'] :is(.app, .settings-page, .view-page)::after {
+    animation: none;
+  }
+
+  :root[data-theme-family='xbox'] :is(.game-card, .rank-row, .news-row, .hm-release-item, .np):active,
+  :root[data-theme-family='playstation'] :is(.game-card, .rank-row, .news-row, .hm-release-item, .np):active {
+    transform: none;
+  }
 }
 
 :root[data-transparency='reduced'],

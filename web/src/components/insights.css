@@ -464,3 +464,30 @@
 @media (prefers-reduced-motion: reduce) {
   .ins-period button { transition: none; }
 }
+
+/* Charts share the theme's interaction character: Xbox reads as a compact
+   dashboard, while PlayStation charts sit in a softer luminous layer. */
+:root[data-theme-family='xbox'] :is(.wk-fill, .month-fill, .hm-bfill) {
+  border-radius: 2px 2px 0 0;
+}
+
+:root[data-theme-family='xbox'] :is(.wk-track, .month-track, .np-track) {
+  border-radius: 2px;
+}
+
+:root[data-theme-family='xbox'] .genre-pie {
+  filter: drop-shadow(0 8px 18px rgba(0,0,0,.24));
+}
+
+:root[data-theme-family='playstation'] :is(.wk-fill, .month-fill, .hm-bfill) {
+  background: linear-gradient(180deg, #87c7ff, #287dcc 72%, #174a91);
+  box-shadow: 0 0 12px rgba(100,169,255,.2);
+}
+
+:root[data-theme-family='playstation'] :is(.wk-fill.peak, .month-col:last-child .month-fill, .hm-bfill.peak) {
+  background: linear-gradient(180deg, #d2eaff, #64a9ff 56%, #756fea);
+}
+
+:root[data-theme-family='playstation'] .genre-pie {
+  filter: drop-shadow(0 10px 22px rgba(62,137,225,.24));
+}
