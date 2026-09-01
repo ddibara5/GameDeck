@@ -26,7 +26,7 @@ import { useDialogA11y } from '../lib/useDialogA11y.js'
 // Group headings are printed as the list is walked, not by grouping it first,
 // because the order belongs to the user: drag a row somewhere else and its
 // heading follows it there. Same rule as the editor, so the two always agree.
-export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpenTab, onWarmTab, onOpenSettings, onShuffle, onSearch, searchPinned = false, activeTab }) {
+export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpenTab, onWarmTab, onOpenSettings, onSearch, searchPinned = false, activeTab }) {
   const { items: wishItems } = useWishlist()
   const { games } = useLibraryGames()
   const nav = useNavConfig()
@@ -82,7 +82,7 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpen
     if (dest.kind === 'tab') return go(() => onOpenTab && onOpenTab(dest.key))
     if (dest.kind === 'view') return go(onOpenWishlist)
     if (dest.kind === 'list') return go(() => onOpenList && onOpenList(dest.viewKey))
-    if (dest.kind === 'action') return go(dest.action === 'shuffle' ? onShuffle : onOpenSettings)
+    if (dest.kind === 'action') return go(onOpenSettings)
     return undefined
   }
 
@@ -160,10 +160,6 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpen
                 Search
               </button>
             ) : null}
-            <button type="button" className="menu-fb" onClick={() => go(onShuffle)}>
-              {cloneElement(DEST_ICONS.shuffle, { className: 'menu-fb-i' })}
-              Shuffle
-            </button>
             <button type="button" className="menu-fb" onClick={() => go(onOpenSettings)}>
               {cloneElement(DEST_ICONS.settings, { className: 'menu-fb-i' })}
               Settings

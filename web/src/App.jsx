@@ -47,10 +47,8 @@ const RankingsTab = lazy(TAB_LOADERS.rankings)
 const VIEW_LOADERS = {
   list: () => import('./components/ListView.jsx'),
   wishlist: TAB_LOADERS.wishlist,
-  shuffle: () => import('./components/ShufflePicker.jsx'),
 }
 const ListView = lazy(VIEW_LOADERS.list)
-const ShufflePicker = lazy(VIEW_LOADERS.shuffle)
 const loadGlobalSearch = () => import('./components/GlobalSearch.jsx')
 const GlobalSearch = lazy(loadGlobalSearch)
 const VALID_TABS = new Set(Object.keys(TAB_BY_KEY))
@@ -98,7 +96,6 @@ function GameDeckApp() {
   const [customizeOpen, setCustomizeOpen] = useState(false)
   const [customizeNavOpen, setCustomizeNavOpen] = useState(false)
   const [customizeBarOpen, setCustomizeBarOpen] = useState(false)
-  const [shuffleOpen, setShuffleOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(() => initialShell.current.searchOpen)
   const [searchVisited, setSearchVisited] = useState(() => initialShell.current.searchOpen)
   const [searchMode, setSearchMode] = useState(() => initialShell.current.searchMode || 'search')
@@ -298,15 +295,14 @@ function GameDeckApp() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  // Opening the drawer is intent: the next tap is likely to be Wishlist, a
-  // status list or Shuffle. Warm those small chunks during the drawer animation
+  // Opening the drawer is intent: the next tap is likely to be Wishlist or a
+  // status list. Warm those small chunks during the drawer animation
   // so their first open does not wait on a request. These are not launch work and
   // hidden tabs remain excluded from the ordinary idle queue.
   useEffect(() => {
     if (!menuOpen) return
     warmLoader(VIEW_LOADERS.wishlist)
     warmLoader(VIEW_LOADERS.list)
-    warmLoader(VIEW_LOADERS.shuffle)
   }, [menuOpen])
 
   // Fetch the code for the OTHER tabs in the bar once the page has loaded, one at
@@ -344,7 +340,7 @@ function GameDeckApp() {
       // Full-screen pages with their own edge-back swipe (Settings / Customize,
       // and any overlay registered via useEdgeBack, e.g. the Discover rail page):
       // don't also open the app drawer behind them on an edge swipe.
-      if (settingsOpen || customizeOpen || customizeNavOpen || customizeBarOpen || shuffleOpen || overlaysOpen()) return
+      if (settingsOpen || customizeOpen || customizeNavOpen || customizeBarOpen || overlaysOpen()) return
       const t = e.touches && e.touches[0]
       if (!t) return
       const dx = t.clientX - startX
@@ -384,7 +380,7 @@ function GameDeckApp() {
       window.removeEventListener('touchmove', onMove)
       window.removeEventListener('touchend', onEnd)
     }
-  }, [closeMenu, menuOpen, openMenu, settingsOpen, customizeOpen, customizeNavOpen, customizeBarOpen, shuffleOpen, view, viewClosing])
+  }, [closeMenu, menuOpen, openMenu, settingsOpen, customizeOpen, customizeNavOpen, customizeBarOpen, view, viewClosing])
 
   return (
     // `bar-off` collapses --tabbar-height to zero for everything inside, which
@@ -472,7 +468,6 @@ function GameDeckApp() {
         onOpenWishlist={() => openView('wishlist')}
         onOpenList={(key) => openView(key)}
         onOpenSettings={() => setSettingsOpen(true)}
-        onShuffle={() => setShuffleOpen(true)}
         onSearch={openSearch}
         searchPinned={!nav.barShown}
         onOpenTab={(t) => {
@@ -481,9 +476,6 @@ function GameDeckApp() {
         }}
         onWarmTab={(t) => warmLoader(TAB_LOADERS[t])}
       />
-      <Suspense fallback={<ChunkFallback label="Opening Shuffle…" overlay />}>
-        {shuffleOpen ? <ShufflePicker open onClose={() => setShuffleOpen(false)} /> : null}
-      </Suspense>
       <SettingsPage
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}

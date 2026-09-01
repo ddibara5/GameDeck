@@ -5,6 +5,7 @@ import test from 'node:test'
 import {
   NEW_LANE,
   buildRecommendationSlate,
+  buildRecommendationSurprises,
   candidateCooldownDays,
   candidateIsCoolingDown,
   candidateOutcomeAdjustment,
@@ -148,9 +149,9 @@ test('wishlist items leave ordinary For You discovery', () => {
   assert.deepEqual(feed.map((game) => game.id), [1])
 })
 
-test('manual refresh replaces the visible deck and only relaxes two repeats when sparse', () => {
+test('a new batch rotates the visible deck and only relaxes two repeats when sparse', () => {
   const released = Math.floor(Date.parse('2026-08-01T12:00:00Z') / 1000)
-  const games = Array.from({ length: 10 }, (_, index) => ({
+  const games = Array.from({ length: 16 }, (_, index) => ({
     id: index + 1,
     rating: 90 - index,
     ratingCount: 200,
@@ -162,7 +163,7 @@ test('manual refresh replaces the visible deck and only relaxes two repeats when
     NOW,
     { excludedIds: new Set(['1', '2']) },
   )
-  assert.equal(rotated.length, 8)
+  assert.equal(rotated.length, 12)
   assert.ok(rotated.every((game) => game.id !== 1 && game.id !== 2))
 
   const sparse = buildRecommendationSlate(
@@ -186,10 +187,10 @@ test('graduated cooldowns rest repeated ignores without permanently hiding them'
   assert.equal(candidateIsCoolingDown({ ignored_streak: 0, detail_open_count: 1, last_shown_at: lastShown }, NOW), false)
 })
 
-test('the default slate balances five strong matches, two adjacent picks and one wildcard', () => {
+test('the default slate balances seven strong matches, three adjacent picks and two wildcards', () => {
   const released = Math.floor(Date.parse('2026-08-01T12:00:00Z') / 1000)
   const taste = { key: 'openworld', label: 'Open world' }
-  const strong = Array.from({ length: 7 }, (_, index) => ({
+  const strong = Array.from({ length: 10 }, (_, index) => ({
     id: index + 1,
     rating: 90 - index,
     ratingCount: 200,
@@ -203,14 +204,38 @@ test('the default slate balances five strong matches, two adjacent picks and one
       new: [
         { id: 101, rating: 88, ratingCount: 200, released, genres: ['Action'] },
         { id: 102, rating: 87, ratingCount: 200, released, genres: ['Action'] },
-        { id: 103, rating: 75, ratingCount: 200, released, genres: ['Puzzle'] },
+        { id: 103, rating: 86, ratingCount: 200, released, genres: ['Action'] },
+        { id: 104, rating: 75, ratingCount: 200, released, genres: ['Puzzle'] },
+        { id: 105, rating: 74, ratingCount: 200, released, genres: ['Strategy'] },
       ],
     },
     NOW,
   )
-  assert.equal(slate.length, 8)
-  assert.deepEqual(slate.slice(0, 5).map((game) => game.lane.key), Array(5).fill('openworld'))
-  assert.deepEqual(slate.slice(5).map((game) => game.id), [101, 102, 103])
+  assert.equal(slate.length, 12)
+  assert.deepEqual(slate.slice(0, 7).map((game) => game.lane.key), Array(7).fill('openworld'))
+  assert.deepEqual(slate.slice(7).map((game) => game.id), [101, 102, 103, 104, 105])
+  assert.deepEqual(slate.map((game) => game.recommendationKind), [
+    ...Array(7).fill('strong'),
+    ...Array(3).fill('adjacent'),
+    ...Array(2).fill('wildcard'),
+  ])
+})
+
+test('Surprise me stays outside the active deck and favors dissimilar discoveries', () => {
+  const released = Math.floor(Date.parse('2026-08-01T12:00:00Z') / 1000)
+  const activeDeck = [{ id: 1, genres: ['Action'] }]
+  const surprises = buildRecommendationSurprises(
+    [NEW_LANE],
+    { new: [
+      { id: 1, rating: 95, ratingCount: 200, released, genres: ['Action'] },
+      { id: 2, rating: 80, ratingCount: 200, released, genres: ['Action'] },
+      { id: 3, rating: 79, ratingCount: 200, released, genres: ['Puzzle'] },
+    ] },
+    NOW,
+    { baseline: activeDeck, excludedIds: new Set(['1']) },
+  )
+  assert.deepEqual(surprises.map((game) => game.id), [3, 2])
+  assert.ok(surprises.every((game) => game.recommendationKind === 'surprise'))
 })
 
 test('outcome learning waits for evidence and keeps lane influence bounded', () => {
@@ -304,8 +329,9 @@ test('Discover keeps title search and Ask GameDeck in the global entry point', a
   assert.doesNotMatch(forYou, /Browse catalog/)
   assert.doesNotMatch(forYou, /Ask GameDeck about these picks/)
   assert.doesNotMatch(discover, /DiscoverAsk|discover-ask-view|askOpen/)
-  assert.match(discover, /<DiscoverForYou onAsk=\{askAbout\}/)
-  assert.match(forYou, /Refreshing picks…/)
+  assert.match(discover, /<DiscoverForYou[\s\S]*?onAsk=\{askAbout\}/)
+  assert.match(forYou, /RecommendationDeckComplete/)
+  assert.match(forYou, /showSurprise/)
   assert.doesNotMatch(forYou, /className="fy-refresh"/)
   assert.doesNotMatch(discover, /sessionStorage/)
 })

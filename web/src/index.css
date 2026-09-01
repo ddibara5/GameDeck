@@ -717,11 +717,9 @@
   background: color-mix(in srgb, var(--surface) 76%, transparent);
 }
 
-/* Two equal halves rather than a row that reflows: the labels are short and
-   fixed, and a 50/50 split keeps both tap targets the same size. */
 .menu-foot-acts {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 0;
   overflow: hidden;
   border: 1px solid var(--line-soft);
@@ -730,7 +728,7 @@
 }
 
 .menu-foot-acts.has-search {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .menu-fb {

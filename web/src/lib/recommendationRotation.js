@@ -1,7 +1,7 @@
 const ROTATION_KEY = 'gamedeck_for_you_rotation_v1'
 const REFRESH_BUCKET_MS = 10 * 60 * 1000
 
-function localDayKey(now = Date.now()) {
+export function localDayKey(now = Date.now()) {
   const date = new Date(now)
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -14,8 +14,9 @@ function browserStorage() {
   return localStorage
 }
 
-export function dailyRecommendationBatch(now = Date.now()) {
-  return `daily-${localDayKey(now)}`
+export function dailyRecommendationBatch(now = Date.now(), batchNumber = 0) {
+  const batch = Math.max(0, Number(batchNumber) || 0)
+  return `daily-${localDayKey(now)}-b${batch}`
 }
 
 // Refreshes inside the same ten-minute window share one learning opportunity.

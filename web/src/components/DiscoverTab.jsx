@@ -70,7 +70,13 @@ export default function DiscoverTab({ onCustomize, onAsk }) {
         </div>
 
         <div id="discover-foryou-panel" role="tabpanel" aria-labelledby="discover-foryou-tab" hidden={mode !== 'foryou'}>
-          <DiscoverForYou onAsk={askAbout} />
+          <DiscoverForYou
+            onAsk={askAbout}
+            onBrowse={() => {
+              warmBrowse()
+              selectMode('browse')
+            }}
+          />
         </div>
 
         {browseVisited ? (

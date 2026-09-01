@@ -22,6 +22,7 @@ export {
   NEW_LANE,
   MAX_TASTE_LANES,
   buildRecommendationSlate,
+  buildRecommendationSurprises,
   candidateCooldownDays,
   candidateIsCoolingDown,
   gameDescriptor,

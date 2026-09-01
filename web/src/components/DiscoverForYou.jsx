@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
-import Cover from './Cover.jsx'
-import WishHeart from './WishHeart.jsx'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Skeleton from './Skeleton.jsx'
 import { MessageState } from './AsyncState.jsx'
 import DiscoverFilterButton from './DiscoverFilterButton.jsx'
 import DiscoverPreferenceFields from './DiscoverPreferenceFields.jsx'
 import DiscoverDetail from './DiscoverDetail.jsx'
+import RecommendationDeckCard from './RecommendationDeckCard.jsx'
+import RecommendationDeckComplete from './RecommendationDeckComplete.jsx'
 import { fetchDiscoverLanes, loadLibraryTitles, normTitle } from '../lib/discover.js'
 import { useWishlist } from '../lib/wishlist.js'
 import {
@@ -14,7 +14,14 @@ import {
   platformParam,
   setDiscoverPrefs,
 } from '../lib/discoverPrefs.js'
-import { useTasteProfile, NEW_LANE, buildRecommendationSlate, gameDescriptor, laneReason } from '../lib/discoverLanes.js'
+import {
+  useTasteProfile,
+  NEW_LANE,
+  buildRecommendationSlate,
+  buildRecommendationSurprises,
+  interleave,
+  laneReason,
+} from '../lib/discoverLanes.js'
 import { recordRecommendationDetailOpen, trackRecommendationFeed } from '../lib/recommendationLearning.js'
 import {
   dismissRecommendation,
@@ -24,10 +31,8 @@ import {
 import {
   dailyRecommendationBatch,
   loadRotationExclusions,
-  refreshRecommendationBatch,
   rememberRotationExclusions,
 } from '../lib/recommendationRotation.js'
-import usePullRefresh from '../lib/usePullRefresh.js'
 import { useDialogA11y } from '../lib/useDialogA11y.js'
 import {
   PRODUCTION_SCALE_KEYS,
@@ -36,23 +41,23 @@ import {
 } from '../lib/productionScale.js'
 import DiscoverFilterDisclosure from './DiscoverFilterDisclosure.jsx'
 import DiscoverProductionScaleField from './DiscoverProductionScaleField.jsx'
+import {
+  CONTINUATION_DECK_SIZE,
+  DAILY_DECK_SIZE,
+  loadRecommendationDeck,
+  recommendationDeckScope,
+  restoreRecommendationDeck,
+  saveRecommendationDeck,
+} from '../lib/recommendationDeck.js'
+import { optImg } from '../lib/format.js'
 
 // Pull a wider candidate pool than the feed displays. The server still returns
 // recent matching releases, then the client can balance freshness with
 // confidence-weighted quality instead of treating release date as the complete
 // recommendation score.
-const CANDIDATES_PER_LANE = 16
-
-export function freshnessLabel(updatedAt, now = Date.now()) {
-  const elapsed = Math.max(0, now - Number(updatedAt || now))
-  const minutes = Math.floor(elapsed / 60000)
-  if (minutes < 1) return 'just now'
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  if (hours < 48) return 'yesterday'
-  return `${Math.floor(hours / 24)}d ago`
-}
+const CANDIDATES_PER_LANE = 24
+const CARD_EXIT_MS = 190
+const CARD_ENTER_MS = 360
 
 const PLATFORM_MATCHERS = {
   xbox: /xbox|xone|series/i,
@@ -90,7 +95,7 @@ function refreshedLaneMap(result, keys) {
   return out
 }
 
-export default function DiscoverForYou({ onAsk }) {
+export default function DiscoverForYou({ onAsk, onBrowse }) {
   const prefs = useDiscoverPrefs()
   const platform = platformParam(prefs.platforms)
   const [scales, setScales] = useState(() => [...PRODUCTION_SCALE_KEYS])
@@ -110,12 +115,21 @@ export default function DiscoverForYou({ onAsk }) {
   const [draftScales, setDraftScales] = useState(() => [...PRODUCTION_SCALE_KEYS])
   const [draftPrefs, setDraftPrefs] = useState(null)
   const [openFilterSection, setOpenFilterSection] = useState(null)
-  const [refreshing, setRefreshing] = useState(false)
-  const [refreshError, setRefreshError] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [continuationError, setContinuationError] = useState(false)
   const [rotationExclusions, setRotationExclusions] = useState(() => loadRotationExclusions())
-  const [feedBatch, setFeedBatch] = useState(() => dailyRecommendationBatch())
+  const [deck, setDeck] = useState([])
+  const [deckAt, setDeckAt] = useState(0)
+  const [deckBatchNumber, setDeckBatchNumber] = useState(0)
+  const [deckReady, setDeckReady] = useState(false)
+  const [surpriseGame, setSurpriseGame] = useState(null)
+  const [surpriseRound, setSurpriseRound] = useState(0)
+  const [cardMotion, setCardMotion] = useState('')
+  const motionTimerRef = useRef(null)
+  const continuationRef = useRef(null)
   const [dismissedGame, setDismissedGame] = useState(null)
   const [dismissalError, setDismissalError] = useState(false)
+  const [dismissing, setDismissing] = useState(false)
   const filterDialogRef = useDialogA11y({ active: showFilters, onClose: () => setShowFilters(false) })
 
   const { ids: wishIds, loading: wishlistLoading } = useWishlist()
@@ -129,10 +143,7 @@ export default function DiscoverForYou({ onAsk }) {
     }
   }, [])
 
-  useEffect(() => {
-    setFeedBatch(dailyRecommendationBatch())
-    setRefreshError(false)
-  }, [platform, scale])
+  useEffect(() => () => motionTimerRef.current && clearTimeout(motionTimerRef.current), [])
 
   useEffect(() => {
     if (!dismissedGame) return undefined
@@ -215,17 +226,76 @@ export default function DiscoverForYou({ onAsk }) {
     if (only && !lanes.some((lane) => lane.key === only)) setOnly(null)
   }, [lanes, only])
 
-  const feed = useMemo(() => {
+  const activeLanes = useMemo(
+    () => (only ? lanes.filter((lane) => lane.key === only) : lanes),
+    [lanes, only],
+  )
+
+  const initialSlate = useMemo(() => {
     if (!tasteProfile || wishlistLoading || dismissalsLoading) return []
-    const active = only ? lanes.filter((lane) => lane.key === only) : lanes
-    return buildRecommendationSlate(active, byLane, Date.now(), {
+    return buildRecommendationSlate(activeLanes, byLane, Date.now(), {
       wishlistIds: wishIds,
       dismissedIds,
       excludedIds: rotationExclusions,
       gameFeedback,
       drop: (game) => prefs.hideOwned && isOwned(game.name),
     })
-  }, [tasteProfile, wishlistLoading, dismissalsLoading, lanes, only, byLane, wishIds, dismissedIds, rotationExclusions, gameFeedback, prefs.hideOwned, isOwned])
+  }, [tasteProfile, wishlistLoading, dismissalsLoading, activeLanes, byLane, wishIds, dismissedIds, rotationExclusions, gameFeedback, prefs.hideOwned, isOwned])
+
+  const allCandidates = useMemo(
+    () => interleave(activeLanes, byLane, {
+      drop: (game) => (
+        wishIds.has(game.id)
+        || dismissedIds.has(game.id)
+        || (prefs.hideOwned && isOwned(game.name))
+      ),
+    }),
+    [activeLanes, byLane, wishIds, dismissedIds, prefs.hideOwned, isOwned],
+  )
+
+  const deckScope = recommendationDeckScope({
+    platform,
+    scale,
+    lane: only || '',
+    hideOwned: prefs.hideOwned,
+  })
+  const deckScopeRef = useRef(deckScope)
+  deckScopeRef.current = deckScope
+
+  useEffect(() => {
+    if (motionTimerRef.current) clearTimeout(motionTimerRef.current)
+    motionTimerRef.current = null
+    setCardMotion('')
+    setDeck([])
+    setDeckAt(0)
+    setDeckBatchNumber(0)
+    setDeckReady(false)
+    setSurpriseGame(null)
+    setSurpriseRound(0)
+    setContinuationError(false)
+    continuationRef.current = null
+  }, [deckScope])
+
+  useEffect(() => {
+    if (deckReady || !initialSlate.length) return
+    const saved = loadRecommendationDeck(deckScope)
+    const restored = restoreRecommendationDeck(saved, allCandidates, initialSlate)
+    if (restored) {
+      setDeck(restored.games)
+      setDeckAt(restored.at)
+      setDeckBatchNumber(restored.batchNumber)
+    } else {
+      setDeck(initialSlate.slice(0, DAILY_DECK_SIZE))
+      setDeckAt(0)
+      setDeckBatchNumber(0)
+    }
+    setDeckReady(true)
+  }, [allCandidates, deckReady, deckScope, initialSlate])
+
+  useEffect(() => {
+    if (!deckReady || !deck.length) return
+    saveRecommendationDeck({ scope: deckScope, games: deck, at: deckAt, batchNumber: deckBatchNumber })
+  }, [deck, deckAt, deckBatchNumber, deckReady, deckScope])
 
   const activeFilterCount =
     (only ? 1 : 0) +
@@ -233,54 +303,186 @@ export default function DiscoverForYou({ onAsk }) {
     (prefs.platforms.length ? 1 : 0) +
     (prefs.hideOwned ? 1 : 0)
 
-  const feedSig = feed.map((game) => `${game.id}:${game.lane?.key || 'new'}`).join(',')
-  useEffect(() => {
-    if (!tasteProfile || wishlistLoading || dismissalsLoading) return
-    trackRecommendationFeed(feed.map((game) => ({
-      ...game,
-      recommendationReason: laneReason(game.lane),
-    })), { batchId: feedBatch })
-    // The signature is the stable recommendation identity. Tracking a new
-    // object instance with the same rows would only repeat the same batch.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [feedSig, feedBatch, tasteProfile, wishlistLoading, dismissalsLoading])
+  const currentDeckGame = deckAt < deck.length ? deck[deckAt] : null
+  const surpriseExclusions = useMemo(() => new Set([
+    ...rotationExclusions,
+    ...deck.map((game) => String(game.id)),
+  ]), [rotationExclusions, deck])
+  const surpriseCandidates = useMemo(() => buildRecommendationSurprises(activeLanes, byLane, Date.now(), {
+    wishlistIds: wishIds,
+    dismissedIds,
+    excludedIds: surpriseExclusions,
+    gameFeedback,
+    drop: (game) => prefs.hideOwned && isOwned(game.name),
+    baseline: deck,
+    limit: 12,
+  }), [activeLanes, byLane, wishIds, dismissedIds, surpriseExclusions, gameFeedback, prefs.hideOwned, isOwned, deck])
+  const visibleGame = surpriseGame || currentDeckGame
+  const feedBatch = dailyRecommendationBatch(Date.now(), deckBatchNumber)
 
-  async function refreshPicks() {
-    if (refreshing || loading) return 'Still loading picks'
+  const visibleSig = visibleGame
+    ? `${surpriseGame ? 'surprise' : 'deck'}:${visibleGame.id}:${deckAt}:${deckBatchNumber}:${surpriseRound}`
+    : ''
+  useEffect(() => {
+    if (!visibleGame || !tasteProfile || wishlistLoading || dismissalsLoading) return
+    trackRecommendationFeed([{
+      ...visibleGame,
+      recommendationReason: laneReason(visibleGame.lane),
+    }], {
+      batchId: surpriseGame ? `${feedBatch}-surprise-${surpriseRound}` : feedBatch,
+      surface: surpriseGame ? 'for_you_surprise' : 'for_you',
+      positionOffset: surpriseGame ? 0 : deckAt,
+    })
+    // The signature is the stable identity of the one card actually visible.
+    // Hidden queue items are not impressions.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleSig, tasteProfile, wishlistLoading, dismissalsLoading])
+
+  useEffect(() => {
+    const nextGame = surpriseGame ? null : deck[deckAt + 1]
+    if (!nextGame?.cover || typeof Image === 'undefined') return
+    const image = new Image()
+    image.src = optImg(nextGame.cover, 640)
+  }, [deck, deckAt, surpriseGame])
+
+  const remaining = Math.max(0, deck.length - deckAt)
+  useEffect(() => {
+    if (!deckReady || remaining > 3 || remaining === 0 || loadingMore) return
+    const key = `${deckScope}:${deckBatchNumber}`
+    if (continuationRef.current?.key === key) return
     const keys = [...new Set([NEW_LANE.key, ...(tasteLanes || []).map((lane) => lane.key)])]
-    const currentIds = new Set(feed.map((game) => game?.id).filter(Boolean))
-    setRefreshing(true)
-    setRefreshError(false)
+    const promise = fetchDiscoverLanes(keys, CANDIDATES_PER_LANE, { platform, scale, force: true })
+    continuationRef.current = { key, promise }
+    promise.catch(() => {
+      if (continuationRef.current?.promise === promise) continuationRef.current = null
+    })
+  }, [deckReady, remaining, loadingMore, deckScope, deckBatchNumber, tasteLaneSig, tasteLanes, platform, scale])
+
+  function animateCard(update, direction = 'next') {
+    if (cardMotion) return
+    setCardMotion(direction === 'dismiss' ? 'leaving-right' : 'leaving-left')
+    motionTimerRef.current = setTimeout(() => {
+      update()
+      setCardMotion('entering')
+      motionTimerRef.current = setTimeout(() => {
+        setCardMotion('')
+        motionTimerRef.current = null
+      }, CARD_ENTER_MS)
+    }, CARD_EXIT_MS)
+  }
+
+  function enterCard(update) {
+    update()
+    setCardMotion('entering')
+    motionTimerRef.current = setTimeout(() => {
+      setCardMotion('')
+      motionTimerRef.current = null
+    }, CARD_ENTER_MS)
+  }
+
+  function advanceCard() {
+    animateCard(() => {
+      if (surpriseGame) setSurpriseGame(null)
+      else setDeckAt((current) => Math.min(deck.length, current + 1))
+    })
+  }
+
+  function showSurprise() {
+    if (!surpriseCandidates.length || cardMotion) return
+    const currentIndex = surpriseGame
+      ? surpriseCandidates.findIndex((game) => String(game.id) === String(surpriseGame.id))
+      : -1
+    const reveal = () => {
+      setSurpriseGame(surpriseCandidates[(currentIndex + 1) % surpriseCandidates.length])
+      setSurpriseRound((current) => current + 1)
+    }
+    if (visibleGame) animateCard(reveal)
+    else enterCard(reveal)
+  }
+
+  async function loadMorePicks() {
+    if (loadingMore) return
+    const requestedScope = deckScope
+    setLoadingMore(true)
+    setContinuationError(false)
+    const keys = [...new Set([NEW_LANE.key, ...(tasteLanes || []).map((lane) => lane.key)])]
+    const excludedIds = rememberRotationExclusions([
+      ...rotationExclusions,
+      ...deck.map((game) => game?.id).filter(Boolean),
+    ])
     try {
-      const result = await fetchDiscoverLanes(keys, CANDIDATES_PER_LANE, { platform, scale, force: true })
-      setByLane((current) => ({ ...current, ...refreshedLaneMap(result, keys) }))
+      const prefetchKey = `${deckScope}:${deckBatchNumber}`
+      const prefetched = continuationRef.current?.key === prefetchKey
+        ? continuationRef.current.promise
+        : fetchDiscoverLanes(keys, CANDIDATES_PER_LANE, { platform, scale, force: true })
+      const result = await prefetched
+      if (deckScopeRef.current !== requestedScope) return
+      const nextByLane = { ...byLane, ...refreshedLaneMap(result, keys) }
+      const nextDeck = buildRecommendationSlate(activeLanes, nextByLane, Date.now(), {
+        wishlistIds: wishIds,
+        dismissedIds,
+        excludedIds,
+        gameFeedback,
+        drop: (game) => prefs.hideOwned && isOwned(game.name),
+        slateSize: CONTINUATION_DECK_SIZE,
+        strongCount: 4,
+        adjacentCount: 1,
+        wildcardCount: 1,
+      })
+      if (!nextDeck.length) throw new Error('No continuation picks')
+      setByLane(nextByLane)
       setFailedKeys((result.failedKeys || []).filter((key) => keys.includes(key)))
-      setRotationExclusions(rememberRotationExclusions(currentIds))
+      setRotationExclusions(excludedIds)
+      enterCard(() => {
+        setDeck(nextDeck)
+        setDeckAt(0)
+        setDeckBatchNumber((current) => current + 1)
+        setDeckReady(true)
+        setSurpriseGame(null)
+      })
       setNewState('ready')
       setTasteState('ready')
-      setFeedBatch(refreshRecommendationBatch())
-      return 'Picks refreshed'
+      continuationRef.current = null
     } catch {
-      // Keep the current feed intact. A manual refresh is never allowed to turn
-      // a good last-known set into an error screen.
-      setRefreshError(true)
-      return 'Couldn\'t refresh picks'
+      setContinuationError(true)
     } finally {
-      setRefreshing(false)
+      setLoadingMore(false)
     }
+  }
+
+  function openGame(game = visibleGame) {
+    if (!game) return
+    recordRecommendationDetailOpen(game, {
+      lane: game.lane,
+      position: surpriseGame ? 1 : deckAt + 1,
+      reason: laneReason(game.lane),
+      batchId: surpriseGame ? `${feedBatch}-surprise-${surpriseRound}` : feedBatch,
+      surface: surpriseGame ? 'for_you_surprise' : 'for_you',
+    })
+    setSelected(game)
+  }
+
+  function hideGame(game = visibleGame) {
+    if (!game || cardMotion || dismissing) return
+    setDismissalError(false)
+    setDismissing(true)
+    dismissRecommendation(game).then((hidden) => {
+      if (!hidden) {
+        setDismissalError(true)
+        return
+      }
+      setDismissedGame(game)
+      animateCard(() => {
+        if (surpriseGame) setSurpriseGame(null)
+        else setDeckAt((current) => Math.min(deck.length, current + 1))
+      }, 'dismiss')
+    }).finally(() => setDismissing(false))
   }
 
   const tastePending = tasteState === 'waiting' || tasteState === 'loading'
   const learningPending = !tasteProfile || wishlistLoading || dismissalsLoading
-  const loading = feed.length === 0 && (newState === 'loading' || tastePending || learningPending)
-  const unavailable = feed.length === 0 && !tastePending && (newState === 'error' || tasteState === 'error')
-  const pullRefresh = usePullRefresh({
-    onRefresh: refreshPicks,
-    disabled: loading || refreshing,
-    workingLabel: 'Refreshing picks…',
-    doneLabel: 'Picks refreshed',
-    errorLabel: 'Couldn\'t refresh picks',
-  })
+  const loading = !deckReady && (newState === 'loading' || tastePending || learningPending)
+  const unavailable = !deckReady && !tastePending && (newState === 'error' || tasteState === 'error')
 
   function openFilters() {
     setDraftOnly(only)
@@ -314,22 +516,9 @@ export default function DiscoverForYou({ onAsk }) {
 
   return (
     <div
-      ref={pullRefresh.hostRef}
-      className={`discover-foryou ${pullRefresh.handlers.className}`}
-      aria-busy={loading || refreshing}
+      className="discover-foryou"
+      aria-busy={loading || loadingMore}
     >
-      <div
-        ref={pullRefresh.gutterRef}
-        className={`fy-refresh-gutter ${pullRefresh.phase}`}
-        role="status"
-        aria-live="polite"
-      >
-        <span className="fy-refresh-flag">
-          <span className="fy-refresh-spinner" aria-hidden="true" />
-          <span ref={pullRefresh.labelRef} />
-        </span>
-      </div>
-
       <div className="discover-filter-toolbar">
         <DiscoverFilterButton
           activeCount={activeFilterCount}
@@ -338,64 +527,59 @@ export default function DiscoverForYou({ onAsk }) {
         />
       </div>
 
-      <div>
+      <div className="fy-deck-shell">
         {unavailable ? (
           <MessageState title="Couldn't refresh your picks" error>Try again in a moment, or use Browse for the wider catalog.</MessageState>
         ) : loading ? (
-          <Skeleton count={5} />
-        ) : feed.length === 0 ? (
+          <Skeleton count={3} />
+        ) : !deck.length ? (
           <MessageState title="Your strongest picks are resting">Try another taste or Browse while recent recommendations rotate back in.</MessageState>
+        ) : surpriseGame || currentDeckGame ? (
+          <>
+            <div className="fy-deck-head">
+              <span>{surpriseGame ? 'Surprise me' : (deckBatchNumber ? 'Extra picks' : 'Today’s deck')}</span>
+              <span>{surpriseGame ? 'Outside your deck' : <><b>{deckAt + 1}</b> of {deck.length}</>}</span>
+            </div>
+            <div className="fy-deck-progress" aria-hidden="true">
+              <span style={{ width: surpriseGame ? '100%' : `${((deckAt + 1) / deck.length) * 100}%` }} />
+            </div>
+
+            <RecommendationDeckCard
+              game={visibleGame}
+              wished={wishIds.has(visibleGame.id)}
+              platforms={preferredPlatforms(visibleGame.platforms, prefs.platforms)}
+              motion={cardMotion}
+              surprise={Boolean(surpriseGame)}
+              busy={Boolean(cardMotion) || dismissing}
+              onOpen={() => openGame(visibleGame)}
+              onNext={advanceCard}
+              onNotInterested={() => hideGame(visibleGame)}
+            />
+
+            <button type="button" className="fy-surprise-action" onClick={showSurprise} disabled={!surpriseCandidates.length || Boolean(cardMotion)}>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5" />
+              </svg>
+              {surpriseGame ? 'Another surprise' : 'Surprise me'}
+            </button>
+          </>
         ) : (
-          <div className="fy-feed">
-            {feed.map((game, index) => {
-              const wished = wishIds.has(game.id)
-              const platforms = preferredPlatforms(game.platforms, prefs.platforms)
-              const descriptor = gameDescriptor(game)
-              const releaseMeta = [game.year || null, platforms].filter(Boolean).join(' · ')
-              return (
-                <div key={game.id} className="fy-row-wrap">
-                  <button
-                    type="button"
-                    className="fy-row"
-                    onClick={() => {
-                      recordRecommendationDetailOpen(game, {
-                        lane: game.lane,
-                        position: index + 1,
-                        reason: laneReason(game.lane),
-                      })
-                      setSelected(game)
-                    }}
-                  >
-                    <Cover src={game.cover} title={game.name} size="sm" className="fy-cov" />
-                    <span className="fy-body">
-                      <span className="fy-name">{game.name}</span>
-                      {descriptor ? <span className="fy-descriptor">{descriptor}</span> : null}
-                      {game.rating || releaseMeta ? (
-                        <span className="fy-meta">
-                          {game.rating ? <span className="fy-rating">★ {game.rating}</span> : null}
-                          {game.rating && releaseMeta ? <span> · </span> : null}
-                          {releaseMeta ? <span>{releaseMeta}</span> : null}
-                        </span>
-                      ) : null}
-                      <span className={`fy-why${wished ? ' wished' : ''}`}>
-                        {wished ? 'On your wishlist · available now' : laneReason(game.lane)}
-                      </span>
-                    </span>
-                  </button>
-                  <WishHeart game={game} active={wished} />
-                </div>
-              )
-            })}
-          </div>
+          <RecommendationDeckComplete
+            batchSize={deck.length}
+            loading={loadingMore}
+            onContinue={loadMorePicks}
+            onSurprise={showSurprise}
+            onBrowse={onBrowse}
+          />
         )}
       </div>
 
-      {(failedKeys.length || newState === 'error' || tasteState === 'error') && feed.length ? (
+      {(failedKeys.length || newState === 'error' || tasteState === 'error') && deck.length ? (
         <p className="fy-partial-note">Some recommendation tastes couldn't refresh.</p>
       ) : null}
 
-      {refreshError && feed.length ? (
-        <p className="fy-partial-note">Couldn't refresh right now. Showing your previous picks.</p>
+      {continuationError ? (
+        <p className="fy-partial-note" role="alert">Couldn't find more picks right now. Your completed deck is still here.</p>
       ) : null}
 
       {dismissalError ? (

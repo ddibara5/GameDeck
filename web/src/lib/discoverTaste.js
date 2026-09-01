@@ -53,10 +53,10 @@ const VIBE_TERMS = [
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const RECENCY_HALF_LIFE_DAYS = 120
-export const RECOMMENDATION_SLATE_SIZE = 8
-const STRONG_PICK_COUNT = 5
-const ADJACENT_PICK_COUNT = 2
-const WILDCARD_PICK_COUNT = 1
+export const RECOMMENDATION_SLATE_SIZE = 12
+export const RECOMMENDATION_STRONG_COUNT = 7
+export const RECOMMENDATION_ADJACENT_COUNT = 3
+export const RECOMMENDATION_WILDCARD_COUNT = 2
 
 function clamp(min, max, value) {
   return Math.max(min, Math.min(max, value))
@@ -315,6 +315,10 @@ function addUnique(target, candidates, limit) {
   }
 }
 
+function withKind(games, recommendationKind) {
+  return games.map((game) => ({ ...game, recommendationKind }))
+}
+
 function rankedEligibleByLane(lanes, byLane, now, options, allowRotation = false) {
   const out = {}
   for (const lane of lanes) {
@@ -324,32 +328,41 @@ function rankedEligibleByLane(lanes, byLane, now, options, allowRotation = false
   return out
 }
 
-// Compose the visible deck after relevance ranking. The default blend keeps
-// five high-confidence taste matches, two nearby discoveries from New, and one
-// less-similar wildcard. Filters that select one lane get eight from that lane
-// instead. Daily refresh exclusions are strict when alternatives exist; at most
-// two prior picks may return at the end when the candidate pool is unusually
-// small. Cooldowns, wishlist items and explicit dismissals are never relaxed.
+// Compose one recommendation batch after relevance ranking. The default blend
+// keeps seven high-confidence taste matches, three nearby discoveries from New,
+// and two less-similar wildcards. Continuation batches can provide their own
+// smaller mix through options. Daily exclusions are strict when alternatives
+// exist; at most two prior picks may return at the end when the candidate pool
+// is unusually small. Cooldowns, wishlist items and explicit dismissals are
+// never relaxed.
 export function buildRecommendationSlate(lanes, byLane, now = Date.now(), options = {}) {
   const activeLanes = (lanes || []).filter(Boolean)
   if (!activeLanes.length) return []
+
+  const slateSize = Math.max(1, Number(options.slateSize) || RECOMMENDATION_SLATE_SIZE)
+  const strongCount = Math.min(slateSize, Math.max(0, Number(options.strongCount) || RECOMMENDATION_STRONG_COUNT))
+  const adjacentCount = Math.min(slateSize - strongCount, Math.max(0, Number(options.adjacentCount) || RECOMMENDATION_ADJACENT_COUNT))
+  const wildcardCount = Math.min(
+    slateSize - strongCount - adjacentCount,
+    Math.max(0, Number(options.wildcardCount) || RECOMMENDATION_WILDCARD_COUNT),
+  )
 
   const strictByLane = rankedEligibleByLane(activeLanes, byLane || {}, now, options)
   const selected = []
 
   if (activeLanes.length === 1) {
-    addUnique(selected, interleave(activeLanes, strictByLane), RECOMMENDATION_SLATE_SIZE)
+    addUnique(selected, withKind(interleave(activeLanes, strictByLane), 'strong'), slateSize)
   } else {
     const tasteLanes = activeLanes.filter((lane) => lane.key !== NEW_LANE.key)
     const newLane = activeLanes.find((lane) => lane.key === NEW_LANE.key)
-    addUnique(selected, interleave(tasteLanes, strictByLane), STRONG_PICK_COUNT)
+    addUnique(selected, withKind(interleave(tasteLanes, strictByLane), 'strong'), strongCount)
 
     if (newLane) {
       const newPicks = (strictByLane[newLane.key] || []).map((game) => ({ ...game, lane: newLane }))
       addUnique(
         selected,
-        newPicks.filter((game) => sharesTrait(game, selected)),
-        STRONG_PICK_COUNT + ADJACENT_PICK_COUNT,
+        withKind(newPicks.filter((game) => sharesTrait(game, selected)), 'adjacent'),
+        strongCount + adjacentCount,
       )
       const wildcard = newPicks
         .filter((game) => !selected.some((pick) => String(pick.id) === String(game.id)))
@@ -358,24 +371,47 @@ export function buildRecommendationSlate(lanes, byLane, now = Date.now(), option
         .map(({ game }) => game)
       addUnique(
         selected,
-        wildcard,
-        STRONG_PICK_COUNT + ADJACENT_PICK_COUNT + WILDCARD_PICK_COUNT,
+        withKind(wildcard, 'wildcard'),
+        strongCount + adjacentCount + wildcardCount,
       )
     }
 
-    addUnique(selected, interleave(activeLanes, strictByLane), RECOMMENDATION_SLATE_SIZE)
+    addUnique(selected, withKind(interleave(activeLanes, strictByLane), 'strong'), slateSize)
   }
 
-  if (selected.length < RECOMMENDATION_SLATE_SIZE && options.excludedIds?.size) {
+  if (selected.length < slateSize && options.excludedIds?.size) {
     const relaxedByLane = rankedEligibleByLane(activeLanes, byLane || {}, now, options, true)
     addUnique(
       selected,
-      interleave(activeLanes, relaxedByLane),
-      Math.min(RECOMMENDATION_SLATE_SIZE, selected.length + 2),
+      withKind(interleave(activeLanes, relaxedByLane), 'returning'),
+      Math.min(slateSize, selected.length + 2),
     )
   }
 
-  return selected.slice(0, RECOMMENDATION_SLATE_SIZE)
+  return selected.slice(0, slateSize)
+}
+
+// Surprise me deliberately searches outside the active batch. The least-similar
+// eligible New picks lead, followed by the wider taste pool if New is sparse.
+// Returning this as an ordered list lets the UI offer another surprise without
+// randomising or consuming the main deck.
+export function buildRecommendationSurprises(lanes, byLane, now = Date.now(), options = {}) {
+  const activeLanes = (lanes || []).filter(Boolean)
+  if (!activeLanes.length) return []
+  const strictByLane = rankedEligibleByLane(activeLanes, byLane || {}, now, options)
+  const baseline = options.baseline || []
+  const newLane = activeLanes.find((lane) => lane.key === NEW_LANE.key)
+  const newPicks = newLane
+    ? (strictByLane[newLane.key] || []).map((game) => ({ ...game, lane: newLane }))
+    : []
+  const adventurous = newPicks
+    .map((game, index) => ({ game, index, similarity: similarityCount(game, baseline) }))
+    .sort((a, b) => a.similarity - b.similarity || a.index - b.index)
+    .map(({ game }) => game)
+  const wider = interleave(activeLanes, strictByLane)
+  const out = []
+  addUnique(out, withKind([...adventurous, ...wider], 'surprise'), Number(options.limit) || 12)
+  return out
 }
 
 // Taste lanes arrive before the general New lane. That lets the most specific

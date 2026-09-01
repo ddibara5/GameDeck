@@ -23,19 +23,19 @@ test('For You records impressions and opens without blocking navigation', async 
   assert.match(learning, /\.catch\(\(\) => \{\}\)/)
 })
 
-test('manual refresh keeps the prior feed and creates a distinct learning batch', async () => {
+test('the rolling deck records only visible cards and creates stable continuation batches', async () => {
   const component = await readFile(new URL('../src/components/DiscoverForYou.jsx', import.meta.url), 'utf8')
-  const pullRefresh = await readFile(new URL('../src/lib/usePullRefresh.js', import.meta.url), 'utf8')
   const learning = await readFile(new URL('../src/lib/recommendationLearning.js', import.meta.url), 'utf8')
   const discover = await readFile(new URL('../src/lib/discover.js', import.meta.url), 'utf8')
 
-  assert.match(component, /usePullRefresh/)
-  assert.match(component, /Refreshing picks…/)
-  assert.match(pullRefresh, /addEventListener\('touchmove', onTouchMove, \{ passive: false \}\)/)
+  assert.doesNotMatch(component, /usePullRefresh/)
+  assert.match(component, /Hidden queue items are not impressions/)
+  assert.match(component, /CONTINUATION_DECK_SIZE/)
   assert.match(component, /force: true/)
-  assert.match(component, /Showing your previous picks/)
-  assert.match(component, /batchId: feedBatch/)
+  assert.match(component, /batchId: surpriseGame/)
+  assert.match(component, /positionOffset:/)
   assert.match(learning, /batchId = 'initial'/)
+  assert.match(learning, /positionOffset = 0/)
   assert.match(discover, /if \(force\)/)
 })
 
@@ -50,7 +50,7 @@ test('rotation v4 starts clean, persists dismissals safely, and exposes cooldown
   assert.match(learning, /for_you_v4/)
   assert.doesNotMatch(learning, /recommendation_session/)
   assert.match(rotation, /REFRESH_BUCKET_MS = 10 \* 60 \* 1000/)
-  assert.match(component, /rememberRotationExclusions\(currentIds\)/)
+  assert.match(component, /rememberRotationExclusions\(/)
   assert.match(component, /wishlistIds: wishIds/)
   assert.match(component, /onNotInterested/)
   assert.match(migration, /alter table public\.recommendation_dismissals enable row level security/)

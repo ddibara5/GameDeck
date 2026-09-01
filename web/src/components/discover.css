@@ -621,216 +621,357 @@ button.shelf-head:active {
    ranking, so a rail whose front is wrong costs the whole rail. Six rows fit on
    one screen and none of them is behind a swipe. */
 .discover-foryou {
-  padding-bottom: 8px;
+  padding-bottom: calc(var(--tabbar-height) + var(--safe-bottom) + var(--space-4));
 }
 
-.pull-refresh-host {
-  overscroll-behavior-y: contain;
+.fy-deck-shell {
+  padding-top: var(--space-2);
 }
 
-.fy-refresh-gutter {
-  height: 0;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  color: var(--muted);
-  transition: height var(--d-base) var(--ease-out);
-}
-
-.fy-refresh-gutter.dragging {
-  transition: none;
-}
-
-.fy-refresh-flag {
-  min-height: 28px;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 4px 11px;
-  border: 1px solid var(--line-soft);
-  border-radius: var(--r-pill);
-  background: color-mix(in oklab, var(--surface) 88%, transparent);
-  color: var(--muted);
-  font-size: var(--t-cap2);
-  font-weight: var(--w-semi);
-  opacity: 0;
-  transform: translateY(-4px);
-  transition: opacity var(--d-fast) ease, transform var(--d-base) var(--ease-out);
-}
-
-.fy-refresh-gutter.on .fy-refresh-flag,
-.fy-refresh-gutter.working .fy-refresh-flag,
-.fy-refresh-gutter.done .fy-refresh-flag {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.fy-refresh-gutter.armed .fy-refresh-flag,
-.fy-refresh-gutter.working .fy-refresh-flag {
-  color: var(--accent);
-  border-color: color-mix(in oklab, var(--accent) 42%, var(--line-soft));
-}
-
-.fy-refresh-spinner {
-  width: 12px;
-  height: 12px;
-  display: none;
-  flex: 0 0 auto;
-  border: 1.5px solid color-mix(in oklab, currentColor 28%, transparent);
-  border-top-color: currentColor;
-  border-radius: 50%;
-}
-
-.fy-refresh-gutter.working .fy-refresh-spinner {
-  display: block;
-  animation: fy-pull-spin 0.75s linear infinite;
-}
-
-@keyframes fy-pull-spin {
-  to { transform: rotate(360deg); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .fy-refresh-gutter,
-  .fy-refresh-flag { transition: none; }
-  .fy-refresh-gutter.working .fy-refresh-spinner { animation: none; }
-}
-
-.fy-feed-head {
+.fy-deck-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: var(--space-2) var(--screen-gutter) var(--space-1);
-}
-
-.fy-feed-head strong {
-  font-size: var(--t-sub);
-}
-
-.fy-feed-head span {
+  padding: 0 var(--screen-gutter) var(--space-2);
   color: var(--muted);
-  font-size: var(--t-cap2);
-  white-space: nowrap;
+  font-size: var(--t-foot);
 }
 
-/* One continuous canvas, hairline rows. The feed label and lane controls already
-   provide its context; the rounded outer slab was a second container around a
-   homogeneous list. */
-.fy-feed {
-  display: flex;
-  flex-direction: column;
-  margin: 0 var(--screen-gutter) var(--space-5);
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  overflow: visible;
+.fy-deck-head > span:first-child {
+  font-size: var(--t-cap);
+  font-weight: var(--w-bold);
+  letter-spacing: .07em;
+  text-transform: uppercase;
 }
 
-.fy-feed:empty {
-  display: none;
+.fy-deck-head b {
+  color: var(--text);
+  font-weight: var(--w-semi);
 }
 
-/* The wrap stays - it is what the heart button is positioned against - but it
-   is no longer a card. */
-.fy-row-wrap {
+.fy-deck-progress {
+  height: 3px;
+  margin: 0 var(--screen-gutter) var(--space-3);
+  overflow: hidden;
+  border-radius: var(--r-pill);
+  background: color-mix(in oklab, var(--line-soft) 62%, transparent);
+}
+
+.fy-deck-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width var(--d-slow) var(--ease-out);
+}
+
+.fy-deck-card {
   position: relative;
+  margin: 0 var(--screen-gutter);
+  transform-origin: center 68%;
+  will-change: transform, opacity;
 }
 
-.fy-feed > * + * {
-  border-top: 1px solid var(--line-soft);
+.fy-deck-card.leaving-left {
+  animation: fy-card-out-left 190ms ease-in forwards;
+  pointer-events: none;
 }
 
-/* The heart is a SIBLING of the row button, never inside it: a button inside a
-   button is invalid markup and costs the row its own activation. Same shape as
-   DiscoverCard. */
-.fy-row {
-  display: flex;
-  gap: 11px;
-  /* Centred, not top-aligned: the compact metadata stack stays visually tied
-     to the poster instead of leaving all of its slack under the reason line. */
-  align-items: center;
+.fy-deck-card.leaving-right {
+  animation: fy-card-out-right 190ms ease-in forwards;
+  pointer-events: none;
+}
+
+.fy-deck-card.entering {
+  animation: fy-card-in var(--d-slow) var(--ease-out) both;
+}
+
+@keyframes fy-card-out-left {
+  to { opacity: 0; transform: translateX(-18%) scale(.98); }
+}
+
+@keyframes fy-card-out-right {
+  to { opacity: 0; transform: translateX(18%) scale(.98); }
+}
+
+@keyframes fy-card-in {
+  from { opacity: 0; transform: translateY(14px) scale(.975); }
+}
+
+.fy-deck-open {
   width: 100%;
-  min-height: calc(var(--game-art-row) * 4 / 3 + 20px);
-  padding: 10px 44px 10px 0;
-  background: none;
-  border: none;
-  text-align: left;
+  display: block;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--e2);
   color: inherit;
-  font: inherit;
+  text-align: left;
   cursor: pointer;
 }
 
-/* Shares the row token with Library and search results, so switching the global
-   setting keeps the three views aligned. */
-.cover.fy-cov {
-  width: var(--game-art-row);
-  height: auto;
-  min-width: var(--game-art-row);
-  aspect-ratio: 3 / 4;
-  border-radius: var(--r-sm);
-  margin: 0;
+.fy-deck-open:disabled {
+  opacity: 1;
 }
 
-.fy-body {
-  flex: 1;
-  min-width: 0;
+.fy-deck-art {
+  position: relative;
+  height: clamp(250px, 68vw, 306px);
   display: block;
-}
-
-/* Every line clamps. A feed is scanned down the left edge, and one three-line
-   title puts the row below it out of rhythm. */
-.fy-name,
-.fy-descriptor,
-.fy-meta {
-  display: block;
-  white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
+  background: var(--surface-2);
 }
 
-.fy-name {
-  font-size: var(--t-sub);
-  font-weight: var(--w-semi);
+.fy-deck-art::after {
+  content: '';
+  position: absolute;
+  inset: 45% 0 0;
+  background: linear-gradient(180deg, transparent, color-mix(in oklab, var(--surface) 92%, transparent));
+  pointer-events: none;
 }
 
-.fy-descriptor {
-  margin-top: 3px;
-  color: color-mix(in oklab, var(--text) 72%, var(--muted));
+.fy-deck-art .cover.fy-deck-cover {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  margin: 0;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+
+.fy-deck-art .cover.fy-deck-cover img {
+  object-position: center 24%;
+}
+
+.fy-deck-kind {
+  position: absolute;
+  z-index: 1;
+  top: var(--space-3);
+  left: var(--space-3);
+  min-height: 29px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 11px;
+  border: 1px solid var(--glass-line);
+  border-radius: var(--r-pill);
+  background: rgba(20, 18, 16, .62);
+  color: #f7efe5;
   font-size: var(--t-cap);
-  font-weight: var(--w-semi);
+  font-weight: var(--w-bold);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: blur(16px) saturate(150%);
 }
 
-.fy-meta {
-  font-size: var(--t-cap);
+.fy-deck-kind.surprise,
+.fy-deck-kind.wildcard {
+  color: #ffe2a9;
+}
+
+.fy-deck-card > .wish-heart {
+  top: var(--space-3);
+  right: var(--space-3);
+  width: 38px;
+  height: 38px;
+}
+
+.fy-deck-copy {
+  display: block;
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+.fy-deck-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin-top: -2px;
+  font-size: var(--t-t2);
+  line-height: 1.08;
+  font-weight: var(--w-bold);
+  letter-spacing: var(--t-t2-tr);
+}
+
+.fy-deck-meta {
+  display: block;
+  margin-top: 7px;
+  overflow: hidden;
   color: var(--muted);
-  margin-top: 2px;
+  font-size: var(--t-foot);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fy-deck-tags {
+  display: flex;
+  gap: 6px;
+  margin-top: var(--space-3);
+  overflow: hidden;
+}
+
+.fy-deck-tags > span {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-pill);
+  color: color-mix(in oklab, var(--text) 78%, var(--muted));
+  font-size: var(--t-cap);
+  font-weight: var(--w-semi);
+}
+
+.fy-deck-why {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+  margin-top: var(--space-3);
+  color: color-mix(in oklab, var(--text) 72%, var(--muted));
+  font-size: var(--t-foot);
+  line-height: 1.38;
+}
+
+.fy-deck-why-mark {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-xs);
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+
+.fy-deck-actions {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.fy-deck-action {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-sm);
+  background: color-mix(in oklab, var(--surface-2) 72%, transparent);
+  color: var(--text);
+  font-size: var(--t-foot);
+  font-weight: var(--w-bold);
+  cursor: pointer;
+}
+
+.fy-deck-action.primary {
+  border-color: transparent;
+  background: var(--accent);
+  color: color-mix(in oklab, var(--bg) 88%, #000);
+}
+
+.fy-deck-action:disabled,
+.fy-surprise-action:disabled,
+.fy-deck-complete button:disabled {
+  cursor: default;
+  opacity: .58;
+}
+
+.fy-surprise-action {
+  width: calc(100% - 2 * var(--screen-gutter));
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin: var(--space-2) var(--screen-gutter) var(--space-4);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: var(--t-foot);
+  font-weight: var(--w-bold);
+  cursor: pointer;
+}
+
+.fy-deck-complete {
+  margin: var(--space-5) var(--screen-gutter) var(--space-4);
+  padding: 34px var(--space-4) var(--space-4);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--e2);
+  text-align: center;
+}
+
+.fy-deck-complete-mark {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto var(--space-3);
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+  color: var(--accent);
+  font-size: var(--t-t2);
+  font-weight: var(--w-bold);
+}
+
+.fy-deck-complete h2 {
+  margin: 0;
+  font-size: var(--t-t2);
+  letter-spacing: var(--t-t2-tr);
+}
+
+.fy-deck-complete p {
+  max-width: 300px;
+  margin: var(--space-2) auto var(--space-4);
+  color: var(--muted);
+  font-size: var(--t-foot);
+  line-height: 1.45;
+}
+
+.fy-deck-complete-primary {
+  width: 100%;
+  min-height: 48px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: var(--accent);
+  color: color-mix(in oklab, var(--bg) 88%, #000);
+  font-size: var(--t-foot);
+  font-weight: var(--w-bold);
+}
+
+.fy-deck-complete-secondary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-top: var(--space-2);
+}
+
+.fy-deck-complete-secondary button {
+  min-height: 44px;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: var(--t-foot);
+  font-weight: var(--w-semi);
+}
+
+.fy-deck-complete-secondary button + button {
+  border-left: 1px solid var(--line-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fy-deck-card.leaving-left,
+  .fy-deck-card.leaving-right,
+  .fy-deck-card.entering { animation: none; }
+  .fy-deck-progress > span { transition: none; }
 }
 
 .fy-rating {
   color: var(--amber);
   font-weight: var(--w-semi);
-}
-
-/* The reason is metadata, not another control or container. Accent and spacing
-   distinguish it without drawing a pill inside every row. */
-.fy-why {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-  max-width: 100%;
-  margin-top: 5px;
-  font-size: var(--t-cap);
-  line-height: 1.3;
-  color: color-mix(in oklab, var(--accent) 84%, var(--text));
-  border: 0;
-  border-radius: 0;
-  padding: 0;
-}
-
-.fy-why.wished {
-  color: var(--amber);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -839,23 +980,8 @@ button.shelf-head:active {
   }
 }
 
-/* In a list row the heart is not floating over artwork, so it drops the glass
-   puck the base rule gives it and reads as a plain control. */
-.fy-row-wrap .wish-heart {
-  position: absolute;
-  top: 50%;
-  right: -4px;
-  transform: translateY(-50%);
-  width: 44px;
-  height: 44px;
-  background: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  color: var(--muted);
-}
-
 .fy-partial-note {
-  margin: calc(-1 * var(--space-3)) var(--screen-gutter) var(--space-5);
+  margin: var(--space-2) var(--screen-gutter) var(--space-4);
   color: var(--muted);
   font-size: var(--t-cap2);
   text-align: center;
@@ -908,6 +1034,6 @@ button.shelf-head:active {
 }
 
 [data-theme="light"] .fy-profile-note,
-[data-theme="light"] .fy-why {
+[data-theme="light"] .fy-deck-why {
   color: var(--walnut);
 }

@@ -32,8 +32,8 @@ export const MIN_VISIBLE = 2
 
 // Every destination the drawer can show, in default order. The drawer stays a
 // map of places rather than a second filter surface: Backlog, Playing and
-// Finished live in Library's status filter, while Shuffle and Settings are
-// pinned utilities below the map.
+// Finished live in Library's status filter, while Settings is pinned below the
+// map. Shuffle now lives inside For You as Surprise me.
 //
 // kind decides what the row does and whether it can sit in the bar:
 //   tab     a top-level tab. `bar: false` marks one that is reachable only from
@@ -60,10 +60,9 @@ export const DEST_CATALOG = [
   { key: 'wishlist', label: 'Wishlist', group: 'explore', kind: 'view', fixed: 'list' },
 ]
 
-// Settings and Shuffle are deliberately NOT in the catalog. They are actions,
-// not places, and stay pinned in the drawer footer. Drawer customization is in
-// Settings beside the bottom-bar editor instead of competing for a third footer
-// control.
+// Settings is deliberately NOT in the catalog. It is an action, not a place,
+// and stays pinned in the drawer footer. Drawer customization is in Settings
+// beside the bottom-bar editor.
 
 export const DEST_BY_KEY = DEST_CATALOG.reduce((m, d) => ((m[d.key] = d), m), {})
 

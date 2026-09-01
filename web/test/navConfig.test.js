@@ -42,7 +42,8 @@ test('drawer geometry and pinned actions stay compact', async () => {
     readFile(new URL('../src/components/SettingsPage.jsx', import.meta.url), 'utf8'),
   ])
   assert.match(css, /\.drawer\s*\{[\s\S]*?width:\s*min\(80vw, 320px\)/)
-  assert.match(menu, /\n\s*Shuffle\s*\n\s*<\/button>/)
+  assert.doesNotMatch(menu, /\n\s*Shuffle\s*\n\s*<\/button>/)
+  assert.doesNotMatch(app, /ShufflePicker/)
   assert.match(menu, /\n\s*Settings\s*\n\s*<\/button>/)
   assert.doesNotMatch(menu, /\n\s*Customize\s*\n\s*<\/button>/)
   assert.doesNotMatch(menu, /GameDeck · \{counts\.library\} games/)

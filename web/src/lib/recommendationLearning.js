@@ -61,10 +61,11 @@ async function persistExposureRows(rows) {
 // One exposure per game in each deliberately generated feed. The batch id stays
 // stable while taste chips change, so filtering and rerenders do not inflate the
 // evidence; a manual refresh receives a new id because it is a new opportunity.
-export function trackRecommendationFeed(feed, { batchId = 'initial' } = {}) {
+export function trackRecommendationFeed(feed, { batchId = 'initial', surface = 'for_you', positionOffset = 0 } = {}) {
   const rows = (feed || []).map((game, index) => recommendationExposureRow(game, {
     lane: game.lane,
-    position: index + 1,
+    position: positionOffset + index + 1,
+    surface,
     reason: game.recommendationReason,
     batchId,
   })).filter(Boolean)

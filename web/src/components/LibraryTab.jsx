@@ -7,7 +7,7 @@ import { useStatusMap, effectiveStatus } from '../lib/userStatus.js'
 import { platformMeta } from '../lib/format.js'
 import { useLibraryGames, useVibeKeywords } from '../lib/useLibraryGames.js'
 import { VIBES, hasVibe, availableVibes } from '../lib/vibes.js'
-import { topGenres } from '../lib/shuffle.js'
+import { topGenres } from '../lib/gameGenres.js'
 import { useDialogA11y } from '../lib/useDialogA11y.js'
 
 // Derived from platformMeta so this cannot drift from the labels on the cards it
