@@ -527,12 +527,20 @@ export default function DiscoverForYou({ onAsk, onBrowse }) {
       className="discover-foryou"
       aria-busy={loading || loadingMore}
     >
-      <div className="discover-filter-toolbar">
-        <DiscoverFilterButton
-          activeCount={activeFilterCount}
-          label="For You filters"
-          onClick={openFilters}
-        />
+      <div className="discover-section-toolbar fy-deck-head">
+        <span>{surpriseGame ? 'Surprise me' : (deckBatchNumber ? 'Extra picks' : 'Today’s deck')}</span>
+        <span className="discover-section-actions">
+          {deckReady && deck.length ? (
+            <span className="fy-deck-position">
+              {surpriseGame ? 'Outside your deck' : <><b>{Math.min(deckAt + 1, deck.length)}</b> of {deck.length}</>}
+            </span>
+          ) : null}
+          <DiscoverFilterButton
+            activeCount={activeFilterCount}
+            label="For You filters"
+            onClick={openFilters}
+          />
+        </span>
       </div>
 
       <div className="fy-deck-shell">
@@ -544,10 +552,6 @@ export default function DiscoverForYou({ onAsk, onBrowse }) {
           <MessageState title="Your strongest picks are resting">Try another taste or Browse while recent recommendations rotate back in.</MessageState>
         ) : surpriseGame || currentDeckGame ? (
           <>
-            <div className="fy-deck-head">
-              <span>{surpriseGame ? 'Surprise me' : (deckBatchNumber ? 'Extra picks' : 'Today’s deck')}</span>
-              <span>{surpriseGame ? 'Outside your deck' : <><b>{deckAt + 1}</b> of {deck.length}</>}</span>
-            </div>
             <div className="fy-deck-progress" aria-hidden="true">
               <span style={{ width: surpriseGame ? '100%' : `${((deckAt + 1) / deck.length) * 100}%` }} />
             </div>

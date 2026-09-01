@@ -309,10 +309,10 @@ test('For You collapses taste controls into the shared Discover filter pattern',
     readFile(new URL('../src/components/DiscoverForYou.jsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/components/DiscoverPreferenceFields.jsx', import.meta.url), 'utf8'),
   ])
-  assert.match(browse, /className="discover-filter-toolbar"/)
+  assert.match(browse, /className="discover-section-toolbar"/)
   assert.doesNotMatch(browse, /className="showing-strip"/)
   assert.doesNotMatch(browse, />Show all</)
-  assert.match(forYou, /className="discover-filter-toolbar"/)
+  assert.match(forYou, /className="discover-section-toolbar fy-deck-head"/)
   assert.match(forYou, /<DiscoverFilterButton/)
   assert.match(forYou, /Recommendation taste/)
   assert.match(forYou, /<DiscoverPreferenceFields/)

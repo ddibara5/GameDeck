@@ -431,7 +431,8 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
 
   return (
     <div className="discover-browse">
-      <div className="discover-filter-toolbar">
+      <div className="discover-section-toolbar">
+        <span className="discover-section-label">Browse games</span>
         <DiscoverFilterButton activeCount={activeFilterCount} onClick={openFilters} />
       </div>
       {narrowed ? (

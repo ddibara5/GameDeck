@@ -24,10 +24,6 @@
   position: relative;
 }
 
-.discover-page-standalone .discover-base {
-  padding-top: 52px;
-}
-
 /* Browse is a child destination of Discover, not a peer tab. It replaces the
    app header while open and leaves the dock visible, matching the approved
    iPhone push-navigation model without adding a second heading inside the page. */
@@ -95,26 +91,41 @@
   -webkit-overflow-scrolling: touch;
 }
 
-.discover-filter-toolbar {
-  position: absolute;
-  z-index: 2;
-  top: var(--space-2);
-  right: var(--screen-gutter);
-  min-height: 44px;
+.discover-section-toolbar {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 2px var(--screen-gutter) 6px;
+}
+
+.discover-section-label,
+.discover-section-toolbar > span:first-child {
+  color: var(--muted);
+  font-size: var(--t-cap);
+  font-weight: var(--w-bold);
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.discover-section-actions {
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding: 0;
+  gap: var(--space-3);
 }
 
-.discover-filter-toolbar .filter-btn {
+.discover-section-toolbar .filter-btn {
   position: relative;
-  width: 44px;
-  min-width: 44px;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
   padding: 0;
 }
 
-.discover-filter-toolbar .filter-btn.active {
+.discover-section-toolbar .filter-btn.active {
   color: var(--bg);
 }
 
@@ -601,29 +612,25 @@ button.shelf-head:active {
 }
 
 .fy-deck-shell {
-  padding-top: var(--space-2);
+  padding-top: 0;
 }
 
 .fy-deck-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: 0 var(--screen-gutter) var(--space-2);
   color: var(--muted);
   font-size: var(--t-foot);
-}
-
-.fy-deck-head > span:first-child {
-  font-size: var(--t-cap);
-  font-weight: var(--w-bold);
-  letter-spacing: .07em;
-  text-transform: uppercase;
 }
 
 .fy-deck-head b {
   color: var(--text);
   font-weight: var(--w-semi);
+}
+
+.fy-deck-position {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--t-foot);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .fy-deck-progress {
