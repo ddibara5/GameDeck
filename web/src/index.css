@@ -4040,6 +4040,48 @@ textarea {
   box-shadow: inset 0 1px 0 rgba(232,245,255,.24), 0 0 22px rgba(76,154,246,.18);
 }
 
+/* The luminous lens sits much closer to --accent than the other families, so
+   accent-colored glyphs lose their silhouette on the selected tab. Give both
+   states explicit, mode-aware contrast while leaving the material itself intact. */
+:root[data-theme-family='playstation'] .tabbar-btn {
+  color: #c3d7ee;
+  font-weight: var(--w-semi);
+}
+
+:root[data-theme-family='playstation'] .tabbar-btn.active {
+  color: #f8fbff;
+}
+
+:root[data-theme-family='playstation'] .tabbar-btn.active .tabbar-icon {
+  color: #f1f8ff;
+  filter: drop-shadow(0 0 7px rgba(126,194,255,.5));
+}
+
+:root[data-theme-family='playstation'] .tabbar-icon svg {
+  stroke-width: 2.05;
+}
+
+:root[data-theme-family='playstation'] .global-search-trigger {
+  color: #c3d7ee;
+}
+
+:root[data-theme-family='playstation'][data-theme='light'] .tabbar-btn {
+  color: #3d5c7b;
+}
+
+:root[data-theme-family='playstation'][data-theme='light'] .tabbar-btn.active {
+  color: #082e54;
+}
+
+:root[data-theme-family='playstation'][data-theme='light'] .tabbar-btn.active .tabbar-icon {
+  color: #005ca8;
+  filter: drop-shadow(0 0 5px rgba(0,104,189,.22));
+}
+
+:root[data-theme-family='playstation'][data-theme='light'] .global-search-trigger {
+  color: #315574;
+}
+
 :root[data-theme-family='playstation'] :is(
   .chart-card,
   .hm-tile,

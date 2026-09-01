@@ -100,6 +100,14 @@ test('the bottom bar has complete light and dark theme materials', () => {
   }
 })
 
+test('the PlayStation bottom bar keeps icons legible over its luminous lens', () => {
+  const css = readFileSync(new URL('../src/index.css', import.meta.url), 'utf8')
+
+  assert.match(css, /data-theme-family='playstation'\] \.tabbar-btn\.active \.tabbar-icon\s*\{[^}]*color:\s*#f1f8ff/s)
+  assert.match(css, /data-theme-family='playstation'\]\[data-theme='light'\] \.tabbar-btn\.active \.tabbar-icon\s*\{[^}]*color:\s*#005ca8/s)
+  assert.match(css, /data-theme-family='playstation'\] \.tabbar-icon svg\s*\{[^}]*stroke-width:\s*2\.05/s)
+})
+
 test('the genre pie has a complete palette in every theme and appearance', () => {
   const css = readFileSync(new URL('../src/components/insights.css', import.meta.url), 'utf8')
 
