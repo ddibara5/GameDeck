@@ -16,13 +16,16 @@ import {
   setDiscoverPrefs,
 } from '../lib/discoverPrefs.js'
 import {
-  PRODUCTION_SCALES,
   PRODUCTION_SCALE_KEYS,
   classifyProductionScale,
+  productionScaleParam,
+  toggleProductionScale,
 } from '../lib/productionScale.js'
 import { useDialogA11y } from '../lib/useDialogA11y.js'
 import DiscoverFilterButton from './DiscoverFilterButton.jsx'
 import DiscoverPreferenceFields from './DiscoverPreferenceFields.jsx'
+import DiscoverFilterDisclosure from './DiscoverFilterDisclosure.jsx'
+import DiscoverProductionScaleField from './DiscoverProductionScaleField.jsx'
 
 const CURRENT_YEAR = new Date().getFullYear()
 
@@ -96,28 +99,6 @@ const makeDefaultFilters = () => ({
   scales: [...PRODUCTION_SCALE_KEYS],
 })
 const DEFAULT_FILTERS = makeDefaultFilters()
-
-function FilterDisclosure({ label, value, open, onToggle, children }) {
-  return (
-    <section className={`filter-disclosure${open ? ' open' : ''}`}>
-      <button
-        type="button"
-        className="filter-disclosure-trigger"
-        aria-expanded={open}
-        onClick={onToggle}
-      >
-        <span className="filter-disclosure-copy">
-          <span className="filter-disclosure-label">{label}</span>
-          <span className="filter-disclosure-value">{value}</span>
-        </span>
-        <svg className="filter-disclosure-caret" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M6 9l6 6 6-6" />
-        </svg>
-      </button>
-      {open ? <div className="filter-disclosure-body">{children}</div> : null}
-    </section>
-  )
-}
 
 // In-place placeholder for a rail whose batched data hasn't landed yet. Reserves
 // the shelf's height (heading + a row of poster-shaped shimmers) so the home
@@ -342,12 +323,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
       preset: preset || undefined,
       ...rest,
       platform: platformParam(activePlatforms),
-      scale:
-        scales.length === PRODUCTION_SCALE_KEYS.length
-          ? undefined
-          : scales.length
-            ? scales.join(',')
-            : 'none',
+      scale: productionScaleParam(scales),
       sort: sort !== DEFAULT_FILTERS.sort ? sort : undefined,
     }
   }, [preset, filters, activePlatforms])
@@ -432,9 +408,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
   function toggleDraftScale(scale) {
     setDraftFilters((current) => ({
       ...current,
-      scales: current.scales.includes(scale)
-        ? current.scales.filter((key) => key !== scale)
-        : PRODUCTION_SCALE_KEYS.filter((key) => key === scale || current.scales.includes(key)),
+      scales: toggleProductionScale(current.scales, scale),
     }))
   }
 
@@ -567,29 +541,10 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
             </div>
 
             <div className="filter-sheet-scroll">
-              <div className="filter-group filter-group-compact">
-                <div className="filter-label-row">
-                  <span className="filter-label">Production scale</span>
-                  <span className="filter-note">Tap to include or hide</span>
-                </div>
-                <div className="filter-options production-scale-options">
-                  {PRODUCTION_SCALES.map((scale) => {
-                    const selected = draftFilters.scales.includes(scale.key)
-                    return (
-                      <button
-                        key={scale.key}
-                        type="button"
-                        className={`filter-opt scale-opt${selected ? ' active' : ''}`}
-                        aria-pressed={selected}
-                        onClick={() => toggleDraftScale(scale.key)}
-                      >
-                        <span>{scale.label}</span>
-                        <span className="scale-state" aria-hidden="true">{selected ? '✓' : '−'}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
+              <DiscoverProductionScaleField
+                selectedScales={draftFilters.scales}
+                onToggle={toggleDraftScale}
+              />
 
               <div className="filter-group filter-group-compact">
                 <span className="filter-label">Availability</span>
@@ -616,7 +571,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
               />
 
               <div className="filter-disclosures">
-                <FilterDisclosure
+                <DiscoverFilterDisclosure
                   label="Genre"
                   value={(GENRES.find((option) => option.key === draftFilters.genre) || GENRES[0]).label}
                   open={openFilterSection === 'genre'}
@@ -638,9 +593,9 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
                       </button>
                     ))}
                   </div>
-                </FilterDisclosure>
+                </DiscoverFilterDisclosure>
 
-                <FilterDisclosure
+                <DiscoverFilterDisclosure
                   label="Vibe"
                   value={(VIBES.find((vibe) => vibe.key === draftPreset) || { label: 'Any vibe' }).label}
                   open={openFilterSection === 'vibe'}
@@ -673,9 +628,9 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
                       </button>
                     ))}
                   </div>
-                </FilterDisclosure>
+                </DiscoverFilterDisclosure>
 
-                <FilterDisclosure
+                <DiscoverFilterDisclosure
                   label="Release year"
                   value={draftFilters.year === 'all' ? 'Any year' : String(draftFilters.year)}
                   open={openFilterSection === 'year'}
@@ -697,9 +652,9 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
                       </button>
                     ))}
                   </div>
-                </FilterDisclosure>
+                </DiscoverFilterDisclosure>
 
-                <FilterDisclosure
+                <DiscoverFilterDisclosure
                   label="Sort by"
                   value={(SORTS.find((option) => option.key === draftFilters.sort) || SORTS[0]).label}
                   open={openFilterSection === 'sort'}
@@ -721,7 +676,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
                       </button>
                     ))}
                   </div>
-                </FilterDisclosure>
+                </DiscoverFilterDisclosure>
               </div>
             </div>
 

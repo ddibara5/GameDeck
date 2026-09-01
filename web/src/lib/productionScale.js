@@ -19,6 +19,18 @@ export const PRODUCTION_SCALES = [
 
 export const PRODUCTION_SCALE_KEYS = PRODUCTION_SCALES.map((scale) => scale.key)
 
+export function productionScaleParam(scales) {
+  if (!Array.isArray(scales) || scales.length === PRODUCTION_SCALE_KEYS.length) return 'all'
+  return scales.length ? scales.join(',') : 'none'
+}
+
+export function toggleProductionScale(scales, key) {
+  const current = Array.isArray(scales) ? scales : PRODUCTION_SCALE_KEYS
+  return current.includes(key)
+    ? current.filter((scale) => scale !== key)
+    : PRODUCTION_SCALE_KEYS.filter((scale) => scale === key || current.includes(scale))
+}
+
 const AAA_COMPANY_MARKERS = [
   '2k games',
   'activision',
@@ -92,4 +104,3 @@ export function filterByProductionScale(games, value) {
   if (!selected.size) return []
   return (games || []).filter((game) => selected.has(classifyProductionScale(game)))
 }
-

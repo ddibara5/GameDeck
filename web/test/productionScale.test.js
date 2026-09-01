@@ -3,7 +3,9 @@ import assert from 'node:assert/strict'
 import {
   classifyProductionScale,
   filterByProductionScale,
+  productionScaleParam,
   selectedProductionScales,
+  toggleProductionScale,
 } from '../src/lib/productionScale.js'
 
 const games = [
@@ -54,3 +56,10 @@ test('ignores unsupported scale values', () => {
   assert.deepEqual([...selectedProductionScales('aaa,unknown')], ['aaa'])
 })
 
+test('serializes and toggles the shared production-scale selection', () => {
+  assert.equal(productionScaleParam(['aaa', 'aa', 'indie']), 'all')
+  assert.equal(productionScaleParam(['aaa', 'indie']), 'aaa,indie')
+  assert.equal(productionScaleParam([]), 'none')
+  assert.deepEqual(toggleProductionScale(['aaa', 'aa', 'indie'], 'aa'), ['aaa', 'indie'])
+  assert.deepEqual(toggleProductionScale(['aaa', 'indie'], 'aa'), ['aaa', 'aa', 'indie'])
+})

@@ -8,11 +8,23 @@ import DiscoverPreferenceFields from './DiscoverPreferenceFields.jsx'
 import DiscoverDetail from './DiscoverDetail.jsx'
 import { fetchDiscoverLanes, loadLibraryTitles, normTitle } from '../lib/discover.js'
 import { useWishlist } from '../lib/wishlist.js'
-import { resetDiscoverPrefs, useDiscoverPrefs, platformParam } from '../lib/discoverPrefs.js'
+import {
+  DEFAULT_DISCOVER_PREFS,
+  useDiscoverPrefs,
+  platformParam,
+  setDiscoverPrefs,
+} from '../lib/discoverPrefs.js'
 import { useTasteProfile, NEW_LANE, laneReason, rankCandidates, interleave } from '../lib/discoverLanes.js'
 import { recordRecommendationDetailOpen, trackRecommendationFeed } from '../lib/recommendationLearning.js'
 import usePullRefresh from '../lib/usePullRefresh.js'
 import { useDialogA11y } from '../lib/useDialogA11y.js'
+import {
+  PRODUCTION_SCALE_KEYS,
+  productionScaleParam,
+  toggleProductionScale,
+} from '../lib/productionScale.js'
+import DiscoverFilterDisclosure from './DiscoverFilterDisclosure.jsx'
+import DiscoverProductionScaleField from './DiscoverProductionScaleField.jsx'
 
 // Pull a wider candidate pool than the feed displays. The server still returns
 // recent matching releases, then the client can balance freshness with
@@ -71,6 +83,8 @@ function refreshedLaneMap(result, keys) {
 export default function DiscoverForYou({ onAsk }) {
   const prefs = useDiscoverPrefs()
   const platform = platformParam(prefs.platforms)
+  const [scales, setScales] = useState(() => [...PRODUCTION_SCALE_KEYS])
+  const scale = productionScaleParam(scales)
   const tasteProfile = useTasteProfile()
   const tasteLanes = tasteProfile?.lanes || null
   const gameFeedback = tasteProfile?.gameFeedback
@@ -82,6 +96,10 @@ export default function DiscoverForYou({ onAsk }) {
   const [selected, setSelected] = useState(null)
   const [only, setOnly] = useState(null)
   const [showFilters, setShowFilters] = useState(false)
+  const [draftOnly, setDraftOnly] = useState(null)
+  const [draftScales, setDraftScales] = useState(() => [...PRODUCTION_SCALE_KEYS])
+  const [draftPrefs, setDraftPrefs] = useState(null)
+  const [openFilterSection, setOpenFilterSection] = useState(null)
   const [refreshing, setRefreshing] = useState(false)
   const [refreshError, setRefreshError] = useState(false)
   const [deprioritizeIds, setDeprioritizeIds] = useState(() => new Set())
@@ -102,7 +120,7 @@ export default function DiscoverForYou({ onAsk }) {
     setDeprioritizeIds(new Set())
     setFeedBatch('initial')
     setRefreshError(false)
-  }, [platform])
+  }, [platform, scale])
 
   const isOwned = useMemo(() => {
     if (!libTitles) return () => false
@@ -123,7 +141,7 @@ export default function DiscoverForYou({ onAsk }) {
       setByLane((current) => ({ ...current, ...rawLaneMap(result, keys) }))
       setFailedKeys((current) => [...new Set([...current.filter((key) => !keys.includes(key)), ...(result.failedKeys || [])])])
     }
-    fetchDiscoverLanes(keys, CANDIDATES_PER_LANE, { platform, onFresh: apply })
+    fetchDiscoverLanes(keys, CANDIDATES_PER_LANE, { platform, scale, onFresh: apply })
       .then((result) => {
         if (!alive) return
         apply(result)
@@ -133,7 +151,7 @@ export default function DiscoverForYou({ onAsk }) {
     return () => {
       alive = false
     }
-  }, [platform])
+  }, [platform, scale])
 
   // Taste lanes begin as soon as the lightweight Supabase profile resolves.
   // They merge into New rather than replacing it, so whichever source wins the
@@ -156,7 +174,7 @@ export default function DiscoverForYou({ onAsk }) {
       setByLane((current) => ({ ...current, ...rawLaneMap(result, keys) }))
       setFailedKeys((current) => [...new Set([...current.filter((key) => !keys.includes(key)), ...(result.failedKeys || [])])])
     }
-    fetchDiscoverLanes(keys, CANDIDATES_PER_LANE, { platform, onFresh: apply })
+    fetchDiscoverLanes(keys, CANDIDATES_PER_LANE, { platform, scale, onFresh: apply })
       .then((result) => {
         if (!alive) return
         apply(result)
@@ -169,7 +187,7 @@ export default function DiscoverForYou({ onAsk }) {
     // tasteLaneSig is the stable identity; using the array would refetch on any
     // hook render that produced equivalent lane objects.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tasteLaneSig, platform])
+  }, [tasteLaneSig, platform, scale])
 
   // Taste lanes lead so a duplicate gets its specific personalized explanation
   // before the general New lane can claim it.
@@ -197,7 +215,11 @@ export default function DiscoverForYou({ onAsk }) {
     return interleave(active, rankedByLane, { drop: (game) => prefs.hideOwned && isOwned(game.name) })
   }, [lanes, rankedByLane, only, isOwned, prefs.hideOwned])
 
-  const activeFilterCount = (only ? 1 : 0) + (prefs.platforms.length ? 1 : 0) + (prefs.hideOwned ? 1 : 0)
+  const activeFilterCount =
+    (only ? 1 : 0) +
+    (scales.length !== PRODUCTION_SCALE_KEYS.length ? 1 : 0) +
+    (prefs.platforms.length ? 1 : 0) +
+    (prefs.hideOwned ? 1 : 0)
 
   const feedSig = feed.map((game) => `${game.id}:${game.lane?.key || 'new'}`).join(',')
   useEffect(() => {
@@ -222,7 +244,7 @@ export default function DiscoverForYou({ onAsk }) {
     setRefreshing(true)
     setRefreshError(false)
     try {
-      const result = await fetchDiscoverLanes(keys, CANDIDATES_PER_LANE, { platform, force: true })
+      const result = await fetchDiscoverLanes(keys, CANDIDATES_PER_LANE, { platform, scale, force: true })
       setByLane((current) => ({ ...current, ...refreshedLaneMap(result, keys) }))
       setFailedKeys((result.failedKeys || []).filter((key) => keys.includes(key)))
       setDeprioritizeIds(currentIds)
@@ -251,6 +273,36 @@ export default function DiscoverForYou({ onAsk }) {
     errorLabel: 'Couldn\'t refresh picks',
   })
 
+  function openFilters() {
+    setDraftOnly(only)
+    setDraftScales([...scales])
+    setDraftPrefs({ ...prefs, platforms: [...prefs.platforms] })
+    setOpenFilterSection(null)
+    setShowFilters(true)
+  }
+
+  function resetDraftFilters() {
+    setDraftOnly(null)
+    setDraftScales([...PRODUCTION_SCALE_KEYS])
+    setDraftPrefs({ ...DEFAULT_DISCOVER_PREFS, platforms: [...DEFAULT_DISCOVER_PREFS.platforms] })
+    setOpenFilterSection(null)
+  }
+
+  function applyDraftFilters() {
+    setOnly(draftOnly)
+    setScales(draftScales)
+    setDiscoverPrefs(draftPrefs || prefs)
+    setShowFilters(false)
+  }
+
+  function toggleDraftScale(key) {
+    setDraftScales((current) => toggleProductionScale(current, key))
+  }
+
+  const tasteSummary = draftOnly
+    ? (lanes.find((lane) => lane.key === draftOnly)?.label || 'New')
+    : 'All picks'
+
   return (
     <div
       ref={pullRefresh.hostRef}
@@ -273,7 +325,7 @@ export default function DiscoverForYou({ onAsk }) {
         <DiscoverFilterButton
           activeCount={activeFilterCount}
           label="For You filters"
-          onClick={() => setShowFilters(true)}
+          onClick={openFilters}
         />
       </div>
 
@@ -334,50 +386,73 @@ export default function DiscoverForYou({ onAsk }) {
 
       {showFilters ? (
         <div className="modal-backdrop" onClick={(event) => event.target === event.currentTarget && setShowFilters(false)}>
-          <div ref={filterDialogRef} className="modal-sheet filter-sheet" role="dialog" aria-modal="true" aria-label="For You filters">
+          <div ref={filterDialogRef} className="modal-sheet filter-sheet discover-filter-sheet" role="dialog" aria-modal="true" aria-label="For You filters">
             <div className="modal-handle" />
             <button type="button" className="modal-close" aria-label="Close filters" onClick={() => setShowFilters(false)}>&times;</button>
-            <div className="detail-title">For You filters</div>
-
-            <div className="filter-group">
-              <span className="filter-label">Recommendation taste</span>
-              <div className="filter-options">
-                <button
-                  type="button"
-                  className={`filter-opt${only === null ? ' active' : ''}`}
-                  aria-pressed={only === null}
-                  onClick={() => setOnly(null)}
-                >
-                  All picks
-                </button>
-                {lanes.map((lane) => (
-                  <button
-                    key={lane.key}
-                    type="button"
-                    className={`filter-opt${only === lane.key ? ' active' : ''}`}
-                    aria-pressed={only === lane.key}
-                    onClick={() => setOnly(only === lane.key ? null : lane.key)}
-                  >
-                    {lane.key === NEW_LANE.key ? 'New' : lane.label}
-                  </button>
-                ))}
-              </div>
+            <div className="filter-sheet-head">
+              <div className="detail-title">For You filters</div>
             </div>
 
-            <DiscoverPreferenceFields prefs={prefs} />
+            <div className="filter-sheet-scroll">
+              <DiscoverProductionScaleField
+                selectedScales={draftScales}
+                onToggle={toggleDraftScale}
+              />
+
+              <DiscoverPreferenceFields
+                prefs={draftPrefs || prefs}
+                onChange={setDraftPrefs}
+                deferred
+                compact
+              />
+
+              <div className="filter-disclosures for-you-filter-disclosures">
+                <DiscoverFilterDisclosure
+                  label="Recommendation taste"
+                  value={tasteSummary}
+                  open={openFilterSection === 'taste'}
+                  onToggle={() => setOpenFilterSection((section) => (section === 'taste' ? null : 'taste'))}
+                >
+                  <div className="filter-options">
+                    <button
+                      type="button"
+                      className={`filter-opt${draftOnly === null ? ' active' : ''}`}
+                      aria-pressed={draftOnly === null}
+                      onClick={() => {
+                        setDraftOnly(null)
+                        setOpenFilterSection(null)
+                      }}
+                    >
+                      All picks
+                    </button>
+                    {lanes.map((lane) => (
+                      <button
+                        key={lane.key}
+                        type="button"
+                        className={`filter-opt${draftOnly === lane.key ? ' active' : ''}`}
+                        aria-pressed={draftOnly === lane.key}
+                        onClick={() => {
+                          setDraftOnly(lane.key)
+                          setOpenFilterSection(null)
+                        }}
+                      >
+                        {lane.key === NEW_LANE.key ? 'New' : lane.label}
+                      </button>
+                    ))}
+                  </div>
+                </DiscoverFilterDisclosure>
+              </div>
+            </div>
 
             <div className="filter-sheet-actions">
               <button
                 type="button"
                 className="discover-action"
-                onClick={() => {
-                  setOnly(null)
-                  resetDiscoverPrefs()
-                }}
+                onClick={resetDraftFilters}
               >
                 Reset
               </button>
-              <button type="button" className="discover-action primary" onClick={() => setShowFilters(false)}>
+              <button type="button" className="discover-action primary" onClick={applyDraftFilters}>
                 Show picks
               </button>
             </div>

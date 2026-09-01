@@ -3388,7 +3388,7 @@ textarea {
 }
 
 .filter-options.compact .filter-opt {
-  min-height: 36px;
+  min-height: 44px;
   padding-inline: 12px;
 }
 
@@ -3400,6 +3400,7 @@ textarea {
 
 .production-scale-options .filter-opt,
 .filter-segments .filter-opt {
+  min-height: 44px;
   min-width: 0;
   padding-inline: 10px;
 }
@@ -3575,6 +3576,10 @@ textarea {
 
 .filter-disclosure-body {
   padding: 0 0 12px;
+}
+
+.filter-disclosure-body .filter-opt {
+  min-height: 44px;
 }
 
 .discover-filter-sheet > .filter-sheet-actions {

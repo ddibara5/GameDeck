@@ -106,9 +106,10 @@ export async function fetchDiscoverHome(keys, limit = 20, { onFresh, filters } =
 // Returns { laneKey: games[] }.
 const LANE_TTL = 30 * 60 * 1000
 
-async function fetchLanesNetwork(list, limit, platform, refreshToken) {
+async function fetchLanesNetwork(list, limit, platform, scale, refreshToken) {
   const qs = new URLSearchParams({ lanes: list.join(','), limit: String(limit) })
   if (platform && platform !== 'all') qs.set('platform', platform)
+  if (scale && scale !== 'all') qs.set('scale', scale)
   // The API ignores this semantically. It only gives a deliberate manual
   // refresh a unique request URL so no browser or edge cache can answer it with
   // the payload the user just asked to replace.
@@ -122,19 +123,19 @@ async function fetchLanesNetwork(list, limit, platform, refreshToken) {
   return { lanes, failedKeys }
 }
 
-export async function fetchDiscoverLanes(keys, limit = 8, { onFresh, platform, force = false } = {}) {
+export async function fetchDiscoverLanes(keys, limit = 8, { onFresh, platform, scale, force = false } = {}) {
   const list = (keys || []).filter(Boolean)
   if (!list.length) return {}
-  // The platform set is part of this payload's identity, exactly as the filter
-  // selection is for the home rails: without it, turning a platform chip on
-  // would be answered off disk with the narrower set.
-  const cacheKey = `${list.join(',')}|${limit}|${platform || 'all'}`
+  // Platform and production scale are both part of this payload's identity.
+  // Without them, changing a filter could be answered from disk with the prior
+  // lane set before the fresh request lands.
+  const cacheKey = `${list.join(',')}|${limit}|${platform || 'all'}|${scale || 'all'}`
   if (force) {
-    const fresh = await fetchLanesNetwork(list, limit, platform, Date.now())
+    const fresh = await fetchLanesNetwork(list, limit, platform, scale, Date.now())
     idbSet(`discover:lanes:v2:${cacheKey}`, fresh)
     return fresh
   }
-  const { value } = await swr(`discover:lanes:v2:${cacheKey}`, () => fetchLanesNetwork(list, limit, platform), {
+  const { value } = await swr(`discover:lanes:v2:${cacheKey}`, () => fetchLanesNetwork(list, limit, platform, scale), {
     maxAge: LANE_TTL,
     onFresh: (result) => {
       if (onFresh) onFresh(result)

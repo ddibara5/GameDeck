@@ -584,6 +584,13 @@ export default async function handler(req, res) {
         .slice(0, 8);
       const laneExtra = filterClauses({ platform: q.platform }, nowTs);
       const laneLimit = Math.min(20, parseInt(q.limit, 10) || 8);
+      const scaleFilterActive = selectedProductionScales(q.scale) !== null;
+      // Production scale is inferred from normalized IGDB metadata, so it must
+      // be applied after the catalog response. Pull a wider pool only while the
+      // filter is active to keep the ordinary For You path unchanged.
+      const laneCandidateLimit = scaleFilterActive
+        ? Math.min(200, Math.max(laneLimit * 5, 80))
+        : laneLimit;
       // Three years. Long enough that a lane is never empty, short enough that
       // "what is new in the things I play" does not become a back catalog.
       const since = nowTs - 1095 * 86400;
@@ -604,10 +611,11 @@ export default async function handler(req, res) {
                   ]
                 : null;
           if (!where) return [k, [], false];
-          const body = `${GAME_FIELDS}; where ${where.join(' & ')}; sort first_release_date desc; limit ${laneLimit}; offset 0;`;
+          const body = `${GAME_FIELDS}; where ${where.join(' & ')}; sort first_release_date desc; limit ${laneCandidateLimit}; offset 0;`;
           try {
             const rows = await igdb('games', body);
-            return [k, (rows || []).map(normalize), false];
+            const scaleRows = filterByProductionScale(rows, q.scale);
+            return [k, scaleRows.slice(0, laneLimit).map(normalize), false];
           } catch {
             return [k, [], true];
           }
