@@ -37,6 +37,12 @@ export const TAB_ICONS = {
     </svg>
   ),
   discover: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="m14.8 9.2-1.9 3.7-3.7 1.9 1.9-3.7 3.7-1.9z" />
+    </svg>
+  ),
+  foryou: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
       <path d="M12 3.5l1.8 4.2 4.2 1.8-4.2 1.8L12 15.5l-1.8-4.2-4.2-1.8 4.2-1.8L12 3.5z" strokeLinejoin="round" />
       <path d="M18.5 15l.8 1.9 1.9.8-1.9.8-.8 1.9-.8-1.9-1.9-.8 1.9-.8.8-1.9z" strokeLinejoin="round" />

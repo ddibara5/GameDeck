@@ -12,6 +12,7 @@ import {
 test('global search defaults to the current product context', () => {
   assert.equal(defaultSearchScope({ activeTab: 'library' }), 'library')
   assert.equal(defaultSearchScope({ activeTab: 'discover' }), 'catalog')
+  assert.equal(defaultSearchScope({ activeTab: 'foryou' }), 'catalog')
   assert.equal(defaultSearchScope({ activeTab: 'home', view: 'wishlist' }), 'wishlist')
   assert.equal(defaultSearchScope({ activeTab: 'home' }), 'all')
 })

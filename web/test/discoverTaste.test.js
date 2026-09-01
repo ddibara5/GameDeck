@@ -288,14 +288,19 @@ test('per-game learning gently rewards outcomes and suppresses repeated ignores'
   assert.equal(ranked[0].id, 2)
 })
 
-test('Discover keeps For You and Browse in a compact accessible selector', async () => {
-  const source = await readFile(new URL('../src/components/DiscoverTab.jsx', import.meta.url), 'utf8')
-  assert.equal((source.match(/role="tab"/g) || []).length, 2)
-  assert.match(source, /role="tablist" aria-label="Discover view"/)
-  assert.match(source, /aria-controls="discover-foryou-panel"/)
-  assert.match(source, /aria-controls="discover-browse-panel"/)
-  assert.doesNotMatch(source, /className="discover-browse-page"/)
-  assert.doesNotMatch(source, /className="discover-browse-back"/)
+test('Discover is Browse while For You is an independent root destination', async () => {
+  const [discover, forYou, app, nav] = await Promise.all([
+    readFile(new URL('../src/components/DiscoverTab.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/ForYouTab.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/App.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/lib/navConfig.js', import.meta.url), 'utf8'),
+  ])
+  assert.match(discover, /<DiscoverBrowse/)
+  assert.doesNotMatch(discover, /DiscoverForYou|role="tablist"/)
+  assert.match(forYou, /<DiscoverForYou/)
+  assert.match(app, /foryou: \(\) => import\('\.\/components\/ForYouTab\.jsx'\)/)
+  assert.match(app, /activeTab === 'foryou'/)
+  assert.match(nav, /key: 'foryou'[\s\S]*?group: 'explore'[\s\S]*?kind: 'tab'/)
 })
 
 test('For You collapses taste controls into the shared Discover filter pattern', async () => {
@@ -319,8 +324,9 @@ test('For You collapses taste controls into the shared Discover filter pattern',
 })
 
 test('Discover keeps title search and Ask GameDeck in the global entry point', async () => {
-  const [discover, browse, forYou] = await Promise.all([
+  const [discover, forYouTab, browse, forYou] = await Promise.all([
     readFile(new URL('../src/components/DiscoverTab.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/ForYouTab.jsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/components/DiscoverBrowse.jsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/components/DiscoverForYou.jsx', import.meta.url), 'utf8'),
   ])
@@ -329,7 +335,8 @@ test('Discover keeps title search and Ask GameDeck in the global entry point', a
   assert.doesNotMatch(forYou, /Browse catalog/)
   assert.doesNotMatch(forYou, /Ask GameDeck about these picks/)
   assert.doesNotMatch(discover, /DiscoverAsk|discover-ask-view|askOpen/)
-  assert.match(discover, /<DiscoverForYou[\s\S]*?onAsk=\{askAbout\}/)
+  assert.match(discover, /<DiscoverBrowse[\s\S]*?onAsk=\{onAsk\}/)
+  assert.match(forYouTab, /<DiscoverForYou[\s\S]*?onAsk=\{onAsk\}/)
   assert.match(forYou, /RecommendationDeckComplete/)
   assert.match(forYou, /showSurprise/)
   assert.doesNotMatch(forYou, /className="fy-refresh"/)

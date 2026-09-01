@@ -5,7 +5,7 @@ const VIEWS = new Set(['wishlist', 'releases', 'released', 'backlog', 'playing',
 export function defaultSearchScope({ activeTab, view } = {}) {
   if (view === 'wishlist') return 'wishlist'
   if (activeTab === 'library') return 'library'
-  if (activeTab === 'discover') return 'catalog'
+  if (activeTab === 'discover' || activeTab === 'foryou') return 'catalog'
   return 'all'
 }
 

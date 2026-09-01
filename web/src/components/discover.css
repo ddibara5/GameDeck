@@ -1,5 +1,5 @@
 /* ============================================================
-   Discover 2.0 - For You + Browse
+   Discover catalog + focused For You deck
    Reuses the app's global tokens (--bg/--surface/--line/--accent...)
    so everything follows dark/light automatically. Only new elements
    are defined here; cards, shelves and sheets reuse global classes.
@@ -24,32 +24,8 @@
   position: relative;
 }
 
-.discover-mode-bar {
-  display: flex;
-  padding: var(--space-2) calc(var(--screen-gutter) + 52px) 0 var(--screen-gutter);
-}
-
-.discover-mode-seg {
-  width: 100%;
-  margin: 0;
-}
-
-.discover-mode-seg .seg-btn {
-  position: relative;
-}
-
-.discover-mode-seg .seg-btn::before {
-  content: '';
-  position: absolute;
-  inset: -4px 0;
-}
-
-.discover-view-loading {
-  min-height: 180px;
-  display: grid;
-  place-items: center;
-  color: var(--muted);
-  font-size: var(--t-foot);
+.discover-page-standalone .discover-base {
+  padding-top: 52px;
 }
 
 /* Browse is a child destination of Discover, not a peer tab. It replaces the

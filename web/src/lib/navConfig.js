@@ -51,11 +51,12 @@ export const DEST_CATALOG = [
   { key: 'activity', label: 'Activity', group: 'games', kind: 'tab' },
   // Drawer only, deliberately. It is the one tab whose numbers do not change
   // between two visits on the same day, Home carries the ones that do, and
-  // leaving it out of the bar editor means the five that ARE eligible fill the
-  // five slots exactly. A switch that can only ever be off is not a choice.
+  // leaving it out of the bar editor keeps the shortcut choices focused on
+  // destinations with fresh or actionable content.
   { key: 'insights', label: 'Insights', group: 'games', kind: 'tab', bar: false, fixed: 'drawer only', sub: 'How it is going over time' },
   { key: 'rankings', label: 'Rankings', group: 'games', kind: 'tab', sub: 'Your explicit game order' },
   { key: 'discover', label: 'Discover', group: 'explore', kind: 'tab' },
+  { key: 'foryou', label: 'For You', group: 'explore', kind: 'tab', sub: 'A focused recommendation deck' },
   { key: 'news', label: 'News', group: 'explore', kind: 'tab' },
   { key: 'wishlist', label: 'Wishlist', group: 'explore', kind: 'view', fixed: 'list' },
 ]

@@ -31,6 +31,7 @@ const TAB_LOADERS = {
   activity: () => import('./components/ActivityTab.jsx'),
   insights: () => import('./components/InsightsTab.jsx'),
   discover: () => import('./components/DiscoverTab.jsx'),
+  foryou: () => import('./components/ForYouTab.jsx'),
   news: () => import('./components/NewsTab.jsx'),
   wishlist: () => import('./components/WishlistTab.jsx'),
   rankings: () => import('./components/RankingsTab.jsx'),
@@ -41,6 +42,7 @@ const LibraryTab = lazy(TAB_LOADERS.library)
 const ActivityTab = lazy(TAB_LOADERS.activity)
 const InsightsTab = lazy(TAB_LOADERS.insights)
 const DiscoverTab = lazy(TAB_LOADERS.discover)
+const ForYouTab = lazy(TAB_LOADERS.foryou)
 const NewsTab = lazy(TAB_LOADERS.news)
 const WishlistTab = lazy(TAB_LOADERS.wishlist)
 const RankingsTab = lazy(TAB_LOADERS.rankings)
@@ -421,6 +423,7 @@ function GameDeckApp() {
           {activeTab === 'activity' && <ActivityTab />}
           {activeTab === 'insights' && <InsightsTab />}
           {activeTab === 'discover' && <DiscoverTab onCustomize={() => setCustomizeOpen(true)} onAsk={openAsk} />}
+          {activeTab === 'foryou' && <ForYouTab onAsk={openAsk} onBrowse={() => navigateTab('discover')} />}
           {activeTab === 'news' && <NewsTab />}
           {activeTab === 'rankings' && <RankingsTab />}
         </Suspense>

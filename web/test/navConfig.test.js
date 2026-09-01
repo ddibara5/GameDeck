@@ -8,14 +8,14 @@ test('drawer is a compact place map with shelf filters and actions elsewhere', (
   assert.deepEqual(Object.values(GROUP_LABEL), ['Your games', 'Explore'])
   assert.deepEqual(
     DEST_CATALOG.map((destination) => destination.key),
-    ['home', 'library', 'activity', 'insights', 'rankings', 'discover', 'news', 'wishlist'],
+    ['home', 'library', 'activity', 'insights', 'rankings', 'discover', 'foryou', 'news', 'wishlist'],
   )
   assert.ok(!DEST_CATALOG.some((destination) => ['backlog', 'playing', 'finished', 'shuffle', 'settings'].includes(destination.key)))
 })
 
 test('the compact drawer keeps every surviving destination in its intended group', () => {
   const groups = DEST_CATALOG.map((destination) => destination.group)
-  assert.deepEqual(groups, ['games', 'games', 'games', 'games', 'games', 'explore', 'explore', 'explore'])
+  assert.deepEqual(groups, ['games', 'games', 'games', 'games', 'games', 'explore', 'explore', 'explore', 'explore'])
 })
 
 test('legacy drawer state regroups surviving rows without resetting the bar', () => {
@@ -28,8 +28,9 @@ test('legacy drawer state regroups surviving rows without resetting the bar', ()
   global.localStorage = { getItem: () => JSON.stringify(stored) }
   const config = getNavConfig()
   delete global.localStorage
-  assert.deepEqual(config.order, ['home', 'library', 'activity', 'insights', 'rankings', 'discover', 'news', 'wishlist'])
-  assert.deepEqual(config.bar, stored.bar)
+  assert.deepEqual(config.order, ['home', 'library', 'activity', 'insights', 'rankings', 'discover', 'news', 'wishlist', 'foryou'])
+  assert.deepEqual(config.bar, [...stored.bar, 'foryou'])
+  assert.equal(config.enabled.foryou, false)
   assert.equal(config.labels, false)
 })
 
