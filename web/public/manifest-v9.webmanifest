@@ -1,0 +1,25 @@
+{
+  "name": "GameDeck",
+  "short_name": "GameDeck",
+  "description": "Your personal video-game library, activity, and AI game picks.",
+  "theme_color": "#070a08",
+  "background_color": "#070a08",
+  "display": "standalone",
+  "orientation": "portrait",
+  "start_url": "/",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icons/icon-192-v9.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512-v9.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
