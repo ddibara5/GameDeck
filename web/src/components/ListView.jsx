@@ -70,8 +70,8 @@ export default function ListView({ viewKey, onClose }) {
         <MessageState title="Nothing here yet">{def.empty}</MessageState>
       ) : (
         <div className="game-list">
-          {list.map((game) => (
-            <GameCard key={game.master_id} game={game} onSelect={setSelectedGame} statusMap={statusMap} />
+          {list.map((game, index) => (
+            <GameCard key={game.master_id} game={game} onSelect={setSelectedGame} statusMap={statusMap} priority={index === 0} />
           ))}
         </div>
       )}

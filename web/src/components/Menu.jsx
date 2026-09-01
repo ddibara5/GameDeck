@@ -2,7 +2,7 @@ import { cloneElement, useEffect, useMemo, useRef } from 'react'
 import { useWishlist } from '../lib/wishlist.js'
 import { useMountTransition } from '../lib/useMountTransition.js'
 import { lockScroll } from '../lib/scrollLock.js'
-import { useLibraryGames } from '../lib/useLibraryGames.js'
+import { useAppBootstrap } from '../lib/appBootstrap.js'
 import { useNavConfig, DEST_BY_KEY, GROUP_LABEL, isFolded, toggleGroup } from '../lib/navConfig.js'
 import { DEST_ICONS } from './destIcons.jsx'
 import LogoMark from './LogoMark.jsx'
@@ -27,8 +27,8 @@ import { useDialogA11y } from '../lib/useDialogA11y.js'
 // because the order belongs to the user: drag a row somewhere else and its
 // heading follows it there. Same rule as the editor, so the two always agree.
 export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpenTab, onWarmTab, onOpenSettings, onSearch, searchPinned = false, activeTab }) {
-  const { items: wishItems } = useWishlist()
-  const { games } = useLibraryGames()
+  const { items: wishItems } = useWishlist(open)
+  const { libraryCount } = useAppBootstrap(14, open)
   const nav = useNavConfig()
   const { mounted, closing } = useMountTransition(open)
   const dialogRef = useDialogA11y({ active: mounted, onClose })
@@ -47,8 +47,8 @@ export default function Menu({ open, onClose, onOpenWishlist, onOpenList, onOpen
   }, [nav.order])
 
   const counts = useMemo(
-    () => ({ library: games.length, wishlist: wishItems.length }),
-    [games, wishItems],
+    () => ({ library: libraryCount, wishlist: wishItems.length }),
+    [libraryCount, wishItems],
   )
 
   // Lock background scroll while the drawer is open.

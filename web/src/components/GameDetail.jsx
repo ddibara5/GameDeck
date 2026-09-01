@@ -1,4 +1,4 @@
-import GameSheet from './GameSheet.jsx'
+import GameSheet from './LazyGameSheet.jsx'
 
 // Library / list detail: an owned game. Thin wrapper over the shared GameSheet so
 // Library, Discover, and Wishlist all render the same sheet.

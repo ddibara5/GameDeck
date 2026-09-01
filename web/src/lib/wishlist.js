@@ -184,12 +184,14 @@ export async function reconcileWishlist(ownedTitleSet) {
 }
 
 // Live wishlist for components: rows, an id Set for quick membership, and loading.
-export function useWishlist() {
+export function useWishlist(enabled = true) {
   const [items, setItems] = useState(cache || [])
-  const [loading, setLoading] = useState(cache == null)
+  const [loading, setLoading] = useState(cache == null && enabled)
 
   useEffect(() => {
+    if (!enabled) return undefined
     let alive = true
+    if (cache == null) setLoading(true)
     loadWishlist().then((l) => {
       if (!alive) return
       setItems(l)
@@ -201,7 +203,7 @@ export function useWishlist() {
       alive = false
       window.removeEventListener(EVENT, handler)
     }
-  }, [])
+  }, [enabled])
 
   const ids = useMemo(() => new Set(items.map((r) => r.igdb_id)), [items])
   return { items, ids, loading }

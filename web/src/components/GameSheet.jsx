@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Cover from './Cover.jsx'
-import RankGameSheet from './RankGameSheet.jsx'
 import { useDelayedClose } from '../lib/useDelayedClose.js'
 import { useSheetDrag } from '../lib/useSheetDrag.js'
 import { lockScroll } from '../lib/scrollLock.js'
@@ -18,7 +17,6 @@ import {
 import { useWishlist, toggleWishlist } from '../lib/wishlist.js'
 import { fetchGameById } from '../lib/discover.js'
 import { peekGameSheetMedia } from '../lib/gameSheetMedia.js'
-import Lightbox from './Lightbox.jsx'
 import {
   REACTIONS,
   getRankingStateCache,
@@ -30,6 +28,11 @@ import { safeExternalUrl } from '../lib/safeUrl.js'
 import { useDialogA11y } from '../lib/useDialogA11y.js'
 import './gameSheet.css'
 
+const loadRankGameSheet = () => import('./RankGameSheet.jsx')
+const loadLightbox = () => import('./Lightbox.jsx')
+const RankGameSheet = lazy(loadRankGameSheet)
+const Lightbox = lazy(loadLightbox)
+
 function reactionLabel(reaction) {
   return REACTIONS.find((item) => item.key === reaction)?.label || String(reaction || '').replaceAll('_', ' ')
 }
@@ -38,6 +41,7 @@ function OwnedRankingAction({ game }) {
   const cachedState = getRankingStateCache()
   const [rankingState, setRankingState] = useState(cachedState)
   const [rankOpen, setRankOpen] = useState(false)
+  const [rankVisited, setRankVisited] = useState(false)
   const [opening, setOpening] = useState(false)
   const [error, setError] = useState('')
   const { games } = useLibraryGames()
@@ -77,6 +81,7 @@ function OwnedRankingAction({ game }) {
       }
       setOpening(false)
     }
+    setRankVisited(true)
     setRankOpen(true)
   }
 
@@ -87,7 +92,7 @@ function OwnedRankingAction({ game }) {
 
   return (
     <>
-      <button type="button" className="game-sheet-rank" disabled={opening} onClick={openRanking}>
+      <button type="button" className="game-sheet-rank" disabled={opening} onPointerDown={loadRankGameSheet} onFocus={loadRankGameSheet} onClick={openRanking}>
         <span>
           <small>My ranking</small>
           <strong>
@@ -101,15 +106,19 @@ function OwnedRankingAction({ game }) {
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
       </button>
       {error ? <p className="rank-error" role="alert">{error}</p> : null}
-      <RankGameSheet
-        open={rankOpen}
-        game={game}
-        ranks={ranks}
-        gameById={gameById}
-        existingRank={rank}
-        onClose={() => setRankOpen(false)}
-        onSaved={refreshRanking}
-      />
+      {rankVisited ? (
+        <Suspense fallback={null}>
+          <RankGameSheet
+            open={rankOpen}
+            game={game}
+            ranks={ranks}
+            gameById={gameById}
+            existingRank={rank}
+            onClose={() => setRankOpen(false)}
+            onSaved={refreshRanking}
+          />
+        </Suspense>
+      ) : null}
     </>
   )
 }
@@ -317,7 +326,7 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
       >
         <div className="sheet-drag-zone" {...dragHandlers}>
           <div className="modal-handle" />
-          <Cover src={coverSrc} title={title} size="lg" />
+          <Cover src={coverSrc} title={title} size="lg" priority />
         </div>
         <button type="button" className="modal-close" aria-label="Close game details" onClick={requestClose}>&times;</button>
 
@@ -420,6 +429,8 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
                     type="button"
                     className="shot-btn"
                     key={i}
+                    onPointerDown={loadLightbox}
+                    onFocus={loadLightbox}
                     onClick={() => setShotIndex(i)}
                     aria-label={`View ${title} screenshot ${i + 1} larger`}
                   >
@@ -525,12 +536,14 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
       </div>
 
       {shotIndex != null ? (
-        <Lightbox
-          shots={screenshots}
-          index={shotIndex}
-          title={title}
-          onClose={() => setShotIndex(null)}
-        />
+        <Suspense fallback={null}>
+          <Lightbox
+            shots={screenshots}
+            index={shotIndex}
+            title={title}
+            onClose={() => setShotIndex(null)}
+          />
+        </Suspense>
       ) : null}
     </div>,
     document.body,

@@ -2,15 +2,11 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { lockScroll } from './lib/scrollLock.js'
 import Brand from './components/Brand.jsx'
 import Menu from './components/Menu.jsx'
-import SettingsPage from './components/SettingsPage.jsx'
 import TabBar from './components/TabBar.jsx'
-import { useNewsUnread } from './lib/news.js'
+import { useNewsUnread } from './lib/newsUnread.js'
 import { useNavConfig, getNavConfig, visibleKeys, TAB_BY_KEY } from './lib/navConfig.js'
 import { overlaysOpen } from './lib/useEdgeBack.js'
 import { warmOnIdle } from './lib/warmChunks.js'
-import CustomizeRows from './components/CustomizeRows.jsx'
-import CustomizeNav from './components/CustomizeNav.jsx'
-import CustomizeBar from './components/CustomizeBar.jsx'
 import AuthGate from './components/AuthGate.jsx'
 import { useAppSession } from './lib/appAuth.js'
 import AppErrorBoundary from './components/AppErrorBoundary.jsx'
@@ -53,6 +49,16 @@ const VIEW_LOADERS = {
 const ListView = lazy(VIEW_LOADERS.list)
 const loadGlobalSearch = () => import('./components/GlobalSearch.jsx')
 const GlobalSearch = lazy(loadGlobalSearch)
+const OVERLAY_LOADERS = {
+  settings: () => import('./components/SettingsPage.jsx'),
+  rows: () => import('./components/CustomizeRows.jsx'),
+  nav: () => import('./components/CustomizeNav.jsx'),
+  bar: () => import('./components/CustomizeBar.jsx'),
+}
+const SettingsPage = lazy(OVERLAY_LOADERS.settings)
+const CustomizeRows = lazy(OVERLAY_LOADERS.rows)
+const CustomizeNav = lazy(OVERLAY_LOADERS.nav)
+const CustomizeBar = lazy(OVERLAY_LOADERS.bar)
 const VALID_TABS = new Set(Object.keys(TAB_BY_KEY))
 
 function ChunkFallback({ label = 'Opening…', overlay = false }) {
@@ -95,9 +101,13 @@ function GameDeckApp() {
   const [activeTab, setActiveTab] = useState(() => initialShell.current.tab)
   const [menuOpen, setMenuOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [settingsVisited, setSettingsVisited] = useState(false)
   const [customizeOpen, setCustomizeOpen] = useState(false)
+  const [customizeVisited, setCustomizeVisited] = useState(false)
   const [customizeNavOpen, setCustomizeNavOpen] = useState(false)
+  const [customizeNavVisited, setCustomizeNavVisited] = useState(false)
   const [customizeBarOpen, setCustomizeBarOpen] = useState(false)
+  const [customizeBarVisited, setCustomizeBarVisited] = useState(false)
   const [searchOpen, setSearchOpen] = useState(() => initialShell.current.searchOpen)
   const [searchVisited, setSearchVisited] = useState(() => initialShell.current.searchOpen)
   const [searchMode, setSearchMode] = useState(() => initialShell.current.searchMode || 'search')
@@ -115,7 +125,7 @@ function GameDeckApp() {
   // Header goes frosted + shows a separator once the page is scrolled off the top.
   const [scrolled, setScrolled] = useState(false)
   // Unread dot on the News tab when a newer weekly drop is available.
-  const newsUnread = useNewsUnread()
+  const newsUnread = useNewsUnread(nav.barShown && visibleTabs.includes('news'))
   // Blank while a drawer-opened overlay is up: Wishlist and the status lists
   // print their own heading, and two would disagree about where you are.
   const headerTitle = view ? '' : TAB_BY_KEY[activeTab]?.label || ''
@@ -142,6 +152,30 @@ function GameDeckApp() {
 
   const closeMenu = useCallback(() => {
     setMenuOpen(false)
+  }, [])
+
+  const openSettings = useCallback(() => {
+    warmLoader(OVERLAY_LOADERS.settings)
+    setSettingsVisited(true)
+    setSettingsOpen(true)
+  }, [])
+
+  const openCustomizeRows = useCallback(() => {
+    warmLoader(OVERLAY_LOADERS.rows)
+    setCustomizeVisited(true)
+    setCustomizeOpen(true)
+  }, [])
+
+  const openCustomizeNav = useCallback(() => {
+    warmLoader(OVERLAY_LOADERS.nav)
+    setCustomizeNavVisited(true)
+    setCustomizeNavOpen(true)
+  }, [])
+
+  const openCustomizeBar = useCallback(() => {
+    warmLoader(OVERLAY_LOADERS.bar)
+    setCustomizeBarVisited(true)
+    setCustomizeBarOpen(true)
   }, [])
 
   // Bottom-bar and drawer tabs are peers. Switching between them replaces the
@@ -305,6 +339,7 @@ function GameDeckApp() {
     if (!menuOpen) return
     warmLoader(VIEW_LOADERS.wishlist)
     warmLoader(VIEW_LOADERS.list)
+    warmLoader(OVERLAY_LOADERS.settings)
   }, [menuOpen])
 
   // Fetch the code for the OTHER tabs in the bar once the page has loaded, one at
@@ -422,7 +457,7 @@ function GameDeckApp() {
           {activeTab === 'library' && <LibraryTab />}
           {activeTab === 'activity' && <ActivityTab />}
           {activeTab === 'insights' && <InsightsTab />}
-          {activeTab === 'discover' && <DiscoverTab onCustomize={() => setCustomizeOpen(true)} onAsk={openAsk} />}
+          {activeTab === 'discover' && <DiscoverTab onCustomize={openCustomizeRows} onAsk={openAsk} />}
           {activeTab === 'foryou' && <ForYouTab onAsk={openAsk} onBrowse={() => navigateTab('discover')} />}
           {activeTab === 'news' && <NewsTab />}
           {activeTab === 'rankings' && <RankingsTab />}
@@ -470,7 +505,7 @@ function GameDeckApp() {
         activeTab={view ? null : activeTab}
         onOpenWishlist={() => openView('wishlist')}
         onOpenList={(key) => openView(key)}
-        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenSettings={openSettings}
         onSearch={openSearch}
         searchPinned={!nav.barShown}
         onOpenTab={(t) => {
@@ -479,15 +514,19 @@ function GameDeckApp() {
         }}
         onWarmTab={(t) => warmLoader(TAB_LOADERS[t])}
       />
-      <SettingsPage
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        onOpenBar={() => setCustomizeBarOpen(true)}
-        onOpenDrawer={() => setCustomizeNavOpen(true)}
-      />
-      <CustomizeRows open={customizeOpen} onClose={() => setCustomizeOpen(false)} />
-      <CustomizeNav open={customizeNavOpen} onClose={() => setCustomizeNavOpen(false)} />
-      <CustomizeBar open={customizeBarOpen} onClose={() => setCustomizeBarOpen(false)} />
+      <Suspense fallback={null}>
+        {settingsVisited ? (
+          <SettingsPage
+            open={settingsOpen}
+            onClose={() => setSettingsOpen(false)}
+            onOpenBar={openCustomizeBar}
+            onOpenDrawer={openCustomizeNav}
+          />
+        ) : null}
+        {customizeVisited ? <CustomizeRows open={customizeOpen} onClose={() => setCustomizeOpen(false)} /> : null}
+        {customizeNavVisited ? <CustomizeNav open={customizeNavOpen} onClose={() => setCustomizeNavOpen(false)} /> : null}
+        {customizeBarVisited ? <CustomizeBar open={customizeBarOpen} onClose={() => setCustomizeBarOpen(false)} /> : null}
+      </Suspense>
       {searchVisited ? (
         <Suspense fallback={searchOpen ? <ChunkFallback label="Opening Search…" overlay /> : null}>
           <GlobalSearch

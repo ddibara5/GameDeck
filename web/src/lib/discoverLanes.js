@@ -13,8 +13,6 @@ import { useEffect, useState } from 'react'
 import { supabase } from './supabase.js'
 import { swr } from './idbCache.js'
 import { rankLanes } from './discoverTaste.js'
-import { loadRecentActivity } from './recentActivity.js'
-import { loadWishlist } from './wishlist.js'
 import { buildTasteProfile } from './gameIntelligence.js'
 
 export {
@@ -48,7 +46,26 @@ const RANKING_EVENT = 'gd-ranking-change'
 // Up to one hundred most-recently-played keyword rows. The activity window is
 // joined below and carries the stronger weight; this query supplies only the
 // genres/themes needed to turn that behavior into named lanes.
-async function fetchTasteProfile() {
+function assembleTasteProfile(payload) {
+  const data = payload || {}
+  const profile = buildTasteProfile({
+    games: data.games || [],
+    ranks: data.ranks || [],
+    activity: data.activity || [],
+    wishlist: data.wishlist || [],
+  })
+  const laneFeedback = new Map((data.lane_feedback || []).map((row) => [row.lane_key, row]))
+  const gameFeedback = new Map((data.game_feedback || []).map((row) => [String(row.igdb_id), row]))
+  const recommendationOutcomeCount = [...gameFeedback.values()]
+    .reduce((sum, row) => sum + Math.max(0, Number(row.meaningful_outcome_count) || 0), 0)
+  return { ...profile, laneFeedback, gameFeedback, recommendationOutcomeCount }
+}
+
+async function fetchTasteProfileFallback() {
+  const [{ loadRecentActivity }, { loadWishlist }] = await Promise.all([
+    import('./recentActivity.js'),
+    import('./wishlist.js'),
+  ])
   const [gameRes, rankRes, activity, wishlist, laneFeedbackRes, gameFeedbackRes] = await Promise.all([
     supabase
       .from('games')
@@ -67,17 +84,23 @@ async function fetchTasteProfile() {
       .select('igdb_id,exposure_count,detail_open_count,meaningful_outcome_count,ignored_streak,last_positive_at,last_shown_at'),
   ])
   if (gameRes.error) throw new Error(gameRes.error.message || 'Taste probe failed')
-  const profile = buildTasteProfile({
+  return assembleTasteProfile({
     games: gameRes.data || [],
     ranks: rankRes.data || [],
     activity,
     wishlist,
+    lane_feedback: laneFeedbackRes.error ? [] : laneFeedbackRes.data || [],
+    game_feedback: gameFeedbackRes.error ? [] : gameFeedbackRes.data || [],
   })
-  const laneFeedback = new Map((laneFeedbackRes.error ? [] : laneFeedbackRes.data || []).map((row) => [row.lane_key, row]))
-  const gameFeedback = new Map((gameFeedbackRes.error ? [] : gameFeedbackRes.data || []).map((row) => [String(row.igdb_id), row]))
-  const recommendationOutcomeCount = [...gameFeedback.values()]
-    .reduce((sum, row) => sum + Math.max(0, Number(row.meaningful_outcome_count) || 0), 0)
-  return { ...profile, laneFeedback, gameFeedback, recommendationOutcomeCount }
+}
+
+async function fetchTasteProfile() {
+  const { data, error } = await supabase.rpc('get_for_you_bootstrap')
+  if (!error) return assembleTasteProfile(data)
+  if (/get_for_you_bootstrap|schema cache|function/i.test(error.message || '')) {
+    return fetchTasteProfileFallback()
+  }
+  throw new Error(error.message || 'Taste probe failed')
 }
 
 export function useTasteProfile() {

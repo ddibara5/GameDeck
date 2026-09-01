@@ -267,6 +267,22 @@ function loadLibrary() {
   return inflight
 }
 
+// Intent/idle warming entry point. This is deliberately a plain promise API so
+// navigation controls can start the full refresh before Library mounts without
+// creating a hidden React subscriber.
+export function preloadLibrary() {
+  if (cache) return Promise.resolve(cache.games)
+  return loadLibrary().then(() => (cache || latest || { games: [] }).games || [])
+}
+
+export function getLibraryGamesCache() {
+  return cache?.games || latest?.games || null
+}
+
+export function getLibraryInflight() {
+  return inflight
+}
+
 export function useLibraryGames() {
   const [state, setState] = useState(() => cache || { games: [], loading: true, error: null })
 

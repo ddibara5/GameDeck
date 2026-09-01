@@ -143,6 +143,8 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
   const [gamePass, setGamePass] = useState(null)
 
   const prefs = useDiscoverPrefs()
+  const rowsConfig = useRowsConfig()
+  const gamePassEnabled = rowsConfig.order.some((key) => rowsConfig.enabled[key] && ROW_BY_KEY[key]?.kind === 'gamepass')
   const activePlatforms = prefs.platforms
   const hideOwned = prefs.hideOwned
 
@@ -167,12 +169,16 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
 
   // Load the user's library titles once (for the "In library" badge).
   useEffect(() => {
+    if (!gamePassEnabled) {
+      setGamePass([])
+      return undefined
+    }
     let alive = true
     loadLibraryTitles().then((set) => alive && setLibTitles(set))
     return () => {
       alive = false
     }
-  }, [])
+  }, [gamePassEnabled])
 
   const isOwned = useMemo(() => {
     if (!libTitles) return () => false
@@ -192,7 +198,10 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
   }, [])
 
   const { items: wishItems, ids: wishIds, loading: wishLoading } = useWishlist()
-  const rowsConfig = useRowsConfig()
+  const wishlistRowsEnabled = rowsConfig.order.some((key) => {
+    const kind = ROW_BY_KEY[key]?.kind
+    return rowsConfig.enabled[key] && (kind === 'wishlist' || kind === 'wishlistSoon' || kind === 'wishlistOutNow')
+  })
   // Read once per mount. It is a hint about the PREVIOUS load, so re-reading it
   // as it changes would defeat the point.
   const [filledRows] = useState(getFilledRows)
@@ -203,6 +212,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
   const [wishMeta, setWishMeta] = useState({})
   const wishIdSig = wishItems.map((r) => r.igdb_id).join(',')
   useEffect(() => {
+    if (!wishlistRowsEnabled) return undefined
     const ids = wishItems.map((r) => r.igdb_id).filter(Boolean)
     if (!ids.length) {
       setWishMeta({})
@@ -214,7 +224,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
       alive = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wishIdSig])
+  }, [wishIdSig, wishlistRowsEnabled])
 
   const wishGames = useMemo(
     () =>

@@ -10,13 +10,6 @@ import { idbSet, swr } from './idbCache.js'
 
 // Keep roughly the last four weeks. week_of is a DATE (Monday of the digest week).
 const WEEKS_KEPT = 4
-// v2: the value stored here changed from a week_of date to a created_at
-// timestamp when refreshes started adding to the current week instead of
-// replacing it. A stale v1 date would compare as older than any timestamp and
-// light the dot once, so the key is bumped rather than reinterpreted.
-const SEEN_KEY = 'gamedeck_news_seen_stamp_v2'
-const SEEN_EVENT = 'gd-news-seen'
-
 const BASE_SELECT =
   'id, week_of, rank, title, summary, image_url, primary_url, sources, published_at, created_at'
 // game_* columns are added by a later migration. Select them when present; fall
@@ -517,78 +510,4 @@ export function useReadNews() {
     return () => window.removeEventListener(READ_EVENT, sync)
   }, [])
   return read
-}
-
-// --- Unread signal on the News tab -----------------------------------------
-// A tab-level "there is something new" dot.
-//
-// This compares the newest created_at, not the newest week_of. A mid-week
-// refresh ADDS rows to the current week rather than replacing it, so week_of
-// does not move and a week-based comparison would never light the dot for
-// stories that arrived between Sundays.
-
-export function getSeenStamp() {
-  try {
-    return localStorage.getItem(SEEN_KEY) || ''
-  } catch {
-    return ''
-  }
-}
-
-export function markNewsSeen(stamp) {
-  if (!stamp) return
-  try {
-    if ((localStorage.getItem(SEEN_KEY) || '') >= stamp) return
-    localStorage.setItem(SEEN_KEY, stamp)
-  } catch {
-    // ignore storage failures
-  }
-  window.dispatchEvent(new Event(SEEN_EVENT))
-}
-
-export async function fetchLatestStamp() {
-  const { data, error } = await supabase
-    .from('news')
-    .select('created_at')
-    .order('created_at', { ascending: false })
-    .limit(1)
-  if (error || !data || !data.length) return ''
-  return data[0].created_at || ''
-}
-
-// Newest created_at across the rows already in hand, so the tab can mark itself
-// seen without a second round trip.
-export function newestStamp(rows) {
-  let best = ''
-  for (const r of rows || []) {
-    const s = r.createdAt || ''
-    if (s > best) best = s
-  }
-  return best
-}
-
-// Boolean hook: true when the table holds something newer than the user has
-// seen. Recomputed whenever markNewsSeen fires.
-export function useNewsUnread() {
-  const [unread, setUnread] = useState(false)
-
-  useEffect(() => {
-    let alive = true
-    const check = async () => {
-      const latest = await fetchLatestStamp()
-      if (!alive) return
-      setUnread(Boolean(latest) && latest > getSeenStamp())
-    }
-    check()
-    const onSeen = () => {
-      if (alive) setUnread(false)
-    }
-    window.addEventListener(SEEN_EVENT, onSeen)
-    return () => {
-      alive = false
-      window.removeEventListener(SEEN_EVENT, onSeen)
-    }
-  }, [])
-
-  return unread
 }

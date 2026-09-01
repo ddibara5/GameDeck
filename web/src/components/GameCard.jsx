@@ -2,8 +2,9 @@ import Cover from './Cover.jsx'
 import CompletionBar from './CompletionBar.jsx'
 import { platformMeta, libraryCover } from '../lib/format.js'
 import { effectiveStatus, STATUS_LABELS } from '../lib/userStatus.js'
+import { preloadGameSheet } from './LazyGameSheet.jsx'
 
-export default function GameCard({ game, onSelect, statusMap }) {
+export default function GameCard({ game, onSelect, statusMap, priority = false }) {
   const { label, color } = platformMeta(game.environment)
   const status = effectiveStatus(game, statusMap)
   const showBadge = status === 'finished'
@@ -14,11 +15,18 @@ export default function GameCard({ game, onSelect, statusMap }) {
     len > 0 ? Math.max(0, Math.min(100, Math.round(((game.playtime_minutes || 0) / len) * 100))) : null
 
   return (
-    <button type="button" className="game-card" onClick={() => onSelect(game)}>
+    <button
+      type="button"
+      className="game-card"
+      onPointerDown={preloadGameSheet}
+      onFocus={preloadGameSheet}
+      onClick={() => onSelect(game)}
+    >
       <Cover
         src={libraryCover(game)}
         title={game.title}
         size="sm"
+        priority={priority}
       />
       <div className="game-card-body">
         <div className="game-title">{game.title}</div>

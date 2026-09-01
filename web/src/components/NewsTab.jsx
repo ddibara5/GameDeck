@@ -13,8 +13,6 @@ import {
   cardArtChain,
   outletCount,
   OUTLET_CHIP_MIN,
-  markNewsSeen,
-  newestStamp,
   markRead,
   useReadNews,
   relTime,
@@ -22,6 +20,7 @@ import {
   getNewsSort,
   setNewsSort,
 } from '../lib/news.js'
+import { markNewsSeen, newestStamp } from '../lib/newsUnread.js'
 import { remoteImg } from '../lib/format.js'
 import { useWishlist } from '../lib/wishlist.js'
 import { useLibraryGames } from '../lib/useLibraryGames.js'

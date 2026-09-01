@@ -4,8 +4,9 @@
 
 import { supabase } from './supabase.js'
 import { authFetch } from './appAuth.js'
-import { swr, idbGet, idbSet } from './idbCache.js'
+import { swr, idbGetMany, idbSet, idbSetMany } from './idbCache.js'
 import { gamePassCatalogAvailable, normalizeGamePassState } from './gamePassState.js'
+import { getLibraryGamesCache, getLibraryInflight } from './useLibraryGames.js'
 
 // How long a persisted payload is served without even asking the network.
 // Discover rails are editorial-ish lists that barely move hour to hour; the Game
@@ -205,17 +206,24 @@ export async function fetchGamesByIds(ids) {
   // boundaries and invalidates every one of them; per id, a new entry costs a
   // single lookup, and a game whose sheet you have already opened is free.
   const out = {}
+  const diskIds = []
+  for (const id of list) {
+    const memory = _gameCache.get(id)
+    if (memory && typeof memory.then !== 'function') out[id] = memory
+    else diskIds.push(id)
+  }
+
+  const hits = await idbGetMany(diskIds.map((id) => `discover:game:${id}`))
   const missing = []
-  await Promise.all(
-    list.map(async (id) => {
-      const hit = await idbGet(`discover:game:${id}`)
-      if (hit && hit.value && Date.now() - hit.ts < GAME_TTL) {
-        out[id] = hit.value
-        _gameCache.set(id, hit.value)
-      }
-      else missing.push(id)
-    })
-  )
+  for (const id of diskIds) {
+    const hit = hits.get(`discover:game:${id}`)
+    if (hit && hit.value && Date.now() - hit.ts < GAME_TTL) {
+      out[id] = hit.value
+      _gameCache.set(id, hit.value)
+    } else {
+      missing.push(id)
+    }
+  }
   if (!missing.length) return out
 
   const chunks = []
@@ -223,13 +231,15 @@ export async function fetchGamesByIds(ids) {
   const fetched = await Promise.all(
     chunks.map((chunk) => fetchDiscover({ ids: chunk.join(','), limit: chunk.length }).catch(() => []))
   )
+  const writes = []
   fetched.flat().forEach((g) => {
     if (g && g.id != null) {
       out[g.id] = g
       _gameCache.set(Number(g.id), g)
-      idbSet(`discover:game:${g.id}`, g)
+      writes.push([`discover:game:${g.id}`, g])
     }
   })
+  idbSetMany(writes)
   return out
 }
 
@@ -341,9 +351,20 @@ async function fetchLibraryTitles() {
 
 export function loadLibraryTitles() {
   if (!_libPromise) {
-    _libPromise = swr('discover:libraryTitles', fetchLibraryTitles, { maxAge: LIB_TITLES_TTL })
-      .then(({ value }) => new Set(value || []))
-      .catch(() => new Set())
+    const toTitles = (games) => new Set((games || []).map((game) => normTitle(game.title)).filter(Boolean))
+    const cachedGames = getLibraryGamesCache()
+    const libraryRequest = getLibraryInflight()
+    if (cachedGames) {
+      _libPromise = Promise.resolve(toTitles(cachedGames))
+    } else if (libraryRequest) {
+      _libPromise = libraryRequest
+        .then(() => toTitles(getLibraryGamesCache()))
+        .catch(() => new Set())
+    } else {
+      _libPromise = swr('discover:libraryTitles', fetchLibraryTitles, { maxAge: LIB_TITLES_TTL })
+        .then(({ value }) => new Set(value || []))
+        .catch(() => new Set())
+    }
   }
   return _libPromise
 }

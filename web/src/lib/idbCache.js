@@ -108,6 +108,55 @@ export function idbGet(key) {
     .catch(() => null)
 }
 
+// Read a group of keys through one IndexedDB transaction. Opening a transaction
+// per game made wishlist metadata cache hits surprisingly expensive on mobile:
+// a 60-game wishlist meant 60 transactions before the network decision could be
+// made. The returned Map uses the caller's unprefixed keys and the same
+// `{ value, ts }` record shape as idbGet().
+export function idbGetMany(keys) {
+  const list = [...new Set((keys || []).filter(Boolean))]
+  if (!list.length) return Promise.resolve(new Map())
+  return openDb()
+    .then((db) => new Promise((resolve) => {
+      if (!db) {
+        resolve(new Map())
+        return
+      }
+      let tx
+      try {
+        tx = db.transaction(STORE, 'readonly')
+      } catch {
+        resolve(new Map())
+        return
+      }
+      const os = tx.objectStore(STORE)
+      const out = new Map()
+      tx.onabort = () => resolve(out)
+      tx.onerror = () => resolve(out)
+      let remaining = list.length
+      const finish = () => {
+        remaining -= 1
+        if (remaining === 0) resolve(out)
+      }
+      for (const key of list) {
+        let req
+        try {
+          req = os.get(`${SCHEMA}:${key}`)
+        } catch {
+          finish()
+          continue
+        }
+        req.onsuccess = () => {
+          const rec = req.result
+          if (rec && rec.value !== undefined) out.set(key, { value: rec.value, ts: rec.ts || 0 })
+          finish()
+        }
+        req.onerror = finish
+      }
+    }))
+    .catch(() => new Map())
+}
+
 // Fire-and-forget write. Values must be structured-cloneable (plain objects,
 // arrays, Map/Set, Date); anything else is skipped rather than thrown.
 export function idbSet(key, value) {
@@ -121,6 +170,40 @@ export function idbSet(key, value) {
       }
       return undefined
     })
+    .catch(() => undefined)
+}
+
+// Write a group of cache records in one transaction. Like idbSet(), cache
+// failures never escape to rendering code.
+export function idbSetMany(entries) {
+  const list = (entries || []).filter((entry) => Array.isArray(entry) && entry[0])
+  if (!list.length) return Promise.resolve(undefined)
+  return openDb()
+    .then((db) => new Promise((resolve) => {
+      if (!db) {
+        resolve(undefined)
+        return
+      }
+      let tx
+      try {
+        tx = db.transaction(STORE, 'readwrite')
+      } catch {
+        resolve(undefined)
+        return
+      }
+      const os = tx.objectStore(STORE)
+      const ts = Date.now()
+      for (const [key, value] of list) {
+        try {
+          os.put({ key: `${SCHEMA}:${key}`, value, ts })
+        } catch {
+          /* not cloneable - skip this record */
+        }
+      }
+      tx.oncomplete = () => resolve(undefined)
+      tx.onerror = () => resolve(undefined)
+      tx.onabort = () => resolve(undefined)
+    }))
     .catch(() => undefined)
 }
 

@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import Cover from './Cover.jsx'
 import Skeleton from './Skeleton.jsx'
 import GameDetail from './GameDetail.jsx'
-import GameSheet from './GameSheet.jsx'
-import { useLibraryGames } from '../lib/useLibraryGames.js'
+import GameSheet, { preloadGameSheet } from './LazyGameSheet.jsx'
+import { preloadLibrary } from '../lib/useLibraryGames.js'
+import { useAppBootstrap } from '../lib/appBootstrap.js'
 import { useWishlist } from '../lib/wishlist.js'
 import { relOf, releaseCalendarDay, releaseDaysFromToday } from '../lib/wishlistRelease.js'
 import { platformMeta, minutesToHhm, parseDayOrInstant, libraryCover } from '../lib/format.js'
@@ -57,7 +58,7 @@ const CHEV = (
 /* ------------------------------------------------------------------- main */
 
 export default function HomeTab({ onOpenTab, onOpenList }) {
-  const { games, loading: libLoading } = useLibraryGames()
+  const { games, ownedIds, loading: libLoading } = useAppBootstrap(ACTIVITY_DAYS)
   // The same cached rows the Wishlist page and the drawer count read, rather
   // than a fourth thin copy of the table. They carry everything the wishlist
   // sheet wants, so a Coming up row can open the sheet the Wishlist page opens.
@@ -94,6 +95,30 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
       cancelled = true
     }
   }, [])
+
+  // Home no longer blocks on the full library. Warm it only after the compact
+  // snapshot is ready so Library and owned game sheets are instant on intent.
+  useEffect(() => {
+    if (loading || libLoading) return undefined
+    let cancelled = false
+    const warm = () => {
+      if (cancelled) return
+      preloadGameSheet().catch(() => {})
+      preloadLibrary().catch(() => {})
+    }
+    if (typeof requestIdleCallback === 'function') {
+      const id = requestIdleCallback(warm, { timeout: 2200 })
+      return () => {
+        cancelled = true
+        cancelIdleCallback(id)
+      }
+    }
+    const id = setTimeout(warm, 900)
+    return () => {
+      cancelled = true
+      clearTimeout(id)
+    }
+  }, [libLoading, loading])
 
   const week = useMemo(() => weekStats(events, new Date(), WEEK_SPAN, activityStart), [events, activityStart])
   const gamesById = useMemo(() => new Map(games.map((g) => [g.master_id, g])), [games])
@@ -171,7 +196,6 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
   const releaseWatch = useMemo(() => {
     // A wishlist game you have since bought is not release news. `games` is
     // already loaded for Now playing, so this costs no additional read.
-    const owned = new Set(games.filter((g) => g.igdb_id != null).map((g) => g.igdb_id))
     const dated = wishItems
       .map((w) => {
         const rel = relOf(w)
@@ -189,13 +213,13 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
     // Day zero belongs to Out now. This is a calendar boundary, not an elapsed
     // timestamp boundary, so it flips at the start of the user's local day.
     const recentlyReleased = dated
-      .filter((w) => w.delta <= 0 && w.delta >= -RECENT_DAYS && !owned.has(w.igdb_id))
+      .filter((w) => w.delta <= 0 && w.delta >= -RECENT_DAYS && !ownedIds.has(w.igdb_id))
       .sort((a, b) => b.delta - a.delta || String(a.title).localeCompare(String(b.title)))
       .slice(0, RELEASE_VISIBLE)
       .map((w) => ({ ...w, days: Math.abs(w.delta) }))
 
     return { comingUp, recentlyReleased }
-  }, [wishItems, games])
+  }, [wishItems, ownedIds])
   const { comingUp, recentlyReleased } = releaseWatch
 
   if (loading || libLoading) {
@@ -241,6 +265,8 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
         type="button"
         className={`hm-release-item${upcoming ? ' upcoming' : ' out'}${w.days <= 7 ? ' soon' : ''}`}
         key={`${direction}-${w.igdb_id}`}
+        onPointerDown={preloadGameSheet}
+        onFocus={preloadGameSheet}
         onClick={() => setWishOpen(w)}
       >
         <Cover src={w.cover} title={w.title} size="sm" className="up-cov" />
@@ -268,9 +294,11 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
           <button
             type="button"
             className={`np${nowPlaying.game ? '' : ' flat'}`}
+            onPointerDown={nowPlaying.game ? preloadGameSheet : undefined}
+            onFocus={nowPlaying.game ? preloadGameSheet : undefined}
             onClick={nowPlaying.game ? () => openGame(nowPlaying.game) : undefined}
           >
-            <Cover src={nowPlaying.cover} title={nowPlaying.title} size="sm" />
+            <Cover src={nowPlaying.cover} title={nowPlaying.title} size="sm" priority />
             <span className="np-b">
               <span className="np-t">{nowPlaying.title}</span>
               <span className="np-s">

@@ -173,8 +173,8 @@ export default function LibraryTab() {
       ) : (
         <>
           <div className="game-list">
-            {visibleGames.slice(0, visibleCount).map((game) => (
-              <GameCard key={game.master_id} game={game} onSelect={setSelectedGame} statusMap={statusMap} />
+            {visibleGames.slice(0, visibleCount).map((game, index) => (
+              <GameCard key={game.master_id} game={game} onSelect={setSelectedGame} statusMap={statusMap} priority={index === 0} />
             ))}
           </div>
           {visibleGames.length > visibleCount ? (

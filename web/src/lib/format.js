@@ -326,6 +326,24 @@ export function optImg(url, targetW = 240) {
   return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${w}&output=webp&q=82`
 }
 
+// Responsive candidates for ordinary <img> elements. The width descriptor is
+// the actual capped source width, not the requested ladder width, so the browser
+// never assumes a 264px IGDB cover contains 640 real pixels.
+export function optImgSrcSet(url, widths = []) {
+  if (!url || url.indexOf('images.igdb.com') === -1) return ''
+  const bucket = url.match(/\/(t_[a-z0-9_]+)\//)
+  const srcW = (bucket && IGDB_BUCKET_W[bucket[1]]) || 0
+  const seen = new Set()
+  const candidates = []
+  for (const requested of widths) {
+    const width = srcW ? Math.min(requested, srcW) : requested
+    if (!width || seen.has(width)) continue
+    seen.add(width)
+    candidates.push(`${optImg(url, width)} ${width}w`)
+  }
+  return candidates.join(', ')
+}
+
 // HTML entities inside a url. The news ingest stores what the feed handed it and
 // some feeds escape their query strings: four rows in `news` currently hold
 // "?w=400&#038;h=600", which is not an address and cannot load. Decoding on the

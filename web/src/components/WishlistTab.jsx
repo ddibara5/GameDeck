@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Cover from './Cover.jsx'
-import GameSheet from './GameSheet.jsx'
+import GameSheet, { preloadGameSheet } from './LazyGameSheet.jsx'
 import { useWishlist, removeFromWishlist, restoreToWishlist, reconcileWishlist } from '../lib/wishlist.js'
 import { fetchGamesByIds, loadLibraryTitles } from '../lib/discover.js'
 import NextUp from './NextUp.jsx'
@@ -201,6 +201,8 @@ function SwipeRow({ r, onOpen, onRemove, scope }) {
         ref={faceRef}
         role="button"
         tabIndex={0}
+        onPointerDown={preloadGameSheet}
+        onFocus={preloadGameSheet}
         onClick={onFaceClick}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
@@ -225,7 +227,7 @@ function GridCard({ r, onOpen, scope }) {
   const short = shortOf(rel)
   const cls = chipOf(rel, scope).cls
   return (
-    <button type="button" className="wl-gc" onClick={() => onOpen(r)}>
+    <button type="button" className="wl-gc" onPointerDown={preloadGameSheet} onFocus={preloadGameSheet} onClick={() => onOpen(r)}>
       <div className="wl-gcov">
         <Cover src={r.cover} title={r.title} size="lg" className="wl-gcover" />
         <span className={`wl-gbadge ${cls}`}>{short}</span>
@@ -354,6 +356,10 @@ export default function WishlistTab({ onClose, mode = 'wishlist', initialScope =
 
   const itemIdSignature = allItems.map((r) => r.igdb_id).filter(Boolean).join(',')
   useEffect(() => {
+    // The normal wishlist rows already contain everything they render. Genres
+    // are enrichment for the filter sheet, so do not resolve every saved IGDB
+    // record until the user actually asks for that sheet (or has a filter set).
+    if (!genreOpen && genre === 'all') return undefined
     const ids = allItems.map((r) => r.igdb_id).filter(Boolean)
     if (!ids.length) {
       setGenreMetadata({})
@@ -378,7 +384,7 @@ export default function WishlistTab({ onClose, mode = 'wishlist', initialScope =
     // The rows themselves are intentionally not a dependency: their stable id
     // set is the identity of the cached metadata request.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itemIdSignature])
+  }, [genre, genreOpen, itemIdSignature])
 
   useEffect(() => {
     try {

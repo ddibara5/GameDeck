@@ -1,4 +1,4 @@
-import GameSheet from './GameSheet.jsx'
+import GameSheet from './LazyGameSheet.jsx'
 
 // Discover detail: an IGDB game (not owned). Thin wrapper over the shared
 // GameSheet; the game object already carries its summary/screenshots/etc.
