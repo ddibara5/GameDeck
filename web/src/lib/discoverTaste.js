@@ -53,6 +53,10 @@ const VIBE_TERMS = [
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const RECENCY_HALF_LIFE_DAYS = 120
+export const RECOMMENDATION_SLATE_SIZE = 8
+const STRONG_PICK_COUNT = 5
+const ADJACENT_PICK_COUNT = 2
+const WILDCARD_PICK_COUNT = 1
 
 function clamp(min, max, value) {
   return Math.max(min, Math.min(max, value))
@@ -86,10 +90,32 @@ export function candidateOutcomeAdjustment(feedback) {
   const exposures = Math.max(0, Number(feedback?.exposure_count) || 0)
   const details = Math.max(0, Number(feedback?.detail_open_count) || 0)
   const meaningful = Math.max(0, Number(feedback?.meaningful_outcome_count) || 0)
+  const ignored = Number.isFinite(Number(feedback?.ignored_streak))
+    ? Math.max(0, Number(feedback.ignored_streak))
+    : exposures
   if (meaningful > 0) return Math.min(0.08, 0.04 + meaningful * 0.015)
   if (details > 0) return Math.min(0.04, details * 0.015)
-  if (exposures < 3) return 0
-  return -Math.min(0.12, (exposures - 2) * 0.035)
+  if (ignored < 3) return 0
+  return -Math.min(0.12, (ignored - 2) * 0.035)
+}
+
+// Silence is ambiguous, so it never permanently removes a game. Three
+// consecutive ignored opportunities start a short rest; repeat ignores extend
+// it, capped at 30 days so a genuinely strong recommendation can return.
+export function candidateCooldownDays(feedback) {
+  const ignored = Math.max(0, Number(feedback?.ignored_streak) || 0)
+  if (ignored < 3) return 0
+  if (ignored === 3) return 7
+  if (ignored === 4) return 14
+  return 30
+}
+
+export function candidateIsCoolingDown(feedback, now = Date.now()) {
+  const days = candidateCooldownDays(feedback)
+  if (!days) return false
+  const lastShown = Date.parse(feedback?.last_shown_at || '')
+  if (!Number.isFinite(lastShown)) return false
+  return now < lastShown + days * DAY_MS
 }
 
 // Reactions are the user's explicit opinion. Elo refines that opinion once
@@ -208,7 +234,7 @@ export function gameDescriptor(game) {
   return `${genre} · ${vibe}`
 }
 
-function candidateScore(game, now, wishlistIds, gameFeedback) {
+function candidateScore(game, now, gameFeedback) {
   const rating = Number(game?.rating)
   const votes = Math.max(0, Number(game?.ratingCount) || 0)
   const confidence = votes / (votes + 25)
@@ -216,33 +242,140 @@ function candidateScore(game, now, wishlistIds, gameFeedback) {
   const releasedAt = Number(game?.released) * 1000
   const daysAgo = Number.isFinite(releasedAt) && releasedAt > 0 ? Math.max(0, (now - releasedAt) / DAY_MS) : 1095
   const freshness = 1 - clamp(0, 1, daysAgo / 1095)
-  const wished = wishlistIds && (
-    wishlistIds.has(game?.id)
-    || wishlistIds.has(Number(game?.id))
-    || wishlistIds.has(String(game?.id))
-  )
   return freshness * 0.58
     + quality * 0.42
-    + (wished ? 0.14 : 0)
     + candidateOutcomeAdjustment(feedbackAt(gameFeedback, game?.id))
 }
 
-export function rankCandidates(games, now = Date.now(), { wishlistIds, gameFeedback, deprioritizeIds } = {}) {
+export function rankCandidates(games, now = Date.now(), { gameFeedback } = {}) {
   return (games || [])
     .map((game, index) => {
-      const shown = deprioritizeIds && (
-        deprioritizeIds.has(game?.id)
-        || deprioritizeIds.has(Number(game?.id))
-        || deprioritizeIds.has(String(game?.id))
-      )
-      // Manual refresh is a diversity nudge, not a quality reset. Four points is
-      // enough for a near-tie from the wider candidate pool to move ahead, while
-      // a materially stronger pick remains visible and may legitimately repeat.
-      const refreshPenalty = shown ? 0.04 : 0
-      return { game, index, score: candidateScore(game, now, wishlistIds, gameFeedback) - refreshPenalty }
+      return { game, index, score: candidateScore(game, now, gameFeedback) }
     })
     .sort((a, b) => b.score - a.score || a.index - b.index)
     .map(({ game }) => game)
+}
+
+function idSetHas(ids, value) {
+  return Boolean(ids) && (
+    ids.has(value)
+    || ids.has(Number(value))
+    || ids.has(String(value))
+  )
+}
+
+function gameTraits(game) {
+  return new Set([...(game?.genres || []), ...(game?.themes || []), ...(game?.keywords || [])]
+    .map((value) => String(value || '').trim().toLowerCase())
+    .filter(Boolean))
+}
+
+function sharesTrait(game, selected) {
+  const traits = gameTraits(game)
+  if (!traits.size) return false
+  return selected.some((pick) => {
+    const pickedTraits = gameTraits(pick)
+    for (const trait of traits) if (pickedTraits.has(trait)) return true
+    return false
+  })
+}
+
+function similarityCount(game, selected) {
+  const traits = gameTraits(game)
+  let matches = 0
+  for (const pick of selected) {
+    const pickedTraits = gameTraits(pick)
+    for (const trait of traits) if (pickedTraits.has(trait)) matches += 1
+  }
+  return matches
+}
+
+function candidateEligible(game, now, {
+  wishlistIds,
+  dismissedIds,
+  excludedIds,
+  gameFeedback,
+  drop,
+  allowRotation = false,
+} = {}) {
+  if (!game || (drop && drop(game))) return false
+  if (idSetHas(wishlistIds, game.id) || idSetHas(dismissedIds, game.id)) return false
+  if (!allowRotation && idSetHas(excludedIds, game.id)) return false
+  return !candidateIsCoolingDown(feedbackAt(gameFeedback, game.id), now)
+}
+
+function addUnique(target, candidates, limit) {
+  const seen = new Set(target.map((game) => String(game.id)))
+  for (const game of candidates) {
+    if (target.length >= limit) break
+    const key = String(game.id)
+    if (seen.has(key)) continue
+    seen.add(key)
+    target.push(game)
+  }
+}
+
+function rankedEligibleByLane(lanes, byLane, now, options, allowRotation = false) {
+  const out = {}
+  for (const lane of lanes) {
+    out[lane.key] = rankCandidates(byLane[lane.key] || [], now, options)
+      .filter((game) => candidateEligible(game, now, { ...options, allowRotation }))
+  }
+  return out
+}
+
+// Compose the visible deck after relevance ranking. The default blend keeps
+// five high-confidence taste matches, two nearby discoveries from New, and one
+// less-similar wildcard. Filters that select one lane get eight from that lane
+// instead. Daily refresh exclusions are strict when alternatives exist; at most
+// two prior picks may return at the end when the candidate pool is unusually
+// small. Cooldowns, wishlist items and explicit dismissals are never relaxed.
+export function buildRecommendationSlate(lanes, byLane, now = Date.now(), options = {}) {
+  const activeLanes = (lanes || []).filter(Boolean)
+  if (!activeLanes.length) return []
+
+  const strictByLane = rankedEligibleByLane(activeLanes, byLane || {}, now, options)
+  const selected = []
+
+  if (activeLanes.length === 1) {
+    addUnique(selected, interleave(activeLanes, strictByLane), RECOMMENDATION_SLATE_SIZE)
+  } else {
+    const tasteLanes = activeLanes.filter((lane) => lane.key !== NEW_LANE.key)
+    const newLane = activeLanes.find((lane) => lane.key === NEW_LANE.key)
+    addUnique(selected, interleave(tasteLanes, strictByLane), STRONG_PICK_COUNT)
+
+    if (newLane) {
+      const newPicks = (strictByLane[newLane.key] || []).map((game) => ({ ...game, lane: newLane }))
+      addUnique(
+        selected,
+        newPicks.filter((game) => sharesTrait(game, selected)),
+        STRONG_PICK_COUNT + ADJACENT_PICK_COUNT,
+      )
+      const wildcard = newPicks
+        .filter((game) => !selected.some((pick) => String(pick.id) === String(game.id)))
+        .map((game, index) => ({ game, index, similarity: similarityCount(game, selected) }))
+        .sort((a, b) => a.similarity - b.similarity || a.index - b.index)
+        .map(({ game }) => game)
+      addUnique(
+        selected,
+        wildcard,
+        STRONG_PICK_COUNT + ADJACENT_PICK_COUNT + WILDCARD_PICK_COUNT,
+      )
+    }
+
+    addUnique(selected, interleave(activeLanes, strictByLane), RECOMMENDATION_SLATE_SIZE)
+  }
+
+  if (selected.length < RECOMMENDATION_SLATE_SIZE && options.excludedIds?.size) {
+    const relaxedByLane = rankedEligibleByLane(activeLanes, byLane || {}, now, options, true)
+    addUnique(
+      selected,
+      interleave(activeLanes, relaxedByLane),
+      Math.min(RECOMMENDATION_SLATE_SIZE, selected.length + 2),
+    )
+  }
+
+  return selected.slice(0, RECOMMENDATION_SLATE_SIZE)
 }
 
 // Taste lanes arrive before the general New lane. That lets the most specific

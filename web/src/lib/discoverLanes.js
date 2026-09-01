@@ -21,13 +21,16 @@ export {
   LANE_CATALOG,
   NEW_LANE,
   MAX_TASTE_LANES,
+  buildRecommendationSlate,
+  candidateCooldownDays,
+  candidateIsCoolingDown,
   gameDescriptor,
   laneReason,
   rankCandidates,
   interleave,
 } from './discoverTaste.js'
 
-const PROBE_KEY = 'discover:tasteProfile:v3'
+const PROBE_KEY = 'discover:tasteProfile:v4'
 const PROBE_TTL = 6 * 60 * 60 * 1000
 const RANKING_EVENT = 'gd-ranking-change'
 
@@ -60,7 +63,7 @@ async function fetchTasteProfile() {
       .select('lane_key,exposure_count,detail_open_count,meaningful_outcome_count,last_shown_at'),
     supabase
       .from('v_recommendation_game_feedback')
-      .select('igdb_id,exposure_count,detail_open_count,meaningful_outcome_count,last_shown_at'),
+      .select('igdb_id,exposure_count,detail_open_count,meaningful_outcome_count,ignored_streak,last_positive_at,last_shown_at'),
   ])
   if (gameRes.error) throw new Error(gameRes.error.message || 'Taste probe failed')
   const profile = buildTasteProfile({

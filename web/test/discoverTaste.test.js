@@ -4,6 +4,9 @@ import test from 'node:test'
 
 import {
   NEW_LANE,
+  buildRecommendationSlate,
+  candidateCooldownDays,
+  candidateIsCoolingDown,
   candidateOutcomeAdjustment,
   gameDescriptor,
   interleave,
@@ -131,40 +134,83 @@ test('candidate ranking balances freshness with confidence-weighted quality', ()
   assert.equal(ranked[0].id, 2)
 })
 
-test('wishlist intent promotes a relevant candidate inside its lane', () => {
+test('wishlist items leave ordinary For You discovery', () => {
   const released = Math.floor(Date.parse('2026-08-01T12:00:00Z') / 1000)
-  const ranked = rankCandidates(
-    [
+  const feed = buildRecommendationSlate(
+    [NEW_LANE],
+    { new: [
       { id: 1, rating: 90, ratingCount: 200, released },
       { id: 2, rating: 84, ratingCount: 200, released },
-    ],
+    ] },
     NOW,
     { wishlistIds: new Set([2]) },
   )
-  assert.equal(ranked[0].id, 2)
+  assert.deepEqual(feed.map((game) => game.id), [1])
 })
 
-test('manual refresh promotes near-equal alternatives without hiding a clearly stronger pick', () => {
+test('manual refresh replaces the visible deck and only relaxes two repeats when sparse', () => {
   const released = Math.floor(Date.parse('2026-08-01T12:00:00Z') / 1000)
-  const nearTie = rankCandidates(
-    [
-      { id: 1, rating: 86, ratingCount: 200, released },
-      { id: 2, rating: 84, ratingCount: 200, released },
-    ],
+  const games = Array.from({ length: 10 }, (_, index) => ({
+    id: index + 1,
+    rating: 90 - index,
+    ratingCount: 200,
+    released,
+  }))
+  const rotated = buildRecommendationSlate(
+    [NEW_LANE],
+    { new: games },
     NOW,
-    { deprioritizeIds: new Set([1]) },
+    { excludedIds: new Set(['1', '2']) },
   )
-  assert.equal(nearTie[0].id, 2)
+  assert.equal(rotated.length, 8)
+  assert.ok(rotated.every((game) => game.id !== 1 && game.id !== 2))
 
-  const clearWinner = rankCandidates(
-    [
-      { id: 3, rating: 98, ratingCount: 500, released },
-      { id: 4, rating: 60, ratingCount: 20, released },
-    ],
+  const sparse = buildRecommendationSlate(
+    [NEW_LANE],
+    { new: games.slice(0, 4) },
     NOW,
-    { deprioritizeIds: new Set([3]) },
+    { excludedIds: new Set(['1', '2']) },
   )
-  assert.equal(clearWinner[0].id, 3)
+  assert.deepEqual(sparse.map((game) => game.id), [3, 4, 1, 2])
+})
+
+test('graduated cooldowns rest repeated ignores without permanently hiding them', () => {
+  const lastShown = '2026-08-25T12:00:00Z'
+  assert.equal(candidateCooldownDays({ ignored_streak: 2, last_shown_at: lastShown }), 0)
+  assert.equal(candidateCooldownDays({ ignored_streak: 3, last_shown_at: lastShown }), 7)
+  assert.equal(candidateCooldownDays({ ignored_streak: 4, last_shown_at: lastShown }), 14)
+  assert.equal(candidateCooldownDays({ ignored_streak: 5, last_shown_at: lastShown }), 30)
+  assert.equal(candidateCooldownDays({ ignored_streak: 20, last_shown_at: lastShown }), 30)
+  assert.equal(candidateIsCoolingDown({ ignored_streak: 3, last_shown_at: lastShown }, NOW), true)
+  assert.equal(candidateIsCoolingDown({ ignored_streak: 3, last_shown_at: lastShown }, NOW + 8 * 86400000), false)
+  assert.equal(candidateIsCoolingDown({ ignored_streak: 0, detail_open_count: 1, last_shown_at: lastShown }, NOW), false)
+})
+
+test('the default slate balances five strong matches, two adjacent picks and one wildcard', () => {
+  const released = Math.floor(Date.parse('2026-08-01T12:00:00Z') / 1000)
+  const taste = { key: 'openworld', label: 'Open world' }
+  const strong = Array.from({ length: 7 }, (_, index) => ({
+    id: index + 1,
+    rating: 90 - index,
+    ratingCount: 200,
+    released,
+    genres: ['Action'],
+  }))
+  const slate = buildRecommendationSlate(
+    [taste, NEW_LANE],
+    {
+      openworld: strong,
+      new: [
+        { id: 101, rating: 88, ratingCount: 200, released, genres: ['Action'] },
+        { id: 102, rating: 87, ratingCount: 200, released, genres: ['Action'] },
+        { id: 103, rating: 75, ratingCount: 200, released, genres: ['Puzzle'] },
+      ],
+    },
+    NOW,
+  )
+  assert.equal(slate.length, 8)
+  assert.deepEqual(slate.slice(0, 5).map((game) => game.lane.key), Array(5).fill('openworld'))
+  assert.deepEqual(slate.slice(5).map((game) => game.id), [101, 102, 103])
 })
 
 test('outcome learning waits for evidence and keeps lane influence bounded', () => {
@@ -209,8 +255,8 @@ test('per-game learning gently rewards outcomes and suppresses repeated ignores'
     NOW,
     {
       gameFeedback: new Map([
-        ['1', { exposure_count: 6 }],
-        ['2', { exposure_count: 3, meaningful_outcome_count: 1 }],
+        ['1', { exposure_count: 6, ignored_streak: 6 }],
+        ['2', { exposure_count: 3, ignored_streak: 0, meaningful_outcome_count: 1 }],
       ]),
     },
   )

@@ -161,7 +161,7 @@ function MediaSkeleton({ owned }) {
 // + progress, not-owned games get wishlist + Ask AI + More like this. Owned and
 // wishlist games fetch their IGDB blurb + screenshots by id so every sheet is
 // equally rich.
-export default function GameSheet({ variant, game, onClose, inLibrary = false, onAsk, onMoreLikeThis }) {
+export default function GameSheet({ variant, game, onClose, inLibrary = false, onAsk, onMoreLikeThis, onNotInterested }) {
   const owned = variant === 'owned'
   const { closing, requestClose } = useDelayedClose(onClose)
   const dialogRef = useDialogA11y({ onClose: requestClose })
@@ -516,6 +516,11 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
           <a className="detail-link" href={safeGameUrl} target="_blank" rel="noreferrer noopener">
             View on IGDB
           </a>
+        ) : null}
+        {!owned && onNotInterested ? (
+          <button type="button" className="game-sheet-not-interested" onClick={() => onNotInterested(game)}>
+            Not interested
+          </button>
         ) : null}
       </div>
 

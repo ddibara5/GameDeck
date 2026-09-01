@@ -1,34 +1,11 @@
 import { supabase } from './supabase.js'
 
-const SESSION_KEY = 'gamedeck_recommendation_session_v1'
-export const RECOMMENDATION_MODEL_VERSION = 'for_you_v3'
+export const RECOMMENDATION_MODEL_VERSION = 'for_you_v4'
 
 const exposureIdByKey = new Map()
 const exposureKeyByGame = new Map()
 const exposureRowByKey = new Map()
 const pendingByKey = new Map()
-
-function randomId() {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID()
-  }
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
-}
-
-function recommendationSessionId() {
-  if (typeof sessionStorage === 'undefined') return randomId()
-  try {
-    const current = sessionStorage.getItem(SESSION_KEY)
-    if (current) return current
-    const next = randomId()
-    sessionStorage.setItem(SESSION_KEY, next)
-    return next
-  } catch {
-    return randomId()
-  }
-}
-
-const sessionId = recommendationSessionId()
 
 function gameId(game) {
   return Number(game && (game.id ?? game.igdb_id)) || 0
@@ -41,17 +18,16 @@ function cleanText(value, max) {
 export function recommendationExposureRow(
   game,
   { lane, position, surface = 'for_you', reason = '', batchId = '' } = {},
-  stableSessionId = sessionId,
 ) {
   const igdbId = gameId(game)
   const laneKey = cleanText(lane?.key || game?.lane?.key || 'new', 80) || 'new'
   const batch = cleanText(batchId, 40)
   if (!igdbId) return null
   return {
-    // One opportunity per game/surface/generated batch. If the lightweight New
-    // lane paints first and the taste lanes claim the same game moments later,
-    // the stable batch key prevents that rerender from counting twice.
-    exposure_key: `${stableSessionId}:${surface}:${RECOMMENDATION_MODEL_VERSION}:${batch || 'initial'}:${igdbId}`.slice(0, 180),
+    // One opportunity per game/surface/generated deck. Daily and ten-minute
+    // refresh batch ids stay stable across app relaunches, so navigating back to
+    // For You or pulling repeatedly cannot manufacture dozens of ignores.
+    exposure_key: `${surface}:${RECOMMENDATION_MODEL_VERSION}:${batch || 'initial'}:${igdbId}`.slice(0, 180),
     igdb_id: igdbId,
     title: cleanText(game?.name || game?.title || 'Untitled', 300) || 'Untitled',
     surface,

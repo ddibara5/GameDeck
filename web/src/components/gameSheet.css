@@ -104,6 +104,20 @@
   border-color: var(--line-soft);
 }
 
+.game-sheet-not-interested {
+  display: block;
+  min-height: 44px;
+  margin: 10px auto 0;
+  padding: 8px 14px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--t-foot);
+  font-weight: var(--w-semi);
+  cursor: pointer;
+}
+
 /* Summary blurb. */
 .discover-summary {
   color: var(--muted);

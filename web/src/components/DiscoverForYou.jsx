@@ -14,8 +14,19 @@ import {
   platformParam,
   setDiscoverPrefs,
 } from '../lib/discoverPrefs.js'
-import { useTasteProfile, NEW_LANE, gameDescriptor, laneReason, rankCandidates, interleave } from '../lib/discoverLanes.js'
+import { useTasteProfile, NEW_LANE, buildRecommendationSlate, gameDescriptor, laneReason } from '../lib/discoverLanes.js'
 import { recordRecommendationDetailOpen, trackRecommendationFeed } from '../lib/recommendationLearning.js'
+import {
+  dismissRecommendation,
+  restoreRecommendation,
+  useRecommendationDismissals,
+} from '../lib/recommendationDismissals.js'
+import {
+  dailyRecommendationBatch,
+  loadRotationExclusions,
+  refreshRecommendationBatch,
+  rememberRotationExclusions,
+} from '../lib/recommendationRotation.js'
 import usePullRefresh from '../lib/usePullRefresh.js'
 import { useDialogA11y } from '../lib/useDialogA11y.js'
 import {
@@ -31,7 +42,6 @@ import DiscoverProductionScaleField from './DiscoverProductionScaleField.jsx'
 // confidence-weighted quality instead of treating release date as the complete
 // recommendation score.
 const CANDIDATES_PER_LANE = 16
-const PICKS_PER_LANE = 8
 
 export function freshnessLabel(updatedAt, now = Date.now()) {
   const elapsed = Math.max(0, now - Number(updatedAt || now))
@@ -102,11 +112,14 @@ export default function DiscoverForYou({ onAsk }) {
   const [openFilterSection, setOpenFilterSection] = useState(null)
   const [refreshing, setRefreshing] = useState(false)
   const [refreshError, setRefreshError] = useState(false)
-  const [deprioritizeIds, setDeprioritizeIds] = useState(() => new Set())
-  const [feedBatch, setFeedBatch] = useState('initial')
+  const [rotationExclusions, setRotationExclusions] = useState(() => loadRotationExclusions())
+  const [feedBatch, setFeedBatch] = useState(() => dailyRecommendationBatch())
+  const [dismissedGame, setDismissedGame] = useState(null)
+  const [dismissalError, setDismissalError] = useState(false)
   const filterDialogRef = useDialogA11y({ active: showFilters, onClose: () => setShowFilters(false) })
 
-  const { ids: wishIds } = useWishlist()
+  const { ids: wishIds, loading: wishlistLoading } = useWishlist()
+  const { ids: dismissedIds, loading: dismissalsLoading } = useRecommendationDismissals()
 
   useEffect(() => {
     let alive = true
@@ -117,10 +130,15 @@ export default function DiscoverForYou({ onAsk }) {
   }, [])
 
   useEffect(() => {
-    setDeprioritizeIds(new Set())
-    setFeedBatch('initial')
+    setFeedBatch(dailyRecommendationBatch())
     setRefreshError(false)
   }, [platform, scale])
+
+  useEffect(() => {
+    if (!dismissedGame) return undefined
+    const timeout = setTimeout(() => setDismissedGame(null), 6000)
+    return () => clearTimeout(timeout)
+  }, [dismissedGame])
 
   const isOwned = useMemo(() => {
     if (!libTitles) return () => false
@@ -193,27 +211,21 @@ export default function DiscoverForYou({ onAsk }) {
   // before the general New lane can claim it.
   const lanes = useMemo(() => (tasteLanes ? [...tasteLanes, NEW_LANE] : [NEW_LANE]), [tasteLanes])
 
-  const rankedByLane = useMemo(() => {
-    const out = {}
-    for (const lane of lanes) {
-      out[lane.key] = rankCandidates(byLane[lane.key] || [], Date.now(), {
-        wishlistIds: wishIds,
-        gameFeedback,
-        deprioritizeIds,
-      })
-        .slice(0, PICKS_PER_LANE)
-    }
-    return out
-  }, [byLane, lanes, wishIds, gameFeedback, deprioritizeIds])
-
   useEffect(() => {
     if (only && !lanes.some((lane) => lane.key === only)) setOnly(null)
   }, [lanes, only])
 
   const feed = useMemo(() => {
+    if (!tasteProfile || wishlistLoading || dismissalsLoading) return []
     const active = only ? lanes.filter((lane) => lane.key === only) : lanes
-    return interleave(active, rankedByLane, { drop: (game) => prefs.hideOwned && isOwned(game.name) })
-  }, [lanes, rankedByLane, only, isOwned, prefs.hideOwned])
+    return buildRecommendationSlate(active, byLane, Date.now(), {
+      wishlistIds: wishIds,
+      dismissedIds,
+      excludedIds: rotationExclusions,
+      gameFeedback,
+      drop: (game) => prefs.hideOwned && isOwned(game.name),
+    })
+  }, [tasteProfile, wishlistLoading, dismissalsLoading, lanes, only, byLane, wishIds, dismissedIds, rotationExclusions, gameFeedback, prefs.hideOwned, isOwned])
 
   const activeFilterCount =
     (only ? 1 : 0) +
@@ -223,6 +235,7 @@ export default function DiscoverForYou({ onAsk }) {
 
   const feedSig = feed.map((game) => `${game.id}:${game.lane?.key || 'new'}`).join(',')
   useEffect(() => {
+    if (!tasteProfile || wishlistLoading || dismissalsLoading) return
     trackRecommendationFeed(feed.map((game) => ({
       ...game,
       recommendationReason: laneReason(game.lane),
@@ -230,27 +243,22 @@ export default function DiscoverForYou({ onAsk }) {
     // The signature is the stable recommendation identity. Tracking a new
     // object instance with the same rows would only repeat the same batch.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [feedSig, feedBatch])
+  }, [feedSig, feedBatch, tasteProfile, wishlistLoading, dismissalsLoading])
 
   async function refreshPicks() {
     if (refreshing || loading) return 'Still loading picks'
     const keys = [...new Set([NEW_LANE.key, ...(tasteLanes || []).map((lane) => lane.key)])]
-    const currentIds = new Set(
-      Object.values(rankedByLane)
-        .flat()
-        .map((game) => game?.id)
-        .filter(Boolean),
-    )
+    const currentIds = new Set(feed.map((game) => game?.id).filter(Boolean))
     setRefreshing(true)
     setRefreshError(false)
     try {
       const result = await fetchDiscoverLanes(keys, CANDIDATES_PER_LANE, { platform, scale, force: true })
       setByLane((current) => ({ ...current, ...refreshedLaneMap(result, keys) }))
       setFailedKeys((result.failedKeys || []).filter((key) => keys.includes(key)))
-      setDeprioritizeIds(currentIds)
+      setRotationExclusions(rememberRotationExclusions(currentIds))
       setNewState('ready')
       setTasteState('ready')
-      setFeedBatch(`refresh-${Date.now().toString(36)}`)
+      setFeedBatch(refreshRecommendationBatch())
       return 'Picks refreshed'
     } catch {
       // Keep the current feed intact. A manual refresh is never allowed to turn
@@ -263,7 +271,8 @@ export default function DiscoverForYou({ onAsk }) {
   }
 
   const tastePending = tasteState === 'waiting' || tasteState === 'loading'
-  const loading = feed.length === 0 && (newState === 'loading' || tastePending)
+  const learningPending = !tasteProfile || wishlistLoading || dismissalsLoading
+  const loading = feed.length === 0 && (newState === 'loading' || tastePending || learningPending)
   const unavailable = feed.length === 0 && !tastePending && (newState === 'error' || tasteState === 'error')
   const pullRefresh = usePullRefresh({
     onRefresh: refreshPicks,
@@ -335,7 +344,7 @@ export default function DiscoverForYou({ onAsk }) {
         ) : loading ? (
           <Skeleton count={5} />
         ) : feed.length === 0 ? (
-          <MessageState title="Nothing new in your tastes">Everything these tastes found is already in your library. Browse has the wider catalog.</MessageState>
+          <MessageState title="Your strongest picks are resting">Try another taste or Browse while recent recommendations rotate back in.</MessageState>
         ) : (
           <div className="fy-feed">
             {feed.map((game, index) => {
@@ -387,6 +396,10 @@ export default function DiscoverForYou({ onAsk }) {
 
       {refreshError && feed.length ? (
         <p className="fy-partial-note">Couldn't refresh right now. Showing your previous picks.</p>
+      ) : null}
+
+      {dismissalError ? (
+        <p className="fy-partial-note" role="alert">Couldn't hide that recommendation. Try again in a moment.</p>
       ) : null}
 
       {showFilters ? (
@@ -473,8 +486,35 @@ export default function DiscoverForYou({ onAsk }) {
             setSelected(null)
             if (onAsk) onAsk(game)
           }}
+          onNotInterested={(game) => {
+            setDismissalError(false)
+            setSelected(null)
+            dismissRecommendation(game).then((hidden) => {
+              if (hidden) setDismissedGame(game)
+              else setDismissalError(true)
+            })
+          }}
           onClose={() => setSelected(null)}
         />
+      ) : null}
+
+      {dismissedGame ? (
+        <div className="fy-dismiss-toast" role="status">
+          <span>{dismissedGame.name || dismissedGame.title} hidden from For You</span>
+          <button
+            type="button"
+            onClick={() => {
+              setDismissalError(false)
+              restoreRecommendation(dismissedGame.id || dismissedGame.igdb_id)
+                .then((restored) => {
+                  if (!restored) setDismissalError(true)
+                })
+              setDismissedGame(null)
+            }}
+          >
+            Undo
+          </button>
+        </div>
       ) : null}
     </div>
   )

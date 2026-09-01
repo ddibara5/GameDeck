@@ -861,6 +861,52 @@ button.shelf-head:active {
   text-align: center;
 }
 
+.fy-dismiss-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--tabbar-height) + var(--safe-bottom) + 12px);
+  z-index: 260;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: calc(100vw - 32px);
+  padding: 11px 12px 11px 16px;
+  transform: translateX(-50%);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  box-shadow: var(--e2);
+  color: var(--text);
+  font-size: var(--t-foot);
+  animation: fy-toast-in var(--d-base) var(--enter-ease);
+}
+
+.fy-dismiss-toast span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fy-dismiss-toast button {
+  flex: none;
+  padding: 2px 4px;
+  border: 0;
+  background: none;
+  color: var(--amber);
+  font: inherit;
+  font-weight: var(--w-bold);
+  cursor: pointer;
+}
+
+@keyframes fy-toast-in {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fy-dismiss-toast { animation: none; }
+}
+
 [data-theme="light"] .fy-profile-note,
 [data-theme="light"] .fy-why {
   color: var(--walnut);
