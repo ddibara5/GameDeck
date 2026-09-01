@@ -34,7 +34,7 @@ export const PLATFORM_CHOICES = [
 
 const CHOICE_KEYS = PLATFORM_CHOICES.map((p) => p.key)
 
-const DEFAULTS = { platforms: ['xbox', 'psn'], hideOwned: true }
+export const DEFAULT_DISCOVER_PREFS = { platforms: ['xbox', 'psn'], hideOwned: true }
 
 function load() {
   let stored = null
@@ -43,15 +43,15 @@ function load() {
   } catch {
     stored = null
   }
-  if (!stored) return { ...DEFAULTS, platforms: [...DEFAULTS.platforms] }
+  if (!stored) return { ...DEFAULT_DISCOVER_PREFS, platforms: [...DEFAULT_DISCOVER_PREFS.platforms] }
   // Reconcile against the catalog so a slug that no longer exists drops out
   // rather than being sent to IGDB forever.
   const platforms = Array.isArray(stored.platforms)
     ? stored.platforms.filter((k) => CHOICE_KEYS.includes(k))
-    : [...DEFAULTS.platforms]
+    : [...DEFAULT_DISCOVER_PREFS.platforms]
   return {
     platforms,
-    hideOwned: 'hideOwned' in stored ? Boolean(stored.hideOwned) : DEFAULTS.hideOwned,
+    hideOwned: 'hideOwned' in stored ? Boolean(stored.hideOwned) : DEFAULT_DISCOVER_PREFS.hideOwned,
   }
 }
 
@@ -69,7 +69,7 @@ export function setDiscoverPrefs(next) {
 }
 
 export function resetDiscoverPrefs() {
-  setDiscoverPrefs({ ...DEFAULTS, platforms: [...DEFAULTS.platforms] })
+  setDiscoverPrefs({ ...DEFAULT_DISCOVER_PREFS, platforms: [...DEFAULT_DISCOVER_PREFS.platforms] })
 }
 
 export function useDiscoverPrefs() {

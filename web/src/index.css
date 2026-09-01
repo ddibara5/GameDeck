@@ -3342,6 +3342,257 @@ textarea {
   border-color: var(--accent);
 }
 
+/* Discover's filter sheet keeps the high-frequency choices visible and folds
+   the long taxonomies into summary rows. Its body scrolls independently while
+   the decision buttons remain reachable above the home indicator. */
+.discover-filter-sheet {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: calc(12px + var(--safe-bottom));
+}
+
+.filter-sheet-head {
+  flex: 0 0 auto;
+  padding-right: 48px;
+}
+
+.filter-sheet-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 0 -20px;
+  padding: 0 20px 12px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.filter-group-compact {
+  margin-top: 12px;
+}
+
+.filter-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.filter-label-row .filter-label,
+.filter-label-row .filter-note {
+  margin: 0 0 8px;
+}
+
+.filter-options.compact {
+  gap: 7px;
+}
+
+.filter-options.compact .filter-opt {
+  min-height: 36px;
+  padding-inline: 12px;
+}
+
+.production-scale-options,
+.filter-segments {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.production-scale-options .filter-opt,
+.filter-segments .filter-opt {
+  min-width: 0;
+  padding-inline: 10px;
+}
+
+.scale-opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.scale-state {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line-soft);
+  border-radius: 50%;
+  color: var(--muted);
+  font-size: var(--t-cap2);
+}
+
+.scale-opt.active .scale-state {
+  border-color: color-mix(in srgb, var(--bg) 58%, transparent);
+  color: var(--bg);
+}
+
+.filter-setting-row {
+  width: 100%;
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.filter-setting-row:active,
+.filter-disclosure-trigger:active {
+  background: color-mix(in srgb, var(--surface-2) 78%, var(--line));
+}
+
+@media (hover: hover) {
+  .filter-setting-row:hover,
+  .filter-disclosure-trigger:hover {
+    background: color-mix(in srgb, var(--surface-2) 88%, transparent);
+  }
+}
+
+.filter-setting-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.filter-setting-title {
+  font-size: var(--t-foot);
+  font-weight: var(--w-semi);
+}
+
+.filter-setting-note {
+  color: var(--muted);
+  font-size: var(--t-cap2);
+  line-height: 1.25;
+}
+
+.filter-switch {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  flex: 0 0 42px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-pill);
+  background: var(--line);
+  transition: background var(--d-fast) ease, border-color var(--d-fast) ease;
+}
+
+.filter-switch > span {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--text);
+  box-shadow: var(--shadow);
+  transition: transform var(--d-fast) ease;
+}
+
+.filter-switch.on {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.filter-switch.on > span {
+  transform: translateX(18px);
+  background: var(--bg);
+}
+
+.filter-disclosures {
+  margin-top: 14px;
+  border-top: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.filter-disclosure + .filter-disclosure {
+  border-top: 1px solid var(--line-soft);
+}
+
+.filter-disclosure-trigger {
+  width: 100%;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 2px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.filter-disclosure-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.filter-disclosure-label {
+  color: var(--muted);
+  font-size: var(--t-cap2);
+  font-weight: var(--w-bold);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.filter-disclosure-value {
+  max-width: min(64vw, 360px);
+  overflow: hidden;
+  color: var(--text);
+  font-size: var(--t-foot);
+  font-weight: var(--w-semi);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filter-disclosure-caret {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform var(--d-fast) ease;
+}
+
+.filter-disclosure.open .filter-disclosure-caret {
+  transform: rotate(180deg);
+}
+
+.filter-disclosure-body {
+  padding: 0 0 12px;
+}
+
+.discover-filter-sheet > .filter-sheet-actions {
+  flex: 0 0 auto;
+  margin: 0 -20px calc(-12px - var(--safe-bottom));
+  padding: 12px 20px calc(12px + var(--safe-bottom));
+  border-top: 1px solid var(--line-soft);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .filter-switch,
+  .filter-switch > span,
+  .filter-disclosure-caret {
+    transition: none;
+  }
+}
+
 /* Title lookup now belongs to the global dock search. The Library keeps its
    changing collection summary and one compact page-local filter action on the
    same row, instead of spending two rows explaining that the library can be

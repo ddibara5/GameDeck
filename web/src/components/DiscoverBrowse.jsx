@@ -10,9 +10,16 @@ import { useWishlist } from '../lib/wishlist.js'
 import { useRowsConfig, ROW_BY_KEY, getFilledRows, setFilledRows } from '../lib/discoverRows.js'
 import { VIBES } from '../lib/vibes.js'
 import {
+  DEFAULT_DISCOVER_PREFS,
   useDiscoverPrefs,
   platformParam,
+  setDiscoverPrefs,
 } from '../lib/discoverPrefs.js'
+import {
+  PRODUCTION_SCALES,
+  PRODUCTION_SCALE_KEYS,
+  classifyProductionScale,
+} from '../lib/productionScale.js'
 import { useDialogA11y } from '../lib/useDialogA11y.js'
 import DiscoverFilterButton from './DiscoverFilterButton.jsx'
 import DiscoverPreferenceFields from './DiscoverPreferenceFields.jsx'
@@ -56,7 +63,6 @@ const GENRES = [
   { key: 'fighting', label: 'Fighting' },
   { key: 'strategy', label: 'Strategy' },
   { key: 'puzzle', label: 'Puzzle' },
-  { key: 'indie', label: 'Indie' },
   { key: 'simulator', label: 'Simulator' },
   { key: 'racing', label: 'Racing' },
 ]
@@ -75,13 +81,6 @@ const AVAILABILITY = [
   { key: 'upcoming', label: 'Coming soon' },
 ]
 
-const RAILS = [
-  { key: 'popular', label: 'Popular right now' },
-  { key: 'upcoming', label: 'Most anticipated' },
-  { key: 'recent', label: 'Recently released' },
-  { key: 'highly_rated', label: 'Critically acclaimed' },
-]
-
 const YEARS = ['all', 2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2016, 2014, 2011]
 // Cards shown per rail on the home. The full list lives behind each rail's
 // "see all" page, so a small inline preview keeps the home light (fewer mounted
@@ -89,7 +88,36 @@ const YEARS = ['all', 2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2016
 const RAIL_PREVIEW = 12
 // `platform` is deliberately absent: it lives in discoverPrefs, because it is a
 // standing preference rather than something you set for one look around.
-const DEFAULT_FILTERS = { genre: 'all', year: 'all', status: 'all', sort: 'popularity' }
+const makeDefaultFilters = () => ({
+  genre: 'all',
+  year: 'all',
+  status: 'all',
+  sort: 'popularity',
+  scales: [...PRODUCTION_SCALE_KEYS],
+})
+const DEFAULT_FILTERS = makeDefaultFilters()
+
+function FilterDisclosure({ label, value, open, onToggle, children }) {
+  return (
+    <section className={`filter-disclosure${open ? ' open' : ''}`}>
+      <button
+        type="button"
+        className="filter-disclosure-trigger"
+        aria-expanded={open}
+        onClick={onToggle}
+      >
+        <span className="filter-disclosure-copy">
+          <span className="filter-disclosure-label">{label}</span>
+          <span className="filter-disclosure-value">{value}</span>
+        </span>
+        <svg className="filter-disclosure-caret" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+      {open ? <div className="filter-disclosure-body">{children}</div> : null}
+    </section>
+  )
+}
 
 // In-place placeholder for a rail whose batched data hasn't landed yet. Reserves
 // the shelf's height (heading + a row of poster-shaped shimmers) so the home
@@ -118,8 +146,12 @@ function ShelfSkeleton({ label }) {
 
 export default function DiscoverBrowse({ onAsk, onCustomize }) {
   const [preset, setPreset] = useState(null)
-  const [filters, setFilters] = useState(DEFAULT_FILTERS)
+  const [filters, setFilters] = useState(makeDefaultFilters)
   const [showFilters, setShowFilters] = useState(false)
+  const [draftFilters, setDraftFilters] = useState(makeDefaultFilters)
+  const [draftPreset, setDraftPreset] = useState(null)
+  const [draftPrefs, setDraftPrefs] = useState(null)
+  const [openFilterSection, setOpenFilterSection] = useState(null)
   const filterDialogRef = useDialogA11y({ active: showFilters, onClose: () => setShowFilters(false) })
 
   const [rails, setRails] = useState({}) // key -> games[]; a key is undefined until its batch resolves
@@ -139,13 +171,15 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
     filters.genre !== 'all' ||
     filters.year !== 'all' ||
     filters.status !== 'all' ||
-    filters.sort !== 'popularity'
+    filters.sort !== 'popularity' ||
+    filters.scales.length !== PRODUCTION_SCALE_KEYS.length
   const activeFilterCount =
     (preset ? 1 : 0) +
     (filters.genre !== 'all' ? 1 : 0) +
     (filters.year !== 'all' ? 1 : 0) +
     (filters.status !== 'all' ? 1 : 0) +
     (filters.sort !== 'popularity' ? 1 : 0) +
+    (filters.scales.length !== PRODUCTION_SCALE_KEYS.length ? 1 : 0) +
     (prefs.platforms.length ? 1 : 0) +
     (prefs.hideOwned ? 1 : 0)
   const narrowed = Boolean(preset || filtersActive)
@@ -222,6 +256,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
           rating: (m && m.rating) || null,
           released: (m && m.released != null ? m.released : r.released) ?? null,
           release: (m && m.release) || null,
+          productionScale: m ? m.productionScale || classifyProductionScale(m) : null,
           // Carried so the rails can tell "14 Sep 2026" from "sometime in 2026".
           precision: (m && m.release && m.release.precision) || r.date_precision || null,
         }
@@ -302,11 +337,17 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
   // duplicates of each other. The see-all pages sent no sort, so they showed the
   // rail's real order - which is why a row never matched the page it opened.
   const railFilters = useMemo(() => {
-    const { sort, ...rest } = filters
+    const { sort, scales, ...rest } = filters
     return {
       preset: preset || undefined,
       ...rest,
       platform: platformParam(activePlatforms),
+      scale:
+        scales.length === PRODUCTION_SCALE_KEYS.length
+          ? undefined
+          : scales.length
+            ? scales.join(',')
+            : 'none',
       sort: sort !== DEFAULT_FILTERS.sort ? sort : undefined,
     }
   }, [preset, filters, activePlatforms])
@@ -354,19 +395,47 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
 
   function resetAll() {
     setPreset(null)
-    setFilters(DEFAULT_FILTERS)
+    setFilters(makeDefaultFilters())
   }
 
-  // Availability drives the `status` param. Unreleased games have no rating
-  // counts, so default "Coming soon" to anticipation (hypes) sorting; restore
-  // popularity when leaving it, unless the user has since picked another sort.
-  function setAvailability(status) {
-    setFilters((f) => {
-      let sort = f.sort
+  function openFilters() {
+    setDraftFilters({ ...filters, scales: [...filters.scales] })
+    setDraftPreset(preset)
+    setDraftPrefs({ ...prefs, platforms: [...prefs.platforms] })
+    setOpenFilterSection(null)
+    setShowFilters(true)
+  }
+
+  function resetDraftFilters() {
+    setDraftFilters(makeDefaultFilters())
+    setDraftPreset(null)
+    setDraftPrefs({ ...DEFAULT_DISCOVER_PREFS, platforms: [...DEFAULT_DISCOVER_PREFS.platforms] })
+    setOpenFilterSection(null)
+  }
+
+  function applyDraftFilters() {
+    setFilters(draftFilters)
+    setPreset(draftPreset)
+    setDiscoverPrefs(draftPrefs)
+    setShowFilters(false)
+  }
+
+  function setDraftAvailability(status) {
+    setDraftFilters((current) => {
+      let sort = current.sort
       if (status === 'upcoming' && sort === 'popularity') sort = 'anticipated'
       else if (status !== 'upcoming' && sort === 'anticipated') sort = 'popularity'
-      return { ...f, status, sort }
+      return { ...current, status, sort }
     })
+  }
+
+  function toggleDraftScale(scale) {
+    setDraftFilters((current) => ({
+      ...current,
+      scales: current.scales.includes(scale)
+        ? current.scales.filter((key) => key !== scale)
+        : PRODUCTION_SCALE_KEYS.filter((key) => key === scale || current.scales.includes(key)),
+    }))
   }
 
   function handleMoreLikeThis(game) {
@@ -374,15 +443,22 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
     const slug = g.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
     setSelected(null)
     setPreset(null)
-    setFilters({ ...DEFAULT_FILTERS, genre: slug || 'all', sort: 'rating' })
+    setFilters({ ...makeDefaultFilters(), genre: slug || 'all', sort: 'rating' })
   }
 
   const hideFromLibrary = (list) => (hideOwned && list ? list.filter((g) => !isOwned(g.name)) : list || [])
+  const narrowLocalByScale = (list) => {
+    if (filters.scales.length === PRODUCTION_SCALE_KEYS.length) return list || []
+    const selectedScales = new Set(filters.scales)
+    // A locally stored row without fetched IGDB metadata remains visible. Hiding
+    // an unknown game would be a false claim about its production scale.
+    return (list || []).filter((game) => !game.productionScale || selectedScales.has(game.productionScale))
+  }
 
   return (
     <div className="discover-browse">
       <div className="discover-filter-toolbar">
-        <DiscoverFilterButton activeCount={activeFilterCount} onClick={() => setShowFilters(true)} />
+        <DiscoverFilterButton activeCount={activeFilterCount} onClick={openFilters} />
       </div>
       {narrowed ? (
         <div className="results-head">
@@ -408,16 +484,16 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
             let items
             let pending
             if (row.kind === 'wishlist') {
-              items = wishGames
+              items = narrowLocalByScale(wishGames)
               pending = wishLoading
             } else if (row.kind === 'wishlistSoon') {
-              items = wishSoonGames
+              items = narrowLocalByScale(wishSoonGames)
               pending = wishLoading
             } else if (row.kind === 'wishlistOutNow') {
-              items = hideFromLibrary(wishOutNowGames)
+              items = hideFromLibrary(narrowLocalByScale(wishOutNowGames))
               pending = wishLoading
             } else if (row.kind === 'gamepass') {
-              items = hideFromLibrary(gamePass)
+              items = hideFromLibrary(narrowLocalByScale(gamePass))
               pending = gamePass === null
             } else {
               items = rails[key] === undefined ? null : hideFromLibrary(rails[key])
@@ -483,103 +559,169 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
 
       {showFilters ? (
         <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && setShowFilters(false)}>
-          <div ref={filterDialogRef} className="modal-sheet filter-sheet" role="dialog" aria-modal="true" aria-label="Filters">
+          <div ref={filterDialogRef} className="modal-sheet filter-sheet discover-filter-sheet" role="dialog" aria-modal="true" aria-label="Filters">
             <div className="modal-handle" />
             <button type="button" className="modal-close" aria-label="Close filters" onClick={() => setShowFilters(false)}>&times;</button>
-            <div className="detail-title">Filters</div>
-
-            <div className="filter-group">
-              <span className="filter-label">Genre</span>
-              <div className="filter-options">
-                {GENRES.map((o) => (
-                  <button
-                    key={o.key}
-                    type="button"
-                    className={`filter-opt${filters.genre === o.key ? ' active' : ''}`}
-                    onClick={() => setFilters((f) => ({ ...f, genre: o.key }))}
-                  >
-                    {o.label}
-                  </button>
-                ))}
-              </div>
+            <div className="filter-sheet-head">
+              <div className="detail-title">Filters</div>
             </div>
 
-            {/* Same six categories the Library and shuffler offer. They set `preset`,
-                which the API resolves to IGDB keyword/theme ids, so the filtering
-                happens server side rather than over whatever page is loaded.
-                They sit next to Genre because both answer the same question:
-                what kind of game. This replaced the standalone chip row that used
-                to sit under the Discover header. */}
-            <div className="filter-group">
-              <span className="filter-label">Vibe</span>
-              <div className="filter-options">
-                <button
-                  type="button"
-                  className={`filter-opt${VIBES.every((v) => v.key !== preset) ? ' active' : ''}`}
-                  onClick={() => setPreset(null)}
+            <div className="filter-sheet-scroll">
+              <div className="filter-group filter-group-compact">
+                <div className="filter-label-row">
+                  <span className="filter-label">Production scale</span>
+                  <span className="filter-note">Tap to include or hide</span>
+                </div>
+                <div className="filter-options production-scale-options">
+                  {PRODUCTION_SCALES.map((scale) => {
+                    const selected = draftFilters.scales.includes(scale.key)
+                    return (
+                      <button
+                        key={scale.key}
+                        type="button"
+                        className={`filter-opt scale-opt${selected ? ' active' : ''}`}
+                        aria-pressed={selected}
+                        onClick={() => toggleDraftScale(scale.key)}
+                      >
+                        <span>{scale.label}</span>
+                        <span className="scale-state" aria-hidden="true">{selected ? '✓' : '−'}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="filter-group filter-group-compact">
+                <span className="filter-label">Availability</span>
+                <div className="filter-options filter-segments">
+                  {AVAILABILITY.map((option) => (
+                    <button
+                      key={option.key}
+                      type="button"
+                      className={`filter-opt${draftFilters.status === option.key ? ' active' : ''}`}
+                      aria-pressed={draftFilters.status === option.key}
+                      onClick={() => setDraftAvailability(option.key)}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <DiscoverPreferenceFields
+                prefs={draftPrefs || prefs}
+                onChange={setDraftPrefs}
+                deferred
+                compact
+              />
+
+              <div className="filter-disclosures">
+                <FilterDisclosure
+                  label="Genre"
+                  value={(GENRES.find((option) => option.key === draftFilters.genre) || GENRES[0]).label}
+                  open={openFilterSection === 'genre'}
+                  onToggle={() => setOpenFilterSection((section) => (section === 'genre' ? null : 'genre'))}
                 >
-                  Any
-                </button>
-                {VIBES.map((v) => (
-                  <button
-                    key={v.key}
-                    type="button"
-                    className={`filter-opt${preset === v.key ? ' active' : ''}`}
-                    onClick={() => setPreset((cur) => (cur === v.key ? null : v.key))}
-                  >
-                    {v.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+                  <div className="filter-options">
+                    {GENRES.map((option) => (
+                      <button
+                        key={option.key}
+                        type="button"
+                        className={`filter-opt${draftFilters.genre === option.key ? ' active' : ''}`}
+                        aria-pressed={draftFilters.genre === option.key}
+                        onClick={() => {
+                          setDraftFilters((current) => ({ ...current, genre: option.key }))
+                          setOpenFilterSection(null)
+                        }}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </FilterDisclosure>
 
-            <DiscoverPreferenceFields prefs={prefs} />
+                <FilterDisclosure
+                  label="Vibe"
+                  value={(VIBES.find((vibe) => vibe.key === draftPreset) || { label: 'Any vibe' }).label}
+                  open={openFilterSection === 'vibe'}
+                  onToggle={() => setOpenFilterSection((section) => (section === 'vibe' ? null : 'vibe'))}
+                >
+                  <div className="filter-options">
+                    <button
+                      type="button"
+                      className={`filter-opt${draftPreset === null ? ' active' : ''}`}
+                      aria-pressed={draftPreset === null}
+                      onClick={() => {
+                        setDraftPreset(null)
+                        setOpenFilterSection(null)
+                      }}
+                    >
+                      Any vibe
+                    </button>
+                    {VIBES.map((vibe) => (
+                      <button
+                        key={vibe.key}
+                        type="button"
+                        className={`filter-opt${draftPreset === vibe.key ? ' active' : ''}`}
+                        aria-pressed={draftPreset === vibe.key}
+                        onClick={() => {
+                          setDraftPreset(vibe.key)
+                          setOpenFilterSection(null)
+                        }}
+                      >
+                        {vibe.label}
+                      </button>
+                    ))}
+                  </div>
+                </FilterDisclosure>
 
-            <div className="filter-group">
-              <span className="filter-label">Availability</span>
-              <div className="filter-options">
-                {AVAILABILITY.map((o) => (
-                  <button
-                    key={o.key}
-                    type="button"
-                    className={`filter-opt${filters.status === o.key ? ' active' : ''}`}
-                    onClick={() => setAvailability(o.key)}
-                  >
-                    {o.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+                <FilterDisclosure
+                  label="Release year"
+                  value={draftFilters.year === 'all' ? 'Any year' : String(draftFilters.year)}
+                  open={openFilterSection === 'year'}
+                  onToggle={() => setOpenFilterSection((section) => (section === 'year' ? null : 'year'))}
+                >
+                  <div className="filter-options">
+                    {YEARS.map((year) => (
+                      <button
+                        key={year}
+                        type="button"
+                        className={`filter-opt${String(draftFilters.year) === String(year) ? ' active' : ''}`}
+                        aria-pressed={String(draftFilters.year) === String(year)}
+                        onClick={() => {
+                          setDraftFilters((current) => ({ ...current, year }))
+                          setOpenFilterSection(null)
+                        }}
+                      >
+                        {year === 'all' ? 'Any year' : year}
+                      </button>
+                    ))}
+                  </div>
+                </FilterDisclosure>
 
-            <div className="filter-group">
-              <span className="filter-label">Release year</span>
-              <div className="filter-options">
-                {YEARS.map((y) => (
-                  <button
-                    key={y}
-                    type="button"
-                    className={`filter-opt${String(filters.year) === String(y) ? ' active' : ''}`}
-                    onClick={() => setFilters((f) => ({ ...f, year: y }))}
-                  >
-                    {y === 'all' ? 'Any year' : y}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="filter-group">
-              <span className="filter-label">Sort by</span>
-              <div className="filter-options">
-                {SORTS.map((o) => (
-                  <button
-                    key={o.key}
-                    type="button"
-                    className={`filter-opt${filters.sort === o.key ? ' active' : ''}`}
-                    onClick={() => setFilters((f) => ({ ...f, sort: o.key }))}
-                  >
-                    {o.label}
-                  </button>
-                ))}
+                <FilterDisclosure
+                  label="Sort by"
+                  value={(SORTS.find((option) => option.key === draftFilters.sort) || SORTS[0]).label}
+                  open={openFilterSection === 'sort'}
+                  onToggle={() => setOpenFilterSection((section) => (section === 'sort' ? null : 'sort'))}
+                >
+                  <div className="filter-options">
+                    {SORTS.map((option) => (
+                      <button
+                        key={option.key}
+                        type="button"
+                        className={`filter-opt${draftFilters.sort === option.key ? ' active' : ''}`}
+                        aria-pressed={draftFilters.sort === option.key}
+                        onClick={() => {
+                          setDraftFilters((current) => ({ ...current, sort: option.key }))
+                          setOpenFilterSection(null)
+                        }}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </FilterDisclosure>
               </div>
             </div>
 
@@ -587,14 +729,11 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
               <button
                 type="button"
                 className="discover-action"
-                onClick={() => {
-                  setFilters(DEFAULT_FILTERS)
-                  setPreset(null)
-                }}
+                onClick={resetDraftFilters}
               >
                 Reset
               </button>
-              <button type="button" className="discover-action primary" onClick={() => setShowFilters(false)}>
+              <button type="button" className="discover-action primary" onClick={applyDraftFilters}>
                 Show results
               </button>
             </div>
@@ -621,13 +760,13 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
           row={openRail}
           seedItems={
             openRail.kind === 'wishlist'
-              ? wishGames
+              ? narrowLocalByScale(wishGames)
               : openRail.kind === 'wishlistSoon'
-                ? wishSoonGames
+                ? narrowLocalByScale(wishSoonGames)
                 : openRail.kind === 'wishlistOutNow'
-                  ? hideFromLibrary(wishOutNowGames)
+                  ? hideFromLibrary(narrowLocalByScale(wishOutNowGames))
                   : openRail.kind === 'gamepass'
-                    ? hideFromLibrary(gamePass)
+                    ? hideFromLibrary(narrowLocalByScale(gamePass))
                     : undefined
           }
           isOwned={isOwned}

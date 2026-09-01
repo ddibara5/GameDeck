@@ -17,6 +17,7 @@
 
 import { clientIp, isN8nService, requireOwner } from './_auth.js';
 import { rateLimit } from './_rateLimit.js';
+import { classifyProductionScale, filterByProductionScale, selectedProductionScales } from '../src/lib/productionScale.js';
 
 const IGDB = 'https://api.igdb.com/v4';
 const IMG = (id, size) => (id ? `https://images.igdb.com/igdb/image/upload/t_${size}/${id}.jpg` : null);
@@ -404,6 +405,7 @@ function normalize(g) {
     backdropId: backdrop.id,
     backdropKind: backdrop.kind,
     companies,
+    productionScale: classifyProductionScale(g),
     url: g.url || null,
     // Surfaced so the deprecated-`category` replacement can be checked against
     // live data before anything filters on it. gameType is an id from IGDB's
@@ -527,13 +529,21 @@ export default async function handler(req, res) {
         .slice(0, 12);
       const homeExtra = filterClauses(q, nowTs);
       const homeSort = q.sort && SORTS[q.sort] ? SORTS[q.sort] : null;
+      const scaleFilterActive = selectedProductionScales(q.scale) !== null;
       const pairs = await Promise.all(
         keys.map(async (k) => {
-          const body = railBody(k, nowTs, limit, 0, homeExtra, homeSort);
+          // Production scale is a GameDeck classification rather than an IGDB
+          // field, so it is applied after the catalog response. Pull a wider
+          // candidate pool only when that filter is active, then return the same
+          // rail-sized slice as usual. The ordinary home path stays untouched.
+          const candidateLimit = scaleFilterActive ? Math.min(200, Math.max(limit * 5, 80)) : limit;
+          const body = railBody(k, nowTs, candidateLimit, 0, homeExtra, homeSort);
           if (!body) return [k, []];
           try {
             const rows = await igdb('games', body);
-            return [k, applyRerank(k, nowTs, rows, limit, 0, homeSort).map(normalize)];
+            const scaleRows = filterByProductionScale(rows, q.scale);
+            const ordered = applyRerank(k, nowTs, scaleRows, limit, 0, homeSort);
+            return [k, ordered.slice(0, limit).map(normalize)];
           } catch {
             return [k, []];
           }
@@ -657,12 +667,20 @@ export default async function handler(req, res) {
     const wantsRerank = Boolean(rc && rc.rerank && !explicitSort && !search);
 
     // IGDB's `search` can't be combined with `sort`; drop sort when searching.
+    const scaleFilterActive = selectedProductionScales(q.scale) !== null;
+    const candidateLimit = scaleFilterActive
+      ? 500
+      : wantsRerank
+        ? RERANK_POOL
+        : limit;
+    const candidateOffset = scaleFilterActive || wantsRerank ? 0 : offset;
+
     const parts = [GAME_FIELDS + ';'];
     if (search) parts.push(search);
     if (where.length) parts.push(`where ${where.join(' & ')};`);
     if (!search) parts.push(sort + ';');
-    parts.push(`limit ${wantsRerank ? RERANK_POOL : limit};`);
-    parts.push(`offset ${wantsRerank ? 0 : offset};`);
+    parts.push(`limit ${candidateLimit};`);
+    parts.push(`offset ${candidateOffset};`);
     const body = parts.join(' ');
 
     if (q.debug) {
@@ -670,8 +688,9 @@ export default async function handler(req, res) {
       return;
     }
 
-    const rows = await igdb('games', body);
-    const windowed = wantsRerank ? rankByWeighted(rows, limit, offset) : rows;
+    const rows = filterByProductionScale(await igdb('games', body), q.scale);
+    const ordered = wantsRerank ? rankByWeighted(rows, scaleFilterActive ? offset + limit : limit, scaleFilterActive ? 0 : offset) : rows;
+    const windowed = scaleFilterActive ? ordered.slice(offset, offset + limit) : ordered;
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=1800');
     res.status(200).json({ games: windowed.map(normalize) });
   } catch (err) {

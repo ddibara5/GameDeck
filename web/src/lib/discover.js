@@ -56,7 +56,7 @@ const _homeCache = new Map()
 
 // Only the filters the server actually understands, in a fixed order, so the
 // same selection always produces the same cache key.
-const HOME_FILTER_KEYS = ['preset', 'genre', 'platform', 'year', 'status', 'sort']
+const HOME_FILTER_KEYS = ['preset', 'genre', 'platform', 'scale', 'year', 'status', 'sort']
 
 function homeFilterParams(filters) {
   const out = {}

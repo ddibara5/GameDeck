@@ -180,6 +180,24 @@ and requires each pick's “Why it fits” line to cite actual evidence without
 turning neutral play history into a positive reaction. Optional evidence reads
 degrade independently; only the library read is required for an answer.
 
+### Browse filter sheet
+
+Discover Browse keeps Production scale, Availability, Platforms, and the
+hide-owned preference directly accessible. Genre, Vibe, Release year, and Sort
+are compact summary rows that expand one at a time, so the default sheet no
+longer presents every taxonomy choice at once. Changes are staged until Show
+results; closing the sheet discards the draft and avoids refetching rails after
+every tap.
+
+Production scale is an inclusive three-way control: AAA, AA, and Indie are all
+shown by default, and tapping a tier hides or restores it. IGDB has no official
+budget tier, so `web/src/lib/productionScale.js` owns one deterministic shared
+classification: known major publisher/platform-holder context wins as AAA,
+otherwise IGDB's Indie genre is Indie, and the remaining mid-market catalog is
+AA. The API overfetches only while this post-query classification filter is
+active, then returns the normal rail/page size. Keep the server and cached local
+metadata on this shared helper rather than introducing a second taxonomy.
+
 ### Recommendation outcome learning
 
 For You now records one structured exposure per game and browser session plus a
