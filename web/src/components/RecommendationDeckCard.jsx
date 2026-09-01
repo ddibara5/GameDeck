@@ -26,6 +26,7 @@ export default function RecommendationDeckCard({
   surprise = false,
   busy = false,
   onOpen,
+  onBack,
   onNext,
   onNotInterested,
 }) {
@@ -81,13 +82,12 @@ export default function RecommendationDeckCard({
         >
           <NotInterestedIcon />
         </button>
-        <button type="button" className="fy-deck-action" onClick={onOpen} disabled={busy}>Details</button>
+        <button type="button" className="fy-deck-action" onClick={onBack} disabled={busy || !onBack}>Back</button>
         <button type="button" className="fy-deck-action primary" onClick={onNext} disabled={busy}>
-          {surprise ? 'Back to deck' : 'Next'}
+          {surprise ? 'Another' : 'Next'}
           <span aria-hidden="true">→</span>
         </button>
       </div>
     </div>
   )
 }
-

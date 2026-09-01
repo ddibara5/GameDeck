@@ -360,7 +360,7 @@ export default function DiscoverForYou({ onAsk, onBrowse }) {
 
   function animateCard(update, direction = 'next') {
     if (cardMotion) return
-    setCardMotion(direction === 'dismiss' ? 'leaving-right' : 'leaving-left')
+    setCardMotion(direction === 'dismiss' || direction === 'back' ? 'leaving-right' : 'leaving-left')
     motionTimerRef.current = setTimeout(() => {
       update()
       setCardMotion('entering')
@@ -385,6 +385,14 @@ export default function DiscoverForYou({ onAsk, onBrowse }) {
       if (surpriseGame) setSurpriseGame(null)
       else setDeckAt((current) => Math.min(deck.length, current + 1))
     })
+  }
+
+  function previousCard() {
+    if (cardMotion) return
+    animateCard(() => {
+      if (surpriseGame) setSurpriseGame(null)
+      else setDeckAt((current) => Math.max(0, current - 1))
+    }, 'back')
   }
 
   function showSurprise() {
@@ -552,16 +560,19 @@ export default function DiscoverForYou({ onAsk, onBrowse }) {
               surprise={Boolean(surpriseGame)}
               busy={Boolean(cardMotion) || dismissing}
               onOpen={() => openGame(visibleGame)}
-              onNext={advanceCard}
+              onBack={surpriseGame || deckAt > 0 ? previousCard : null}
+              onNext={surpriseGame ? showSurprise : advanceCard}
               onNotInterested={() => hideGame(visibleGame)}
             />
 
-            <button type="button" className="fy-surprise-action" onClick={showSurprise} disabled={!surpriseCandidates.length || Boolean(cardMotion)}>
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5" />
-              </svg>
-              {surpriseGame ? 'Another surprise' : 'Surprise me'}
-            </button>
+            {!surpriseGame ? (
+              <button type="button" className="fy-surprise-action" onClick={showSurprise} disabled={!surpriseCandidates.length || Boolean(cardMotion)}>
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5" />
+                </svg>
+                Surprise me
+              </button>
+            ) : null}
           </>
         ) : (
           <RecommendationDeckComplete

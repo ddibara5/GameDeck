@@ -25,6 +25,7 @@ test('For You records impressions and opens without blocking navigation', async 
 
 test('the rolling deck records only visible cards and creates stable continuation batches', async () => {
   const component = await readFile(new URL('../src/components/DiscoverForYou.jsx', import.meta.url), 'utf8')
+  const card = await readFile(new URL('../src/components/RecommendationDeckCard.jsx', import.meta.url), 'utf8')
   const learning = await readFile(new URL('../src/lib/recommendationLearning.js', import.meta.url), 'utf8')
   const discover = await readFile(new URL('../src/lib/discover.js', import.meta.url), 'utf8')
 
@@ -34,6 +35,10 @@ test('the rolling deck records only visible cards and creates stable continuatio
   assert.match(component, /force: true/)
   assert.match(component, /batchId: surpriseGame/)
   assert.match(component, /positionOffset:/)
+  assert.match(component, /function previousCard\(\)/)
+  assert.match(component, /direction === 'back'/)
+  assert.match(card, />Back<\/button>/)
+  assert.doesNotMatch(card, />Details<\/button>/)
   assert.match(learning, /batchId = 'initial'/)
   assert.match(learning, /positionOffset = 0/)
   assert.match(discover, /if \(force\)/)
