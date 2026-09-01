@@ -602,6 +602,122 @@ button.shelf-head:active {
   margin-bottom: 6px;
 }
 
+.filter-default-block {
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--surface-2) 78%, transparent);
+}
+
+.filter-default-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 48px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.filter-default-row input {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.filter-default-row input:focus-visible,
+.filter-default-meta button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.filter-default-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.filter-default-title {
+  color: var(--text);
+  font-size: var(--t-foot);
+  font-weight: var(--w-bold);
+}
+
+.filter-default-note,
+.filter-default-meta,
+.filter-default-status {
+  color: var(--muted);
+  font-size: var(--t-cap2);
+  line-height: 1.4;
+}
+
+.filter-default-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 14px;
+  flex-wrap: wrap;
+  padding-left: 31px;
+}
+
+.filter-default-meta > span {
+  flex: 1 1 180px;
+}
+
+.filter-default-meta button {
+  min-height: 44px;
+  margin: -6px -8px -6px 0;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: var(--w-semi);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+@media (hover: hover) {
+  .filter-default-row:hover .filter-default-title,
+  .filter-default-meta button:hover {
+    color: var(--accent);
+  }
+}
+
+.filter-default-status {
+  display: block;
+  min-height: 1.4em;
+  padding-left: 31px;
+  color: var(--accent);
+}
+
+.discover-default-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--tabbar-height) + var(--safe-bottom) + 12px);
+  z-index: 260;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  padding: 12px 16px;
+  transform: translateX(-50%);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  box-shadow: var(--e2);
+  color: var(--text);
+  font-size: var(--t-foot);
+  font-weight: var(--w-semi);
+  text-align: center;
+  animation: fy-toast-in var(--d-base) var(--enter-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .discover-default-toast { animation: none; }
+}
+
 /* ---------- For you: the taste feed ----------
    One column, one game per row, a reason on every row. The layout answers the
    complaint the rails could not: a rail shows three cards and hides its own

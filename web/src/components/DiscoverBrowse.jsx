@@ -13,8 +13,14 @@ import {
   DEFAULT_DISCOVER_PREFS,
   useDiscoverPrefs,
   platformParam,
+  resetDiscoverPrefs,
   setDiscoverPrefs,
 } from '../lib/discoverPrefs.js'
+import {
+  resetDiscoverFilterDefaults,
+  setDiscoverFilterDefaults,
+  useDiscoverFilterDefaults,
+} from '../lib/discoverFilterDefaults.js'
 import {
   PRODUCTION_SCALE_KEYS,
   classifyProductionScale,
@@ -26,6 +32,7 @@ import DiscoverFilterButton from './DiscoverFilterButton.jsx'
 import DiscoverPreferenceFields from './DiscoverPreferenceFields.jsx'
 import DiscoverFilterDisclosure from './DiscoverFilterDisclosure.jsx'
 import DiscoverProductionScaleField from './DiscoverProductionScaleField.jsx'
+import DiscoverDefaultControl from './DiscoverDefaultControl.jsx'
 
 const CURRENT_YEAR = new Date().getFullYear()
 
@@ -100,6 +107,14 @@ const makeDefaultFilters = () => ({
 })
 const DEFAULT_FILTERS = makeDefaultFilters()
 
+const filtersFromDefaults = (defaults) => ({
+  genre: defaults.browse.genre,
+  year: defaults.browse.year,
+  status: defaults.browse.status,
+  sort: defaults.browse.sort,
+  scales: [...defaults.scales],
+})
+
 // In-place placeholder for a rail whose batched data hasn't landed yet. Reserves
 // the shelf's height (heading + a row of poster-shaped shimmers) so the home
 // doesn't jump as rails fill in.
@@ -126,12 +141,18 @@ function ShelfSkeleton({ label }) {
 }
 
 export default function DiscoverBrowse({ onAsk, onCustomize }) {
-  const [preset, setPreset] = useState(null)
-  const [filters, setFilters] = useState(makeDefaultFilters)
+  const savedFilterDefaults = useDiscoverFilterDefaults()
+  const savedPrefs = useDiscoverPrefs()
+  const [preset, setPreset] = useState(() => savedFilterDefaults.browse.preset)
+  const [filters, setFilters] = useState(() => filtersFromDefaults(savedFilterDefaults))
+  const [prefs, setPrefs] = useState(() => ({ ...savedPrefs, platforms: [...savedPrefs.platforms] }))
   const [showFilters, setShowFilters] = useState(false)
   const [draftFilters, setDraftFilters] = useState(makeDefaultFilters)
   const [draftPreset, setDraftPreset] = useState(null)
   const [draftPrefs, setDraftPrefs] = useState(null)
+  const [saveAsDefault, setSaveAsDefault] = useState(false)
+  const [defaultsRestored, setDefaultsRestored] = useState(false)
+  const [defaultNotice, setDefaultNotice] = useState(0)
   const [openFilterSection, setOpenFilterSection] = useState(null)
   const filterDialogRef = useDialogA11y({ active: showFilters, onClose: () => setShowFilters(false) })
 
@@ -142,13 +163,18 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
   const [libTitles, setLibTitles] = useState(null)
   const [gamePass, setGamePass] = useState(null)
 
-  const prefs = useDiscoverPrefs()
   const rowsConfig = useRowsConfig()
   const gamePassEnabled = rowsConfig.order.some((key) => rowsConfig.enabled[key] && ROW_BY_KEY[key]?.kind === 'gamepass')
   const activePlatforms = prefs.platforms
   const hideOwned = prefs.hideOwned
 
   const lastFilterSig = useRef(null)
+
+  useEffect(() => {
+    if (!defaultNotice) return undefined
+    const timeout = setTimeout(() => setDefaultNotice(0), 2600)
+    return () => clearTimeout(timeout)
+  }, [defaultNotice])
 
   const filtersActive =
     filters.genre !== 'all' ||
@@ -388,22 +414,52 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
     setDraftFilters({ ...filters, scales: [...filters.scales] })
     setDraftPreset(preset)
     setDraftPrefs({ ...prefs, platforms: [...prefs.platforms] })
+    setSaveAsDefault(false)
+    setDefaultsRestored(false)
     setOpenFilterSection(null)
     setShowFilters(true)
   }
 
   function resetDraftFilters() {
-    setDraftFilters(makeDefaultFilters())
-    setDraftPreset(null)
-    setDraftPrefs({ ...DEFAULT_DISCOVER_PREFS, platforms: [...DEFAULT_DISCOVER_PREFS.platforms] })
+    setDraftFilters(filtersFromDefaults(savedFilterDefaults))
+    setDraftPreset(savedFilterDefaults.browse.preset)
+    setDraftPrefs({ ...savedPrefs, platforms: [...savedPrefs.platforms] })
+    setSaveAsDefault(false)
+    setDefaultsRestored(false)
     setOpenFilterSection(null)
   }
 
   function applyDraftFilters() {
     setFilters(draftFilters)
     setPreset(draftPreset)
-    setDiscoverPrefs(draftPrefs)
+    setPrefs(draftPrefs)
+    if (saveAsDefault) {
+      setDiscoverFilterDefaults({
+        ...savedFilterDefaults,
+        scales: [...draftFilters.scales],
+        browse: {
+          preset: draftPreset,
+          genre: draftFilters.genre,
+          year: draftFilters.year,
+          status: draftFilters.status,
+          sort: draftFilters.sort,
+        },
+      })
+      setDiscoverPrefs(draftPrefs)
+      setDefaultNotice(Date.now())
+    }
     setShowFilters(false)
+  }
+
+  function restoreGameDeckDefaults() {
+    const restoredFilters = resetDiscoverFilterDefaults()
+    resetDiscoverPrefs()
+    setDraftFilters(filtersFromDefaults(restoredFilters))
+    setDraftPreset(restoredFilters.browse.preset)
+    setDraftPrefs({ ...DEFAULT_DISCOVER_PREFS, platforms: [...DEFAULT_DISCOVER_PREFS.platforms] })
+    setSaveAsDefault(false)
+    setDefaultsRestored(true)
+    setOpenFilterSection(null)
   }
 
   function setDraftAvailability(status) {
@@ -689,6 +745,13 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
                   </div>
                 </DiscoverFilterDisclosure>
               </div>
+
+              <DiscoverDefaultControl
+                checked={saveAsDefault}
+                onChange={setSaveAsDefault}
+                onRestore={restoreGameDeckDefaults}
+                restored={defaultsRestored}
+              />
             </div>
 
             <div className="filter-sheet-actions">
@@ -704,6 +767,12 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
               </button>
             </div>
           </div>
+        </div>
+      ) : null}
+
+      {defaultNotice ? (
+        <div className="discover-default-toast" role="status" aria-live="polite">
+          Discover default saved.
         </div>
       ) : null}
 

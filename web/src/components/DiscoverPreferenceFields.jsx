@@ -11,7 +11,7 @@ export default function DiscoverPreferenceFields({ prefs, onChange, deferred = f
       <div className={`filter-group${compact ? ' filter-group-compact' : ''}`}>
         <div className="filter-label-row">
           <span className="filter-label">Platforms</span>
-          <span className="filter-note">Remembered</span>
+          <span className="filter-note">Shared</span>
         </div>
         <div className={`filter-options${compact ? ' compact' : ''}`}>
           <button

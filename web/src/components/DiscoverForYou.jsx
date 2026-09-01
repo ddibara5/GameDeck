@@ -12,8 +12,14 @@ import {
   DEFAULT_DISCOVER_PREFS,
   useDiscoverPrefs,
   platformParam,
+  resetDiscoverPrefs,
   setDiscoverPrefs,
 } from '../lib/discoverPrefs.js'
+import {
+  resetDiscoverFilterDefaults,
+  setDiscoverFilterDefaults,
+  useDiscoverFilterDefaults,
+} from '../lib/discoverFilterDefaults.js'
 import {
   useTasteProfile,
   NEW_LANE,
@@ -41,6 +47,7 @@ import {
 } from '../lib/productionScale.js'
 import DiscoverFilterDisclosure from './DiscoverFilterDisclosure.jsx'
 import DiscoverProductionScaleField from './DiscoverProductionScaleField.jsx'
+import DiscoverDefaultControl from './DiscoverDefaultControl.jsx'
 import {
   CONTINUATION_DECK_SIZE,
   DAILY_DECK_SIZE,
@@ -96,9 +103,11 @@ function refreshedLaneMap(result, keys) {
 }
 
 export default function DiscoverForYou({ onAsk, onBrowse }) {
-  const prefs = useDiscoverPrefs()
+  const savedFilterDefaults = useDiscoverFilterDefaults()
+  const savedPrefs = useDiscoverPrefs()
+  const [prefs, setPrefs] = useState(() => ({ ...savedPrefs, platforms: [...savedPrefs.platforms] }))
   const platform = platformParam(prefs.platforms)
-  const [scales, setScales] = useState(() => [...PRODUCTION_SCALE_KEYS])
+  const [scales, setScales] = useState(() => [...savedFilterDefaults.scales])
   const scale = productionScaleParam(scales)
   const tasteProfile = useTasteProfile()
   const tasteLanes = tasteProfile?.lanes || null
@@ -109,11 +118,14 @@ export default function DiscoverForYou({ onAsk, onBrowse }) {
   const [failedKeys, setFailedKeys] = useState([])
   const [libTitles, setLibTitles] = useState(null)
   const [selected, setSelected] = useState(null)
-  const [only, setOnly] = useState(null)
+  const [only, setOnly] = useState(() => savedFilterDefaults.forYou.only)
   const [showFilters, setShowFilters] = useState(false)
   const [draftOnly, setDraftOnly] = useState(null)
   const [draftScales, setDraftScales] = useState(() => [...PRODUCTION_SCALE_KEYS])
   const [draftPrefs, setDraftPrefs] = useState(null)
+  const [saveAsDefault, setSaveAsDefault] = useState(false)
+  const [defaultsRestored, setDefaultsRestored] = useState(false)
+  const [defaultNotice, setDefaultNotice] = useState(0)
   const [openFilterSection, setOpenFilterSection] = useState(null)
   const [loadingMore, setLoadingMore] = useState(false)
   const [continuationError, setContinuationError] = useState(false)
@@ -144,6 +156,12 @@ export default function DiscoverForYou({ onAsk, onBrowse }) {
   }, [])
 
   useEffect(() => () => motionTimerRef.current && clearTimeout(motionTimerRef.current), [])
+
+  useEffect(() => {
+    if (!defaultNotice) return undefined
+    const timeout = setTimeout(() => setDefaultNotice(0), 2600)
+    return () => clearTimeout(timeout)
+  }, [defaultNotice])
 
   useEffect(() => {
     if (!dismissedGame) return undefined
@@ -496,22 +514,46 @@ export default function DiscoverForYou({ onAsk, onBrowse }) {
     setDraftOnly(only)
     setDraftScales([...scales])
     setDraftPrefs({ ...prefs, platforms: [...prefs.platforms] })
+    setSaveAsDefault(false)
+    setDefaultsRestored(false)
     setOpenFilterSection(null)
     setShowFilters(true)
   }
 
   function resetDraftFilters() {
-    setDraftOnly(null)
-    setDraftScales([...PRODUCTION_SCALE_KEYS])
-    setDraftPrefs({ ...DEFAULT_DISCOVER_PREFS, platforms: [...DEFAULT_DISCOVER_PREFS.platforms] })
+    setDraftOnly(savedFilterDefaults.forYou.only)
+    setDraftScales([...savedFilterDefaults.scales])
+    setDraftPrefs({ ...savedPrefs, platforms: [...savedPrefs.platforms] })
+    setSaveAsDefault(false)
+    setDefaultsRestored(false)
     setOpenFilterSection(null)
   }
 
   function applyDraftFilters() {
     setOnly(draftOnly)
     setScales(draftScales)
-    setDiscoverPrefs(draftPrefs || prefs)
+    setPrefs(draftPrefs || prefs)
+    if (saveAsDefault) {
+      setDiscoverFilterDefaults({
+        ...savedFilterDefaults,
+        scales: [...draftScales],
+        forYou: { only: draftOnly },
+      })
+      setDiscoverPrefs(draftPrefs || prefs)
+      setDefaultNotice(Date.now())
+    }
     setShowFilters(false)
+  }
+
+  function restoreGameDeckDefaults() {
+    const restoredFilters = resetDiscoverFilterDefaults()
+    resetDiscoverPrefs()
+    setDraftOnly(restoredFilters.forYou.only)
+    setDraftScales([...restoredFilters.scales])
+    setDraftPrefs({ ...DEFAULT_DISCOVER_PREFS, platforms: [...DEFAULT_DISCOVER_PREFS.platforms] })
+    setSaveAsDefault(false)
+    setDefaultsRestored(true)
+    setOpenFilterSection(null)
   }
 
   function toggleDraftScale(key) {
@@ -659,6 +701,13 @@ export default function DiscoverForYou({ onAsk, onBrowse }) {
                   </div>
                 </DiscoverFilterDisclosure>
               </div>
+
+              <DiscoverDefaultControl
+                checked={saveAsDefault}
+                onChange={setSaveAsDefault}
+                onRestore={restoreGameDeckDefaults}
+                restored={defaultsRestored}
+              />
             </div>
 
             <div className="filter-sheet-actions">
@@ -674,6 +723,12 @@ export default function DiscoverForYou({ onAsk, onBrowse }) {
               </button>
             </div>
           </div>
+        </div>
+      ) : null}
+
+      {defaultNotice ? (
+        <div className="discover-default-toast" role="status" aria-live="polite">
+          Discover default saved.
         </div>
       ) : null}
 

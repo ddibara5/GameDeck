@@ -1,6 +1,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
+import {
+  DEFAULT_DISCOVER_FILTER_DEFAULTS,
+  normalizeDiscoverFilterDefaults,
+} from '../src/lib/discoverFilterDefaults.js'
 
 test('Discover keeps quick filters visible and long lists behind summaries', async () => {
   const [source, scaleField] = await Promise.all([
@@ -48,4 +52,53 @@ test('Discover no longer presents Indie as both a genre and a scale', async () =
   const genreBlock = source.slice(source.indexOf('const GENRES'), source.indexOf('const SORTS'))
 
   assert.doesNotMatch(genreBlock, /label: 'Indie'/)
+})
+
+test('Discover filter defaults preserve shared scale and surface-specific choices', () => {
+  const normalized = normalizeDiscoverFilterDefaults({
+    scales: ['aaa', 'unknown', 'aaa'],
+    browse: {
+      preset: 'short-and-sweet',
+      genre: 'role-playing-rpg',
+      year: 2026,
+      status: 'upcoming',
+      sort: 'anticipated',
+    },
+    forYou: { only: 'deep-rpgs' },
+  })
+
+  assert.deepEqual(normalized, {
+    scales: ['aaa'],
+    browse: {
+      preset: 'short-and-sweet',
+      genre: 'role-playing-rpg',
+      year: 2026,
+      status: 'upcoming',
+      sort: 'anticipated',
+    },
+    forYou: { only: 'deep-rpgs' },
+  })
+  assert.deepEqual(normalizeDiscoverFilterDefaults(null), DEFAULT_DISCOVER_FILTER_DEFAULTS)
+})
+
+test('Browse and For You expose explicit saved-default controls', async () => {
+  const [browse, forYou, control, prefs] = await Promise.all([
+    readFile(new URL('../src/components/DiscoverBrowse.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/DiscoverForYou.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/DiscoverDefaultControl.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/DiscoverPreferenceFields.jsx', import.meta.url), 'utf8'),
+  ])
+
+  for (const source of [browse, forYou]) {
+    assert.match(source, /useDiscoverFilterDefaults/)
+    assert.match(source, /saveAsDefault/)
+    assert.match(source, /DiscoverDefaultControl/)
+    assert.match(source, /resetDiscoverFilterDefaults/)
+    assert.match(source, /Discover default saved\./)
+  }
+  assert.match(control, /type="checkbox"/)
+  assert.match(control, /Save as My Default/)
+  assert.match(control, /Restore GameDeck Defaults/)
+  assert.match(control, /aria-live="polite"/)
+  assert.match(prefs, />Shared</)
 })
