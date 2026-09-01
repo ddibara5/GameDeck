@@ -746,13 +746,14 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
                 </DiscoverFilterDisclosure>
               </div>
 
-              <DiscoverDefaultControl
-                checked={saveAsDefault}
-                onChange={setSaveAsDefault}
-                onRestore={restoreGameDeckDefaults}
-                restored={defaultsRestored}
-              />
             </div>
+
+            <DiscoverDefaultControl
+              checked={saveAsDefault}
+              onChange={setSaveAsDefault}
+              onRestore={restoreGameDeckDefaults}
+              restored={defaultsRestored}
+            />
 
             <div className="filter-sheet-actions">
               <button

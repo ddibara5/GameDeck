@@ -95,6 +95,10 @@ test('Browse and For You expose explicit saved-default controls', async () => {
     assert.match(source, /DiscoverDefaultControl/)
     assert.match(source, /resetDiscoverFilterDefaults/)
     assert.match(source, /Discover default saved\./)
+    assert.match(
+      source,
+      /className="filter-sheet-scroll"[\s\S]*?<DiscoverDefaultControl[\s\S]*?<div className="filter-sheet-actions"/,
+    )
   }
   assert.match(control, /type="checkbox"/)
   assert.match(control, /Save as My Default/)

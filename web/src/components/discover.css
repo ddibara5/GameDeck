@@ -603,18 +603,20 @@ button.shelf-head:active {
 }
 
 .filter-default-block {
-  margin-top: 16px;
-  padding: 12px;
-  border: 1px solid var(--line-soft);
-  border-radius: var(--r-sm);
-  background: color-mix(in srgb, var(--surface-2) 78%, transparent);
+  flex: 0 0 auto;
+  position: relative;
+  margin: 0 -20px;
+  padding: 8px 20px;
+  border-top: 1px solid var(--line-soft);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
 }
 
 .filter-default-row {
   display: flex;
   align-items: center;
   gap: 11px;
-  min-height: 48px;
+  min-height: 44px;
+  padding-right: 132px;
   cursor: pointer;
   touch-action: manipulation;
 }
@@ -655,21 +657,13 @@ button.shelf-head:active {
 }
 
 .filter-default-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 14px;
-  flex-wrap: wrap;
-  padding-left: 31px;
-}
-
-.filter-default-meta > span {
-  flex: 1 1 180px;
+  position: absolute;
+  top: 8px;
+  right: 12px;
 }
 
 .filter-default-meta button {
   min-height: 44px;
-  margin: -6px -8px -6px 0;
   padding: 0 8px;
   border: 0;
   background: none;
@@ -689,9 +683,19 @@ button.shelf-head:active {
 
 .filter-default-status {
   display: block;
-  min-height: 1.4em;
   padding-left: 31px;
   color: var(--accent);
+}
+
+@media (max-width: 370px) {
+  .filter-default-row {
+    padding-right: 94px;
+  }
+
+  .filter-default-meta button {
+    width: 94px;
+    line-height: 1.2;
+  }
 }
 
 .discover-default-toast {
