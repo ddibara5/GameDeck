@@ -225,7 +225,13 @@ export function buildTasteEvidenceProfile({
 
   const sources = new Map()
   const excluded = new Set()
-  for (const game of (games || []).slice(0, 100)) {
+  const tasteGames = [...(games || [])]
+    .sort((left, right) =>
+      (positiveId(left?.master_id) || Number.MAX_SAFE_INTEGER) -
+      (positiveId(right?.master_id) || Number.MAX_SAFE_INTEGER),
+    )
+    .slice(0, 100)
+  for (const game of tasteGames) {
     const id = positiveId(game?.master_id)
     const title = cleanText(game?.title)
     if (!id || !title) continue

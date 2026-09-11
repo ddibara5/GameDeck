@@ -104,3 +104,29 @@ test('partial comparison history qualifies every duel-derived total', () => {
   assert.match(context, /Ranking evidence: at least 1 decided comparison, at least 0 skips, at least 1 unique matchup/)
   assert.match(context, /available history: 1-0 raw duel record/)
 })
+
+test('taste sources use Expo master-id order before applying the 100-game model bound', () => {
+  const filler = Array.from({ length: 99 }, (_, index) => ({
+    master_id: index + 2,
+    title: `Filler ${index + 2}`,
+    keywords: [],
+    playtime_minutes: 0,
+    last_played: null,
+  }))
+  const profile = buildTasteEvidenceProfile({
+    games: [
+      { master_id: 101, title: 'High ID Story', keywords: ['story rich'], playtime_minutes: 5000, last_played: '2026-09-11' },
+      ...filler.reverse(),
+      { master_id: 1, title: 'Low ID Horror', keywords: ['horror'], playtime_minutes: 60, last_played: '2026-09-10' },
+    ],
+    ranks: [
+      { master_id: 101, reaction: 'loved', score: 1700, comparison_count: 8 },
+      { master_id: 1, reaction: 'liked', score: 1550, comparison_count: 2 },
+    ],
+    coverage: completeCoverage,
+    now: NOW,
+  })
+
+  assert.ok(profile.lanes.some((lane) => lane.key === 'horror'))
+  assert.ok(!profile.lanes.some((lane) => lane.key === 'story'))
+})

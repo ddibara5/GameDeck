@@ -169,7 +169,7 @@ export async function loadGameEvidence(req) {
     coverage: {
       games: gameRead.complete,
       ranks: rankRead.complete,
-      activity: activityRead.complete,
+      activity: activityRead.complete && activityRead.rows.length <= 500,
       comparisons: comparisonRead.complete,
     },
   })

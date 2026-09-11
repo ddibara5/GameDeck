@@ -104,3 +104,36 @@ test('comparison history is paginated, bounded, and qualified when more rows exi
     else process.env.SUPABASE_ANON_KEY = originalKey
   }
 })
+
+test('taste coverage is partial when more than 500 recent activity rows are intentionally trimmed', async () => {
+  const originalFetch = global.fetch
+  const originalUrl = process.env.SUPABASE_URL
+  const originalKey = process.env.SUPABASE_ANON_KEY
+  process.env.SUPABASE_URL = 'https://example.supabase.co'
+  process.env.SUPABASE_ANON_KEY = 'public-test-key'
+  global.fetch = async (url) => {
+    const path = new URL(String(url)).pathname
+    if (path.endsWith('/games')) return Response.json([{ master_id: 1, title: 'Owned', environment: 'xbox' }])
+    if (path.endsWith('/v_recent_activity')) {
+      return Response.json(Array.from({ length: 501 }, (_, index) => ({
+        master_id: 1,
+        title: 'Owned',
+        environment: `device-${index}`,
+        event_date: '2026-09-10',
+        minutes_delta: 1,
+      })))
+    }
+    return Response.json([])
+  }
+
+  try {
+    const context = await loadGameEvidence({ headers: { authorization: 'Bearer owner' } })
+    assert.match(context, /PERSONAL TASTE - derived from ratings, play history, and ranking duels \| coverage partial/)
+  } finally {
+    global.fetch = originalFetch
+    if (originalUrl == null) delete process.env.SUPABASE_URL
+    else process.env.SUPABASE_URL = originalUrl
+    if (originalKey == null) delete process.env.SUPABASE_ANON_KEY
+    else process.env.SUPABASE_ANON_KEY = originalKey
+  }
+})
