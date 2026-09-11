@@ -1,4 +1,5 @@
 import { buildTasteProfile, derivedEvidenceStatus } from '../src/lib/gameIntelligence.js'
+import { buildTasteEvidenceProfile, formatTasteEvidence } from '../src/lib/tasteEvidence.js'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -12,10 +13,25 @@ function restUrl(base, table, params) {
   return url.toString()
 }
 
-async function rowsOrEmpty(response) {
-  if (!response.ok) return []
-  const rows = await response.json()
-  return Array.isArray(rows) ? rows : []
+async function loadBoundedRows(base, table, params, headers, { maxRows, pageSize = 1000 }) {
+  const rows = []
+  for (let from = 0; from <= maxRows; from += pageSize) {
+    const response = await fetch(restUrl(base, table, params), {
+      headers: { ...headers, Range: `${from}-${from + pageSize - 1}` },
+    })
+    if (response.status === 416 && rows.length === maxRows) {
+      return { rows, complete: true, status: response.status }
+    }
+    if (!response.ok) return { rows: [], complete: false, status: response.status }
+    const page = await response.json()
+    if (!Array.isArray(page)) return { rows: [], complete: false, status: response.status }
+    rows.push(...page)
+    if (rows.length > maxRows) {
+      return { rows: rows.slice(0, maxRows), complete: false, status: response.status }
+    }
+    if (page.length < pageSize) return { rows, complete: true, status: response.status }
+  }
+  return { rows: rows.slice(0, maxRows), complete: false, status: 200 }
 }
 
 function hours(minutes) {
@@ -28,8 +44,19 @@ function releaseDate(value) {
   return new Date(seconds * 1000).toISOString().slice(0, 10)
 }
 
-export function buildGameEvidenceContext({ games, ranks, statuses, activity, wishlist, gamepass, now = Date.now() }) {
+export function buildGameEvidenceContext({
+  games,
+  ranks,
+  statuses,
+  activity,
+  wishlist,
+  gamepass,
+  comparisons = [],
+  coverage = {},
+  now = Date.now(),
+}) {
   const profile = buildTasteProfile({ games, ranks, activity, wishlist })
+  const tasteProfile = buildTasteEvidenceProfile({ games, ranks, activity, comparisons, coverage, now })
   const statusByGame = new Map((statuses || []).map((row) => [String(row.master_id), row.status]))
   const gameById = new Map((games || []).map((game) => [String(game.master_id), game]))
   const rankByGame = new Map((ranks || []).map((rank) => [String(rank.master_id), rank]))
@@ -79,6 +106,7 @@ export function buildGameEvidenceContext({ games, ranks, statuses, activity, wis
   const evidence = profile.evidence
   const sections = [
     `EVIDENCE SUMMARY\nRecent window: 90 days | ${evidence.recentGameCount} library games | ${hours(evidence.recentMinutes)}h | ${evidence.activeDayCount} active days | ${evidence.rankedGameCount} ranked games | ${evidence.wishlistCount} wishlist saves${unmatchedRecent ? ` | ${unmatchedRecent} unmatched activity ids` : ''}`,
+    formatTasteEvidence(tasteProfile),
     `LIBRARY - authoritative ownership list\n${games?.length || 0} owned games | ${backlogCount} currently classified backlog\nFormat: Title | Platform | Status | Completion | Lifetime hours | Last played | Optional rank\n${libraryLines.join('\n') || '(empty)'}`,
     `RECENT ACTIVITY - strongest behavioral taste signal\n${recentLines.join('\n') || '(no activity in the last 90 days)'}`,
     `WISHLIST - explicit interest, not ownership\n${wishlistLines.join('\n') || '(empty)'}`,
@@ -95,25 +123,54 @@ export async function loadGameEvidence(req) {
   const headers = { apikey: key, Authorization: req.headers.authorization }
   const since = new Date(Date.now() - 90 * DAY_MS).toISOString().slice(0, 10)
   const requests = [
-    fetch(restUrl(base, 'games', {
-      select: 'master_id,title,environment,percent,playtime_minutes,earned_awards,total_awards,last_played,length_minutes',
+    loadBoundedRows(base, 'games', {
+      select: 'master_id,igdb_id,title,environment,percent,playtime_minutes,earned_awards,total_awards,last_played,length_minutes,keywords,genre',
       order: 'last_played.desc.nullslast',
-      limit: '5000',
-    }), { headers }),
-    fetch(restUrl(base, 'game_ranks', { select: 'master_id,score,reaction,comparison_count' }), { headers }),
-    fetch(restUrl(base, 'game_status', { select: 'master_id,status' }), { headers }),
-    fetch(restUrl(base, 'v_recent_activity', {
-      select: 'master_id,title,event_date,minutes_delta,achievements_delta',
+    }, headers, { maxRows: 5000 }),
+    loadBoundedRows(base, 'game_ranks', {
+      select: 'master_id,score,reaction,comparison_count',
+      order: 'score.desc',
+    }, headers, { maxRows: 5000 }),
+    loadBoundedRows(base, 'game_status', {
+      select: 'master_id,status',
+      order: 'master_id.asc',
+    }, headers, { maxRows: 5000 }),
+    loadBoundedRows(base, 'v_recent_activity', {
+      select: 'master_id,title,event_date,environment,minutes_delta,achievements_delta',
       event_date: `gte.${since}`,
       order: 'event_date.desc',
-      limit: '1000',
-    }), { headers }),
-    fetch(restUrl(base, 'wishlist', { select: 'igdb_id,title,released,note', order: 'created_at.desc', limit: '200' }), { headers }),
-    fetch(restUrl(base, 'gamepass', { select: 'igdb_id,name,rating,leaving_soon,updated_at', limit: '600' }), { headers }),
+    }, headers, { maxRows: 1000 }),
+    loadBoundedRows(base, 'wishlist', {
+      select: 'igdb_id,title,released,note',
+      order: 'created_at.desc',
+    }, headers, { maxRows: 200, pageSize: 200 }),
+    loadBoundedRows(base, 'gamepass', {
+      select: 'igdb_id,name,rating,leaving_soon,updated_at',
+      order: 'rating.desc.nullslast',
+    }, headers, { maxRows: 600, pageSize: 600 }),
+    loadBoundedRows(base, 'rank_comparisons', {
+      select: 'id,left_id,right_id,result,compared_at',
+      order: 'compared_at.desc,id.desc',
+    }, headers, { maxRows: 2000 }),
   ]
-  const [gameRes, ...optional] = await Promise.all(requests)
-  if (!gameRes.ok) throw new Error(`Supabase library read failed: ${gameRes.status}`)
-  const games = await gameRes.json()
-  const [ranks, statuses, activity, wishlist, gamepass] = await Promise.all(optional.map(rowsOrEmpty))
-  return buildGameEvidenceContext({ games, ranks, statuses, activity, wishlist, gamepass })
+  const [gameRead, rankRead, statusRead, activityRead, wishlistRead, gamepassRead, comparisonRead] = await Promise.all(requests)
+  if (!gameRead.complete) {
+    if (gameRead.rows.length) throw new Error('Supabase library read exceeded the 5000-row safety bound.')
+    throw new Error(`Supabase library read failed: ${gameRead.status}`)
+  }
+  return buildGameEvidenceContext({
+    games: gameRead.rows,
+    ranks: rankRead.rows,
+    statuses: statusRead.rows,
+    activity: activityRead.rows,
+    wishlist: wishlistRead.rows,
+    gamepass: gamepassRead.rows,
+    comparisons: comparisonRead.rows,
+    coverage: {
+      games: gameRead.complete,
+      ranks: rankRead.complete,
+      activity: activityRead.complete,
+      comparisons: comparisonRead.complete,
+    },
+  })
 }
