@@ -3104,6 +3104,51 @@ textarea {
     linear-gradient(155deg, #e9e1c8, #f0e9d3 58%, #e3dac0);
 }
 
+/* Liquid Glass (pilot) — refractive material study. The ground carries all the
+   color as a luminous orb field; every resting surface drops to deep
+   translucency so the orbs refract through it, finished with a specular top
+   edge like light catching a lens. */
+:root[data-theme-family="liquid"] {
+  --bg: #070b1e; --surface: rgba(146, 176, 255, 0.08); --surface-2: rgba(146, 176, 255, 0.15); --line: rgba(158, 188, 255, 0.22);
+  --text: #f3f6ff; --muted: #a6b2d4; --walnut: #3c4c96; --walnut-light: #7186d8;
+  --accent: #7dd3fc; --amber: #c4b5fd;
+  --font-display: ui-rounded, 'SF Pro Rounded', system-ui, sans-serif;
+  --font-body: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --r-xs: 14px; --r-sm: 20px; --r-md: 28px; --r-lg: 40px;
+  --glass: rgba(23, 31, 66, 0.3); --glass-chip: rgba(146, 176, 255, 0.12);
+  --glass-line: rgba(255, 255, 255, 0.26); --glass-blur: blur(34px) saturate(210%);
+  --e1: 0 8px 24px rgba(2, 6, 23, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  --e2: 0 18px 48px rgba(2, 6, 23, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.24);
+  --e3: 0 30px 74px rgba(2, 6, 23, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  --e-nav: 0 14px 40px rgba(2, 6, 23, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  --d-fast: 0.18s; --d-base: 0.3s; --d-slow: 0.46s;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --theme-ground:
+    radial-gradient(58% 42% at 10% -4%, rgba(56, 189, 248, 0.38), transparent 70%),
+    radial-gradient(52% 42% at 90% 8%, rgba(192, 132, 252, 0.34), transparent 70%),
+    radial-gradient(75% 60% at 50% 108%, rgba(99, 102, 241, 0.42), transparent 72%),
+    radial-gradient(36% 28% at 86% 88%, rgba(244, 114, 182, 0.2), transparent 70%),
+    linear-gradient(160deg, #060a1c, #0b1132 55%, #070b1e);
+  --theme-texture: linear-gradient(115deg, transparent 42%, rgba(255,255,255,.05) 50%, transparent 58%);
+  --theme-texture-opacity: 1;
+  --theme-texture-size: 100% 100%;
+  --logo-1: #1e2a6b; --logo-2: #2b3f9e; --logo-3: #3b5bd6; --logo-4: #5b8def;
+  --logo-5: #7cc4ff; --logo-6: #a5b4fc; --logo-7: #e0c3fc;
+}
+:root[data-theme-family="liquid"][data-theme="light"] {
+  --bg: #e9eefb; --surface: rgba(255, 255, 255, 0.55); --surface-2: rgba(255, 255, 255, 0.72); --line: rgba(90, 110, 170, 0.25);
+  --text: #162040; --muted: #5a6a94; --walnut: #4a5fa8; --walnut-light: #6f83c8;
+  --accent: #0f7fd4; --amber: #7a5fd0;
+  --glass: rgba(255, 255, 255, 0.5); --glass-chip: rgba(255, 255, 255, 0.66);
+  --glass-line: rgba(255, 255, 255, 0.7);
+  --e-nav: 0 12px 34px rgba(70, 95, 160, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --theme-ground:
+    radial-gradient(58% 42% at 10% -4%, rgba(56, 189, 248, 0.4), transparent 70%),
+    radial-gradient(52% 42% at 90% 8%, rgba(192, 132, 252, 0.36), transparent 70%),
+    radial-gradient(75% 60% at 50% 108%, rgba(99, 102, 241, 0.32), transparent 72%),
+    linear-gradient(160deg, #e9eefb, #f4f7ff 55%, #e2e9f9);
+}
+
 /* ============================================================
    Appearance controls
    ============================================================
@@ -3952,6 +3997,49 @@ textarea {
   box-shadow: var(--e1);
 }
 
+/* ---------- Liquid Glass material pass (pilot) ----------
+   Every resting surface becomes refractive glass: deep translucency plus the
+   blur, finished with a specular top edge like light catching a lens. The
+   ground underneath carries the color, so this only reads over the orb field. */
+:root[data-theme-family='liquid'] :is(
+  .settings-group, .logo-style-option, .theme-card,
+  .chip, .filter-btn, .seg, .sort-select, .customize-btn,
+  .game-card, .rank-row, .news-row, .hm-release-item, .np,
+  .chart-card, .hm-tile, .fy-deck-open,
+  .modal-sheet, .chat-bubble.assistant, .chat-input,
+  .search-input, .global-search-field, .global-search-modebar, .stats-strip,
+  .suggestion-chip, .show-more-btn, .drawer, .menu-foot, .menu-foot-acts,
+  .settings-hd
+) {
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-line);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 12px 32px rgba(2, 6, 23, 0.32);
+}
+
+@keyframes liquid-drift-ground {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(2%, 3%, 0) scale(1.06); }
+}
+
+:root[data-theme-family='liquid']:not([data-motion='reduced'])
+  :is(.app, .settings-page, .view-page)::before {
+  inset: -40px;
+  animation: liquid-drift-ground 26s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* The settings page is a full-screen slab in every other family; in liquid it
+   drops to frosted glass so the orb field glows through behind the rows. */
+:root[data-theme-family='liquid'] .settings-page {
+  background: color-mix(in srgb, var(--bg) 68%, transparent);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
 /* ---------- Console signature systems ----------
 
    Xbox and PlayStation intentionally change interaction character, not just
@@ -4250,7 +4338,8 @@ textarea {
 
 @media (prefers-reduced-motion: reduce) {
   :root[data-theme-family='xbox'] :is(.app, .settings-page, .view-page)::after,
-  :root[data-theme-family='playstation'] :is(.app, .settings-page, .view-page)::after {
+  :root[data-theme-family='playstation'] :is(.app, .settings-page, .view-page)::after,
+  :root[data-theme-family='liquid'] :is(.app, .settings-page, .view-page)::before {
     animation: none;
   }
 

@@ -10,7 +10,7 @@ const CONTRAST_KEY = 'gamedeck_contrast_v1'
 const TRANSPARENCY_KEY = 'gamedeck_transparency_v1'
 
 const MODES = new Set(['dark', 'light', 'system'])
-const FAMILIES = new Set(['curator', 'obsidian', 'xbox', 'playstation', 'neon', 'blueprint', 'cartridge'])
+const FAMILIES = new Set(['curator', 'obsidian', 'xbox', 'playstation', 'neon', 'blueprint', 'cartridge', 'liquid'])
 const LOGO_STYLES = new Set(['theme', 'classic', 'glass'])
 const DISPLAY_VALUES = new Set(['system', 'standard', 'reduced'])
 const CONTRAST_VALUES = new Set(['system', 'standard', 'high'])
@@ -32,6 +32,11 @@ const RETIRED_GROUND_KEYS = [
 ]
 
 export const THEME_FAMILIES = [
+  {
+    key: 'liquid', label: 'Liquid Glass', eyebrow: 'Material pilot',
+    description: 'Refractive glass study: luminous orb field, specular edges, floating surfaces.',
+    dark: ['#0b1132', '#1a2450', '#7dd3fc'], light: ['#e9eefb', '#f4f7ff', '#0f7fd4'],
+  },
   {
     key: 'curator', label: 'Curator', eyebrow: 'Editorial archive',
     description: 'Warm paper, walnut details, bookish type and restrained movement.',
