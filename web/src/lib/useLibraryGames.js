@@ -277,6 +277,11 @@ export function useVibeKeywords(enabled = true) {
 const subscribers = new Set()
 let inflight = null
 let latest = null
+// Session caches: `cache` holds the last promoted library payload shared by all
+// useLibraryGames consumers; `keywordCache` holds the master_id -> keywords map
+// shared by useVibeKeywords consumers.
+let cache = null
+let keywordCache = null
 
 function broadcast(next, promote) {
   latest = next
