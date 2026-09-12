@@ -1365,6 +1365,13 @@ textarea {
   padding: var(--space-3) 0 0;
 }
 
+.global-search-ask {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .global-search-field {
   min-height: 48px;
   display: flex;

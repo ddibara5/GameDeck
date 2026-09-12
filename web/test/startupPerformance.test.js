@@ -12,15 +12,17 @@ test('responsive cover candidates respect the IGDB source-width cap', () => {
   assert.doesNotMatch(srcSet, / 320w| 640w/)
 })
 
-test('Home uses the compact bootstrap and defers the full library', async () => {
-  const [home, bootstrap] = await Promise.all([
+test('Home reads the shared library with the fixed paginated fetch', async () => {
+  const [home, library] = await Promise.all([
     readFile(new URL('../src/components/HomeTab.jsx', import.meta.url), 'utf8'),
-    readFile(new URL('../src/lib/appBootstrap.js', import.meta.url), 'utf8'),
+    readFile(new URL('../src/lib/useLibraryGames.js', import.meta.url), 'utf8'),
   ])
-  assert.match(home, /useAppBootstrap\(ACTIVITY_DAYS\)/)
-  assert.doesNotMatch(home, /useLibraryGames\s*\(/)
+  assert.match(home, /useLibraryGames\(\)/)
   assert.match(home, /preloadLibrary/)
-  assert.match(bootstrap, /get_app_bootstrap/)
+  // The full-library read pages through PostgREST ranges; Home must not
+  // regress that fetch back to a single capped request.
+  assert.match(library, /\.range\(/)
+  assert.match(library, /cover_standard/)
 })
 
 test('startup overlays, game sheets, and artwork work are deferred', async () => {

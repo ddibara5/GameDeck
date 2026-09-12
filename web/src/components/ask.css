@@ -1,0 +1,381 @@
+/* Ask GameDeck: conversation list, history sheet, composer.
+   Dedicated classes on purpose: the old .chat-bubble rules belong to the
+   deleted DiscoverAsk and carry the wrong radii/padding, so everything here is
+   scoped under .ask-screen. */
+
+.ask-screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.ask-context {
+  padding: 10px 18px 0;
+  display: flex;
+}
+
+.ask-context-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: var(--t-foot);
+  font-weight: 600;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ---- message list ---- */
+
+.ask-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 18px 12px;
+}
+
+.ask-msg {
+  display: flex;
+}
+
+.ask-msg.user {
+  justify-content: flex-end;
+}
+
+.ask-msg.assistant {
+  justify-content: flex-start;
+}
+
+.ask-bubble {
+  overflow-wrap: anywhere;
+}
+
+.ask-bubble.user {
+  max-width: 88%;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 16px;
+  padding: 12px;
+  font-size: var(--t-sub);
+  line-height: 20px;
+  white-space: pre-wrap;
+}
+
+.ask-bubble.assistant {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 12px;
+  color: var(--text);
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.ask-bubble.assistant p {
+  margin: 0 0 8px;
+}
+
+.ask-bubble.assistant p:last-child {
+  margin-bottom: 0;
+}
+
+.ask-bubble.assistant ul,
+.ask-bubble.assistant ol {
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+
+.ask-bubble.assistant a {
+  color: var(--accent);
+}
+
+.ask-bubble.assistant code {
+  background: var(--surface-2);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: var(--t-foot);
+}
+
+.ask-md-plain {
+  white-space: pre-wrap;
+}
+
+/* typing indicator, shown while a reply is in flight */
+.ask-typing {
+  display: inline-flex;
+  gap: 6px;
+  padding: 6px 2px;
+}
+
+.ask-typing span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+  animation: ask-blink 1.2s infinite;
+}
+
+.ask-typing span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.ask-typing span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes ask-blink {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ask-typing span {
+    animation: none;
+    opacity: 0.6;
+  }
+}
+
+/* ---- empty state ---- */
+
+.ask-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 32px 32px 16px;
+  text-align: center;
+}
+
+.ask-empty-title {
+  color: var(--text);
+  font-size: var(--t-sub);
+  font-weight: 700;
+}
+
+.ask-empty-sub {
+  color: var(--muted);
+  font-size: var(--t-foot);
+  line-height: 20px;
+}
+
+/* ---- error notice ---- */
+
+.ask-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 12px;
+  margin: 0 18px;
+  background: var(--surface);
+  border: 1px solid var(--danger, #c45b5b);
+  border-radius: 16px;
+  color: var(--text);
+  font-size: var(--t-foot);
+}
+
+.ask-notice-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.ask-notice-btn {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--accent);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ---- composer ---- */
+
+.ask-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 18px calc(18px + var(--sat));
+  background: var(--bg);
+}
+
+.ask-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.ask-toolbtn {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px;
+  background: none;
+  border: 0;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--t-foot);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ask-toolbtn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.ask-input {
+  flex: 1;
+  min-height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 12px 16px;
+  font: inherit;
+  font-size: var(--t-sub);
+}
+
+.ask-input::placeholder {
+  color: var(--muted);
+}
+
+.ask-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.ask-send {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  border: 0;
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.ask-send:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.ask-send svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* ---- history sheet ---- */
+
+.ask-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(23, 26, 34, 0.25);
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.ask-sheet {
+  width: 100%;
+  max-width: 640px;
+  max-height: 70%;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-radius: 28px 28px 0 0;
+  border: 1px solid var(--line);
+  border-bottom: 0;
+  overflow: hidden;
+}
+
+.ask-sheet-head {
+  display: flex;
+  align-items: center;
+  padding: 14px 18px 8px;
+}
+
+.ask-sheet-title {
+  flex: 1;
+  color: var(--text);
+  font-size: var(--t-body);
+  font-weight: 700;
+}
+
+.ask-sheet-list {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 18px 18px;
+  display: flex;
+  flex-direction: column;
+}
+
+.ask-hist-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: flex-start;
+  width: 100%;
+  min-height: 56px;
+  justify-content: center;
+  padding: 10px 4px;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.ask-hist-title {
+  color: var(--text);
+  font-size: var(--t-sub);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.ask-hist-row.active .ask-hist-title {
+  font-weight: 700;
+}
+
+.ask-hist-meta {
+  color: var(--muted);
+  font-size: var(--t-foot);
+}
+
+.ask-hist-empty {
+  padding: 24px 0;
+  color: var(--muted);
+  font-size: var(--t-foot);
+  text-align: center;
+}

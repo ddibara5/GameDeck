@@ -54,10 +54,14 @@ import { swr } from './idbCache.js'
 //       mean something is a sync-side change, not a client one.
 //
 // 52 kB of the payload, no reader that can be reached.
+// cover_standard is back in the fetch (26 Aug 2026): the pilot's artwork rule
+// falls back to it behind cover_igdb, and it is now the only fallback in this
+// payload since cover_small was removed. Its reader is the Home Now Playing
+// card (src/lib/homeInsights.js gameArtworkUrl).
 const BASE_COLUMNS =
   'master_id, environment, title, platforms, earned_awards, total_awards, percent, ' +
   'playtime_minutes, playtime_label, last_played, ' +
-  'length_minutes, genre, release_year, cover_igdb, igdb_id'
+  'length_minutes, genre, release_year, cover_igdb, igdb_id, cover_standard'
 
 // igdb_id is in BASE_COLUMNS, not the optional tail: the shuffler joins library rows
 // to the Game Pass catalog on it, and without it every library game looks un-covered,

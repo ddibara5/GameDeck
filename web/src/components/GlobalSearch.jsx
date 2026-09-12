@@ -12,12 +12,12 @@ import { useDialogA11y } from '../lib/useDialogA11y.js'
 import { useEdgeBack } from '../lib/useEdgeBack.js'
 import { lockScroll } from '../lib/scrollLock.js'
 
-const loadDiscoverAsk = () => import('./DiscoverAsk.jsx')
-const DiscoverAsk = lazy(loadDiscoverAsk)
+const loadAskGameDeck = () => import('./AskGameDeck.jsx')
+const AskGameDeck = lazy(loadAskGameDeck)
 
 export function preloadGlobalAsk() {
   return Promise.all([
-    loadDiscoverAsk(),
+    loadAskGameDeck(),
     import('./ChatMessage.jsx').then((module) => module.preloadMarkdown()),
   ])
 }
@@ -103,11 +103,10 @@ export default function GlobalSearch({
   open,
   defaultScope = 'all',
   defaultMode = 'search',
-  seedPrompt,
+  askContext,
   onClose,
   onScopeChange,
   onModeChange,
-  onSeedConsumed,
 }) {
   const { mounted, closing } = useMountTransition(open)
   const [query, setQuery] = useState('')
@@ -119,7 +118,7 @@ export default function GlobalSearch({
   const [selected, setSelected] = useState(null)
   const [mode, setMode] = useState(defaultMode)
   const [askDraft, setAskDraft] = useState('')
-  const [askSeed, setAskSeed] = useState(null)
+  const [gameAskContext, setGameAskContext] = useState(null)
   const requestRef = useRef(0)
   const wasOpenRef = useRef(false)
   const dialogRef = useDialogA11y({ active: mounted, onClose })
@@ -142,7 +141,7 @@ export default function GlobalSearch({
       setSelected(null)
       setMode(defaultMode === 'ask' ? 'ask' : 'search')
       setAskDraft('')
-      setAskSeed(null)
+      setGameAskContext(defaultMode === 'ask' ? askContext ?? null : null)
       if (defaultMode === 'ask') preloadGlobalAsk().catch(() => {})
     }
     wasOpenRef.current = open
@@ -151,6 +150,13 @@ export default function GlobalSearch({
   useEffect(() => {
     if (onScopeChange) onScopeChange(scope)
   }, [scope, onScopeChange])
+
+  // A contextual Ask opened while search is already mounted (App.openAsk with
+  // a game) arrives as a new askContext object; hand it to the ask screen so
+  // it starts a new contextual conversation.
+  useEffect(() => {
+    if (askContext) setGameAskContext(askContext)
+  }, [askContext])
 
   const normalized = deferredQuery.trim()
   const wantsCatalog = scope === 'all' || scope === 'catalog'
@@ -188,13 +194,9 @@ export default function GlobalSearch({
   function showAsk() {
     warmAsk()
     setAskDraft(query.trim())
+    setGameAskContext(null)
     setMode('ask')
     if (onModeChange) onModeChange('ask')
-  }
-
-  function showSearch() {
-    setMode('search')
-    if (onModeChange) onModeChange('search')
   }
 
   function askAboutGame(game) {
@@ -202,14 +204,12 @@ export default function GlobalSearch({
     if (!title) return
     warmAsk()
     setSelected(null)
-    setAskSeed(`Would I like ${title}? Explain why it fits my taste and what I should know before playing.`)
+    setGameAskContext({
+      gameId: game.master_id ?? game.id ?? game.igdb_id ?? null,
+      gameTitle: title,
+    })
     setMode('ask')
     if (onModeChange) onModeChange('ask')
-  }
-
-  function consumeAskSeed() {
-    setAskSeed(null)
-    if (onSeedConsumed) onSeedConsumed()
   }
 
   const libraryResults = useMemo(
@@ -251,26 +251,15 @@ export default function GlobalSearch({
 
       <div className={`global-search-body${mode === 'ask' ? ' ask' : ''}`}>
         {mode === 'ask' ? (
-          <>
-            <div className="global-search-modebar" aria-label="Global search mode">
-              <button type="button" onClick={showSearch}>
-                <SearchIcon />
-                Search games
-              </button>
-              <button type="button" className="active" aria-pressed={true}>
-                <AskIcon />
-                Ask
-              </button>
-            </div>
+          <div className="global-search-ask">
             <Suspense fallback={<div className="global-search-ask-loading" role="status">Starting Ask GameDeck…</div>}>
-              <DiscoverAsk
-                seedPrompt={askSeed || seedPrompt}
+              <AskGameDeck
+                context={gameAskContext}
                 initialInput={askDraft}
-                onSeedConsumed={consumeAskSeed}
                 onInitialInputConsumed={() => setAskDraft('')}
               />
             </Suspense>
-          </>
+          </div>
         ) : (
           <>
             <div className="global-search-field">

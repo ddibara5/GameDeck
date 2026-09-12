@@ -111,7 +111,7 @@ function GameDeckApp() {
   const [searchOpen, setSearchOpen] = useState(() => initialShell.current.searchOpen)
   const [searchVisited, setSearchVisited] = useState(() => initialShell.current.searchOpen)
   const [searchMode, setSearchMode] = useState(() => initialShell.current.searchMode || 'search')
-  const [searchSeed, setSearchSeed] = useState(null)
+  const [searchAskContext, setSearchAskContext] = useState(null)
   const [searchScope, setSearchScope] = useState(
     () => initialShell.current.searchScope || defaultSearchScope({ activeTab: initialShell.current.tab, view: initialShell.current.view }),
   )
@@ -190,7 +190,7 @@ function GameDeckApp() {
     setViewClosing(false)
     setSearchOpen(false)
     setSearchMode('search')
-    setSearchSeed(null)
+    setSearchAskContext(null)
     setActiveTab(tab)
     writeLocation({ tab, view: null, searchOpen: false, searchScope: null, searchMode: null }, replace)
   }, [writeLocation])
@@ -201,15 +201,17 @@ function GameDeckApp() {
     setSearchVisited(true)
     setSearchScope(scope)
     setSearchMode('search')
-    setSearchSeed(null)
+    setSearchAskContext(null)
     setSearchOpen(true)
     writeLocation({ tab: activeTab, view, searchOpen: true, searchScope: scope, searchMode: 'search' })
   }, [activeTab, view, writeLocation])
 
   const openAsk = useCallback((game = null) => {
     const scope = defaultSearchScope({ activeTab, view })
-    const prompt = game
-      ? `Would I like ${game.name || game.title}? Explain why it fits my taste and what I should know before playing.`
+    // Contextual open: the ask screen starts a new conversation about this
+    // game (pilot's gameId/gameTitle params), never an auto-sent prompt.
+    const context = game && (game.name || game.title)
+      ? { gameId: game.master_id ?? game.id ?? game.igdb_id ?? null, gameTitle: game.name || game.title }
       : null
     loadGlobalSearch()
       .then((module) => module.preloadGlobalAsk?.())
@@ -217,7 +219,7 @@ function GameDeckApp() {
     setSearchVisited(true)
     setSearchScope(scope)
     setSearchMode('ask')
-    setSearchSeed(prompt)
+    setSearchAskContext(context)
     setSearchOpen(true)
     writeLocation({ tab: activeTab, view, searchOpen: true, searchScope: scope, searchMode: 'ask' })
   }, [activeTab, view, writeLocation])
@@ -230,7 +232,7 @@ function GameDeckApp() {
     }
     setSearchOpen(false)
     setSearchMode('search')
-    setSearchSeed(null)
+    setSearchAskContext(null)
     writeLocation({ tab: activeTab, view, searchOpen: false, searchScope: null, searchMode: null }, true)
   }, [activeTab, view, writeLocation])
 
@@ -242,7 +244,7 @@ function GameDeckApp() {
   const changeSearchMode = useCallback((mode) => {
     const nextMode = mode === 'ask' ? 'ask' : 'search'
     setSearchMode(nextMode)
-    if (nextMode === 'search') setSearchSeed(null)
+    if (nextMode === 'search') setSearchAskContext(null)
     if (searchOpen) writeLocation({ tab: activeTab, view, searchOpen: true, searchScope, searchMode: nextMode }, true)
   }, [activeTab, view, searchOpen, searchScope, writeLocation])
 
@@ -255,7 +257,7 @@ function GameDeckApp() {
     setView(v)
     setSearchOpen(false)
     setSearchMode('search')
-    setSearchSeed(null)
+    setSearchAskContext(null)
     writeLocation({ tab: activeTab, view: v, searchOpen: false, searchScope: null, searchMode: null })
   }
   // Animate the view out (slide + fade, like the drawer), then unmount it.
@@ -313,7 +315,7 @@ function GameDeckApp() {
       if (next.searchOpen) setSearchVisited(true)
       setSearchScope(next.searchScope || defaultSearchScope({ activeTab: next.tab, view: next.view }))
       setSearchMode(next.searchMode || 'search')
-      setSearchSeed(null)
+      setSearchAskContext(null)
     }
     window.addEventListener('popstate', onPopState)
     return () => window.removeEventListener('popstate', onPopState)
@@ -533,11 +535,10 @@ function GameDeckApp() {
             open={searchOpen}
             defaultScope={searchScope}
             defaultMode={searchMode}
-            seedPrompt={searchSeed}
+            askContext={searchAskContext}
             onClose={closeSearch}
             onScopeChange={changeSearchScope}
             onModeChange={changeSearchMode}
-            onSeedConsumed={() => setSearchSeed(null)}
           />
         </Suspense>
       ) : null}

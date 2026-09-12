@@ -1,0 +1,475 @@
+/* Home tab: the pilot's four fixed cards.
+   Colors come from the theme vars; nothing here hardcodes a hex. Font sizes use
+   the --t-* tokens (13 foot, 15 sub, 17 body, 20 t3, 22 t2). Layout px values
+   (inset 18, card radius 22, cover sizes) are the pilot's page metrics. */
+
+.hm-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 18px 24px;
+}
+
+.hm-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  overflow: hidden;
+}
+
+.hm-eyebrow {
+  color: var(--accent);
+  font-size: var(--t-foot);
+  font-weight: 700;
+  letter-spacing: 0.7px;
+}
+
+.hm-muted {
+  color: var(--muted);
+  font-size: var(--t-foot);
+}
+
+.hm-chev {
+  width: 10px;
+  height: 16px;
+  flex: 0 0 auto;
+  color: var(--muted);
+}
+
+.hm-chev.accent {
+  color: var(--accent);
+}
+
+/* ---- Now playing ---- */
+
+.hm-np {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px;
+  background: none;
+  border: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+button.hm-np:not(:disabled) {
+  cursor: pointer;
+}
+
+.hm-cov-np {
+  width: 76px;
+  height: 108px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  font-size: 28px;
+}
+
+.hm-np-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.hm-np-title {
+  color: var(--text);
+  font-size: var(--t-t3);
+  font-weight: 700;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hm-track {
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--surface-2);
+  margin-top: 4px;
+}
+
+.hm-fill {
+  height: 4px;
+  background: var(--accent);
+}
+
+.hm-playtime {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Recent play ---- */
+
+.hm-rp {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 14px;
+  background: none;
+  border: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.hm-rp-head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.hm-rp-title {
+  flex: 1;
+  color: var(--text);
+  font-size: var(--t-body);
+  font-weight: 700;
+}
+
+.hm-rp-main {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 18px;
+}
+
+.hm-rp-stats {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hm-rp-hero {
+  color: var(--text);
+  font-size: 26px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.hm-rp-strip {
+  flex: 1.2;
+  min-width: 0;
+  position: relative;
+}
+
+.hm-rp-rule {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--line);
+}
+
+.hm-rp-cols {
+  display: flex;
+  flex-direction: row;
+  position: relative;
+}
+
+.hm-rp-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.hm-rp-barwrap {
+  height: 72px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.hm-rp-bar {
+  width: 10px;
+  border-radius: 5px;
+  background: var(--accent);
+}
+
+.hm-rp-bar.zero {
+  height: 2px;
+  background: var(--line);
+}
+
+.hm-rp-day {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+@media (max-width: 350px) {
+  .hm-rp-main {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* ---- Release watch ---- */
+
+.hm-rw {
+  padding: 14px;
+}
+
+.hm-rw-head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.hm-rw-title {
+  flex: 1;
+  margin: 0;
+  color: var(--text);
+  font-size: var(--t-body);
+  font-weight: 700;
+}
+
+.hm-rw-all {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  background: none;
+  border: 0;
+  color: var(--accent);
+  font: inherit;
+  font-size: var(--t-foot);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.hm-rw-cols {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.hm-rw-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hm-rw-label {
+  color: var(--accent);
+  font-size: var(--t-foot);
+  font-weight: 700;
+}
+
+.hm-rw-div {
+  width: 1px;
+  align-self: stretch;
+  background: var(--line);
+}
+
+@media (max-width: 380px) {
+  .hm-rw-cols {
+    flex-direction: column;
+  }
+  .hm-rw-div {
+    width: auto;
+    height: 1px;
+  }
+}
+
+.hm-rw-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-height: 80px;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.hm-cov-rel {
+  /* Width follows the artwork-size token (the old home.css used the same
+     token here); the 56:80 pilot ratio is kept via aspect-ratio. */
+  width: var(--game-art-release);
+  aspect-ratio: 56 / 80;
+  height: auto;
+  flex: none;
+  border-radius: 8px;
+  background: var(--surface-2);
+  font-size: 20px;
+}
+
+.hm-rw-copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.hm-rw-name {
+  color: var(--text);
+  font-size: var(--t-foot);
+  font-weight: 600;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hm-rw-empty {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: var(--t-sub);
+  line-height: 21px;
+}
+
+.hm-rw-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hm-rw-retry {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  background: none;
+  border: 0;
+  text-align: left;
+  font: inherit;
+  color: var(--muted);
+  font-size: var(--t-foot);
+  cursor: pointer;
+}
+
+.hm-rw-retry b {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ---- For You card ---- */
+
+.hm-fy {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.hm-fy:active {
+  opacity: 0.72;
+}
+
+.hm-fy-icon {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  color: var(--accent);
+}
+
+.hm-fy-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+}
+
+.hm-fy-title {
+  color: var(--text);
+  font-size: var(--t-sub);
+  font-weight: 600;
+}
+
+/* ---- Loading / error states ---- */
+
+.hm-skel {
+  min-height: 120px;
+}
+
+.hm-err {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 18px 14px;
+}
+
+.hm-err-title {
+  color: var(--text);
+  font-size: var(--t-sub);
+  font-weight: 700;
+}
+
+.hm-err-detail {
+  color: var(--muted);
+  font-size: var(--t-foot);
+}
+
+.hm-err-retry {
+  min-height: 44px;
+  padding: 0 4px;
+  background: none;
+  border: 0;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.hm-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 48px 0;
+  color: var(--muted);
+}
+
+.hm-spinner-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  border-top-color: var(--accent);
+  animation: hm-spin 0.9s linear infinite;
+}
+
+@keyframes hm-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hm-spinner-dot {
+    animation: none;
+  }
+}

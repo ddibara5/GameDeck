@@ -47,7 +47,7 @@ test('one token system reaches every repeatable game-art surface', () => {
   assert.match(css('cardSize.css'), /data-artwork='s'/)
   assert.match(css('cardSize.css'), /data-artwork='m'/)
   assert.match(css('cardSize.css'), /data-artwork='l'/)
-  assert.match(css('components/home.css'), /var\(--game-art-release\)/)
+  assert.match(css('components/homeCards.css'), /var\(--game-art-release\)/)
   assert.match(css('components/insights.css'), /var\(--game-art-feature\)/)
   assert.match(css('components/activity.css'), /var\(--game-art-compact\)/)
   assert.match(css('components/discover.css'), /var\(--game-art-rail\)/)
