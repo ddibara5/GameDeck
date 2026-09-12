@@ -943,6 +943,10 @@ html,
 body {
   height: 100%;
   background: var(--bg);
+  /* PWA baseline: never allow horizontal page scroll (overflow-x: clip, not
+     hidden, so no scroll container is created and position: sticky keeps
+     working) and stop iOS from inflating text on rotation. */
+  overflow-x: clip;
 }
 
 body {
@@ -951,6 +955,7 @@ body {
   color: var(--text);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
   text-rendering: optimizeLegibility;
   /* system-ui resolves to SF on every Apple device, and SF is a variable font
      with an optical-size axis. Letting it choose its own Text vs Display cut is

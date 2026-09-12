@@ -106,7 +106,7 @@ export default function AuthGate({ recovery = false, onRecoveryComplete }) {
         <p className="auth-copy">
           {recovery
             ? `Choose the password you’ll use for GameDeck from now on.`
-            : 'Use your private GameDeck account. New accounts cannot be created.'}
+            : 'Sign in with your existing GameDeck account. New accounts cannot be created.'}
         </p>
 
         {message ? <p className={`auth-message ${tone}`} role={tone === 'error' ? 'alert' : 'status'}>{message}</p> : null}

@@ -73,19 +73,48 @@ export const LIST_GAME_COLUMNS = `${BASE_COLUMNS}, igdb_rating, franchises`
 const CACHE_KEY = 'library:games'
 const KEYWORDS_CACHE_KEY = 'library:keywords'
 
-let cache = null
-let keywordCache = null
+// Supabase's PostgREST layer caps any single select at 1000 rows, so an unbounded
+// query silently drops the tail of a library past that size. The Expo pilot had
+// exactly this bug (a hard limit(1000)); the fix is the same shape here: page with
+// .range() until a page comes back short. The last page of an exact multiple of
+// PAGE_SIZE would do one extra empty request, which is cheaper than miscounting.
+const PAGE_SIZE = 1000
+
+function baseQuery(cols) {
+  return supabase.from('games').select(cols)
+}
+
+// Paginate the whole table with one column list. Ordering must be stable across
+// pages; last_played has NULLs and ties, so the second ordering key keeps page
+// boundaries deterministic.
+async function fetchAllPages(cols) {
+  const rows = []
+  let from = 0
+  for (;;) {
+    const { data, error } = await baseQuery(cols)
+      .order('last_played', { ascending: false, nullsFirst: false })
+      .order('master_id', { ascending: true })
+      .range(from, from + PAGE_SIZE - 1)
+    if (error) throw new Error(error.message || 'Library request failed')
+    const page = data || []
+    rows.push(...page)
+    if (page.length < PAGE_SIZE) break
+    from += PAGE_SIZE
+  }
+  return rows
+}
 
 async function fetchLibrary() {
-  const ordered = (cols) =>
-    supabase.from('games').select(cols).order('last_played', { ascending: false, nullsFirst: false })
-
-  let { data, error } = await ordered(LIST_GAME_COLUMNS)
-  if (error && /igdb_rating|franchises/i.test(error.message || '')) {
-    ;({ data, error } = await ordered(BASE_COLUMNS))
+  try {
+    return await fetchAllPages(LIST_GAME_COLUMNS)
+  } catch (err) {
+    // The optional tail columns are added by a later migration; if they don't
+    // exist yet, fall back to the base list so the library still loads.
+    if (/igdb_rating|franchises/i.test(err && err.message ? err.message : '')) {
+      return fetchAllPages(BASE_COLUMNS)
+    }
+    throw err
   }
-  if (error) throw new Error(error.message || 'Library request failed')
-  return data || []
 }
 
 // keywords, on demand.
@@ -99,11 +128,22 @@ async function fetchLibrary() {
 //
 // It is a sidecar because keywords are 234 kB of a 758 kB payload and only two
 // surfaces read them, both of them lazily loaded chunks that are usually never
-// opened: the Library vibe chips and the shuffler.
+// opened: the Library vibe chips and the shuffler. Paginated the same way as the
+// main fetch so a library past the 1000-row cap does not lose its keywords.
 async function fetchKeywords() {
-  const { data, error } = await supabase.from('games').select('master_id, keywords')
-  if (error) throw new Error(error.message || 'Keyword request failed')
-  return data || []
+  const rows = []
+  let from = 0
+  for (;;) {
+    const { data, error } = await baseQuery('master_id, keywords')
+      .order('master_id', { ascending: true })
+      .range(from, from + PAGE_SIZE - 1)
+    if (error) throw new Error(error.message || 'Keyword request failed')
+    const page = data || []
+    rows.push(...page)
+    if (page.length < PAGE_SIZE) break
+    from += PAGE_SIZE
+  }
+  return rows
 }
 
 function toKeywordMap(rows) {

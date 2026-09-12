@@ -33,6 +33,27 @@ const loadLightbox = () => import('./Lightbox.jsx')
 const RankGameSheet = lazy(loadRankGameSheet)
 const Lightbox = lazy(loadLightbox)
 
+// ---- Pilot detail density: 18px page inset, 16px card padding, 22px radii,
+// section titles ~20px, 44px touch targets. Inline styles keep the rebuild in
+// this file only; colors come from the theme tokens.
+const cardStyle = {
+  background: 'var(--surface-2)',
+  borderRadius: 22,
+  padding: 16,
+}
+const sectionTitleStyle = {
+  color: 'var(--text)',
+  fontSize: 20,
+  fontWeight: 800,
+}
+const eyebrowStyle = {
+  color: 'var(--accent)',
+  fontSize: 12,
+  fontWeight: 800,
+  letterSpacing: 1,
+  textTransform: 'uppercase',
+}
+
 function reactionLabel(reaction) {
   return REACTIONS.find((item) => item.key === reaction)?.label || String(reaction || '').replaceAll('_', ' ')
 }
@@ -103,7 +124,7 @@ function OwnedRankingAction({ game }) {
                 : 'Rank this game'}
           </strong>
         </span>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-9 6" /></svg>
       </button>
       {error ? <p className="rank-error" role="alert">{error}</p> : null}
       {rankVisited ? (
@@ -163,13 +184,47 @@ function MediaSkeleton({ owned }) {
   )
 }
 
-// One sheet for a game across Library (owned), Discover, and Wishlist. Same shell
-// and section order everywhere (cover -> title -> meta -> primary control ->
-// summary -> screenshots -> chips -> facts -> link); empty sections hide. The
-// primary control is the only structural swap: owned games get the status picker
-// + progress, not-owned games get wishlist + Ask AI + More like this. Owned and
-// wishlist games fetch their IGDB blurb + screenshots by id so every sheet is
-// equally rich.
+function Metric({ label, value }) {
+  return (
+    <div style={{ width: '50%', paddingRight: 10 }}>
+      <div style={{ color: 'var(--muted)', fontSize: 12 }}>{label}</div>
+      <div style={{ color: 'var(--text)', fontSize: 15, fontWeight: 600 }}>{value}</div>
+    </div>
+  )
+}
+
+function ProgressBar({ percent, label }) {
+  if (percent == null) return null
+  return (
+    <div
+      role="progressbar"
+      aria-label={`${label}: ${percent} percent`}
+      aria-valuenow={percent}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      style={{ height: 8, borderRadius: 999, overflow: 'hidden', background: 'var(--bg)' }}
+    >
+      <div
+        style={{
+          width: `${percent}%`,
+          height: '100%',
+          borderRadius: 999,
+          background: 'var(--accent)',
+        }}
+      />
+    </div>
+  )
+}
+
+// One sheet for a game across Library (owned), Discover, and Wishlist. Same
+// shell and section order everywhere (hero -> Ask GameDeck -> status/primary
+// controls -> progress -> facts -> summary -> catalog -> screenshots); empty
+// sections hide. The pilot's game-detail layout drives the density: 18px page
+// inset, 16px card padding, 22px card radii, ~20px section titles, 44px touch
+// targets. The primary control is the only structural swap: owned games get the
+// status picker + ranking + progress, not-owned games get wishlist + Ask
+// GameDeck + More like this. Owned and wishlist games fetch their IGDB blurb +
+// screenshots by id so every sheet is equally rich.
 export default function GameSheet({ variant, game, onClose, inLibrary = false, onAsk, onMoreLikeThis, onNotInterested }) {
   const owned = variant === 'owned'
   const { closing, requestClose } = useDelayedClose(onClose)
@@ -280,7 +335,9 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   // rail items already carry it. Falls back to the bare year.
   const releaseText = releaseLabel((media && media.release) || game.release, year)
   const genreText = game.genre || genres[0] || null
-  const platformText = owned ? platformMeta(game.environment).label : platforms.slice(0, 3).join(', ')
+  const platformText = owned
+    ? platformMeta(game.environment).label
+    : platforms.slice(0, 3).join(', ')
   const rating = owned
     ? Number(game.igdb_rating) >= 0
       ? Number(game.igdb_rating)
@@ -289,19 +346,25 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
       ? game.rating
       : (media && media.rating) || null
   const studio = ((companies.find((c) => c.developer) || companies[0] || {}).name) || null
-  const metaText = [year, genreText, platformText].filter(Boolean).join('  ·  ')
+  const genreYearText = [genreText, year].filter(Boolean).join(' · ')
 
-  // Owned progress.
+  // Owned progress. Prefer story progress (playtime vs length); fall back to
+  // achievement completion when no story length is known.
   const len = Number(game.length_minutes) || 0
-  const percent = Math.round(Number(game.percent) || 0)
   const storyPct =
     len > 0 ? Math.max(0, Math.min(100, Math.round(((game.playtime_minutes || 0) / len) * 100))) : null
+  const achievementPct = Math.round(Number(game.percent) || 0)
+  const progressPercent = storyPct ?? achievementPct
+  const progressLabel = storyPct != null ? 'Story progress' : 'Achievement completion'
   const playtime = game.playtime_label || minutesToHhm(game.playtime_minutes)
 
   const wishActive = wishIds.has(Number(igdbId))
   const safeAchievementsUrl = safeExternalUrl(achievementsUrl)
   const safeGameUrl = safeExternalUrl(url)
-  const seed = { id: igdbId, name: title, year, genres }
+  const seed = owned
+    ? { master_id: game.master_id, id: igdbId, name: title, year, genres }
+    : { id: igdbId, name: title, year, genres }
+  const hasCatalogFacts = Boolean(studio || releaseText || platforms.length || rating != null)
 
   const handleOverlayClick = (e) => {
     if (e.target === e.currentTarget) requestClose()
@@ -322,217 +385,333 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
         style={{
           transform: closing ? 'translateY(110%)' : dragY ? `translateY(${dragY}px)` : undefined,
           transition: dragging ? 'none' : 'transform var(--d-base) var(--ease-out)',
+          padding: '8px 18px calc(28px + env(safe-area-inset-bottom, 0px))',
         }}
       >
         <div className="sheet-drag-zone" {...dragHandlers}>
           <div className="modal-handle" />
-          <Cover src={coverSrc} title={title} size="lg" priority />
         </div>
         <button type="button" className="modal-close" aria-label="Close game details" onClick={requestClose}>&times;</button>
 
-        <div className="detail-title">{title}</div>
-        {metaText || rating != null ? (
-          <div className="gs-meta">
-            {metaText ? <span>{metaText}</span> : null}
-            {rating != null ? (
-              <span className="gs-star">
-                <i aria-hidden="true">{'★'}</i> {rating}
-              </span>
-            ) : null}
-          </div>
-        ) : null}
-        {!owned && inLibrary ? <span className="in-library-badge sheet">In your library</span> : null}
-
-        {owned ? (
-          <>
-            <div className="status-picker" role="group" aria-label="Your status for this game">
-              {STATUSES.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  aria-pressed={status === s}
-                  className={`status-btn${status === s ? ' active' : ''}${
-                    pinned && status === s ? ' pinned' : ''
-                  }`}
-                  onClick={() => {
-                    // Tapping the status you already chose clears it, which is
-                    // the only route back to the derived value. That branch of
-                    // setStatus deletes the row; until now nothing in the app
-                    // called it, so a status was permanent once set.
-                    const clearing = pinned && status === s
-                    setStatus(game.master_id, clearing ? null : s)
-                    setPinned(!clearing)
-                    setStatusState(clearing ? derivedStatus(game) : s)
-                  }}
-                >
-                  {STATUS_LABELS[s]}
-                </button>
-              ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 6 }}>
+          {/* Hero: cover + title + key metadata, pilot arrangement. */}
+          <div style={{ display: 'flex', gap: 14 }}>
+            <div style={{ width: 96, flex: '0 0 auto', borderRadius: 14, overflow: 'hidden' }}>
+              <Cover src={coverSrc} title={title} size="lg" priority />
             </div>
-            <p className="status-hint">
-              {pinned
-                ? 'Set by you. Tap it again to clear.'
-                : 'Worked out from your playtime. Tap to set your own.'}
-            </p>
-            <OwnedRankingAction game={game} />
-          </>
-        ) : (
-          <div className="discover-actions">
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 5, justifyContent: 'center', minWidth: 0 }}>
+              {owned || inLibrary ? (
+                <span style={eyebrowStyle}>In your library</span>
+              ) : null}
+              <div
+                style={{
+                  color: 'var(--text)',
+                  fontSize: 23,
+                  lineHeight: '27px',
+                  fontWeight: 800,
+                }}
+              >
+                {title}
+              </div>
+              {genreYearText ? (
+                <div style={{ color: 'var(--accent)', fontWeight: 800 }}>{genreYearText}</div>
+              ) : null}
+              {platformText ? (
+                <div style={{ color: 'var(--muted)' }}>{platformText}</div>
+              ) : null}
+            </div>
+          </div>
+
+          {/* Ask GameDeck, pilot CTA. Owned sheets did not have this before. */}
+          {onAsk ? (
             <button
               type="button"
-              className={`discover-action wish-action${wishActive ? ' on' : ''}`}
-              aria-pressed={wishActive}
-              aria-label={wishActive ? 'Remove from wishlist' : 'Add to wishlist'}
-              onClick={() => toggleWishlist({ id: igdbId, name: title, cover: coverSrc, year })}
+              className="gs-ask"
+              onClick={() => onAsk(seed)}
+              aria-label={`Ask GameDeck about ${title}`}
+              style={{
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 9,
+                width: '100%',
+                minHeight: 46,
+                padding: '8px 14px',
+                border: 0,
+                borderRadius: 16,
+                background: 'var(--accent)',
+                color: 'var(--bg)',
+                cursor: 'pointer',
+                font: 'inherit',
+                textAlign: 'left',
+              }}
             >
-              <svg viewBox="0 0 24 24" width="17" height="17" fill={wishActive ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 21s-7-4.5-9.5-8.5A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6.5C19 16.5 12 21 12 21z" />
-              </svg>
-            </button>
-            {onAsk ? (
-              <button type="button" className="discover-action primary" onClick={() => onAsk(seed)}>
-                Ask AI about this
-              </button>
-            ) : null}
-            {onMoreLikeThis ? (
-              <button type="button" className="discover-action" onClick={() => onMoreLikeThis(seed)}>
-                More like this
-              </button>
-            ) : null}
-          </div>
-        )}
-
-        {owned ? (
-          <div className="detail-percent">
-            {storyPct != null ? (
-              <>
-                {storyPct}%<span className="detail-percent-label">of story</span>
-              </>
-            ) : (
-              <>
-                {percent}%<span className="detail-percent-label">achievements</span>
-              </>
-            )}
-          </div>
-        ) : null}
-
-        {mediaPending ? (
-          <MediaSkeleton owned={owned} />
-        ) : (
-          <>
-            {summary ? <p className="discover-summary">{summary}</p> : null}
-
-            {screenshots.length ? (
-              <div className="shot-strip">
-                {screenshots.map((s, i) => (
-                  <button
-                    type="button"
-                    className="shot-btn"
-                    key={i}
-                    onPointerDown={loadLightbox}
-                    onFocus={loadLightbox}
-                    onClick={() => setShotIndex(i)}
-                    aria-label={`View ${title} screenshot ${i + 1} larger`}
-                  >
-                    <img className="shot" src={s} alt={`${title} screenshot ${i + 1}`} loading="lazy" decoding="async" />
-                  </button>
-                ))}
-              </div>
-            ) : null}
-
-            {genres.length ? (
-              <div className="chip-wrap">
-                {genres.map((g) => (
-                  <span className="meta-chip" key={g}>
-                    {g}
-                  </span>
-                ))}
-              </div>
-            ) : null}
-          </>
-        )}
-
-        {owned ? (
-          <>
-            {storyPct != null ? (
-              <div className="detail-row">
-                <span className="detail-label">Story progress</span>
-                <span className="detail-value">
-                  {storyPct}% {'·'} {minutesToHhm(game.playtime_minutes)} of ~{Math.round(len / 60)}h
+              <span aria-hidden="true" style={{ fontSize: 17, fontWeight: 800 }}>✦</span>
+              <span style={{ flex: 1 }}>
+                <span style={{ display: 'block', fontWeight: 800 }}>Ask GameDeck</span>
+                <span style={{ display: 'block', fontSize: 11, opacity: 0.72 }}>
+                  Get guidance using your GameDeck context
                 </span>
-              </div>
-            ) : null}
-            <div className="detail-row">
-              <span className="detail-label">Achievements</span>
-              <span className="detail-value">
-                {game.earned_awards ?? 0} / {game.total_awards ?? 0}
               </span>
-            </div>
-            <div className="detail-row">
-              <span className="detail-label">Playtime</span>
-              <span className="detail-value">{playtime}</span>
-            </div>
-            <div className="detail-row">
-              <span className="detail-label">Last played</span>
-              <span className="detail-value">{formatDate(game.last_played)}</span>
-            </div>
-            {len > 0 ? (
-              <div className="detail-row">
-                <span className="detail-label">Story length</span>
-                <span className="detail-value">~{Math.round(len / 60)}h</span>
-              </div>
-            ) : null}
-            {studio ? (
-              <div className="detail-row">
-                <span className="detail-label">Studio</span>
-                <span className="detail-value">{studio}</span>
-              </div>
-            ) : null}
-            {releaseText ? (
-              <div className="detail-row">
-                <span className="detail-label">Released</span>
-                <span className="detail-value">{releaseText}</span>
-              </div>
-            ) : null}
-          </>
-        ) : (
-          <>
-            {platforms.length ? (
-              <div className="detail-row">
-                <span className="detail-label">Platforms</span>
-                <span className="detail-value">{platforms.join(', ')}</span>
-              </div>
-            ) : null}
-            {studio ? (
-              <div className="detail-row">
-                <span className="detail-label">Studio</span>
-                <span className="detail-value">{studio}</span>
-              </div>
-            ) : null}
-            {releaseText ? (
-              <div className="detail-row">
-                <span className="detail-label">Released</span>
-                <span className="detail-value">{releaseText}</span>
-              </div>
-            ) : null}
-          </>
-        )}
+              <span aria-hidden="true" style={{ fontSize: 19 }}>›</span>
+            </button>
+          ) : null}
 
-        {owned && safeAchievementsUrl ? (
-          <a className="detail-link" href={safeAchievementsUrl} target="_blank" rel="noreferrer noopener">
-            View achievements
-          </a>
-        ) : null}
-        {!owned && safeGameUrl ? (
-          <a className="detail-link" href={safeGameUrl} target="_blank" rel="noreferrer noopener">
-            View on IGDB
-          </a>
-        ) : null}
-        {!owned && onNotInterested ? (
-          <button type="button" className="game-sheet-not-interested" onClick={() => onNotInterested(game)}>
-            Not interested
-          </button>
-        ) : null}
+          {owned ? (
+            <>
+              {/* Your status, pilot card. */}
+              <div style={{ ...cardStyle, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
+                  <span style={sectionTitleStyle}>Your status</span>
+                  <span
+                    style={{
+                      color: pinned ? 'var(--accent)' : 'var(--muted)',
+                      fontSize: 12,
+                      fontWeight: 800,
+                      letterSpacing: 0.7,
+                    }}
+                  >
+                    {pinned ? 'SET BY YOU' : 'GAMEDECK SUGGESTION'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: 6 }} role="group" aria-label="Your status for this game">
+                  {STATUSES.map((s) => {
+                    const active = status === s
+                    const isPinned = pinned && active
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => {
+                          // Tapping the status you already chose clears it, which is
+                          // the only route back to the derived value. That branch of
+                          // setStatus deletes the row; until now nothing in the app
+                          // called it, so a status was permanent once set.
+                          const clearing = pinned && status === s
+                          setStatus(game.master_id, clearing ? null : s)
+                          setPinned(!clearing)
+                          setStatusState(clearing ? derivedStatus(game) : s)
+                        }}
+                        style={{
+                          flex: 1,
+                          minHeight: 44,
+                          padding: '0 4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: 13,
+                          border: `1px solid ${isPinned ? 'var(--text)' : 'var(--line)'}`,
+                          background: active ? 'var(--accent)' : 'var(--surface)',
+                          color: active ? 'var(--bg)' : 'var(--text)',
+                          font: 'inherit',
+                          fontSize: 12,
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {STATUS_LABELS[s]}
+                      </button>
+                    )
+                  })}
+                </div>
+                <p style={{ color: 'var(--muted)', fontSize: 13, lineHeight: '20px', margin: 0 }}>
+                  {pinned
+                    ? 'Set by you. Tap it again to clear.'
+                    : 'Worked out from your playtime. Tap to set your own.'}
+                </p>
+              </div>
+
+              <OwnedRankingAction game={game} />
+
+              {/* Your progress, pilot card + metrics grid. */}
+              <div style={{ ...cardStyle, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <span style={sectionTitleStyle}>Your progress</span>
+                <ProgressBar percent={progressPercent} label={progressLabel} />
+                <div style={{ display: 'flex', flexWrap: 'wrap', rowGap: 10 }}>
+                  <Metric label="Status" value={STATUS_LABELS[status] || status} />
+                  <Metric label="Playtime" value={playtime || 'Not recorded'} />
+                  <Metric label={progressLabel} value={`${progressPercent}%`} />
+                  {game.total_awards ? (
+                    <Metric
+                      label="Achievements"
+                      value={`${game.earned_awards ?? 0} of ${game.total_awards}`}
+                    />
+                  ) : null}
+                </div>
+              </div>
+
+              {/* At a glance, pilot card + metrics grid. */}
+              <div style={{ ...cardStyle, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <span style={sectionTitleStyle}>At a glance</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', rowGap: 10 }}>
+                  <Metric label="Last played" value={formatDate(game.last_played) || 'Not recorded'} />
+                  <Metric
+                    label="Story length"
+                    value={len > 0 ? `~${Math.round(len / 60)}h` : 'Not available'}
+                  />
+                  <Metric
+                    label="IGDB rating"
+                    value={rating != null ? `${rating} / 100` : 'Not available'}
+                  />
+                  {(game.franchises || []).length ? (
+                    <Metric label="Franchise" value={game.franchises.join(', ')} />
+                  ) : null}
+                </div>
+              </div>
+            </>
+          ) : (
+            /* Discover / wishlist primary actions: wishlist toggle + More like this. */
+            <div className="discover-actions" style={{ margin: 0 }}>
+              <button
+                type="button"
+                className={`discover-action wish-action${wishActive ? ' on' : ''}`}
+                aria-pressed={wishActive}
+                aria-label={wishActive ? 'Remove from wishlist' : 'Add to wishlist'}
+                onClick={() => toggleWishlist({ id: igdbId, name: title, cover: coverSrc, year })}
+              >
+                <svg viewBox="0 0 24 24" width="17" height="17" fill={wishActive ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 21s-7-4.5-9.5-8.5A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6.5C19 16.5 12 21 12 21z" />
+                </svg>
+              </button>
+              {onMoreLikeThis ? (
+                <button
+                  type="button"
+                  className="discover-action"
+                  style={{ flex: 1, minHeight: 46 }}
+                  onClick={() => onMoreLikeThis(seed)}
+                >
+                  More like this
+                </button>
+              ) : null}
+            </div>
+          )}
+
+          {mediaPending ? (
+            <MediaSkeleton owned={owned} />
+          ) : (
+            <>
+              {/* About this game, pilot card. */}
+              {summary ? (
+                <div style={cardStyle}>
+                  <div style={{ ...sectionTitleStyle, marginBottom: 10 }}>About this game</div>
+                  <p style={{ color: 'var(--muted)', lineHeight: '21px', margin: 0 }}>{summary}</p>
+                </div>
+              ) : null}
+
+              {/* Catalog details, pilot card. */}
+              {hasCatalogFacts || url ? (
+                <div style={{ ...cardStyle, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <span style={sectionTitleStyle}>Catalog details</span>
+                  {studio ? (
+                    <div>
+                      <div style={{ color: 'var(--muted)', fontSize: 13 }}>Studio</div>
+                      <div style={{ color: 'var(--text)', fontSize: 16, fontWeight: 600 }}>{studio}</div>
+                    </div>
+                  ) : null}
+                  {releaseText ? (
+                    <div>
+                      <div style={{ color: 'var(--muted)', fontSize: 13 }}>Released</div>
+                      <div style={{ color: 'var(--text)', fontSize: 16, fontWeight: 600 }}>{releaseText}</div>
+                    </div>
+                  ) : null}
+                  {platforms.length ? (
+                    <div>
+                      <div style={{ color: 'var(--muted)', fontSize: 13 }}>Platforms</div>
+                      <div style={{ color: 'var(--text)', fontSize: 16, fontWeight: 600 }}>
+                        {platforms.join(' · ')}
+                      </div>
+                    </div>
+                  ) : null}
+                  {rating != null && !owned ? (
+                    <div>
+                      <div style={{ color: 'var(--muted)', fontSize: 13 }}>IGDB rating</div>
+                      <div style={{ color: 'var(--text)', fontSize: 16, fontWeight: 600 }}>{rating} / 100</div>
+                    </div>
+                  ) : null}
+                  {safeGameUrl ? (
+                    <a
+                      className="detail-link"
+                      href={safeGameUrl}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      style={{ color: 'var(--accent)', fontWeight: 800 }}
+                    >
+                      View on IGDB
+                    </a>
+                  ) : null}
+                  {owned && safeAchievementsUrl ? (
+                    <a
+                      className="detail-link"
+                      href={safeAchievementsUrl}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      style={{ color: 'var(--accent)', fontWeight: 800 }}
+                    >
+                      View achievements
+                    </a>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {/* Screenshots, pilot section. */}
+              {screenshots.length ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <span style={sectionTitleStyle}>Screenshots</span>
+                  <div className="shot-strip" style={{ margin: '0 -18px', paddingLeft: 18, paddingRight: 18 }}>
+                    {screenshots.map((s, i) => (
+                      <button
+                        type="button"
+                        className="shot-btn"
+                        key={i}
+                        onPointerDown={loadLightbox}
+                        onFocus={loadLightbox}
+                        onClick={() => setShotIndex(i)}
+                        aria-label={`View ${title} screenshot ${i + 1} larger`}
+                        style={{
+                          border: 0,
+                          padding: 0,
+                          background: 'none',
+                          cursor: 'pointer',
+                          font: 'inherit',
+                        }}
+                      >
+                        <img
+                          className="shot"
+                          src={s}
+                          alt={`${title} screenshot ${i + 1}`}
+                          loading="lazy"
+                          decoding="async"
+                          style={{ borderRadius: 16 }}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {genres.length ? (
+                <div className="chip-wrap" style={{ margin: 0 }}>
+                  {genres.map((g) => (
+                    <span className="meta-chip" key={g}>
+                      {g}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </>
+          )}
+
+          {!owned && onNotInterested ? (
+            <button
+              type="button"
+              className="game-sheet-not-interested"
+              onClick={() => onNotInterested(game)}
+            >
+              Not interested
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {shotIndex != null ? (

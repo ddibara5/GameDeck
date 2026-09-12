@@ -3,6 +3,11 @@ import { TAB_BY_KEY } from '../lib/navConfig.js'
 // Per-tab line icons. Labels live in navConfig (TAB_META) so the editor and the
 // drawer's "More" list share one source of truth; the drawer also renders these
 // same icons for any hidden tab.
+// Icon language follows the Expo pilot's tab-destinations symbols: safari
+// (compass) for Discover, waveform.path.ecg for Activity, books.vertical for
+// Library, chart.bar for Insights, list.number for Rankings, newspaper for
+// News, and heart for Wishlist (in destIcons). Ask stays the detached search
+// utility, matching the pilot's Search action rather than a tab.
 export const TAB_ICONS = {
   // HomeDeck's house, copied path for path from its `Qt.home` so the two apps
   // open on the same mark. Ours was a roofline over an open-bottomed box: no
@@ -25,9 +30,8 @@ export const TAB_ICONS = {
     </svg>
   ),
   activity: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <circle cx="12" cy="12" r="8.5" />
-      <path d="M12 7.5v4.8l3.2 2" strokeLinecap="round" strokeLinejoin="round" />
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 12h4l2.5-6 4 12 2.5-8 1.5 2H21" />
     </svg>
   ),
   insights: (
@@ -37,9 +41,9 @@ export const TAB_ICONS = {
     </svg>
   ),
   discover: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M12 3.5l1.8 4.2 4.2 1.8-4.2 1.8L12 15.5l-1.8-4.2-4.2-1.8 4.2-1.8L12 3.5z" strokeLinejoin="round" />
-      <path d="M18.5 15l.8 1.9 1.9.8-1.9.8-.8 1.9-.8-1.9-1.9-.8 1.9-.8.8-1.9z" strokeLinejoin="round" />
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="m15.5 8.5-2 5-5 2 2-5z" />
     </svg>
   ),
   foryou: (

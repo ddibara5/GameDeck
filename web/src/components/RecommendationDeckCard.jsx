@@ -1,49 +1,30 @@
 import Cover from './Cover.jsx'
 import WishHeart from './WishHeart.jsx'
-import { gameDescriptor, laneReason } from '../lib/discoverLanes.js'
 import { optImg, originalIgdbImage } from '../lib/format.js'
 
-const KIND_LABELS = {
-  strong: 'Strong match',
-  adjacent: 'Explore a little',
-  wildcard: 'Wildcard',
-  returning: 'Worth another look',
-  surprise: 'Surprise pick',
-}
-
-function NotInterestedIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-      <path d="M6 6l12 12M18 6 6 18" />
-    </svg>
-  )
-}
-
+// The focused card of the For You deck, ported from the Expo pilot's
+// ForYouDeck card: cover art with a kind badge, evidence reason, and
+// details / dismiss / step-through actions.
 export default function RecommendationDeckCard({
-  game,
-  wished,
-  platforms,
-  motion = '',
-  surprise = false,
+  recommendation,
+  position = 0,
+  count = 0,
   busy = false,
+  wished = false,
   onOpen,
   onBack,
   onNext,
-  onNotInterested,
+  onDismiss,
 }) {
+  const game = recommendation && recommendation.game
   if (!game) return null
-  const descriptor = gameDescriptor(game)
-  const tags = descriptor ? descriptor.split(' · ').filter(Boolean).slice(0, 3) : []
-  const releaseMeta = [game.year || null, platforms].filter(Boolean)
   const cover = originalIgdbImage(game.cover)
   const backdrop = optImg(cover, 640)
-  const kind = surprise ? 'surprise' : (game.recommendationKind || 'strong')
-  const reason = surprise
-    ? 'An adventurous pick outside the main deck, still grounded in the parts of games you tend to enjoy.'
-    : laneReason(game.lane)
+  const kindClass = recommendation.kind === 'NEW PICK' ? 'new' : 'strong'
+  const releaseMeta = [game.year || null, (game.platforms || []).filter(Boolean).slice(0, 3).join(' / ')].filter(Boolean)
 
   return (
-    <div className={`fy-deck-card${motion ? ` ${motion}` : ''}`}>
+    <div className="fy-deck-card">
       <button type="button" className="fy-deck-open" onClick={onOpen} disabled={busy}>
         <span className="fy-deck-art">
           {backdrop ? (
@@ -54,29 +35,30 @@ export default function RecommendationDeckCard({
             />
           ) : null}
           <Cover src={cover} title={game.name} size="lg" className="fy-deck-cover" />
-          <span className={`fy-deck-kind ${kind}`}>{KIND_LABELS[kind] || KIND_LABELS.strong}</span>
+          <span className={`fy-deck-kind ${kindClass}`}>{recommendation.kind}</span>
         </span>
 
         <span className="fy-deck-copy">
           <span className="fy-deck-name">{game.name}</span>
-          {game.rating || releaseMeta.length ? (
+          {game.rating != null || releaseMeta.length ? (
             <span className="fy-deck-meta">
-              {game.rating ? <span className="fy-rating">★ {game.rating}</span> : null}
-              {game.rating && releaseMeta.length ? <span aria-hidden="true"> · </span> : null}
+              {game.rating != null ? <span className="fy-rating">★ {game.rating}/100</span> : null}
+              {game.rating != null && releaseMeta.length ? <span aria-hidden="true"> · </span> : null}
               {releaseMeta.map((item, index) => (
                 <span key={item}>{index ? ' · ' : ''}{item}</span>
               ))}
             </span>
           ) : null}
-          {tags.length ? (
-            <span className="fy-deck-tags">
-              {tags.map((tag) => <span key={tag}>{tag}</span>)}
-            </span>
+          {game.releaseLabel ? (
+            <span className="fy-deck-meta">{game.releaseLabel}</span>
           ) : null}
           <span className="fy-deck-why">
             <span className="fy-deck-why-mark" aria-hidden="true">✦</span>
-            <span>{reason}</span>
+            <span>{recommendation.reason}</span>
           </span>
+          {count > 1 ? (
+            <span className="fy-deck-meta">Card {position + 1} of {count}</span>
+          ) : null}
         </span>
       </button>
 
@@ -85,17 +67,28 @@ export default function RecommendationDeckCard({
       <div className="fy-deck-actions">
         <button
           type="button"
-          className="fy-deck-action icon"
-          aria-label={`Not interested in ${game.name}`}
-          onClick={onNotInterested}
+          className="fy-deck-action"
+          aria-label={`Dismiss ${game.name} from For You`}
+          onClick={onDismiss}
           disabled={busy}
         >
-          <NotInterestedIcon />
+          Not for me
         </button>
-        <button type="button" className="fy-deck-action" onClick={onBack} disabled={busy || !onBack}>Back</button>
-        <button type="button" className="fy-deck-action primary" onClick={onNext} disabled={busy}>
-          {surprise ? 'Another' : 'Next'}
-          <span aria-hidden="true">→</span>
+        <button
+          type="button"
+          className="fy-deck-action"
+          aria-label="Previous recommendation"
+          onClick={onBack}
+          disabled={busy || position === 0}
+        >Back</button>
+        <button
+          type="button"
+          className="fy-deck-action primary"
+          aria-label="Next recommendation"
+          onClick={onNext}
+          disabled={busy}
+        >
+          Next →
         </button>
       </div>
     </div>

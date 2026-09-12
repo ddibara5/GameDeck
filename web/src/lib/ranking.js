@@ -176,3 +176,56 @@ export async function recordComparison(leftId, rightId, result) {
   idbDel(GAME_KEY(Number(rightId)))
   return data
 }
+
+// --- Expo pilot parity: ranking list + compare (duel) mode ---
+
+export const RANK_REACTIONS = ['loved', 'liked', 'mixed', 'not_for_me']
+
+export const RANK_REACTION_LABELS = {
+  loved: 'Loved it',
+  liked: 'Liked it',
+  mixed: 'Mixed',
+  not_for_me: 'Not for me',
+}
+
+export const RANK_SKIP_CUTOFF_DAYS = 90
+export const RANK_SKIP_CUTOFF_MS = RANK_SKIP_CUTOFF_DAYS * 86400000
+
+function rankPairKey(a, b) {
+  const x = Number(a)
+  const y = Number(b)
+  return x < y ? `${x}|${y}` : `${y}|${x}`
+}
+
+// Port of the pilot's chooseRankingPair: items sorted by fewest comparisons
+// first, then highest score; each item pairs against the closest-scored peer
+// that is not in the recently-skipped set. Returns { left, right } or null.
+export function chooseRankingPair(ranks, comparisons, cutoff = Date.now() - RANK_SKIP_CUTOFF_MS) {
+  if (!Array.isArray(ranks) || ranks.length < 2) return null
+  const skipped = new Set()
+  for (const item of comparisons || []) {
+    if (item.result === 'skip' && cutoff != null && Date.parse(item.compared_at) >= cutoff) {
+      skipped.add(rankPairKey(item.left_id, item.right_id))
+    }
+  }
+  const byUncertainty = [...ranks].sort(
+    (a, b) =>
+      Number(a.comparison_count || 0) - Number(b.comparison_count || 0) ||
+      Number(b.score) - Number(a.score),
+  )
+  for (const left of byUncertainty) {
+    const right = ranks
+      .filter(
+        (item) =>
+          Number(item.master_id) !== Number(left.master_id) &&
+          !skipped.has(rankPairKey(left.master_id, item.master_id)),
+      )
+      .sort(
+        (a, b) =>
+          Math.abs(Number(a.score) - Number(left.score)) -
+          Math.abs(Number(b.score) - Number(left.score)),
+      )[0]
+    if (right) return { left, right }
+  }
+  return null
+}

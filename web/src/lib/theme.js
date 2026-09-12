@@ -35,12 +35,12 @@ export const THEME_FAMILIES = [
   {
     key: 'curator', label: 'Curator', eyebrow: 'Editorial archive',
     description: 'Warm paper, walnut details, bookish type and restrained movement.',
-    dark: ['#18130e', '#251d16', '#d8aa62'], light: ['#f1e8d8', '#fbf6ed', '#8a5d25'],
+    dark: ['#211B17', '#2C2521', '#F0C184'], light: ['#F5F0E8', '#FFFCF7', '#825B32'],
   },
   {
     key: 'obsidian', label: 'Obsidian Glass', eyebrow: 'Premium cinematic',
     description: 'Prismatic glass, soft depth and deliberate gallery-like pacing.',
-    dark: ['#0a0b0f', '#171923', '#82a3ff'], light: ['#edf1f8', '#f9fbff', '#3f61bd'],
+    dark: ['#101522', '#1A2130', '#A9C2FF'], light: ['#EEF2FC', '#FAFBFF', '#3861b8'],
   },
   {
     key: 'xbox', label: 'Xbox', eyebrow: 'Velocity dashboard',
