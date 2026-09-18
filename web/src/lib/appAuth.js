@@ -21,6 +21,7 @@ export function useAppSession() {
     })
     const { data: listener } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!alive) return
+      if (event === 'SIGNED_IN') clearAuthCodeParam()
       const session = isOwnerSession(nextSession) ? nextSession : null
       setState((current) => ({
         loading: false,
@@ -67,6 +68,30 @@ export function sendPasswordRecoveryEmail() {
   return supabase.auth.resetPasswordForEmail(OWNER_EMAIL, {
     redirectTo: passwordRecoveryRedirectUrl(),
   })
+}
+
+export function sendMagicLink() {
+  return supabase.auth.signInWithOtp({
+    email: OWNER_EMAIL,
+    options: {
+      emailRedirectTo: passwordRecoveryRedirectUrl(),
+    },
+  })
+}
+
+// A magic-link sign-in lands with ?code= in the URL. The code is exchanged
+// for a session before SIGNED_IN fires, so the leftover code can be dropped:
+// a reload with an already-used code would otherwise attempt (and fail) a
+// second exchange.
+function clearAuthCodeParam() {
+  try {
+    const url = new URL(window.location.href)
+    if (!url.searchParams.has('code')) return
+    url.searchParams.delete('code')
+    window.history.replaceState(window.history.state, '', url.toString())
+  } catch {
+    /* cosmetic only */
+  }
 }
 
 export function updatePassword(password) {

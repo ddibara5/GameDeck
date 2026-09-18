@@ -11,7 +11,7 @@ test('preview auth has public configuration and a bounded request path', async (
   assert.match(source, /fetch: authFetchWithTimeout/)
 })
 
-test('password auth uses a fixed owner and routes recovery back to trusted previews', async () => {
+test('auth uses a fixed owner: password, magic link, and trusted preview redirects', async () => {
   const [gate, auth] = await Promise.all([
     readFile(new URL('../src/components/AuthGate.jsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/lib/appAuth.js', import.meta.url), 'utf8'),
@@ -21,10 +21,16 @@ test('password auth uses a fixed owner and routes recovery back to trusted previ
   assert.match(gate, /autoComplete=\{recovery \? 'new-password' : 'current-password'\}/)
   assert.match(gate, /Set or reset password/)
   assert.match(gate, /New accounts cannot be created/)
+  assert.match(gate, /Email me a sign-in link/)
+  assert.match(gate, /Resend link in /)
   assert.match(auth, /signInWithPassword\(\{[\s\S]*email: OWNER_EMAIL,[\s\S]*password/)
   assert.match(auth, /resetPasswordForEmail\(OWNER_EMAIL/)
   assert.match(auth, /redirectTo: passwordRecoveryRedirectUrl\(\)/)
   assert.match(auth, /updateUser\(\{ password \}\)/)
   assert.match(auth, /event === 'PASSWORD_RECOVERY'/)
-  assert.doesNotMatch(auth, /signInWithOtp|signUp\(/)
+  // Magic link is allowed but only ever to the fixed owner email, and its
+  // redirect reuses the trusted-preview host check. Public sign-up stays out.
+  assert.match(auth, /signInWithOtp\(\{[\s\S]*email: OWNER_EMAIL/)
+  assert.match(auth, /emailRedirectTo: passwordRecoveryRedirectUrl\(\)/)
+  assert.doesNotMatch(auth, /signUp\(/)
 })

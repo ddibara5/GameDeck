@@ -1,14 +1,17 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Brand from './Brand.jsx'
 import { OWNER_EMAIL } from '../lib/supabase.js'
 import {
   PASSWORD_MIN_LENGTH,
   isEmailRateLimitError,
+  sendMagicLink,
   sendPasswordRecoveryEmail,
   signInWithPassword,
   updatePassword,
 } from '../lib/appAuth.js'
 import './auth.css'
+
+const MAGIC_LINK_COOLDOWN_SECONDS = 60
 
 export default function AuthGate({ recovery = false, onRecoveryComplete }) {
   const [password, setPassword] = useState('')
@@ -16,8 +19,17 @@ export default function AuthGate({ recovery = false, onRecoveryComplete }) {
   const [showPassword, setShowPassword] = useState(false)
   const [busy, setBusy] = useState(false)
   const [resetSent, setResetSent] = useState(false)
+  const [magicBusy, setMagicBusy] = useState(false)
+  const [magicSent, setMagicSent] = useState(false)
+  const [magicCooldown, setMagicCooldown] = useState(0)
   const [tone, setTone] = useState('status')
   const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    if (magicCooldown <= 0) return
+    const timer = setTimeout(() => setMagicCooldown((seconds) => seconds - 1), 1000)
+    return () => clearTimeout(timer)
+  }, [magicCooldown])
 
   const submitSignIn = async (event) => {
     event.preventDefault()
@@ -61,6 +73,31 @@ export default function AuthGate({ recovery = false, onRecoveryComplete }) {
     setResetSent(true)
     setTone('status')
     setMessage('Check your email. The secure link will return here so you can choose a password.')
+  }
+
+  const requestMagicLink = async () => {
+    setMagicBusy(true)
+    setTone('status')
+    setMessage('Sending a sign-in link…')
+    let error
+    try {
+      const result = await sendMagicLink()
+      error = result.error
+    } catch (caught) {
+      error = caught
+    }
+    setMagicBusy(false)
+    if (error) {
+      setTone('error')
+      setMessage(isEmailRateLimitError(error)
+        ? 'A sign-in email was sent recently. Use the latest email or try again later.'
+        : (error.message || 'Could not send the sign-in link. Try again.'))
+      return
+    }
+    setMagicSent(true)
+    setMagicCooldown(MAGIC_LINK_COOLDOWN_SECONDS)
+    setTone('status')
+    setMessage('Check your email. The sign-in link will bring you straight back here.')
   }
 
   const submitPassword = async (event) => {
@@ -165,17 +202,25 @@ export default function AuthGate({ recovery = false, onRecoveryComplete }) {
             </>
           ) : null}
 
-          <button type="submit" className="auth-button" disabled={busy || !password || (recovery && !confirmPassword)}>
+          <button type="submit" className="auth-button" disabled={busy || magicBusy || !password || (recovery && !confirmPassword)}>
             {busy ? (recovery ? 'Saving…' : 'Signing in…') : (recovery ? 'Save password' : 'Sign in')}
           </button>
         </form>
 
         {!recovery ? (
           <div className="auth-recovery">
-            <button type="button" className="auth-secondary auth-secondary-strong" disabled={busy || resetSent} onClick={requestReset}>
+            <button
+              type="button"
+              className="auth-secondary auth-secondary-strong"
+              disabled={busy || magicBusy || magicCooldown > 0}
+              onClick={requestMagicLink}
+            >
+              {magicBusy ? 'Sending…' : magicCooldown > 0 ? `Resend link in ${magicCooldown}s` : magicSent ? 'Sign-in link sent' : 'Email me a sign-in link'}
+            </button>
+            <button type="button" className="auth-secondary auth-secondary-strong" disabled={busy || magicBusy || resetSent} onClick={requestReset}>
               {resetSent ? 'Password email sent' : 'Set or reset password'}
             </button>
-            <p className="auth-security-note">Only the existing owner account can receive a password link.</p>
+            <p className="auth-security-note">Only the existing owner account can receive a sign-in link.</p>
           </div>
         ) : null}
       </section>
