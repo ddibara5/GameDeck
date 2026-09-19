@@ -1,0 +1,74 @@
+/* QuickSetup card. Port of the Expo pilot's quick-setup.tsx (Sept 10 commit).
+   The platform chips reuse the global .filter-options/.filter-opt classes
+   and the buttons reuse .discover-action/.primary from index.css; this file
+   only owns the card layout and the plain "Skip setup" button. */
+.quick-setup {
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* The settings ("always") variant is slightly denser, like the pilot. */
+.quick-setup-compact {
+  padding: 14px;
+  gap: 8px;
+}
+
+.quick-setup-title {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--t-t3);
+  font-weight: var(--w-bold);
+  letter-spacing: var(--t-t3-tr);
+}
+
+.quick-setup-caption {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--t-sub);
+  line-height: 1.45;
+}
+
+.quick-setup-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--t-foot);
+  line-height: 1.45;
+}
+
+.quick-setup-notice {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--t-foot);
+}
+
+.quick-setup-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Plain text button for "Skip setup", matching the pilot's plain action. */
+.quick-setup-skip {
+  min-height: 44px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: var(--t-sub);
+  font-weight: var(--w-med);
+  cursor: pointer;
+}
+
+.quick-setup-skip:active {
+  opacity: 0.7;
+}
+
+.quick-setup-skip:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

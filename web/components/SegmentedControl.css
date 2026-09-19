@@ -1,0 +1,22 @@
+/* Extends the shared `.seg` / `.seg-btn` styles already in index.css (kept
+   there so theme-family overrides apply). Only the states the shared rules
+   do not cover live here: disabled and keyboard focus. */
+
+.seg-disabled {
+  opacity: 0.55;
+}
+
+.seg-btn:disabled {
+  cursor: not-allowed;
+}
+
+.seg-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seg-btn {
+    transition: none;
+  }
+}

@@ -1,0 +1,53 @@
+/* GameDetailHeader: cover + eyebrow context + title. 84px art, 12px radius,
+   eyebrow in the accent color, mirroring the pilot's game-detail-header. */
+
+.gdh {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  align-items: center;
+}
+
+.gdh-art {
+  width: 84px;
+  flex: none;
+  aspect-ratio: 3 / 4;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface-3, #1d2230);
+}
+
+.gdh-art .cover {
+  width: 100%;
+  height: 100%;
+}
+
+.gdh-art .cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.gdh-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  justify-content: center;
+}
+
+.gdh-context {
+  margin: 0;
+  color: var(--accent, #4da3ff);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.gdh-title {
+  margin: 0;
+  color: var(--text, #f2f4f8);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.2;
+}

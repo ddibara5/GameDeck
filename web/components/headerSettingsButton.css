@@ -1,0 +1,19 @@
+/* HeaderSettingsButton: 44px gear button, accent tint like the pilot. */
+
+.hsb {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent, #4da3ff);
+  cursor: pointer;
+  border-radius: 12px;
+}
+
+.hsb:active {
+  opacity: 0.7;
+}

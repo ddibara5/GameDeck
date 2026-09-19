@@ -1,0 +1,220 @@
+/* Styles for FilterBuilder.jsx. The PWA theming contract is CSS variables;
+   nothing here hard-codes a color. */
+
+.fb {
+  display: grid;
+  gap: 12px;
+}
+
+.fb-section {
+  display: grid;
+  gap: 8px;
+}
+
+/* Matches the PWA .filter-label header style used across filter surfaces. */
+.fb-h {
+  margin: 0;
+  font-size: var(--t-cap);
+  font-weight: var(--w-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.fb-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+/* Pilot renders each field in a GlassCard; the PWA filter surfaces use a
+   solid card with a soft border, so the builder follows that convention. */
+.fb-card {
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  padding: 0 12px 8px;
+}
+
+.fb-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fb-card-toggle {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fb-card-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.fb-caret {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform var(--d-fast) ease;
+}
+
+.fb-caret.open {
+  transform: rotate(180deg);
+}
+
+.fb-remove {
+  flex: 0 0 44px;
+  width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* Current-value summary under the title, in the accent color like the
+   pilot's blue summary line. */
+.fb-summary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--accent);
+  font-size: 14px;
+  line-height: 19px;
+}
+
+.fb-card.open .fb-summary {
+  padding-bottom: 6px;
+}
+
+.fb-editor {
+  border-top: 1px solid var(--line-soft);
+  padding-top: 4px;
+}
+
+/* Capped scroll region for long option lists (same 264px as the pilot's
+   FilterPicker and singleFilter). */
+.fb-editor-scroll {
+  max-height: 264px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.fb-options {
+  display: grid;
+}
+
+/* Full-width option rows with a check on the active choice, matching the
+   pilot's FilterOptions rows. */
+.fb-opt {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--t-foot);
+  text-align: left;
+  cursor: pointer;
+}
+
+.fb-opt:active {
+  opacity: 0.65;
+}
+
+.fb-opt-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fb-opt.active .fb-opt-label {
+  color: var(--accent);
+  font-weight: var(--w-bold);
+}
+
+.fb-opt-check {
+  color: var(--accent);
+  font-size: 14px;
+}
+
+.fb-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.fb-chip {
+  min-height: 44px;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.fb-chip:active {
+  opacity: 0.65;
+}
+
+.fb-chip-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fb-chip-plus {
+  color: var(--accent);
+  font-size: 18px;
+  line-height: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fb-caret {
+    transition: none;
+  }
+}

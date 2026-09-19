@@ -1,0 +1,99 @@
+/* PlatformsView: standing "where do you play" platform picker. */
+
+.pv {
+  padding: 12px 18px 32px;
+}
+
+.pv-back {
+  min-height: 44px;
+  padding: 0 8px 0 0;
+  border: 0;
+  background: none;
+  color: var(--accent, #4da3ff);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pv-title {
+  margin: 4px 0 12px;
+  color: var(--text, #f2f4f8);
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.pv-card {
+  background: var(--surface-2, #171b24);
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pv-copy {
+  margin: 0;
+  color: var(--muted, #9aa3b2);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.pv-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pv-chip {
+  min-height: 44px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border, #2a2f3a);
+  background: transparent;
+  color: var(--text, #f2f4f8);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pv-chip.active {
+  border-color: var(--accent, #4da3ff);
+  background: var(--accent, #4da3ff);
+  color: var(--on-accent, #08131f);
+}
+
+.pv-chip:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.pv-hint {
+  margin: 0;
+  color: var(--muted, #9aa3b2);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.pv-notice {
+  margin: 0;
+  color: var(--muted, #9aa3b2);
+  font-size: 13px;
+}
+
+.pv-save {
+  min-height: 48px;
+  margin-top: 4px;
+  padding: 10px 18px;
+  border-radius: 23px;
+  border: 1px solid var(--accent, #4da3ff);
+  background: var(--accent, #4da3ff);
+  color: var(--on-accent, #08131f);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pv-save:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

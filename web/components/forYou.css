@@ -1,0 +1,544 @@
+/* For You (Daily Mix) surfaces, ported from the pilot's Sept 10 commit.
+   Uses the app's warm design tokens and reuses the existing modal / filter
+   sheet styling where possible. */
+
+/* ---- ForYouAction ---- */
+.fy-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.fy-action.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #241a10;
+}
+.fy-action.plain {
+  background: none;
+  border: none;
+  padding: 0 8px;
+  min-height: 36px;
+  color: var(--accent);
+  font-weight: 500;
+}
+.fy-action.compact {
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 14px;
+}
+.fy-action:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.fy-action-spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-top-color: currentColor;
+  animation: fy-spin 0.8s linear infinite;
+}
+@keyframes fy-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---- ForYouRow ---- */
+.fy-row {
+  display: flex;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line-soft);
+  align-items: center;
+}
+.fy-row:first-child {
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+}
+.fy-row:last-child {
+  border-bottom: none;
+  border-bottom-left-radius: inherit;
+  border-bottom-right-radius: inherit;
+}
+.fy-row-cover-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  line-height: 0;
+}
+.fy-row-cover {
+  width: 56px;
+  height: 84px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.fy-row-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.fy-row-title-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+.fy-row-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.fy-row-meta {
+  font-size: 13px;
+  color: var(--muted);
+}
+.fy-row-taste-update {
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 600;
+}
+.fy-row-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+}
+.fy-row-reason {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  min-width: 0;
+  text-align: left;
+}
+.fy-row-reason-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fy-row-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.fy-row-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+.fy-row-icon-btn.muted {
+  color: var(--muted);
+}
+.fy-row-icon-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ---- ForYouSheet ---- */
+.fy-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.fy-sheet-done {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px;
+  min-height: 36px;
+}
+.fy-sheet-done:disabled {
+  opacity: 0.4;
+}
+.fy-sheet-scroll {
+  padding-bottom: 24px;
+}
+
+/* ---- ForYouTaste (Tune your mix) ---- */
+.fy-taste {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.fy-taste-group-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 0 0 8px 4px;
+}
+.fy-taste-card {
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.fy-taste-item + .fy-taste-item .fy-taste-row {
+  border-top: 1px solid var(--line-soft);
+}
+.fy-taste-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--line-soft);
+  cursor: pointer;
+  text-align: left;
+}
+.fy-taste-row.no-border {
+  border-bottom: none;
+}
+.fy-taste-row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.fy-taste-row-title {
+  font-size: 15px;
+  color: var(--text);
+  font-weight: 500;
+}
+.fy-taste-row-value {
+  font-size: 13px;
+  color: var(--accent);
+}
+.fy-taste-row-value.muted {
+  color: var(--muted);
+}
+.fy-taste-row-chevron {
+  color: var(--muted);
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.fy-taste-detail {
+  padding: 0 16px 16px;
+  border-bottom: 1px solid var(--line-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.fy-taste-detail.no-border {
+  border-bottom: none;
+}
+.fy-taste-secondary {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+  margin: 0;
+}
+.fy-taste-notice {
+  font-size: 13px;
+  color: var(--accent);
+  margin: 0;
+}
+.fy-segmented {
+  display: flex;
+  background: var(--surface-2);
+  border-radius: 10px;
+  padding: 2px;
+  gap: 2px;
+}
+.fy-segmented-option {
+  flex: 1;
+  border: none;
+  background: none;
+  border-radius: 8px;
+  padding: 8px 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+}
+.fy-segmented-option.selected {
+  background: var(--accent);
+  color: #241a10;
+}
+.fy-segmented-option:disabled {
+  opacity: 0.5;
+}
+.fy-taste-hidden {
+  border-top: 1px solid var(--line-soft);
+  padding: 8px 16px 12px;
+}
+.fy-taste-hidden-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.fy-taste-hidden-row:last-child {
+  border-bottom: none;
+}
+.fy-taste-hidden-title {
+  font-size: 14px;
+  color: var(--text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- Why sheet (evidence) ---- */
+.fy-why {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.fy-why-head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.fy-why-cover {
+  width: 56px;
+  height: 84px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface-2);
+  flex-shrink: 0;
+}
+.fy-why-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+.fy-why-meta {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 4px 0 0;
+}
+.fy-why-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+.fy-why-item {
+  padding: 10px 0;
+  border-top: 1px solid var(--line-soft);
+}
+.fy-why-item:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+.fy-why-source {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+.fy-why-detail {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+  margin: 2px 0 0;
+}
+.fy-why-verdict {
+  background: var(--surface-2);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.fy-why-verdict .fy-why-detail {
+  color: var(--text);
+}
+.fy-why-note {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ---- Options sheet ---- */
+.fy-options {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.fy-options-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 8px;
+  padding: 0 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fy-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 4px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--text);
+  font-size: 15px;
+  cursor: pointer;
+  text-align: left;
+}
+.fy-option:last-child {
+  border-bottom: none;
+}
+.fy-option-icon {
+  width: 24px;
+  text-align: center;
+  font-size: 17px;
+  flex-shrink: 0;
+}
+.fy-option-sub {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.fy-option:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ---- Filters sheet ---- */
+.fy-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.fy-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.fy-filters-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+.fy-filters-actions .fy-action {
+  flex: 1;
+}
+
+/* ---- Notices ---- */
+.fy-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin: 0 16px;
+  font-size: 13px;
+  color: var(--text);
+}
+.fy-notice button {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 6px;
+  flex-shrink: 0;
+}
+
+/* ---- ForYouTab list layout ---- */
+.fy-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.fy-list-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px;
+}
+.fy-list-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.fy-list-deck {
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  margin: 0 16px;
+  overflow: hidden;
+}
+.fy-list-foot {
+  display: flex;
+  justify-content: center;
+  padding: 0 16px;
+}
+.fy-empty {
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  margin: 0 16px;
+  padding: 32px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+.fy-empty-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
