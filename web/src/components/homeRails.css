@@ -1,0 +1,130 @@
+/* Home activity rails (Sept 11 pilot port): the Recent play, New releases and
+   Upcoming poster strips. Colors come from the theme vars; nothing here
+   hardcodes a hex. Font sizes use the --t-* tokens (13 foot, 15 sub, 17 body,
+   20 t3, 22 t2). Poster width follows the shared --game-art-rail artwork
+   token so the rails match Discover's strips at every artwork size. */
+
+.hrail {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hrail-head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  width: 100%;
+  padding: 0 4px;
+  background: none;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.hrail-title {
+  flex: 1;
+  color: var(--text);
+  font-size: var(--t-body);
+  font-weight: 700;
+}
+
+.hrail-count {
+  color: var(--muted);
+  font-size: var(--t-foot);
+  font-variant-numeric: tabular-nums;
+}
+
+.hrail-strip {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  /* Bleed to the page edge so the strip scrolls rail-to-rail, like Discover's
+     shelves; the 18px matches .hm-page's horizontal padding. */
+  margin: 0 -18px;
+  padding: 2px 18px;
+}
+
+.hrail-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.hrail-card {
+  flex: 0 0 auto;
+  width: var(--game-art-rail);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.hrail-poster {
+  position: relative;
+  display: block;
+  width: var(--game-art-rail);
+  aspect-ratio: 3 / 4;
+  border-radius: var(--r-md, 12px);
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.hrail-cov {
+  width: 100%;
+  height: 100%;
+  font-size: 28px;
+}
+
+.hrail-cov img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hrail-badge {
+  position: absolute;
+  left: 7px;
+  bottom: 7px;
+  padding: 4px 7px;
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  font-size: var(--t-foot);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.hrail-name {
+  color: var(--text);
+  font-size: var(--t-foot);
+  font-weight: 600;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hrail-meta {
+  line-height: 1.3;
+}
+
+/* Spacing between the last section and the Customize pill bar. */
+.hm-custbar-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+}

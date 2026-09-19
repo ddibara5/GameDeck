@@ -48,3 +48,42 @@ test('all in-app brand surfaces use the shared theme-aware mark', () => {
   assert.match(css, /data-logo-style=["']theme["']/)
   for (let i = 1; i <= 7; i += 1) assert.match(css, new RegExp(`--logo-${i}`))
 })
+
+test('one-time migration moves a stored glass logo style back to theme default', async () => {
+  const { initTheme, getLogoStyle } = await import('../src/lib/theme.js')
+  const priorDocument = globalThis.document
+  const priorStorage = globalThis.localStorage
+  const priorWindow = globalThis.window
+  const values = new Map([['gamedeck_logo_style_v1', 'glass']])
+  const attrs = new Map()
+
+  globalThis.localStorage = {
+    getItem: (key) => values.get(key) ?? null,
+    setItem: (key, value) => values.set(key, String(value)),
+  }
+  globalThis.document = {
+    documentElement: {
+      setAttribute: (key, value) => attrs.set(key, String(value)),
+      removeAttribute: (key) => attrs.delete(key),
+      style: { removeProperty() {} },
+    },
+  }
+  globalThis.window = { matchMedia: () => ({ addEventListener() {} }) }
+
+  try {
+    initTheme()
+    assert.equal(values.get('gamedeck_logo_style_v1'), 'theme')
+    assert.equal(getLogoStyle(), 'theme')
+    assert.equal(attrs.get('data-logo-style'), 'theme')
+
+    // A later explicit pick of glass is respected (migration runs once).
+    values.set('gamedeck_logo_style_v1', 'glass')
+    initTheme()
+    assert.equal(values.get('gamedeck_logo_style_v1'), 'glass')
+    assert.equal(getLogoStyle(), 'glass')
+  } finally {
+    globalThis.document = priorDocument
+    globalThis.localStorage = priorStorage
+    globalThis.window = priorWindow
+  }
+})

@@ -77,7 +77,7 @@ export function byTitle(a, b) {
 // Which dated section a row belongs to, and its sort order.
 export function sectionOf(rel) {
   if (rel.k === 'tba') return { order: 8e15, id: 'tba', label: 'To be announced', amber: false }
-  if (isOut(rel)) return { order: 9e15, id: 'out', label: 'Out now', amber: false }
+  if (isOut(rel)) return { order: 9e15, id: 'out', label: 'New releases', amber: false }
   const d = new Date(rel.ts)
   const y = d.getUTCFullYear()
   const m = d.getUTCMonth()
@@ -94,7 +94,7 @@ export function sectionOf(rel) {
 }
 
 // Group rows into date sections, soonest first, with the released ones last.
-// Inside a section, upcoming games run soonest-first and the "Out now" bucket runs
+// Inside a section, upcoming games run soonest-first and the "New releases" bucket runs
 // most-recent-first: the thing that just landed is the point of that section.
 export function groupByRelease(items) {
   const groups = new Map()
@@ -115,7 +115,7 @@ export function groupByRelease(items) {
   return secs
 }
 
-// The mirror of groupByRelease, for the Out now page: released rows, newest
+// The mirror of groupByRelease, for the New releases page: released rows, newest
 // first, in four bands rather than one section per month.
 //
 // Twelve months of sections is right when you are looking FORWARD, because the
@@ -148,7 +148,7 @@ export function groupByReleased(items) {
   return secs
 }
 
-// The chip for a released row, on the Out now page.
+// The chip for a released row, on the New releases page.
 //
 // Two jobs, and they change hands at 30 days. Up close, recency is the whole
 // point: "8 days ago" is why the row is near the top. Past a month it stops

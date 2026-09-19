@@ -7,16 +7,15 @@ const home = readFileSync(new URL('../src/components/HomeTab.jsx', import.meta.u
 const nowPlaying = readFileSync(new URL('../src/components/HomeNowPlaying.jsx', import.meta.url), 'utf8')
 const releaseWatchSrc = readFileSync(new URL('../src/components/HomeReleaseWatch.jsx', import.meta.url), 'utf8')
 
-test('Home renders its four fixed cards in pilot order', () => {
-  const nowPlayingSlot = home.indexOf('nowPlayingSlot')
-  const recentPlaySlot = home.indexOf('recentPlaySlot')
-  const releaseSlot = home.indexOf('releaseSlot')
-  const forYou = home.indexOf('<HomeForYouCard')
-
-  assert.ok(nowPlayingSlot > 0, 'now playing slot exists')
-  assert.ok(recentPlaySlot > nowPlayingSlot, 'recent play renders after now playing')
-  assert.ok(releaseSlot > recentPlaySlot, 'release watch renders after recent play')
-  assert.ok(forYou > releaseSlot, 'for you card renders last')
+test('Home renders its four sections in the saved layout order', () => {
+  assert.match(home, /loadHomeLayout\(\)/)
+  assert.match(home, /saveHomeLayout\(/)
+  for (const id of ['statistics', 'recent-play', 'new-releases', 'upcoming']) {
+    assert.ok(home.includes(`'${id}'`), `section ${id} rendered`)
+  }
+  assert.match(home, /homeLayout\.hidden\.includes\(section\)/)
+  assert.match(home, /<HomeCustomizeBar/)
+  assert.match(home, /<HomeCustomizeSheet/)
 })
 
 test('Home cards keep the pilot empty states', () => {
@@ -39,10 +38,11 @@ test('Home release watch errors when the wishlist fails with no data', () => {
   assert.match(home, /Your wishlist could not be loaded\./)
 })
 
-test('Home wires the card navigation', () => {
+test('Home wires the section see-all navigation', () => {
   assert.match(home, /onOpenTab\('insights'\)/)
-  assert.match(home, /onOpenList\('wishlist'\)/)
-  assert.match(home, /onOpenTab\('foryou'\)/)
+  assert.match(home, /onOpenTab\('activity'\)/)
+  assert.match(home, /onOpenList\('released'\)/)
+  assert.match(home, /onOpenList\('releases'\)/)
 })
 
 test('releaseDate rebuilds the local calendar date from UTC midnight', () => {
@@ -55,22 +55,25 @@ test('releaseDate rebuilds the local calendar date from UTC midnight', () => {
   assert.equal(releaseDate({}), null)
 })
 
-test('releaseWatch splits coming up and out now, two each', () => {
+test('releaseWatch splits coming up and out now, twelve each', () => {
   const today = new Date(2026, 8, 11, 12, 0, 0)
   const day = 86400
   const base = Date.UTC(2026, 8, 11) / 1000
-  const items = [
-    { igdb_id: 1, title: 'Far 1', released: base + 30 * day },
-    { igdb_id: 2, title: 'Far 2', released: base + 10 * day },
-    { igdb_id: 3, title: 'Far 3', released: base + 20 * day },
-    { igdb_id: 4, title: 'Past 1', released: base - 5 * day },
-    { igdb_id: 5, title: 'Past 2', released: base - 1 * day },
-    { igdb_id: 6, title: 'Past 3', released: base - 9 * day },
-    { igdb_id: 7, title: 'Undated' },
-  ]
+  const items = []
+  for (let i = 1; i <= 15; i++) items.push({ igdb_id: i, title: `Far ${i}`, released: base + i * day })
+  for (let i = 1; i <= 15; i++) items.push({ igdb_id: 100 + i, title: `Past ${i}`, released: base - i * day })
+  items.push({ igdb_id: 999, title: 'Undated' })
   const { comingUp, outNow } = releaseWatch(items, today)
-  assert.deepEqual(comingUp.map((i) => i.title), ['Far 2', 'Far 3'])
-  assert.deepEqual(outNow.map((i) => i.title), ['Past 2', 'Past 1'])
+  assert.equal(comingUp.length, 12)
+  assert.equal(outNow.length, 12)
+  assert.deepEqual(
+    comingUp.map((i) => i.title),
+    Array.from({ length: 12 }, (_, k) => `Far ${k + 1}`),
+  )
+  assert.deepEqual(
+    outNow.map((i) => i.title),
+    Array.from({ length: 12 }, (_, k) => `Past ${k + 1}`),
+  )
 })
 
 test('releaseLabel covers today, tomorrow, this week, and dated labels', () => {

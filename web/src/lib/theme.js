@@ -154,6 +154,17 @@ export function getLogoStyle() {
   return LOGO_STYLES.has(value) ? value : 'theme'
 }
 
+const LOGO_STYLE_RESET_KEY = 'gamedeck_logo_style_reset_v1'
+
+// One-time reset (2026-09-19): Dave asked for Theme default instead of Glass.
+// A stored 'glass' choice is moved back to 'theme' once; later explicit picks
+// are left alone.
+function migrateLogoStyle() {
+  if (read(LOGO_STYLE_RESET_KEY)) return
+  if (read(LOGO_STYLE_KEY) === 'glass') write(LOGO_STYLE_KEY, 'theme')
+  write(LOGO_STYLE_RESET_KEY, '1')
+}
+
 export function applyLogoStyle(value) {
   const next = LOGO_STYLES.has(value) ? value : 'theme'
   root().setAttribute('data-logo-style', next)
@@ -214,6 +225,7 @@ export function setArtworkSize(value) {
 }
 
 export function initTheme() {
+  migrateLogoStyle()
   applyTheme(getTheme())
   applyThemeFamily(getThemeFamily())
   applyLogoStyle(getLogoStyle())

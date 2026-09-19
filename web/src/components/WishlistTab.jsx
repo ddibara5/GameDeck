@@ -308,7 +308,7 @@ function GenreSheet({ open, scopeLabel, options, value, loading, onChange, onClo
 // (three copies of the platform labels, two Library column lists).
 //
 // Recently released' chevron used to open `all`, which was the bug: released
-// rows DO live on that page, in the Out now section, but sectionOf gives that
+// rows DO live on that page, in the New releases section, but sectionOf gives that
 // section order 9e15, so it sorts below every future month, every quarter, every
 // year and To be announced. The card sent you to a page whose last row was the
 // thing you tapped for.
@@ -490,7 +490,7 @@ export default function WishlistTab({ onClose, mode = 'wishlist', initialScope =
         <div className="wl-scope-tabs" role="tablist" aria-label="Release watch view">
           {[
             ['upcoming', 'Upcoming'],
-            ['out', 'Out now'],
+            ['out', 'New releases'],
             ['all', 'All saved'],
           ].map(([key, label]) => (
             <button

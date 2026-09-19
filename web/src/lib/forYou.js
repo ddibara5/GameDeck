@@ -1,22 +1,49 @@
 // For You deck, ported from the GameDeck Expo pilot (src/lib/for-you.ts).
 // Builds a 12-card recommendation deck from Supabase play-history evidence
 // (the get_for_you_bootstrap RPC) plus batched catalog lanes from /api/discover.
+//
+// Sept 10 engine port: loadForYouSnapshot() builds the deck through
+// forYouEngine.js (content-based relevance + MMR diversity reranker) over a
+// tasteEvidence.js profile, with discovery modes (familiar / balanced /
+// adventurous), show-less/show-more taste preferences, local exposure fatigue
+// and same-day slate reconciliation. loadForYouDeck() below is the original
+// lane-fill algorithm, kept as the legacy path.
 
 import { supabase } from './supabase.js'
 import { authFetch } from './appAuth.js'
 import { buildQuery, loadLibraryTitles, normTitle } from './discover.js'
+import { idbSet, swr } from './idbCache.js'
+import { buildTasteEvidenceProfile } from './tasteEvidence.js'
+import {
+  DEFAULT_DISCOVERY_MODE,
+  DISCOVERY_MODES,
+  adaptEngineProfile,
+  localDay,
+  selectRecommendations,
+  toEngineCandidate,
+} from './forYouEngine.js'
+import { localDayKey } from './recommendationRotation.js'
+import {
+  getForYouAccount,
+  readForYouState,
+  saveForYouSlate,
+} from './forYouStorage.js'
 
 export const FOR_YOU_DECK_SIZE = 12
+export const FOR_YOU_CANDIDATE_TTL_MS = 5 * 60 * 1000
 
 export const defaultForYouFilters = {
   scales: ['aaa', 'aa', 'indie'],
   platforms: ['xbox', 'psn'],
   hideOwned: true,
+  mode: DEFAULT_DISCOVERY_MODE,
+  availability: 'all',
 }
 
 const FILTERS_KEY = 'gamedeck-for-you-filters-v1'
 const DISMISSED_KEY = 'gamedeck-for-you-dismissed-v1'
 const DISMISSED_CAP = 250
+const COMPARISON_LIMIT = 500
 
 const catalogLanes = [
   { key: 'soulslike', label: 'Soulslike', terms: ['soulslike', 'souls-like'] },
@@ -37,7 +64,14 @@ function filterScope(filters) {
   const scales = filters.scales.length === defaultForYouFilters.scales.length
     ? 'all'
     : filters.scales.join('-') || 'none'
-  return `${platforms}-${scales}-${filters.hideOwned ? 'hide' : 'include'}`
+  const mode = DISCOVERY_MODES.includes(filters.mode) ? filters.mode : DEFAULT_DISCOVERY_MODE
+  const availability = filters.availability === 'released' ? 'released' : 'all'
+  return `${platforms}-${scales}-${mode}-${availability}-${filters.hideOwned ? 'hide' : 'include'}`
+}
+
+// Stable snapshot identity for the deck state machine (useForYouDeck).
+export function forYouFilterKey(filters) {
+  return `for-you:${filterScope(filters)}`
 }
 
 function keyForToday(filters) {
@@ -117,19 +151,27 @@ function parseDiscoverGame(raw) {
   }
 }
 
+function normalizeFilters(saved) {
+  if (!saved || typeof saved !== 'object') return defaultForYouFilters
+  const mode = DISCOVERY_MODES.includes(saved.mode) ? saved.mode : DEFAULT_DISCOVERY_MODE
+  return {
+    scales: Array.isArray(saved.scales) && saved.scales.length
+      ? saved.scales.filter((key) => ['aaa', 'aa', 'indie'].includes(key))
+      : defaultForYouFilters.scales,
+    platforms: Array.isArray(saved.platforms)
+      ? saved.platforms.filter((key) => ['xbox', 'psn'].includes(key))
+      : defaultForYouFilters.platforms,
+    hideOwned: typeof saved.hideOwned === 'boolean' ? saved.hideOwned : true,
+    mode,
+    availability: saved.availability === 'released' ? 'released' : 'all',
+  }
+}
+
 export function loadForYouFilters() {
   try {
     const saved = JSON.parse(localStorage.getItem(FILTERS_KEY) || 'null')
-    if (!saved || typeof saved !== 'object') return defaultForYouFilters
-    return {
-      scales: Array.isArray(saved.scales) && saved.scales.length
-        ? saved.scales.filter((key) => ['aaa', 'aa', 'indie'].includes(key))
-        : defaultForYouFilters.scales,
-      platforms: Array.isArray(saved.platforms)
-        ? saved.platforms.filter((key) => ['xbox', 'psn'].includes(key))
-        : defaultForYouFilters.platforms,
-      hideOwned: typeof saved.hideOwned === 'boolean' ? saved.hideOwned : true,
-    }
+    if (!saved) return defaultForYouFilters
+    return normalizeFilters(saved)
   } catch {
     return defaultForYouFilters
   }
@@ -137,7 +179,7 @@ export function loadForYouFilters() {
 
 export function saveForYouFilters(filters) {
   try {
-    localStorage.setItem(FILTERS_KEY, JSON.stringify(filters))
+    localStorage.setItem(FILTERS_KEY, JSON.stringify(normalizeFilters(filters)))
   } catch {
     // Disk failure keeps the deck usable with in-memory filters.
   }
@@ -191,6 +233,200 @@ export async function loadForYouOwnershipTitles() {
   }
 }
 
+async function loadComparisons() {
+  try {
+    const { data, error } = await supabase
+      .from('rank_comparisons')
+      .select('id,left_id,right_id,result,compared_at')
+      .order('compared_at', { ascending: false })
+      .limit(COMPARISON_LIMIT)
+    if (error) return { rows: [], complete: false }
+    const rows = data || []
+    return { rows, complete: rows.length < COMPARISON_LIMIT }
+  } catch {
+    return { rows: [], complete: false }
+  }
+}
+
+function catalogParams(filters, activeKeys) {
+  const params = { lanes: activeKeys.join(','), limit: 20 }
+  if (filters.platforms.length) params.platform = filters.platforms.join(',')
+  if (filters.scales.length !== defaultForYouFilters.scales.length) {
+    params.scale = filters.scales.join(',') || 'none'
+  }
+  return params
+}
+
+// The expensive half of a snapshot: taste profile plus the raw candidate pool.
+// Cached for five minutes so filter tweaks, Why sheets and scrolling reuse the
+// same pool instead of refetching the catalog.
+async function fetchForYouBundle(filters, now = Date.now()) {
+  if (!supabase) throw new Error('GameDeck is not configured.')
+
+  const [bootstrapResult, ownership, comparisonResult] = await Promise.all([
+    supabase.rpc('get_for_you_bootstrap'),
+    loadForYouOwnershipTitles(),
+    loadComparisons(),
+  ])
+  if (bootstrapResult.error || !bootstrapResult.data) {
+    throw new Error('For You is unavailable.')
+  }
+  const source = bootstrapResult.data
+  const games = source.games || []
+  const ranks = source.ranks || []
+  const activity = source.activity || []
+  const comparisons = comparisonResult.rows
+  const coverage = {
+    games: games.length < 100,
+    ranks: true,
+    activity: activity.length < 500,
+    comparisons: comparisonResult.complete,
+  }
+  const evidenceProfile = buildTasteEvidenceProfile({
+    games,
+    ranks,
+    activity,
+    comparisons,
+    coverage,
+    now,
+  })
+  const profile = adaptEngineProfile(evidenceProfile)
+  const laneKeys = profile.lanes.slice(0, 4).map((lane) => lane.key)
+  const activeKeys = [...laneKeys, 'new']
+
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 30000)
+  let payload
+  try {
+    // authFetch attaches the Supabase session's Bearer token, exactly like the
+    // pilot's manual Authorization header.
+    const response = await authFetch(`/api/discover?${buildQuery(catalogParams(filters, activeKeys))}`, {
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+    })
+    if (!response.ok) throw new Error('For You catalog is unavailable.')
+    payload = await response.json()
+  } finally {
+    clearTimeout(timeout)
+  }
+
+  const wishlistIds = new Set(
+    (source.wishlist || [])
+      .map((row) => row && row.igdb_id)
+      .filter((id) => typeof id === 'number' && id > 0)
+  )
+  const dismissedIds = loadDismissedForYouGames()
+  const releasedOnly = filters.availability === 'released'
+  const candidates = []
+  const seen = new Set()
+  for (const key of activeKeys) {
+    for (const raw of (payload.lanes && payload.lanes[key]) || []) {
+      const parsed = parseDiscoverGame(raw)
+      if (!parsed || seen.has(parsed.id)) continue
+      seen.add(parsed.id)
+      if (dismissedIds.has(parsed.id) || wishlistIds.has(parsed.id)) continue
+      if (filters.hideOwned && ownership.has(normTitle(parsed.name))) continue
+      // The lanes endpoint does not apply the status filter, so enforce the
+      // released-only selection client-side.
+      if (releasedOnly && !(Number(parsed.released) > 0 && parsed.released * 1000 <= now)) continue
+      // Tag the candidate with the catalog lane it was served from: the IGDB
+      // query behind the lane is the verified membership signal.
+      candidates.push(toEngineCandidate(parsed, key))
+    }
+  }
+  return { profile, evidenceProfile, laneKeys, activeKeys, candidates, wishlistIds, dismissedIds }
+}
+
+function bundleCacheKey(day, key) {
+  return `foryou:candidates:v2:${day}:${key}`
+}
+
+async function loadForYouBundle(filters, { fresh = false, now = Date.now() } = {}) {
+  const day = localDayKey(now)
+  const key = forYouFilterKey(filters)
+  const cacheKey = bundleCacheKey(day, key)
+  const fetch = () => fetchForYouBundle(filters, now)
+  if (fresh) {
+    const bundle = await fetch()
+    idbSet(cacheKey, bundle)
+    return bundle
+  }
+  const { value } = await swr(cacheKey, fetch, { maxAge: FOR_YOU_CANDIDATE_TTL_MS })
+  if (!value || !Array.isArray(value.candidates)) return fetch()
+  return value
+}
+
+function forYouProfileKey(profile, laneKeys) {
+  return [
+    laneKeys.join(','),
+    `sources:${profile.sources.length}`,
+    profile.coverage.comparisons.complete ? 'full' : 'partial',
+  ].join('|')
+}
+
+// Engine-built deck snapshot for useForYouDeck: deterministic per day, filter
+// set and taste profile, reconciled against the same-day slate by game id.
+export async function loadForYouSnapshot(filters, { newBatch = false, preserve } = {}) {
+  const now = Date.now()
+  const day = localDay(new Date(now))
+  const key = forYouFilterKey(filters)
+  const account = await getForYouAccount()
+  const state = readForYouState(account)
+  const slate = state.slates.find((s) => s.key === key && s.day === day)
+  const batch = Math.max(0, (slate?.batch ?? 0) + (newBatch ? 1 : 0))
+
+  const bundle = await loadForYouBundle(filters, { fresh: newBatch, now })
+  const { profile, laneKeys, candidates } = bundle
+  const profileKey = forYouProfileKey(profile, laneKeys)
+  // Reconcile a same-day slate by stable game ID, not by numeric position.
+  const preferred =
+    newBatch
+      ? []
+      : Array.isArray(preserve) && preserve.length
+        ? preserve
+        : []
+  const seed = `${day}:${key}:${profileKey}:b${batch}`
+  const deck = selectRecommendations(candidates, profile, {
+    mode: DISCOVERY_MODES.includes(filters.mode) ? filters.mode : DEFAULT_DISCOVERY_MODE,
+    seed,
+    now,
+    exposures: state.exposures,
+    less: state.less,
+    more: state.more,
+    exclude: new Set([...bundle.dismissedIds, ...bundle.wishlistIds]),
+    preferred,
+    limit: FOR_YOU_DECK_SIZE,
+  })
+
+  // A failing slate write must not fail the deck; the next load reconciles.
+  try {
+    await saveForYouSlate(account, {
+      key,
+      day,
+      profile: profileKey,
+      laneKeys,
+      batch,
+      at: now,
+    })
+  } catch {
+    // Slate persistence is a resume optimization, not the deck itself.
+  }
+
+  return {
+    key,
+    day,
+    profileKey,
+    batch,
+    deck,
+    state: { less: state.less, more: state.more },
+    laneKeys,
+    evidenceProfile: bundle.evidenceProfile,
+    notice: newBatch ? 'New mix ready. Your preferences still apply.' : null,
+  }
+}
+
+// Legacy deck builder: fills up to 12 picks lane by lane (STRONG MATCH /
+// NEW PICK). Kept for reference; ForYouTab now uses loadForYouSnapshot.
 export async function loadForYouDeck(filters = defaultForYouFilters) {
   if (!supabase) throw new Error('GameDeck is not configured.')
 

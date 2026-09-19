@@ -44,7 +44,7 @@ function normalize(value) {
     .trim()
 }
 
-function titleKey(value) {
+export function titleKey(value) {
   return normalize(value).replace(
     /\s+(?:(?:game of the year|goty|deluxe|ultimate|definitive|complete|standard|gold|collector s) edition)$/,
     '',
@@ -349,6 +349,11 @@ export function buildTasteEvidenceProfile({
 
   return {
     lanes,
+    // The For You engine (forYouEngine.js) needs the ranked source list for
+    // content-based affinity and the normalized excluded titles for its
+    // not-for-me exclusion. Everything above is unchanged.
+    sources: orderedSources.slice(0, 100),
+    excludedTitles: [...excluded],
     leaders,
     reactions: reactionDistribution,
     comparisons: comparisonSummary,
