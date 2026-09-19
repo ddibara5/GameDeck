@@ -1,7 +1,7 @@
 // GameDeck app-icon packager.
 //
-// The v8 artwork is the hand-approved Japandi raster master (warm amber glass
-// stack on a warm charcoal field). Source assets live in web/assets/icon-v8; this script validates their dimensions,
+// The v10 artwork is the flat "classic" Japandi master (flat amber layers, no
+// glass, on the same warm charcoal field). Source assets live in web/assets/icon-v10; this script validates their dimensions,
 // copies them into public/icons with cache-busting filenames, and builds favicon.ico.
 // It uses only Node built-ins so local and Vercel builds stay deterministic.
 'use strict';
@@ -9,7 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const ICON_VERSION = 'v8';
+const ICON_VERSION = 'v10';
 const ICON_SIZES = [120, 152, 167, 180, 192, 512, 1024];
 const FAVICON_SIZES = [16, 32];
 const v = (base, ext) => `${base}-${ICON_VERSION}.${ext}`;
