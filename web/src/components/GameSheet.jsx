@@ -365,6 +365,20 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
     : { id: igdbId, name: title, year, genres }
   const hasCatalogFacts = Boolean(studio || releaseText || platforms.length || safeGameUrl || (owned && safeAchievementsUrl))
 
+  // Ask GameDeck is a detail-page action, not an entry-point capability. Most
+  // callers pass the shell opener directly; legacy callers (Home, Wishlist,
+  // Activity, etc.) fall back to a shell event so the action never disappears.
+  const handleAsk = () => {
+    if (onAsk) {
+      onAsk(seed)
+      return
+    }
+    requestClose()
+    window.setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('gamedeck:open-ask', { detail: { game: seed } }))
+    }, 240)
+  }
+
   const handleOverlayClick = (e) => {
     if (e.target === e.currentTarget) requestClose()
   }
@@ -521,21 +535,19 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
                 ) : null}
               </div>
 
-              {onAsk ? (
-                <button
-                  type="button"
-                  className="gs-ask"
-                  onClick={() => onAsk(seed)}
-                  aria-label={`Ask GameDeck about ${title}`}
-                >
-                  <span aria-hidden="true" className="gs-ask-icon">✦</span>
-                  <span className="gs-ask-copy">
-                    <strong>Ask GameDeck</strong>
-                    <small>Get guidance using your GameDeck context</small>
-                  </span>
-                  <span aria-hidden="true" className="gs-ask-chevron">›</span>
-                </button>
-              ) : null}
+              <button
+                type="button"
+                className="gs-ask"
+                onClick={handleAsk}
+                aria-label={`Ask GameDeck about ${title}`}
+              >
+                <span aria-hidden="true" className="gs-ask-icon">✦</span>
+                <span className="gs-ask-copy">
+                  <strong>Ask GameDeck</strong>
+                  <small>Get guidance using your GameDeck context</small>
+                </span>
+                <span aria-hidden="true" className="gs-ask-chevron">›</span>
+              </button>
 
               {/* Your progress, pilot card + metrics grid. */}
               <div style={{ ...cardStyle, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -588,16 +600,14 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
               >
                 {wishActive ? '✓ Wishlisted' : '+ Wishlist'}
               </button>
-              {onAsk ? (
-                <button
-                  type="button"
-                  className="game-page-secondary"
-                  onClick={() => onAsk(seed)}
-                  aria-label={`Ask GameDeck about ${title}`}
-                >
-                  ✦ Ask GameDeck
-                </button>
-              ) : null}
+              <button
+                type="button"
+                className="game-page-secondary"
+                onClick={handleAsk}
+                aria-label={`Ask GameDeck about ${title}`}
+              >
+                ✦ Ask GameDeck
+              </button>
             </div>
           )}
 
