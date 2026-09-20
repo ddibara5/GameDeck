@@ -78,7 +78,7 @@ const warmLoader = (loader) => {
 const EDGE_PX = 24
 const OPEN_DX = 60
 // Keep a closing view mounted through its slide-out (matches --overlay-out).
-const VIEW_EXIT_MS = 220
+const VIEW_EXIT_MS = 240
 // The Home sub-pages reachable from Jump back in / Top story / More news /
 // Library entries. An edge swipe on one of these goes back to Home, exactly
 // like the back caret in the header.
@@ -189,6 +189,7 @@ function GameDeckApp() {
   // current root destination so browser Back never walks across the tab bar.
   const navigateTab = useCallback((tab, { replace = true } = {}) => {
     if (!VALID_TABS.has(tab)) return
+    warmLoader(TAB_LOADERS[tab])
     if (viewTimer.current) {
       clearTimeout(viewTimer.current)
       viewTimer.current = null
@@ -288,6 +289,10 @@ function GameDeckApp() {
   }, [activeTab, view, searchOpen, searchScope, writeLocation])
 
   const openView = (v) => {
+    const viewLoader = v === 'wishlist' || v === 'releases' || v === 'released'
+      ? VIEW_LOADERS.wishlist
+      : VIEW_LOADERS.list
+    warmLoader(viewLoader)
     if (viewTimer.current) {
       clearTimeout(viewTimer.current)
       viewTimer.current = null
@@ -506,7 +511,8 @@ function GameDeckApp() {
         ) : null}
       </header>
       <main className="app-main">
-        <Suspense fallback={<ChunkFallback label={`Opening ${headerTitle || 'GameDeck'}…`} />}>
+        <div key={activeTab} className="app-tab-page">
+          <Suspense fallback={<ChunkFallback label={`Opening ${headerTitle || 'GameDeck'}…`} />}>
           {activeTab === 'home' && (
             <HomeTab
               onOpenTab={(t) => {
@@ -557,7 +563,8 @@ function GameDeckApp() {
           )}
           {activeTab === 'news' && <NewsTab />}
           {activeTab === 'rankings' && <RankingsTab launch={tuneLaunch} onReturnToForYou={handleReturnToForYou} />}
-        </Suspense>
+          </Suspense>
+        </div>
       </main>
       {view ? (
         <div className={`view-page${viewClosing ? ' closing' : ''}`}>
@@ -596,7 +603,7 @@ function GameDeckApp() {
         searchOnly={!nav.barShown}
         showLabels={nav.labels}
       />
-      <Suspense fallback={null}>
+      <Suspense fallback={settingsOpen || customizeOpen || customizeBarOpen ? <ChunkFallback label="Opening settings…" overlay /> : null}>
         {settingsVisited ? (
           <SettingsPage
             open={settingsOpen}

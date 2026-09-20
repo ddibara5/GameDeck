@@ -39,6 +39,20 @@
   will-change: transform;
 }
 
+.game-sheet-fallback {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--screen-gutter);
+  color: var(--muted);
+  font-size: var(--t-foot);
+  background: var(--bg);
+}
+
 /* Shared game-sheet body styles. These live here (not in discover.css) so the
    sheet renders correctly from every tab. discover.css is code-split with the
    Discover tab, so a sheet opened from Wishlist/Library would otherwise miss

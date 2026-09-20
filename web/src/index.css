@@ -1454,7 +1454,11 @@ textarea {
 }
 
 .chunk-fallback.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 220;
   min-height: 100dvh;
+  background: var(--bg);
 }
 
 .chunk-fallback-line {
@@ -1462,6 +1466,34 @@ textarea {
   width: 112px;
   height: 8px;
   border-radius: var(--r-pill);
+}
+
+.app-tab-page {
+  flex: 1;
+  min-height: 0;
+  animation: app-tab-in var(--d-base) var(--enter-ease);
+  will-change: opacity, transform;
+}
+
+@keyframes app-tab-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 5px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-tab-page {
+    animation: none;
+  }
+}
+
+:root[data-motion='reduced'] .app-tab-page {
+  animation: none;
 }
 
 .page {

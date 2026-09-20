@@ -25,3 +25,29 @@
   padding: 5px 4px;
   font-size: var(--t-cap);
 }
+
+.fhub-screen {
+  animation: fhub-screen-in var(--d-base) var(--enter-ease);
+  will-change: opacity, transform;
+}
+
+@keyframes fhub-screen-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 4px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fhub-screen {
+    animation: none;
+  }
+}
+
+:root[data-motion='reduced'] .fhub-screen {
+  animation: none;
+}

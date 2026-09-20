@@ -1,4 +1,5 @@
 import { useDialogA11y } from '../lib/useDialogA11y.js'
+import { useDelayedClose } from '../lib/useDelayedClose.js'
 import './forYou.css'
 
 // Modal page sheet for the For You surfaces ("Why this pick", "Tune your
@@ -12,13 +13,14 @@ export default function ForYouSheet({
   compact = false,
   children,
 }) {
-  const dialogRef = useDialogA11y({ active: true, onClose: busy ? null : onClose })
+  const { closing, requestClose } = useDelayedClose(onClose)
+  const dialogRef = useDialogA11y({ active: true, onClose: busy || closing ? null : requestClose })
 
   return (
     <div
-      className="modal-backdrop"
+      className={`modal-backdrop${closing ? ' closing' : ''}`}
       onClick={(event) => {
-        if (!busy && event.target === event.currentTarget) onClose()
+        if (!busy && !closing && event.target === event.currentTarget) requestClose()
       }}
     >
       <div
@@ -34,8 +36,8 @@ export default function ForYouSheet({
           <button
             type="button"
             className="fy-sheet-done"
-            onClick={onClose}
-            disabled={busy}
+            onClick={requestClose}
+            disabled={busy || closing}
           >
             Done
           </button>

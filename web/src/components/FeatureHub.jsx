@@ -83,7 +83,9 @@ export default function FeatureHub({
           onChange={setSelected}
         />
       </div>
-      <Screen key={selected} {...screenProps} />
+      <div key={selected} className="fhub-screen">
+        <Screen {...screenProps} />
+      </div>
     </div>
   )
 }
