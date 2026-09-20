@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import Cover from './Cover.jsx'
 import HeaderSettingsButton from './HeaderSettingsButton.jsx'
 import { useDelayedClose } from '../lib/useDelayedClose.js'
-import { useEdgeBack } from '../lib/useEdgeBack.js'
+import { NAV_TRANSITION_MS, useEdgeBack } from '../lib/useEdgeBack.js'
 import { lockScroll } from '../lib/scrollLock.js'
 import { useAchievementsUrl, useLibraryGames } from '../lib/useLibraryGames.js'
 import { igdbCover, platformMeta, minutesToHhm, formatDate, releaseLabel } from '../lib/format.js'
@@ -210,7 +210,7 @@ function ProgressBar({ percent, label }) {
 // screenshots by id so every sheet is equally rich.
 export default function GameSheet({ variant, game, onClose, inLibrary = false, onAsk, onNotInterested }) {
   const owned = variant === 'owned'
-  const { closing, requestClose } = useDelayedClose(onClose)
+  const { closing, requestClose } = useDelayedClose(onClose, NAV_TRANSITION_MS)
   const dialogRef = useDialogA11y({ onClose: requestClose })
   const { ids: wishIds } = useWishlist()
 
@@ -267,11 +267,11 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
       fetchGameById(igdbId)
         .then((m) => {
           if (!alive) return
-          // Swap in once the ~200ms open animation has settled. This is a
-          // DEADLINE from sheet open, not 240ms added after the network: a slow
+          // Swap in once the navigation push has settled. This is a DEADLINE
+          // from page open, not another delay added after the network: a slow
           // response that arrives after the slide should paint immediately.
           const now = typeof performance !== 'undefined' ? performance.now() : Date.now()
-          const remaining = Math.max(0, 240 - (now - openedAt))
+          const remaining = Math.max(0, NAV_TRANSITION_MS - (now - openedAt))
           t = setTimeout(() => {
             if (!alive) return
             setMedia(m)
@@ -311,7 +311,10 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
     setSettingsUp(true)
     window.dispatchEvent(new CustomEvent('gamedeck:open-settings'))
   }, [])
-  useEdgeBack(requestClose, { disabled: closing || settingsUp || shotIndex !== null })
+  useEdgeBack(requestClose, {
+    disabled: closing || settingsUp || shotIndex !== null,
+    interactiveRef: dialogRef,
+  })
 
   if (!game) return null
 
@@ -376,7 +379,7 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
     requestClose()
     window.setTimeout(() => {
       window.dispatchEvent(new CustomEvent('gamedeck:open-ask', { detail: { game: seed } }))
-    }, 240)
+    }, NAV_TRANSITION_MS)
   }
 
   const handleOverlayClick = (e) => {

@@ -37,8 +37,12 @@ export function isEdgeBackTopmost(id) {
 }
 
 // Gesture thresholds, shared with App's own edge-swipe handler.
+export const NAV_TRANSITION_MS = 290
 export const EDGE_BACK_PX = 24
 export const EDGE_BACK_DX = 60
+export const EDGE_BACK_COMMIT_RATIO = 0.32
+export const EDGE_BACK_VELOCITY = 0.45
+export const EDGE_BACK_MIN_FLING_DX = 24
 
 /**
  * Pure classifier for one touchmove sample, so the trigger rule is unit-testable
@@ -56,6 +60,50 @@ export function classifyEdgeSwipe({ startX, dx, dy, edgePx = EDGE_BACK_PX, backD
   // Only act on a clearly horizontal gesture, so vertical scrolling is untouched.
   if (Math.abs(dx) <= Math.abs(dy)) return 'none'
   return dx > backDx ? 'back' : 'claim'
+}
+
+export function edgeBackProgress(dx, width) {
+  const w = Math.max(1, Number(width) || 1)
+  return Math.max(0, Math.min(1, (Number(dx) || 0) / w))
+}
+
+export function shouldCompleteEdgeBack({
+  dx,
+  width,
+  velocityX = 0,
+  commitRatio = EDGE_BACK_COMMIT_RATIO,
+  flingVelocity = EDGE_BACK_VELOCITY,
+}) {
+  const distance = Math.max(0, Number(dx) || 0)
+  const w = Math.max(1, Number(width) || 1)
+  if (distance / w >= commitRatio) return true
+  return distance >= EDGE_BACK_MIN_FLING_DX && velocityX >= flingVelocity
+}
+
+function refsToElements(interactiveRef, interactiveRefs) {
+  const refs = interactiveRefs || (interactiveRef ? [interactiveRef] : [])
+  return refs.map((ref) => ref?.current).filter(Boolean)
+}
+
+function snapshotElement(el) {
+  return {
+    el,
+    transform: el.style.transform,
+    transition: el.style.transition,
+    willChange: el.style.willChange,
+  }
+}
+
+function restoreSnapshots(snapshots) {
+  for (const snap of snapshots) {
+    const { el } = snap
+    if (!el?.isConnected) continue
+    el.style.transform = snap.transform
+    el.style.transition = snap.transition
+    el.style.willChange = snap.willChange
+    delete el.dataset.edgeBackDragging
+    delete el.dataset.edgeBackCompleting
+  }
 }
 
 /**
@@ -84,64 +132,180 @@ export function classifyEdgeSwipe({ startX, dx, dy, edgePx = EDGE_BACK_PX, backD
  * When several overlays are registered at once (a rank sheet over a game page),
  * only the topmost one fires: the gesture belongs to the newest registration.
  */
-export function useEdgeBack(onBack, { disabled = false, register = true } = {}) {
+export function useEdgeBack(
+  onBack,
+  {
+    disabled = false,
+    register = true,
+    interactiveRef = null,
+    interactiveRefs = null,
+    deferBack = false,
+    settleMs = NAV_TRANSITION_MS,
+  } = {},
+) {
   const idRef = useRef(0)
-  // Registered while `register` is true, so App can suppress its own edge-swipe
-  // while this overlay is up.
+  const backRef = useRef(onBack)
+  const disabledRef = useRef(disabled)
+  backRef.current = onBack
+  disabledRef.current = disabled
+
   useEffect(() => {
     if (!register) return undefined
     idRef.current = registerEdgeBack()
     const id = idRef.current
-    return () => {
-      unregisterEdgeBack(id)
-    }
+    return () => unregisterEdgeBack(id)
   }, [register])
 
   useEffect(() => {
     let startX = 0
     let startY = 0
     let tracking = false
+    let interactive = false
+    let snapshots = []
+    let lastDx = 0
+    let lastAt = 0
+    let velocityX = 0
+    let settleTimer = null
+
+    const ownsGesture = () => {
+      if (register && !isEdgeBackTopmost(idRef.current)) return false
+      if (!register && overlaysOpen()) return false
+      return true
+    }
+
+    const clearSettle = () => {
+      if (settleTimer) {
+        clearTimeout(settleTimer)
+        settleTimer = null
+      }
+    }
+
+    const settleBack = (duration = 160) => {
+      for (const { el } of snapshots) {
+        if (!el?.isConnected) continue
+        delete el.dataset.edgeBackDragging
+        el.style.transition = 'transform ' + duration + 'ms var(--ease-out)'
+        el.style.transform = 'translate3d(0, 0, 0)'
+      }
+      settleTimer = setTimeout(() => {
+        restoreSnapshots(snapshots)
+        snapshots = []
+        settleTimer = null
+      }, duration + 24)
+    }
+
+    const completeInteractive = () => {
+      const width = window.innerWidth || document.documentElement.clientWidth || 390
+      const progress = edgeBackProgress(lastDx, width)
+      const duration = Math.max(80, Math.min(settleMs, Math.round(settleMs * (1 - progress))))
+
+      for (const { el } of snapshots) {
+        if (!el?.isConnected) continue
+        delete el.dataset.edgeBackDragging
+        el.dataset.edgeBackCompleting = 'true'
+        el.style.transition = 'transform ' + duration + 'ms var(--exit-ease)'
+        el.style.transform = 'translate3d(' + width + 'px, 0, 0)'
+      }
+
+      if (deferBack) {
+        settleTimer = setTimeout(() => {
+          restoreSnapshots(snapshots)
+          snapshots = []
+          settleTimer = null
+          backRef.current()
+        }, duration)
+      } else {
+        backRef.current()
+      }
+    }
 
     const onStart = (e) => {
+      clearSettle()
       const t = e.touches && e.touches[0]
       if (!t) return
       startX = t.clientX
       startY = t.clientY
-      tracking = true
+      tracking = startX <= EDGE_BACK_PX
+      interactive = false
+      snapshots = []
+      lastDx = 0
+      lastAt = e.timeStamp || performance.now()
+      velocityX = 0
     }
+
     const onMove = (e) => {
       if (!tracking) return
       const t = e.touches && e.touches[0]
       if (!t) return
+
       const dx = t.clientX - startX
       const dy = t.clientY - startY
       const verdict = classifyEdgeSwipe({ startX, dx, dy })
-      if (verdict === 'none') return
-      // Own the edge gesture once its horizontal intent is clear. Otherwise the
-      // browser can navigate history while the overlay also closes itself. A
-      // disabled nested interaction still claims the gesture; it suppresses
-      // Back rather than handing the same swipe to browser history underneath.
+      // Before horizontal intent is established, leave vertical scrolling alone.
+      // Once the page is already following the finger, keep tracking even if the
+      // finger drifts back left or diagonally so canceling a swipe really returns
+      // the page to zero instead of completing from a stale dx.
+      if (verdict === 'none' && !interactive) return
+      if (!ownsGesture()) return
+
       if (e.cancelable) e.preventDefault()
-      if (disabled) return
-      // A newer overlay registered on top of this one owns the gesture.
-      if (register && !isEdgeBackTopmost(idRef.current)) return
-      if (!register && overlaysOpen()) return
-      if (verdict === 'back') {
-        onBack()
-        tracking = false
+      if (disabledRef.current) return
+
+      const targets = refsToElements(interactiveRef, interactiveRefs)
+      if (!targets.length) {
+        if (verdict === 'back') {
+          backRef.current()
+          tracking = false
+        }
+        return
+      }
+
+      if (!interactive) {
+        snapshots = targets.map(snapshotElement)
+        for (const { el } of snapshots) {
+          el.dataset.edgeBackDragging = 'true'
+          el.style.willChange = 'transform'
+          el.style.transition = 'none'
+        }
+        interactive = true
+      }
+
+      const clampedDx = Math.max(0, dx)
+      const now = e.timeStamp || performance.now()
+      const dt = Math.max(1, now - lastAt)
+      velocityX = Math.max(0, (clampedDx - lastDx) / dt)
+      lastAt = now
+      lastDx = clampedDx
+
+      for (const { el } of snapshots) {
+        if (el?.isConnected) el.style.transform = 'translate3d(' + clampedDx + 'px, 0, 0)'
       }
     }
-    const onEnd = () => {
+
+    const finish = (cancelled = false) => {
+      if (!tracking) return
       tracking = false
+      if (!interactive) return
+      const width = window.innerWidth || document.documentElement.clientWidth || 390
+      if (!cancelled && shouldCompleteEdgeBack({ dx: lastDx, width, velocityX })) completeInteractive()
+      else settleBack()
+      interactive = false
     }
+
+    const onEnd = () => finish(false)
+    const onCancel = () => finish(true)
 
     window.addEventListener('touchstart', onStart, { passive: true })
     window.addEventListener('touchmove', onMove, { passive: false })
     window.addEventListener('touchend', onEnd, { passive: true })
+    window.addEventListener('touchcancel', onCancel, { passive: true })
     return () => {
+      clearSettle()
+      restoreSnapshots(snapshots)
       window.removeEventListener('touchstart', onStart)
       window.removeEventListener('touchmove', onMove)
       window.removeEventListener('touchend', onEnd)
+      window.removeEventListener('touchcancel', onCancel)
     }
-  }, [disabled, onBack, register])
+  }, [register, interactiveRef, interactiveRefs, deferBack, settleMs])
 }

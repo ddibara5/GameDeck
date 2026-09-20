@@ -36,7 +36,7 @@
   display: flex;
   flex-direction: column;
   background: var(--bg);
-  animation: settings-in var(--overlay-in) var(--enter-ease);
+  animation: settings-in var(--nav-in) var(--enter-ease);
 }
 
 .discover-browse-header {
@@ -417,12 +417,12 @@ button.shelf-head:active {
   background: var(--bg);
   display: flex;
   flex-direction: column;
-  animation: settings-in var(--overlay-in) var(--enter-ease);
+  animation: settings-in var(--nav-in) var(--enter-ease);
   /* Own compositor layer so the shared page slide stays smooth. */
   will-change: transform;
 }
 .rail-page.closing {
-  animation: settings-out var(--overlay-out) var(--exit-ease) forwards;
+  animation: settings-out var(--nav-out) var(--exit-ease) forwards;
 }
 
 @media (prefers-reduced-motion: reduce) {

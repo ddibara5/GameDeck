@@ -9,7 +9,7 @@ import { fetchDiscover } from '../lib/discover.js'
 import { releaseCardLabel } from '../lib/format.js'
 import { groupByRelease } from '../lib/wishlistRelease.js'
 import { useDelayedClose } from '../lib/useDelayedClose.js'
-import { useEdgeBack } from '../lib/useEdgeBack.js'
+import { NAV_TRANSITION_MS, useEdgeBack } from '../lib/useEdgeBack.js'
 import { lockScroll } from '../lib/scrollLock.js'
 import { useDialogA11y } from '../lib/useDialogA11y.js'
 
@@ -78,7 +78,7 @@ function RailCard({ g, isOwned, wishIds, onOpen }) {
 }
 
 export default function DiscoverRailList({ row, seedItems, isOwned, hideOwned, wishIds, onClose, onAsk, onMoreLikeThis, filters }) {
-  const { closing, requestClose } = useDelayedClose(onClose)
+  const { closing, requestClose } = useDelayedClose(onClose, NAV_TRANSITION_MS)
   const isRail = row.kind === 'rail'
 
   const [sort, setSort] = useState('')
@@ -92,6 +92,7 @@ export default function DiscoverRailList({ row, seedItems, isOwned, hideOwned, w
   const [loading, setLoading] = useState(isRail)
   const [hasMore, setHasMore] = useState(false)
   const reqRef = useRef(0)
+  const pageRef = useRef(null)
 
   // Local (Game Pass / wishlist) paging.
   const [localCount, setLocalCount] = useState(PAGE)
@@ -101,7 +102,10 @@ export default function DiscoverRailList({ row, seedItems, isOwned, hideOwned, w
 
   // Edge-swipe from the left to back out (same gesture as Settings / Customize).
   // Suppressed while a nested sheet is up so the swipe closes that first.
-  useEdgeBack(requestClose, { disabled: closing || sortOpen || Boolean(selected) })
+  useEdgeBack(requestClose, {
+    disabled: closing || sortOpen || Boolean(selected),
+    interactiveRef: pageRef,
+  })
 
   // Stable identity for the inherited top-bar filters, so the effect below reruns
   // if they ever change while this page is open rather than silently serving the
@@ -177,7 +181,7 @@ export default function DiscoverRailList({ row, seedItems, isOwned, hideOwned, w
   const sortLabel = (SORTS.find((s) => s.key === sort) || SORTS[0]).label
 
   return createPortal(
-    <div className={`rail-page${closing ? ' closing' : ''}`}>
+    <div ref={pageRef} className={`rail-page${closing ? ' closing' : ''}`}>
       <div className="rail-head">
         <button type="button" className="rail-back" onClick={requestClose} aria-label="Back">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

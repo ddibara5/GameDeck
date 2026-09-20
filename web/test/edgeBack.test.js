@@ -1,9 +1,13 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
+  NAV_TRANSITION_MS,
   EDGE_BACK_PX,
   EDGE_BACK_DX,
+  EDGE_BACK_COMMIT_RATIO,
   classifyEdgeSwipe,
+  edgeBackProgress,
+  shouldCompleteEdgeBack,
   registerEdgeBack,
   unregisterEdgeBack,
   isEdgeBackTopmost,
@@ -30,6 +34,21 @@ test('mostly-vertical movement is a scroll, not a back gesture', () => {
   assert.equal(classifyEdgeSwipe({ startX: 8, dx: 100, dy: 120 }), 'none')
   assert.equal(classifyEdgeSwipe({ startX: 8, dx: 100, dy: 100 }), 'none')
   assert.equal(classifyEdgeSwipe({ startX: 8, dx: 100, dy: 99 }), 'back')
+})
+
+test('interactive edge-back tracks progress and completes by distance or velocity', () => {
+  assert.equal(NAV_TRANSITION_MS, 290)
+  assert.equal(edgeBackProgress(0, 390), 0)
+  assert.equal(edgeBackProgress(195, 390), 0.5)
+  assert.equal(edgeBackProgress(500, 390), 1)
+
+  const width = 390
+  assert.equal(
+    shouldCompleteEdgeBack({ dx: width * EDGE_BACK_COMMIT_RATIO, width, velocityX: 0 }),
+    true,
+  )
+  assert.equal(shouldCompleteEdgeBack({ dx: 40, width, velocityX: 0.6 }), true)
+  assert.equal(shouldCompleteEdgeBack({ dx: 40, width, velocityX: 0.1 }), false)
 })
 
 test('registration stack: only the newest overlay owns the gesture', () => {
