@@ -5,7 +5,7 @@ import HeaderSettingsButton from './components/HeaderSettingsButton.jsx'
 import TabBar from './components/TabBar.jsx'
 import { useNewsUnread } from './lib/newsUnread.js'
 import { useNavConfig, getNavConfig, visibleKeys, TAB_BY_KEY } from './lib/navConfig.js'
-import { useEdgeBack } from './lib/useEdgeBack.js'
+import { NAV_TRANSITION_MS, useEdgeBack } from './lib/useEdgeBack.js'
 import { warmOnIdle } from './lib/warmChunks.js'
 import AuthGate from './components/AuthGate.jsx'
 import { useAppSession } from './lib/appAuth.js'
@@ -73,8 +73,8 @@ const warmLoader = (loader) => {
   Promise.resolve().then(loader).catch(() => {})
 }
 
-// Keep a closing view mounted through its slide-out (matches --overlay-out).
-const VIEW_EXIT_MS = 240
+// Keep a closing pushed view mounted through the shared navigation slide-out.
+const VIEW_EXIT_MS = NAV_TRANSITION_MS
 // The Home sub-pages reachable from Jump back in / Top story / More news /
 // Library entries. An edge swipe on one of these goes back to Home, exactly
 // like the back caret in the header.
@@ -120,6 +120,13 @@ function GameDeckApp() {
   const [view, setView] = useState(() => initialShell.current.view)
   const [viewClosing, setViewClosing] = useState(false)
   const viewTimer = useRef(null)
+  const viewPageRef = useRef(null)
+  const subHeaderRef = useRef(null)
+  const subPageRef = useRef(null)
+  const subPageInteractiveRefs = useRef(null)
+  if (!subPageInteractiveRefs.current) subPageInteractiveRefs.current = [subHeaderRef, subPageRef]
+  const [subPageClosing, setSubPageClosing] = useState(false)
+  const subPageTimer = useRef(null)
   // Header goes frosted + shows a separator once the page is scrolled off the top.
   const [scrolled, setScrolled] = useState(false)
   // Unread dot on the News tab when a newer weekly drop is available.
@@ -190,6 +197,11 @@ function GameDeckApp() {
       clearTimeout(viewTimer.current)
       viewTimer.current = null
     }
+    if (subPageTimer.current) {
+      clearTimeout(subPageTimer.current)
+      subPageTimer.current = null
+    }
+    setSubPageClosing(false)
     setView(null)
     setViewClosing(false)
     setSearchOpen(false)
@@ -217,6 +229,20 @@ function GameDeckApp() {
     if (activeTab === 'rankings') setTuneLaunch(null)
     navigateTab('home')
   }, [activeTab, navigateTab])
+
+  const requestSubPageBack = useCallback(() => {
+    if (subPageClosing || !SUBPAGE_TABS.includes(activeTab)) return
+    setSubPageClosing(true)
+    if (subPageTimer.current) clearTimeout(subPageTimer.current)
+    subPageTimer.current = setTimeout(() => {
+      subPageTimer.current = null
+      goHome()
+    }, NAV_TRANSITION_MS)
+  }, [activeTab, goHome, subPageClosing])
+
+  useEffect(() => () => {
+    if (subPageTimer.current) clearTimeout(subPageTimer.current)
+  }, [])
 
   const openTuneTaste = useCallback(
     (launch) => {
@@ -413,6 +439,7 @@ function GameDeckApp() {
   useEdgeBack(closeView, {
     register: Boolean(view),
     disabled: !view || viewClosing || settingsOpen || customizeOpen || customizeBarOpen,
+    interactiveRef: viewPageRef,
   })
 
   // Home sub-pages (For You, Rankings, Insights, News): the edge swipe mirrors
@@ -424,7 +451,9 @@ function GameDeckApp() {
   const onSubPage = !view && !searchOpen && SUBPAGE_TABS.includes(activeTab)
   useEdgeBack(goHome, {
     register: onSubPage,
-    disabled: !onSubPage || settingsOpen || customizeOpen || customizeBarOpen,
+    disabled: !onSubPage || subPageClosing || settingsOpen || customizeOpen || customizeBarOpen,
+    interactiveRefs: subPageInteractiveRefs.current,
+    deferBack: true,
   })
 
   return (
@@ -442,12 +471,15 @@ function GameDeckApp() {
           There is one <h1> and one copy of the title. The stand-in that used to
           fade in when the large title scrolled off is gone with the second row,
           because the title it stood in for never leaves now. */}
-      <header className={`app-header${scrolled ? ' scrolled' : ''}`}>
+      <header
+        ref={subHeaderRef}
+        className={`app-header${scrolled ? ' scrolled' : ''}${onSubPage ? ' subpage-nav' : ''}${subPageClosing ? ' closing' : ''}`}
+      >
         {showHeaderBack ? (
           <button
             type="button"
             className="header-back"
-            onClick={goHome}
+            onClick={requestSubPageBack}
             aria-label="Back to Home"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -469,7 +501,11 @@ function GameDeckApp() {
         ) : null}
       </header>
       <main className="app-main">
-        <div key={activeTab} className="app-tab-page">
+        <div
+          ref={subPageRef}
+          key={activeTab}
+          className={`app-tab-page${onSubPage ? ' subpage-nav' : ''}${subPageClosing ? ' closing' : ''}`}
+        >
           <Suspense fallback={<ChunkFallback label={`Opening ${headerTitle || 'GameDeck'}…`} />}>
           {activeTab === 'home' && (
             <HomeTab
@@ -508,7 +544,7 @@ function GameDeckApp() {
         </div>
       </main>
       {view ? (
-        <div className={`view-page${viewClosing ? ' closing' : ''}`}>
+        <div ref={viewPageRef} className={`view-page${viewClosing ? ' closing' : ''}`}>
           <Suspense fallback={<ChunkFallback label="Opening list…" overlay />}>
             {/* Wishlist and Release watch share the same cached rows, list,
                 sorting, density and sheet. Release watch adds a three-way scope
