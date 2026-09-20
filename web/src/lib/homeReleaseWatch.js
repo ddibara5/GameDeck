@@ -1,3 +1,5 @@
+import { effTs, isOut, relOf, releaseDaysFromToday } from './wishlistRelease.js'
+
 // Release Watch selection and labels.
 //
 // Port of the Expo pilot's lib/release-watch.ts (Sept 11 commit: the selection
@@ -14,26 +16,30 @@ export function releaseDate(item) {
 }
 
 export function releaseWatch(wishlist, today = new Date()) {
-  const now = new Date(today)
-  now.setHours(0, 0, 0, 0)
-  const dated = (wishlist || []).flatMap((item) => {
-    const date = releaseDate(item)
-    return date ? [{ item, date }] : []
+  const rows = (wishlist || []).map((item) => ({ item, rel: relOf(item) }))
+
+  // Use the exact same out/upcoming decision as the expanded Release watch page,
+  // so the Home count cannot disagree with the list the chevron opens.
+  const comingUpAll = rows
+    .filter(({ rel }) => !isOut(rel, today))
+    .sort((a, b) => effTs(a.rel) - effTs(b.rel))
+
+  const outAll = rows
+    .filter(({ rel }) => isOut(rel, today))
+    .sort((a, b) => effTs(b.rel) - effTs(a.rel))
+
+  // Home is a preview, not the archive. Keep recent releases useful on the
+  // surface while the header count still reflects the full expanded list.
+  const recentOut = outAll.filter(({ rel }) => {
+    const days = releaseDaysFromToday(rel, today)
+    return days != null && days >= -365 && days <= 0
   })
+
   return {
-    comingUp: dated
-      .filter(({ date }) => date > now)
-      .sort((a, b) => a.date - b.date)
-      .slice(0, 12)
-      .map(({ item }) => item),
-    outNow: dated
-      .filter(({ date }) => {
-        const ageDays = Math.round((now - date) / 86400000)
-        return ageDays >= 0 && ageDays <= 365
-      })
-      .sort((a, b) => b.date - a.date)
-      .slice(0, 12)
-      .map(({ item }) => item),
+    comingUp: comingUpAll.slice(0, 12).map(({ item }) => item),
+    comingUpCount: comingUpAll.length,
+    outNow: recentOut.slice(0, 12).map(({ item }) => item),
+    outNowCount: outAll.length,
   }
 }
 

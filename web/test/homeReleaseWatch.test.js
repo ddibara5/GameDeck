@@ -29,14 +29,15 @@ test('Home Now Playing is not tappable without a game to open', () => {
   assert.match(nowPlaying, /disabled=\{!tappable\}/)
 })
 
-test('Home release watch keeps the soft-failure line under the card', () => {
-  assert.match(home, /Couldn’t refresh releases\. Showing the last loaded games\./)
-  assert.match(home, /aria-label="Retry Release Watch refresh"/)
+test('Home reuses the local-first wishlist instead of issuing its own release query', () => {
+  assert.match(home, /useWishlist\(\)/)
+  assert.doesNotMatch(home, /fetchReleaseCandidates/)
+  assert.doesNotMatch(home, /from\('wishlist'\)/)
 })
 
-test('Home release watch errors when the wishlist fails with no data', () => {
-  assert.match(home, /Release watch unavailable\./)
-  assert.match(home, /Your wishlist could not be loaded\./)
+test('Home renders its shell while data sources are still loading', () => {
+  assert.doesNotMatch(home, /showSpinner/)
+  assert.match(home, /wishlistLoading && !wishlistItems\.length/)
 })
 
 test('Home wires the section see-all navigation', () => {
@@ -59,7 +60,7 @@ test('releaseDate rebuilds the local calendar date from UTC midnight', () => {
   assert.equal(releaseDate({}), null)
 })
 
-test('releaseWatch splits coming up and out now, twelve each', () => {
+test('releaseWatch previews twelve but counts the full expanded scopes', () => {
   const today = new Date(2026, 8, 11, 12, 0, 0)
   const day = 86400
   const base = Date.UTC(2026, 8, 11) / 1000
@@ -68,9 +69,11 @@ test('releaseWatch splits coming up and out now, twelve each', () => {
   for (let i = 1; i <= 15; i++) items.push({ igdb_id: 100 + i, title: `Past ${i}`, released: base - i * day })
   items.push({ igdb_id: 999, title: 'Undated' })
   items.push({ igdb_id: 1000, title: 'Stale release', released: base - 400 * day })
-  const { comingUp, outNow } = releaseWatch(items, today)
+  const { comingUp, comingUpCount, outNow, outNowCount } = releaseWatch(items, today)
   assert.equal(comingUp.length, 12)
+  assert.equal(comingUpCount, 16)
   assert.equal(outNow.length, 12)
+  assert.equal(outNowCount, 16)
   assert.deepEqual(
     comingUp.map((i) => i.title),
     Array.from({ length: 12 }, (_, k) => `Far ${k + 1}`),
@@ -80,6 +83,13 @@ test('releaseWatch splits coming up and out now, twelve each', () => {
     Array.from({ length: 12 }, (_, k) => `Past ${k + 1}`),
   )
   assert.ok(!outNow.some((item) => item.title === 'Stale release'))
+  assert.ok(comingUpCount > comingUp.length)
+  assert.ok(outNowCount > outNow.length)
+})
+
+test('Home passes expanded release counts to the preview rails', () => {
+  assert.match(home, /totalCount=\{releases\.comingUpCount\}/)
+  assert.match(home, /totalCount=\{releases\.outNowCount\}/)
 })
 
 test('releaseLabel covers today, tomorrow, this week, and dated labels', () => {
