@@ -2,6 +2,14 @@ import { timingSafeEqual } from 'node:crypto';
 
 const OWNER_EMAIL = (process.env.GAMEDECK_ALLOWED_EMAIL || 'ddibara@gmail.com').trim().toLowerCase();
 
+// These are browser-publishable project identifiers, not secrets. The client
+// already checks in the same fallback so branch previews can sign in when
+// Preview-scoped VITE_* variables are absent. Serverless auth verification must
+// use the same fallback or the browser can sign in while every API route returns
+// auth_config_missing.
+const PUBLIC_SUPABASE_URL = 'https://eiskobjlvxzwvucgpenk.supabase.co';
+const PUBLIC_SUPABASE_KEY = 'sb_publishable_Rfcg7pTWt0Vq7ep3WQYFvQ_anT_mnX7';
+
 function bearer(req) {
   const value = String(req.headers?.authorization || '');
   return value.toLowerCase().startsWith('bearer ') ? value.slice(7).trim() : '';
@@ -27,8 +35,8 @@ export async function requireOwner(req, res) {
     return null;
   }
 
-  const url = (process.env.VITE_SUPABASE_URL || '').replace(/\/+$/, '');
-  const key = process.env.VITE_SUPABASE_ANON_KEY || '';
+  const url = (process.env.VITE_SUPABASE_URL || PUBLIC_SUPABASE_URL).replace(/\/+$/, '');
+  const key = process.env.VITE_SUPABASE_ANON_KEY || PUBLIC_SUPABASE_KEY;
   if (!url || !key) {
     console.error(JSON.stringify({ event: 'auth_config_missing', route: req.url }));
     res.status(503).json({ error: 'Authentication is not configured.' });

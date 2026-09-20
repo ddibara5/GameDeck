@@ -256,39 +256,42 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   // the room; reserving it one render late would reintroduce the jump.
   const [mediaPending, setMediaPending] = useState(() => !initialMedia && Boolean(igdbId))
   useEffect(() => {
-    if (discoverHasMedia) {
-      setMedia(game)
-      setMediaPending(false)
-      return undefined
-    }
-    const cached = peekGameSheetMedia(game, variant)
-    if (cached) {
-      setMedia(cached)
-      setMediaPending(false)
-      return undefined
-    }
     let alive = true
     let t = null
     const openedAt = typeof performance !== 'undefined' ? performance.now() : Date.now()
-    setMedia(null)
-    setMediaPending(Boolean(igdbId))
+    const seeded = discoverHasMedia ? game : null
+    const cached = peekGameSheetMedia(game, variant)
+
+    if (cached) {
+      setMedia(seeded ? { ...seeded, ...cached } : cached)
+      setMediaPending(false)
+      // A v2 cached detail already has the related-game relation. No need to
+      // revalidate during the page open.
+      if ((cached.similarGameIds || []).length || !igdbId) return undefined
+    } else if (seeded) {
+      // Paint the rail payload immediately, but continue below: Browse payloads
+      // deliberately omit similar_games, so stopping here would permanently hide
+      // Related Games on otherwise-rich Discover cards.
+      setMedia(seeded)
+      setMediaPending(false)
+    } else {
+      setMedia(null)
+      setMediaPending(Boolean(igdbId))
+    }
+
     if (igdbId) {
       fetchGameById(igdbId)
         .then((m) => {
           if (!alive) return
-          // Swap in once the navigation push has settled. This is a DEADLINE
-          // from page open, not another delay added after the network: a slow
-          // response that arrives after the slide should paint immediately.
           const now = typeof performance !== 'undefined' ? performance.now() : Date.now()
           const remaining = Math.max(0, NAV_TRANSITION_MS - (now - openedAt))
           t = setTimeout(() => {
             if (!alive) return
-            setMedia(m)
+            setMedia((current) => (m ? { ...(current || {}), ...m } : current))
             setMediaPending(false)
           }, remaining)
         })
         .catch(() => {
-          // Fetch failed: drop the placeholder rather than shimmer forever.
           if (alive) setMediaPending(false)
         })
     }
