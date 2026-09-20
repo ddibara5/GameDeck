@@ -96,6 +96,7 @@ function JumpBackIn({ onOpenTab }) {
 
 function HomeNewsArt({ item, className, targetW }) {
   const [step, setStep] = useState(0)
+  useEffect(() => setStep(0), [item.id, item.primaryUrl, item.image, item.gameCover])
   const chain = cardArtChain(item)
   const art = chain[step] || null
 
