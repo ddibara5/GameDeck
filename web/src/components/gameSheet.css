@@ -251,19 +251,12 @@
   border-top: 0;
   box-shadow: none;
   padding: 0 18px calc(116px + env(safe-area-inset-bottom, 0px));
-  animation: game-page-in var(--overlay-out) var(--enter-ease);
+  animation: settings-in var(--overlay-in) var(--enter-ease);
   overscroll-behavior-y: contain;
 }
 
-@keyframes game-page-in {
-  from {
-    transform: translateX(48px);
-    opacity: 0.4;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
+.modal-sheet.game-sheet.game-page.closing {
+  animation: settings-out var(--overlay-out) var(--exit-ease) forwards;
 }
 
 /* Sticky header: circular back button (same Liquid Glass treatment as the
