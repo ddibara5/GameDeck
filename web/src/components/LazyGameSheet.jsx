@@ -9,7 +9,7 @@ export function preloadGameSheet() {
 
 function GameSheetFallback() {
   return (
-    <div className="game-sheet-fallback" role="status" aria-live="polite">
+    <div className="chunk-fallback overlay game-sheet-fallback" role="status" aria-live="polite">
       <span className="chunk-fallback-line skeleton" aria-hidden="true" />
       <span>Opening game…</span>
     </div>
