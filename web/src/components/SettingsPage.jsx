@@ -18,6 +18,7 @@ import { useMountTransition } from '../lib/useMountTransition.js'
 import { lockScroll } from '../lib/scrollLock.js'
 import { MenuItem, ICONS, relTime } from './menuUI.jsx'
 import { useDialogA11y } from '../lib/useDialogA11y.js'
+import { useEdgeBack } from '../lib/useEdgeBack.js'
 
 const REPO = 'ddibara5/GameDeck'
 const SOURCE_URL = 'https://github.com/ddibara5/GameDeck'
@@ -118,53 +119,16 @@ export default function SettingsPage({ open, onClose, onOpenBar, initialPage = n
     return lockScroll()
   }, [mounted])
 
-  // Swipe to go back: iOS-style edge-back. Start near the left edge and drag
-  // right to dismiss the page.
-  useEffect(() => {
-    if (!mounted) return undefined
-    const EDGE_PX = 24
-    const BACK_DX = 60
-    let startX = 0
-    let startY = 0
-    let tracking = false
-    let fromEdge = false
-
-    const onStart = (e) => {
-      const t = e.touches && e.touches[0]
-      if (!t) return
-      startX = t.clientX
-      startY = t.clientY
-      fromEdge = startX <= EDGE_PX
-      tracking = true
-    }
-    const onMove = (e) => {
-      if (!tracking) return
-      const t = e.touches && e.touches[0]
-      if (!t) return
-      const dx = t.clientX - startX
-      const dy = t.clientY - startY
-      // Only act on a clearly horizontal gesture, so vertical scrolling is untouched.
-      if (Math.abs(dx) <= Math.abs(dy)) return
-      if (fromEdge && dx > 0 && e.cancelable) e.preventDefault()
-      if (fromEdge && dx > BACK_DX) {
-        if (stack.length) pop()
-        else onClose()
-        tracking = false
-      }
-    }
-    const onEnd = () => {
-      tracking = false
-    }
-
-    window.addEventListener('touchstart', onStart, { passive: true })
-    window.addEventListener('touchmove', onMove, { passive: false })
-    window.addEventListener('touchend', onEnd, { passive: true })
-    return () => {
-      window.removeEventListener('touchstart', onStart)
-      window.removeEventListener('touchmove', onMove)
-      window.removeEventListener('touchend', onEnd)
-    }
-  }, [mounted, onClose, stack.length])
+  // One edge-back implementation app-wide. The Settings stack still decides
+  // whether a swipe pops one level or dismisses the root page; useEdgeBack owns
+  // the gesture thresholds, browser-history suppression, and overlay stacking.
+  useEdgeBack(
+    () => {
+      if (stack.length) pop()
+      else onClose()
+    },
+    { register: mounted, disabled: !mounted },
+  )
 
   // Load freshness data + version once when the page opens.
   useEffect(() => {
