@@ -50,12 +50,13 @@ test('Home wires the section see-all navigation', () => {
   assert.match(home, /onOpenList\('releases'\)/)
 })
 
-test('Home news shows one lead story plus compact follow-ups', () => {
+test('Home news scrolls the lead story with compact follow-ups', () => {
   assert.match(home, /function HomeNews/)
   assert.match(home, /items\.slice\(1, 5\)/)
+  assert.match(home, /className="hm-news-strip"/)
   assert.match(home, /className="hm-news-lead"/)
-  assert.match(home, /className="hm-news-more"/)
   assert.match(home, /className="hm-news-mini"/)
+  assert.doesNotMatch(home, /hm-news-more/)
   assert.match(home, /More news/)
   assert.doesNotMatch(home, /hm-news-summary/)
 })
