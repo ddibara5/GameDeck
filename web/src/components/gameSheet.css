@@ -241,6 +241,14 @@
 
 .game-sheet { background: var(--bg); }
 
+/* A pushed full-screen page should reveal the source page while it moves, just
+   like Settings. The generic modal scrim is for sheets, not navigation pages. */
+.modal-backdrop.game-page-backdrop,
+.modal-backdrop.game-page-backdrop.closing {
+  background: transparent;
+  animation: none;
+}
+
 /* Full-screen game page (Expo parity). The game detail is no longer a bottom
    sheet: it fills the viewport, slides in from the right like a pushed page,
    and dismisses through the header back button or the iOS edge swipe. */
@@ -257,6 +265,13 @@
 
 .modal-sheet.game-sheet.game-page.closing {
   animation: settings-out var(--overlay-out) var(--exit-ease) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-sheet.game-sheet.game-page,
+  .modal-sheet.game-sheet.game-page.closing {
+    animation: none;
+  }
 }
 
 /* Sticky header: circular back button (same Liquid Glass treatment as the
