@@ -173,7 +173,7 @@ export default function CustomizeList({
   // Disabled mid-drag: the reorder owns the pointer, and backing out from under
   // it would drop the row somewhere the user did not choose. The registration
   // stays up through the drag, because the overlay is still up.
-  useEdgeBack(onClose, { register: mounted, disabled: !mounted || Boolean(dragKey) })
+  useEdgeBack(onClose, { register: mounted, disabled: !mounted || closing || Boolean(dragKey) })
 
   if (!mounted) return null
 

@@ -5,7 +5,7 @@ import HeaderSettingsButton from './components/HeaderSettingsButton.jsx'
 import TabBar from './components/TabBar.jsx'
 import { useNewsUnread } from './lib/newsUnread.js'
 import { useNavConfig, getNavConfig, visibleKeys, TAB_BY_KEY } from './lib/navConfig.js'
-import { useEdgeBack, overlaysOpen } from './lib/useEdgeBack.js'
+import { useEdgeBack } from './lib/useEdgeBack.js'
 import { warmOnIdle } from './lib/warmChunks.js'
 import AuthGate from './components/AuthGate.jsx'
 import { useAppSession } from './lib/appAuth.js'
@@ -73,10 +73,6 @@ const warmLoader = (loader) => {
   Promise.resolve().then(loader).catch(() => {})
 }
 
-// Edge swipe: a swipe in from the left edge goes back out of a nested view.
-// There is no drawer anymore, so an edge swipe never opens anything.
-const EDGE_PX = 24
-const OPEN_DX = 60
 // Keep a closing view mounted through its slide-out (matches --overlay-out).
 const VIEW_EXIT_MS = 240
 // The Home sub-pages reachable from Jump back in / Top story / More news /
@@ -410,61 +406,14 @@ function GameDeckApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  useEffect(() => {
-    let startX = 0
-    let startY = 0
-    let tracking = false
-    let fromEdge = false
-
-    const onStart = (e) => {
-      const t = e.touches && e.touches[0]
-      if (!t) return
-      startX = t.clientX
-      startY = t.clientY
-      fromEdge = startX <= EDGE_PX
-      tracking = true
-    }
-    const onMove = (e) => {
-      if (!tracking) return
-      // Full-screen pages with their own edge-back swipe (Settings / Customize,
-      // and any overlay registered via useEdgeBack, e.g. the Discover rail page):
-      // don't also act on the edge swipe behind them.
-      if (settingsOpen || customizeOpen || customizeBarOpen || overlaysOpen()) return
-      const t = e.touches && e.touches[0]
-      if (!t) return
-      const dx = t.clientX - startX
-      const dy = t.clientY - startY
-      // Only act on a clearly horizontal gesture, so vertical scrolling is untouched.
-      if (Math.abs(dx) <= Math.abs(dy)) return
-      // Claim the gesture before the action threshold. Without this, iOS can
-      // perform its native history swipe while GameDeck closes a nested view,
-      // producing two actions from one finger movement.
-      if (fromEdge && dx > 0 && e.cancelable) e.preventDefault()
-      // A full-screen overlay (Wishlist, status/smart lists) is open: an edge
-      // swipe-in goes back to close it. There is no drawer anymore, so an edge
-      // swipe never opens anything.
-      // (Home sub-pages use the edge-back stack below, not this handler, so a
-      // sheet opened over them owns the gesture while it's up.)
-      if (view) {
-        if (!viewClosing && fromEdge && dx > OPEN_DX) {
-          closeView()
-          tracking = false
-        }
-      }
-    }
-    const onEnd = () => {
-      tracking = false
-    }
-
-    window.addEventListener('touchstart', onStart, { passive: true })
-    window.addEventListener('touchmove', onMove, { passive: false })
-    window.addEventListener('touchend', onEnd, { passive: true })
-    return () => {
-      window.removeEventListener('touchstart', onStart)
-      window.removeEventListener('touchmove', onMove)
-      window.removeEventListener('touchend', onEnd)
-    }
-  }, [settingsOpen, customizeOpen, customizeBarOpen, view, viewClosing])
+  // Wishlist / Release watch / status lists are pushed full-screen pages just
+  // like Settings. Register them in the same edge-back stack rather than keeping
+  // a second copy of the touch maths in App; nested sheets/pages register later
+  // and therefore own the gesture until they close.
+  useEdgeBack(closeView, {
+    register: Boolean(view),
+    disabled: !view || viewClosing || settingsOpen || customizeOpen || customizeBarOpen,
+  })
 
   // Home sub-pages (For You, Rankings, Insights, News): the edge swipe mirrors
   // the header back caret and returns to Home. This registers in the edge-back

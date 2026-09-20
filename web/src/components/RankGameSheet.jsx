@@ -27,7 +27,7 @@ export default function RankGameSheet({ open, game, ranks, gameById, existingRan
   // Edge swipe closes the rank sheet. Registered in the edge-back stack (only
   // while mounted) so it owns the gesture over the game page beneath it;
   // suppressed while a save/compare is in flight, like the close button.
-  useEdgeBack(onClose, { register: mounted, disabled: busy || !mounted })
+  useEdgeBack(onClose, { register: mounted, disabled: busy || !mounted || closing })
 
   useEffect(() => {
     if (!open || !game) return

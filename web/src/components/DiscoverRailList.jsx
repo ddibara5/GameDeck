@@ -101,7 +101,7 @@ export default function DiscoverRailList({ row, seedItems, isOwned, hideOwned, w
 
   // Edge-swipe from the left to back out (same gesture as Settings / Customize).
   // Suppressed while a nested sheet is up so the swipe closes that first.
-  useEdgeBack(requestClose, { disabled: sortOpen || Boolean(selected) })
+  useEdgeBack(requestClose, { disabled: closing || sortOpen || Boolean(selected) })
 
   // Stable identity for the inherited top-bar filters, so the effect below reruns
   // if they ever change while this page is open rather than silently serving the

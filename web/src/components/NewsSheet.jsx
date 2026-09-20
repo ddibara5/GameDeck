@@ -51,7 +51,7 @@ export default function NewsSheet({ item, rel, onClose, onOpenGame }) {
   // iOS edge swipe dismisses the article sheet. A game page opened from the
   // sheet registers itself on top in the edge-back stack, so it owns the
   // gesture while up.
-  useEdgeBack(requestClose, { disabled: dragging })
+  useEdgeBack(requestClose, { disabled: closing || dragging })
 
   const sources = dedupeSources(item.sources)
   const safeSources = sources
