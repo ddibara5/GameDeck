@@ -503,3 +503,133 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+
+/* ---------- Related games ----------
+   Shared by Discover and Library because both routes use GameSheet. The rail is
+   intentionally canvas-level rather than another card: it is a continuation of
+   screenshots, not a second nested information panel. */
+.gs-related {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 2px;
+}
+
+.gs-related-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gs-related-head > span:last-child {
+  color: var(--muted);
+  font-size: var(--t-foot);
+  line-height: 1.35;
+}
+
+.gs-related-strip {
+  display: flex;
+  gap: 12px;
+  margin: 0 -18px;
+  padding: 2px 18px 4px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.gs-related-strip::-webkit-scrollbar { display: none; }
+
+.gs-related-card {
+  flex: 0 0 112px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.gs-related-card:active { opacity: 0.72; }
+
+.gs-related-cover {
+  position: relative;
+  display: block;
+  width: 112px;
+  height: 158px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.gs-related-cover .cover-lg {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  margin: 0;
+  aspect-ratio: auto;
+  border-radius: inherit;
+}
+
+.gs-related-state {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  max-width: calc(100% - 12px);
+  padding: 3px 6px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.68);
+  color: #fff;
+  font-size: var(--t-cap2);
+  font-weight: var(--w-semi);
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gs-related-title {
+  display: -webkit-box;
+  margin-top: 6px;
+  overflow: hidden;
+  color: var(--text);
+  font-size: var(--poster-caption);
+  font-weight: var(--w-semi);
+  line-height: 1.25;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.gs-related-meta {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: var(--t-cap2);
+  line-height: 1.25;
+}
+
+.gs-related-card.loading { cursor: default; }
+
+.gs-related-skeleton-cover {
+  display: block;
+  width: 112px;
+  height: 158px;
+  border-radius: 12px;
+}
+
+.gs-related-skeleton-line {
+  display: block;
+  width: 92px;
+  height: 10px;
+  margin-top: 7px;
+  border-radius: var(--r-xs);
+}
+
+.gs-related-skeleton-line.short {
+  width: 58px;
+  margin-top: 4px;
+}

@@ -16,7 +16,7 @@ import {
   setStatus,
 } from '../lib/userStatus.js'
 import { useWishlist, toggleWishlist } from '../lib/wishlist.js'
-import { fetchGameById } from '../lib/discover.js'
+import { fetchGameById, fetchGamesByIds } from '../lib/discover.js'
 import { peekGameSheetMedia } from '../lib/gameSheetMedia.js'
 import {
   getRankingStateCache,
@@ -213,6 +213,15 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   const { closing, requestClose } = useDelayedClose(onClose, NAV_TRANSITION_MS)
   const dialogRef = useDialogA11y({ onClose: requestClose })
   const { ids: wishIds } = useWishlist()
+  const { games: libraryGames } = useLibraryGames()
+  const libraryByIgdb = useMemo(() => {
+    const map = new Map()
+    for (const item of libraryGames || []) {
+      const id = Number(item && item.igdb_id)
+      if (id) map.set(id, item)
+    }
+    return map
+  }, [libraryGames])
 
   // Status (owned only). Two pieces of state, not one: which status is showing,
   // and whether that is something you chose or something the app derived from
@@ -329,6 +338,45 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   const companies = (media && media.companies) || game.companies || []
   const summary = (media && media.summary) || game.summary || null
   const screenshots = (media && media.screenshots) || game.screenshots || []
+  const similarGameIds = useMemo(() => {
+    const source = (media && media.similarGameIds) || game.similarGameIds || []
+    const current = Number(igdbId)
+    return [...new Set(source.map(Number).filter((id) => id && id !== current))].slice(0, 10)
+  }, [media, game, igdbId])
+  const [relatedGames, setRelatedGames] = useState([])
+  const [relatedLoading, setRelatedLoading] = useState(false)
+  const [relatedSelected, setRelatedSelected] = useState(null)
+
+  useEffect(() => {
+    let alive = true
+    if (!similarGameIds.length) {
+      setRelatedGames([])
+      setRelatedLoading(false)
+      return undefined
+    }
+    setRelatedLoading(true)
+    fetchGamesByIds(similarGameIds)
+      .then((byId) => {
+        if (!alive) return
+        const excludedTypes = new Set([1, 3, 5, 6, 7, 13, 14])
+        const next = similarGameIds
+          .map((id) => byId[id])
+          .filter(Boolean)
+          .filter((item) => !item.versionParent && !excludedTypes.has(Number(item.gameType)))
+          .slice(0, 8)
+        setRelatedGames(next)
+        setRelatedLoading(false)
+      })
+      .catch(() => {
+        if (!alive) return
+        setRelatedGames([])
+        setRelatedLoading(false)
+      })
+    return () => {
+      alive = false
+    }
+  }, [similarGameIds])
+
   const url = (media && media.url) || game.url || null
   const year = game.release_year || game.year || (media && media.year) || null
   // Exact release date, as precise as IGDB actually is about it (a full day for
@@ -394,7 +442,7 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   // The game detail renders as a full-screen page (Expo parity): a sticky header
   // row with a circular back button, the centered game title, and the settings
   // gear. Back returns to whatever opened the page, via requestClose.
-  return createPortal(
+  const page = createPortal(
     <div className={`modal-backdrop game-page-backdrop${closing ? ' closing' : ''}`} onClick={handleOverlayClick}>
       <div
         ref={dialogRef}
@@ -710,7 +758,58 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
                 </div>
               ) : null}
 
-
+              {similarGameIds.length ? (
+                <section className="gs-related" aria-label={`Games related to ${title}`}>
+                  <div className="gs-related-head">
+                    <span style={sectionTitleStyle}>Related games</span>
+                    <span>Games similar to {title}</span>
+                  </div>
+                  <div className="gs-related-strip">
+                    {relatedLoading
+                      ? Array.from({ length: 3 }).map((_, index) => (
+                          <span className="gs-related-card loading" key={index} aria-hidden="true">
+                            <span className="skeleton gs-related-skeleton-cover" />
+                            <span className="skeleton gs-related-skeleton-line" />
+                            <span className="skeleton gs-related-skeleton-line short" />
+                          </span>
+                        ))
+                      : relatedGames.map((item) => {
+                          const relatedOwned = libraryByIgdb.get(Number(item.id)) || null
+                          const relatedWishlisted = wishIds.has(Number(item.id))
+                          const relatedMeta = [
+                            item.rating != null ? `★ ${Math.round(Number(item.rating))}` : null,
+                            item.year || null,
+                          ].filter(Boolean).join(' · ')
+                          return (
+                            <button
+                              type="button"
+                              className="gs-related-card"
+                              key={item.id}
+                              onClick={() => {
+                                setRelatedSelected(
+                                  relatedOwned
+                                    ? { variant: 'owned', game: relatedOwned, inLibrary: true }
+                                    : { variant: 'discover', game: item, inLibrary: false },
+                                )
+                              }}
+                              aria-label={`Open related game ${item.name}`}
+                            >
+                              <span className="gs-related-cover">
+                                <Cover src={item.cover} title={item.name} size="lg" />
+                                {relatedOwned ? (
+                                  <span className="gs-related-state">In library</span>
+                                ) : relatedWishlisted ? (
+                                  <span className="gs-related-state">Wishlisted</span>
+                                ) : null}
+                              </span>
+                              <span className="gs-related-title">{item.name}</span>
+                              {relatedMeta ? <span className="gs-related-meta">{relatedMeta}</span> : null}
+                            </button>
+                          )
+                        })}
+                  </div>
+                </section>
+              ) : null}
             </>
           )}
 
@@ -738,5 +837,20 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
       ) : null}
     </div>,
     document.body,
+  )
+
+  return (
+    <>
+      {page}
+      {relatedSelected ? (
+        <GameSheet
+          variant={relatedSelected.variant}
+          game={relatedSelected.game}
+          inLibrary={relatedSelected.inLibrary}
+          onAsk={onAsk}
+          onClose={() => setRelatedSelected(null)}
+        />
+      ) : null}
+    </>
   )
 }

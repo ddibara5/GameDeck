@@ -17,6 +17,8 @@ const HOME_TTL = 30 * 60 * 1000 // 30 minutes
 const GAMEPASS_TTL = 12 * 60 * 60 * 1000 // 12 hours
 const LIB_TITLES_TTL = 60 * 60 * 1000 // 1 hour
 const GAME_TTL = 7 * 24 * 60 * 60 * 1000 // 7 days (per-game metadata barely moves)
+const GAME_DETAIL_CACHE_VERSION = 'v2'
+const gameDetailCacheKey = (id) => `discover:game:${GAME_DETAIL_CACHE_VERSION}:${id}`
 
 // --- IGDB catalog fetch (via our serverless proxy) --------------------------
 // Results are cached in-memory per query so flipping between Browse and Ask, or
@@ -163,7 +165,7 @@ export async function fetchGameById(igdbId) {
   if (_gameCache.has(id)) return _gameCache.get(id)
 
   const pending = swr(
-    `discover:game:${id}`,
+    gameDetailCacheKey(id),
     async () => {
       const games = await fetchDiscover({ ids: id })
       return games[0] || null
@@ -213,10 +215,10 @@ export async function fetchGamesByIds(ids) {
     else diskIds.push(id)
   }
 
-  const hits = await idbGetMany(diskIds.map((id) => `discover:game:${id}`))
+  const hits = await idbGetMany(diskIds.map((id) => gameDetailCacheKey(id)))
   const missing = []
   for (const id of diskIds) {
-    const hit = hits.get(`discover:game:${id}`)
+    const hit = hits.get(gameDetailCacheKey(id))
     if (hit && hit.value && Date.now() - hit.ts < GAME_TTL) {
       out[id] = hit.value
       _gameCache.set(id, hit.value)
@@ -236,7 +238,7 @@ export async function fetchGamesByIds(ids) {
     if (g && g.id != null) {
       out[g.id] = g
       _gameCache.set(Number(g.id), g)
-      writes.push([`discover:game:${g.id}`, g])
+      writes.push([gameDetailCacheKey(g.id), g])
     }
   })
   idbSetMany(writes)
