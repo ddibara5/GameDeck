@@ -52,6 +52,10 @@ test('Home wires the section see-all navigation', () => {
 
 test('Home news scrolls the lead story with compact follow-ups', () => {
   assert.match(home, /function HomeNews/)
+  assert.match(home, /function HomeNewsArt/)
+  assert.match(home, /cardArtChain\(item\)/)
+  assert.match(home, /remoteImg\(art\.src, targetW\)/)
+  assert.match(home, /onError=\{\(\) => setStep/)
   assert.match(home, /items\.slice\(1, 5\)/)
   assert.match(home, /className="hm-news-strip"/)
   assert.match(home, /className="hm-news-lead"/)

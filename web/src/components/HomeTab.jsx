@@ -7,11 +7,11 @@ import { TAB_ICONS } from './TabBar.jsx'
 import { preloadLibrary, useLibraryGames } from '../lib/useLibraryGames.js'
 import { gameArtworkUrl } from '../lib/homeInsights.js'
 import { releaseWatch } from '../lib/homeReleaseWatch.js'
-import { coverSrc, getNewsCache, loadNews, markRead, relTime, resolveGame, buildLibraryIndex } from '../lib/news.js'
+import { cardArtChain, getNewsCache, loadNews, markRead, relTime, resolveGame, buildLibraryIndex } from '../lib/news.js'
 import { loadHomeLayout, saveHomeLayout } from '../lib/homeLayout.js'
 import { useWishlist } from '../lib/wishlist.js'
 import { gameProgress, sortRecentGames } from '../lib/homeRails.js'
-import { libraryCover, releaseCardLabel } from '../lib/format.js'
+import { libraryCover, releaseCardLabel, remoteImg } from '../lib/format.js'
 import './homeCards.css'
 import './homeRails.css'
 
@@ -94,14 +94,34 @@ function JumpBackIn({ onOpenTab }) {
   )
 }
 
+function HomeNewsArt({ item, className, targetW }) {
+  const [step, setStep] = useState(0)
+  useEffect(() => setStep(0), [item.id, item.primaryUrl, item.image, item.gameCover])
+  const chain = cardArtChain(item)
+  const art = chain[step] || null
+
+  if (!art) return <span className={`${className} hm-news-art-empty`} aria-hidden="true" />
+
+  return (
+    <img
+      key={art.src}
+      className={`${className}${art.kind === 'cover' ? ' is-cover' : ''}`}
+      src={remoteImg(art.src, targetW)}
+      alt=""
+      loading="lazy"
+      decoding="async"
+      onError={() => setStep((value) => value + 1)}
+    />
+  )
+}
+
 // Home news: one featured story plus compact swipeable follow-ups, kept to
 // roughly the same height as the old single-story card. Story taps open the
-// article sheet; "More news" remains the route to the full News tab.
+// article sheet; the header caret remains the route to the full News tab.
 function HomeNews({ items, unread, onOpenNews, onOpenStory }) {
   if (!items || items.length === 0) return null
   const lead = items[0]
   const more = items.slice(1, 5)
-  const artFor = (item) => item.image || coverSrc(item.gameCover, 't_cover_big') || null
   const timeFor = (item) => relTime(item.publishedAt || item.createdAt)
 
   return (
@@ -124,7 +144,7 @@ function HomeNews({ items, unread, onOpenNews, onOpenStory }) {
           onClick={() => onOpenStory(lead)}
           aria-label={`${lead.title}. Open article.`}
         >
-          {artFor(lead) ? <img className="hm-news-lead-art" src={artFor(lead)} alt="" loading="lazy" /> : null}
+          <HomeNewsArt item={lead} className="hm-news-lead-art" targetW={640} />
           <span className="hm-news-lead-shade" aria-hidden="true" />
           <span className="hm-news-lead-copy">
             <span className="hm-news-lead-meta">
@@ -145,7 +165,7 @@ function HomeNews({ items, unread, onOpenNews, onOpenStory }) {
             onClick={() => onOpenStory(item)}
             aria-label={`${item.title}. Open article.`}
           >
-            {artFor(item) ? <img className="hm-news-mini-art" src={artFor(item)} alt="" loading="lazy" /> : null}
+            <HomeNewsArt item={item} className="hm-news-mini-art" targetW={320} />
             <span className="hm-news-mini-copy">
               <span className="hm-news-mini-title">{item.title}</span>
               {timeFor(item) ? <span className="hm-news-mini-time">{timeFor(item)}</span> : null}
