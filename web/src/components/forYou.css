@@ -71,6 +71,7 @@
   cursor: pointer;
   flex-shrink: 0;
   line-height: 0;
+  text-align: left;
 }
 .fy-row-cover {
   overflow: hidden;
@@ -529,6 +530,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  margin: 0;
 }
 .fy-filters-actions {
   display: flex;
@@ -543,6 +545,7 @@
   color: var(--text);
   font-size: 15px;
   font-weight: 700;
+  margin-bottom: 0;
 }
 
 .fy-filters .filter-options {

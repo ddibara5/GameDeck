@@ -276,6 +276,12 @@
   border-bottom: 1px solid var(--glass-line);
 }
 
+.game-page-header .header-back {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+}
+
 .game-page-hero {
   display: flex;
   gap: 12px;
