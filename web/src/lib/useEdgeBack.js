@@ -241,7 +241,11 @@ export function useEdgeBack(
       const dx = t.clientX - startX
       const dy = t.clientY - startY
       const verdict = classifyEdgeSwipe({ startX, dx, dy })
-      if (verdict === 'none') return
+      // Before horizontal intent is established, leave vertical scrolling alone.
+      // Once the page is already following the finger, keep tracking even if the
+      // finger drifts back left or diagonally so canceling a swipe really returns
+      // the page to zero instead of completing from a stale dx.
+      if (verdict === 'none' && !interactive) return
       if (!ownsGesture()) return
 
       if (e.cancelable) e.preventDefault()
