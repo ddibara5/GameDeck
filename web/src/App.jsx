@@ -385,6 +385,15 @@ function GameDeckApp() {
     return () => window.removeEventListener('gamedeck:open-settings', onRequestSettings)
   }, [openSettings])
 
+  // Some game-detail entry points are portaled outside the component that owns
+  // Search/Ask. This keeps Ask GameDeck universal without threading an opener
+  // through every Home, Wishlist, Activity, Insights, Rankings and News path.
+  useEffect(() => {
+    const onRequestAsk = (event) => openAsk(event.detail?.game || null)
+    window.addEventListener('gamedeck:open-ask', onRequestAsk)
+    return () => window.removeEventListener('gamedeck:open-ask', onRequestAsk)
+  }, [openAsk])
+
   // Fetch the code for the OTHER tabs in the bar once the page has loaded, one at
   // a time on idle. Run once on mount and never re-run: the point is to spend the
   // quiet minute after launch, and a dependency on the tab or the nav config would
