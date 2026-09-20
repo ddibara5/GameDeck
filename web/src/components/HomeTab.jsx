@@ -8,12 +8,12 @@ import { preloadLibrary, useLibraryGames } from '../lib/useLibraryGames.js'
 import { useStatusMap } from '../lib/userStatus.js'
 import { supabase } from '../lib/supabase.js'
 import { gameArtworkUrl } from '../lib/homeInsights.js'
-import { fetchReleaseCandidates, releaseLabel, releasedAgoLabel, releaseWatch } from '../lib/homeReleaseWatch.js'
+import { fetchReleaseCandidates, releaseWatch } from '../lib/homeReleaseWatch.js'
 import { loadNews, markRead, resolveGame, buildLibraryIndex } from '../lib/news.js'
 import { fetchGameById } from '../lib/discover.js'
 import { loadHomeLayout, saveHomeLayout } from '../lib/homeLayout.js'
 import { gameProgress, libraryTitleKey, sortRecentGames, wishlistProgress } from '../lib/homeRails.js'
-import { libraryCover, timingParts } from '../lib/format.js'
+import { libraryCover, releaseCardLabel } from '../lib/format.js'
 import './homeCards.css'
 import './homeRails.css'
 
@@ -237,22 +237,18 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
   const libraryReady = !libraryLoading || games.length > 0
   const libraryBroken = Boolean(libraryError) && games.length === 0
 
-  const toWishlistRailItem = (item, dateMode) => {
-    const timing = timingParts(item.released)
-    return {
-      key: String(item.igdb_id ?? item.title),
-      title: item.title,
-      artwork: gameArtworkUrl(item.cover, null),
-      progress: wishlistProgress(item, libraryByIgdb, libraryByTitle),
-      timing,
-      meta: timing
-        ? null
-        : dateMode === 'age'
-          ? releasedAgoLabel(item)
-          : releaseLabel(item),
-      source: item,
-    }
-  }
+  const toWishlistRailItem = (item) => ({
+    key: String(item.igdb_id ?? item.title),
+    title: item.title,
+    artwork: gameArtworkUrl(item.cover, null),
+    progress: wishlistProgress(item, libraryByIgdb, libraryByTitle),
+    meta: releaseCardLabel({
+      released: item.released,
+      precision: item.date_precision,
+      label: item.release_label,
+    }),
+    source: item,
+  })
 
   const renderSection = (section) => {
     if (section === 'continue-playing') {
@@ -305,7 +301,7 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
             <HomeRail
               title="Upcoming"
               compact
-              items={releases.comingUp.map((item) => toWishlistRailItem(item, 'release'))}
+              items={releases.comingUp.map(toWishlistRailItem)}
               onOpenAll={() => onOpenList('releases')}
               onOpen={(item) => setSelectedGame({ game: item, variant: 'wishlist' })}
             />
@@ -327,7 +323,7 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
         <HomeRail
           title="New releases"
           compact
-          items={releases.outNow.map((item) => toWishlistRailItem(item, 'age'))}
+          items={releases.outNow.map(toWishlistRailItem)}
           onOpenAll={() => onOpenList('released')}
           onOpen={(item) => setSelectedGame({ game: item, variant: 'wishlist' })}
         />
