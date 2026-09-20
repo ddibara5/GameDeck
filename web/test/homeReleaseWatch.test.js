@@ -50,6 +50,16 @@ test('Home wires the section see-all navigation', () => {
   assert.match(home, /onOpenList\('releases'\)/)
 })
 
+test('Home news shows one lead story plus compact follow-ups', () => {
+  assert.match(home, /function HomeNews/)
+  assert.match(home, /items\.slice\(1, 5\)/)
+  assert.match(home, /className="hm-news-lead"/)
+  assert.match(home, /className="hm-news-more"/)
+  assert.match(home, /className="hm-news-mini"/)
+  assert.match(home, /More news/)
+  assert.doesNotMatch(home, /hm-news-summary/)
+})
+
 test('releaseDate rebuilds the local calendar date from UTC midnight', () => {
   const item = { released: Date.UTC(2026, 8, 15) / 1000 }
   const date = releaseDate(item)
