@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import { readFile } from 'node:fs/promises'
 import { libraryMetadata, libraryProgress } from '../src/lib/libraryPresentation.js'
 
 test('Library labels playtime-based progress as an estimate, not achievement completion', () => {
@@ -20,4 +21,13 @@ test('Library progress stays bounded and preserves achievement fallback for sort
   assert.equal(libraryProgress({ length_minutes: 60, playtime_minutes: -1 }), 0)
   assert.equal(libraryProgress({ percent: 42 }), 42)
   assert.equal(libraryProgress({}), 0)
+})
+
+
+test('Library keeps view and sort as an in-context top toolbar control', async () => {
+  const source = await readFile(new URL('../src/components/LibraryTab.jsx', import.meta.url), 'utf8')
+  assert.match(source, /className="gd-library-tools"/)
+  assert.match(source, /aria-label="Library view and sort"/)
+  assert.match(source, /setShowView\(true\)/)
+  assert.match(source, />View and sort</)
 })
