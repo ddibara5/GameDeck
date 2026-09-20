@@ -219,3 +219,58 @@
 }
 
 .game-sheet { background: var(--surface); }
+
+/* Full-screen game page (Expo parity). The game detail is no longer a bottom
+   sheet: it fills the viewport, slides in from the right like a pushed page,
+   and dismisses through the header back button or the iOS edge swipe. */
+.modal-sheet.game-sheet.game-page {
+  max-height: none;
+  height: 100dvh;
+  border-radius: 0;
+  border-top: 0;
+  box-shadow: none;
+  padding: 0 18px calc(28px + env(safe-area-inset-bottom, 0px));
+  animation: game-page-in var(--overlay-out) var(--enter-ease);
+  overscroll-behavior-y: contain;
+}
+
+@keyframes game-page-in {
+  from {
+    transform: translateX(48px);
+    opacity: 0.4;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Sticky header: circular back button (same Liquid Glass treatment as the
+   sub-page header caret), centered game title, settings gear. */
+.game-page-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 -18px;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 14px 10px;
+  background: color-mix(in oklab, var(--surface) 88%, transparent);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--glass-line);
+}
+
+.game-page-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

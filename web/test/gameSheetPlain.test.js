@@ -8,7 +8,7 @@ const css = readFileSync(new URL('src/components/gameSheet.css', root), 'utf8')
 const worker = readFileSync(new URL('public/sw.js', root), 'utf8')
 
 test('game sheets use the plain theme surface without artwork-derived rendering', () => {
-  assert.match(gameSheet, /className="modal-sheet game-sheet"/)
+  assert.match(gameSheet, /className="modal-sheet game-sheet( game-page)?"/)
   assert.match(css, /\.game-sheet \{ background: var\(--surface\); \}/)
   assert.doesNotMatch(gameSheet, /coverLook|peekCoverLook|gs-hero|--gs-tint|\/api\/tint/)
   assert.doesNotMatch(css, /\.gs-hero|--gs-tint/)

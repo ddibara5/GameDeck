@@ -11,6 +11,7 @@ import {
   setRankReaction,
 } from '../lib/ranking.js'
 import { useMountTransition } from '../lib/useMountTransition.js'
+import { useEdgeBack } from '../lib/useEdgeBack.js'
 import { lockScroll } from '../lib/scrollLock.js'
 import { useDialogA11y } from '../lib/useDialogA11y.js'
 import './rankings.css'
@@ -23,6 +24,10 @@ export default function RankGameSheet({ open, game, ranks, gameById, existingRan
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const dialogRef = useDialogA11y({ active: mounted, closeOnEscape: false })
+  // Edge swipe closes the rank sheet. Registered in the edge-back stack (only
+  // while mounted) so it owns the gesture over the game page beneath it;
+  // suppressed while a save/compare is in flight, like the close button.
+  useEdgeBack(onClose, { register: mounted, disabled: busy || !mounted })
 
   useEffect(() => {
     if (!open || !game) return

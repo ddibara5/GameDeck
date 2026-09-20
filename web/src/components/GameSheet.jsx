@@ -1,8 +1,9 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Cover from './Cover.jsx'
+import HeaderSettingsButton from './HeaderSettingsButton.jsx'
 import { useDelayedClose } from '../lib/useDelayedClose.js'
-import { useSheetDrag } from '../lib/useSheetDrag.js'
+import { useEdgeBack } from '../lib/useEdgeBack.js'
 import { lockScroll } from '../lib/scrollLock.js'
 import { useAchievementsUrl, useLibraryGames } from '../lib/useLibraryGames.js'
 import { igdbCover, platformMeta, minutesToHhm, formatDate, releaseLabel } from '../lib/format.js'
@@ -306,13 +307,29 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
     }
   }, [variant, igdbId, discoverHasMedia]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Swipe-down-to-close, from the cover/handle zone so details below still scroll.
-  const { dragY, dragging, handlers: dragHandlers } = useSheetDrag(requestClose)
+  // (Full-screen page: no swipe-down-to-close; the header back button and the
+  // iOS edge swipe handle dismissal.)
 
   // Screenshot lightbox (null = closed, else the index being viewed).
   const [shotIndex, setShotIndex] = useState(null)
   // Lock background scroll while the sheet is open (shared ref-counted lock).
   useEffect(() => lockScroll(), [])
+
+  // Full-screen page: iOS edge-swipe goes back. Suppressed while the screenshot
+  // lightbox is up (it has its own close) or while Settings is open over the
+  // page (Settings has its own bespoke edge-back). The rank sheet registers
+  // itself in the edge-back stack, so it owns the gesture while open.
+  const [settingsUp, setSettingsUp] = useState(false)
+  useEffect(() => {
+    const onSettingsClosed = () => setSettingsUp(false)
+    window.addEventListener('gamedeck:settings-close', onSettingsClosed)
+    return () => window.removeEventListener('gamedeck:settings-close', onSettingsClosed)
+  }, [])
+  const openSettings = useCallback(() => {
+    setSettingsUp(true)
+    window.dispatchEvent(new CustomEvent('gamedeck:open-settings'))
+  }, [])
+  useEdgeBack(requestClose, { disabled: settingsUp || shotIndex !== null })
 
   if (!game) return null
 
@@ -374,24 +391,32 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   // not to a transformed ancestor (e.g. the Wishlist / list overlays use
   // `will-change: transform`, which would otherwise trap this sheet and make it
   // glitch or open misaligned). Keeps every sheet in the app on one identical path.
+  //
+  // The game detail renders as a full-screen page (Expo parity): a sticky header
+  // row with a circular back button, the centered game title, and the settings
+  // gear. Back returns to whatever opened the page, via requestClose.
   return createPortal(
     <div className={`modal-backdrop${closing ? ' closing' : ''}`} onClick={handleOverlayClick}>
       <div
         ref={dialogRef}
-        className="modal-sheet game-sheet"
+        className="modal-sheet game-sheet game-page"
         role="dialog"
         aria-modal="true"
         aria-label={title}
         style={{
-          transform: closing ? 'translateY(110%)' : dragY ? `translateY(${dragY}px)` : undefined,
-          transition: dragging ? 'none' : 'transform var(--d-base) var(--ease-out)',
-          padding: '8px 18px calc(28px + env(safe-area-inset-bottom, 0px))',
+          transform: closing ? 'translateX(100%)' : undefined,
+          transition: 'transform var(--d-base) var(--ease-out)',
         }}
       >
-        <div className="sheet-drag-zone" {...dragHandlers}>
-          <div className="modal-handle" />
+        <div className="game-page-header">
+          <button type="button" className="header-back" onClick={requestClose} aria-label="Back">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </button>
+          <p className="game-page-title">{title}</p>
+          <HeaderSettingsButton onOpenSettings={openSettings} />
         </div>
-        <button type="button" className="modal-close" aria-label="Close game details" onClick={requestClose}>&times;</button>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 6 }}>
           {/* Hero: cover + title + key metadata, pilot arrangement. */}

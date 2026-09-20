@@ -5,6 +5,7 @@ import Skeleton from './Skeleton.jsx'
 import { MessageState } from './AsyncState.jsx'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
 import { useStatusMap, effectiveStatus, includeInLists } from '../lib/userStatus.js'
+import { hasRecentPlay, sortRecentGames } from '../lib/homeRails.js'
 import './wishlist.css'
 
 // Drawer-opened status lists. `filter` runs against a game with the live status map.
@@ -27,6 +28,14 @@ export const LIST_DEFS = {
     filter: (g, m) => effectiveStatus(g, m) === 'finished',
     empty: 'Games you’ve completed will show up here.',
   },
+  // Full list behind the Home "Recent play" rail: everything played in the
+  // last 14 days, most recent first (same ordering as the rail).
+  recent: {
+    title: 'Recent play',
+    filter: (g) => hasRecentPlay(g),
+    empty: 'Games you play will show up here.',
+    sort: sortRecentGames,
+  },
 }
 
 export default function ListView({ viewKey, onClose }) {
@@ -37,7 +46,8 @@ export default function ListView({ viewKey, onClose }) {
 
   const list = useMemo(() => {
     if (!def) return []
-    return games.filter((g) => includeInLists(g, statusMap) && def.filter(g, statusMap))
+    const filtered = games.filter((g) => includeInLists(g, statusMap) && def.filter(g, statusMap))
+    return def.sort ? def.sort(filtered) : filtered
   }, [def, games, statusMap])
 
   if (!def) return null

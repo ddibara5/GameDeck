@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useDelayedClose } from '../lib/useDelayedClose.js'
 import { useSheetDrag } from '../lib/useSheetDrag.js'
+import { useEdgeBack } from '../lib/useEdgeBack.js'
 import { lockScroll } from '../lib/scrollLock.js'
 import {
   dedupeSources,
@@ -47,6 +48,10 @@ export default function NewsSheet({ item, rel, onClose, onOpenGame }) {
   const { dragY, dragging, handlers: dragHandlers } = useSheetDrag(requestClose)
   const [artStep, setArtStep] = useState(0)
   useEffect(() => lockScroll(), [])
+  // iOS edge swipe dismisses the article sheet. A game page opened from the
+  // sheet registers itself on top in the edge-back stack, so it owns the
+  // gesture while up.
+  useEdgeBack(requestClose, { disabled: dragging })
 
   const sources = dedupeSources(item.sources)
   const safeSources = sources

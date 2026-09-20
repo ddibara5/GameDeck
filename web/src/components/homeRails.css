@@ -137,11 +137,15 @@
 }
 
 .hrail-compact .hrail-card {
-  width: 76px;
+  width: 80px;
 }
 
 .hrail-compact .hrail-poster {
-  width: 76px;
+  width: 80px;
+  /* Match the Expo "Continue playing" tile cover (80x120pt, 2:3). The corner
+     radius stays exactly as the base rule sets it (var(--r-md)); it is not
+     scaled up with the size. */
+  aspect-ratio: 2 / 3;
 }
 
 /* Date labels ("In 5 days", "Sep 30", "x days ago") match the game title's

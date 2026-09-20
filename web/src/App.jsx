@@ -79,6 +79,10 @@ const EDGE_PX = 24
 const OPEN_DX = 60
 // Keep a closing view mounted through its slide-out (matches --overlay-out).
 const VIEW_EXIT_MS = 220
+// The Home sub-pages reachable from Jump back in / Top story / More news /
+// Library entries. An edge swipe on one of these goes back to Home, exactly
+// like the back caret in the header.
+const SUBPAGE_TABS = ['foryou', 'rankings', 'insights', 'news']
 
 export default function App() {
   const { loading, session, recovery, finishRecovery } = useAppSession()
@@ -150,6 +154,10 @@ function GameDeckApp() {
     warmLoader(OVERLAY_LOADERS.settings)
     setSettingsVisited(true)
     setSettingsOpen(true)
+    // The full-screen game page's header gear opens Settings through this
+    // event; the page listens for the close event below to re-arm its own
+    // edge-back gesture while Settings is up.
+    window.dispatchEvent(new Event('gamedeck:settings-open'))
   }, [])
 
   const openTasteProfile = useCallback(() => {
@@ -162,6 +170,7 @@ function GameDeckApp() {
   const closeSettings = useCallback(() => {
     setSettingsOpen(false)
     setSettingsEntry(null)
+    window.dispatchEvent(new Event('gamedeck:settings-close'))
   }, [])
 
   const openCustomizeRows = useCallback(() => {
@@ -362,6 +371,15 @@ function GameDeckApp() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  // The full-screen game page's header gear asks for Settings through this
+  // event (the page is portaled outside the App tree, so it can't call the
+  // opener directly).
+  useEffect(() => {
+    const onRequestSettings = () => openSettings()
+    window.addEventListener('gamedeck:open-settings', onRequestSettings)
+    return () => window.removeEventListener('gamedeck:open-settings', onRequestSettings)
+  }, [openSettings])
+
   // Fetch the code for the OTHER tabs in the bar once the page has loaded, one at
   // a time on idle. Run once on mount and never re-run: the point is to spend the
   // quiet minute after launch, and a dependency on the tab or the nav config would
@@ -416,6 +434,13 @@ function GameDeckApp() {
           closeView()
           tracking = false
         }
+      } else if (!searchOpen && SUBPAGE_TABS.includes(activeTab)) {
+        // A Home sub-page (For You, Rankings, Insights, News): the edge swipe
+        // mirrors the header back caret and returns to Home.
+        if (fromEdge && dx > OPEN_DX) {
+          goHome()
+          tracking = false
+        }
       }
     }
     const onEnd = () => {
@@ -430,7 +455,7 @@ function GameDeckApp() {
       window.removeEventListener('touchmove', onMove)
       window.removeEventListener('touchend', onEnd)
     }
-  }, [settingsOpen, customizeOpen, customizeBarOpen, view, viewClosing])
+  }, [settingsOpen, customizeOpen, customizeBarOpen, view, viewClosing, activeTab, searchOpen, goHome])
 
   return (
     // `bar-off` collapses --tabbar-height to zero for everything inside, which

@@ -4,18 +4,16 @@ import GameSheet, { preloadGameSheet } from './LazyGameSheet.jsx'
 import NewsSheet from './NewsSheet.jsx'
 import { HomeCustomizeBar, HomeCustomizeSheet } from './HomeCustomizer.jsx'
 import { TAB_ICONS } from './TabBar.jsx'
-import Cover from './Cover.jsx'
 import { preloadLibrary, useLibraryGames } from '../lib/useLibraryGames.js'
-import { useStatusMap, effectiveStatus } from '../lib/userStatus.js'
+import { useStatusMap } from '../lib/userStatus.js'
 import { supabase } from '../lib/supabase.js'
 import { gameArtworkUrl } from '../lib/homeInsights.js'
 import { fetchReleaseCandidates, releaseLabel, releasedAgoLabel, releaseWatch } from '../lib/homeReleaseWatch.js'
 import { loadNews, markRead, resolveGame, buildLibraryIndex } from '../lib/news.js'
 import { fetchGameById } from '../lib/discover.js'
 import { loadHomeLayout, saveHomeLayout } from '../lib/homeLayout.js'
-import { selectContinueGame } from '../lib/homeContinue.js'
-import { gameProgress, libraryTitleKey, wishlistProgress } from '../lib/homeRails.js'
-import { libraryCover, minutesToHhm, platformMeta } from '../lib/format.js'
+import { gameProgress, libraryTitleKey, sortRecentGames, wishlistProgress } from '../lib/homeRails.js'
+import { libraryCover } from '../lib/format.js'
 import './homeCards.css'
 import './homeRails.css'
 
@@ -23,8 +21,8 @@ import './homeRails.css'
 // (gamedeck_home_layout_v2), each hideable and reorderable through the
 // Customize bar/sheet:
 //
-//   continue-playing  one compact hero for the most recently played
-//                     in-progress game; hidden when there is none
+//   continue-playing  a "Recent play" rail of recently played games with their
+//                     story progress; hidden when there is none
 //   jump-back-in      three entry tiles: For You, Rankings, Insights
 //   top-story         featured news card, plus More news
 //   upcoming          wishlist Release watch, coming up
@@ -58,62 +56,6 @@ function SectionHead({ title, action }) {
       <h2 className="hm-sec-title">{title}</h2>
       {action}
     </div>
-  )
-}
-
-// Compact continue-playing hero: small cover, tight padding, slim progress
-// bar. Platform, total playtime, and story progress. The whole tile is the
-// tap target and opens the game sheet (same role/button + keyboard pattern
-// as the wishlist rows).
-function ContinuePlaying({ game, onView }) {
-  const { label: platformLabel } = platformMeta(game.environment)
-  const playtime = minutesToHhm(game.playtime_minutes)
-  const progress = gameProgress(game)
-  const open = () => onView(game)
-  return (
-    <section
-      className="hm-continue"
-      role="button"
-      tabIndex={0}
-      onClick={open}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          open()
-        }
-      }}
-      aria-label={`Continue playing ${game.title}. Open game.`}
-    >
-      <Cover src={libraryCover(game)} title={game.title} size="sm" className="hm-continue-cover" sizes="160px" priority />
-      <div className="hm-continue-copy">
-        <div className="hm-eyebrow">Continue playing</div>
-        <h2 className="hm-continue-title">{game.title}</h2>
-        <div className="hm-muted">
-          {platformLabel} · {playtime}
-        </div>
-        {progress != null ? (
-          <>
-            <div
-              className="hm-continue-bar"
-              role="progressbar"
-              aria-valuenow={progress}
-              aria-valuemin="0"
-              aria-valuemax="100"
-              aria-label={`${progress} percent story progress`}
-            >
-              <span style={{ width: `${progress}%` }} />
-            </div>
-            <div className="hm-continue-bottom">
-              <span className="hm-muted">About {progress}% through the story</span>
-            </div>
-          </>
-        ) : (
-          <div className="hm-continue-bottom">
-            <span className="hm-muted">{playtime} so far</span>
-          </div>
-        )}
-      </div>
-    </section>
   )
 }
 
@@ -262,10 +204,9 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
   )
   const releases = useMemo(() => releaseWatch(releaseItems || []), [releaseItems])
 
-  const continueGame = useMemo(
-    () => selectContinueGame(games, (game) => effectiveStatus(game, statusMap)),
-    [games, statusMap],
-  )
+  // Recently played library games, most recent first. Feeds the Recent play
+  // rail and its full list view.
+  const recentGames = useMemo(() => sortRecentGames(games || []), [games])
   const topStory = newsItems && newsItems.length ? newsItems[0] : null
 
   // Relevance for the featured story's sheet: library index only (no wishlist
@@ -317,9 +258,24 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
         )
       }
       if (!libraryReady) return <LoadingCard />
-      // Hidden when there is nothing in progress, rather than an empty card.
-      if (!continueGame) return null
-      return <ContinuePlaying game={continueGame} onView={(game) => setSelectedGame({ game, variant: 'owned' })} />
+      // Hidden when there is no recent play, rather than an empty rail. A
+      // single recent game shows as a single card.
+      if (!recentGames.length) return null
+      return (
+        <HomeRail
+          title="Recent play"
+          compact
+          items={recentGames.map((game) => ({
+            key: String(game.master_id ?? game.igdb_id ?? game.title),
+            title: game.title,
+            artwork: libraryCover(game),
+            progress: gameProgress(game),
+            source: game,
+          }))}
+          onOpenAll={() => onOpenList('recent')}
+          onOpen={(game) => setSelectedGame({ game, variant: 'owned' })}
+        />
+      )
     }
 
     if (section === 'jump-back-in') {
