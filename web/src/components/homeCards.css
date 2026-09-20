@@ -6,8 +6,8 @@
 .hm-page {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 20px 18px 24px;
+  gap: 8px;
+  padding: 12px 14px 16px;
 }
 
 .hm-card {
@@ -481,13 +481,13 @@ button.hm-np:not(:disabled) {
   justify-content: space-between;
   align-items: baseline;
   gap: 14px;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .hm-sec-title {
   margin: 0;
   color: var(--text);
-  font-size: var(--t-body);
+  font-size: var(--t-sub);
   font-weight: 700;
   letter-spacing: -0.01em;
 }
@@ -514,25 +514,27 @@ button.hm-np:not(:disabled) {
   flex: none;
 }
 
-/* ---- Continue playing hero: compact ---- */
+/* ---- Continue playing hero: compact ----
+   Compressed sizing per the approved compressed mockup (64px 2:3 cover,
+   15px title, slim 4px bar). */
 
 .hm-continue {
   display: grid;
-  grid-template-columns: 92px minmax(0, 1fr);
-  gap: 14px;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 10px;
   align-items: center;
-  padding: 12px;
+  padding: 9px 10px;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 20px;
+  border-radius: 16px;
   overflow: hidden;
 }
 
 .hm-continue-cover {
-  width: 92px;
+  width: 64px;
   /* IGDB covers are 2:3 portrait; a 3/4 box cropped the art top and bottom. */
   aspect-ratio: 2 / 3;
-  border-radius: 12px;
+  border-radius: 9px;
   overflow: hidden;
   background: var(--surface-2);
 }
@@ -542,9 +544,9 @@ button.hm-np:not(:disabled) {
 }
 
 .hm-continue-title {
-  margin: 4px 0 2px;
+  margin: 2px 0 1px;
   color: var(--text);
-  font-size: var(--t-t3);
+  font-size: var(--t-sub);
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.2;
@@ -554,11 +556,11 @@ button.hm-np:not(:disabled) {
 }
 
 .hm-continue-bar {
-  height: 5px;
+  height: 4px;
   border-radius: 99px;
   background: var(--surface-3, var(--line));
   overflow: hidden;
-  margin: 10px 0 8px;
+  margin: 7px 0 6px;
 }
 
 .hm-continue-bar span {
@@ -577,12 +579,12 @@ button.hm-np:not(:disabled) {
 
 .hm-continue-btn {
   border: 0;
-  border-radius: 10px;
+  border-radius: 9px;
   background: var(--accent);
   color: #fff;
-  font-size: var(--t-foot);
+  font-size: 12px;
   font-weight: 700;
-  padding: 8px 14px;
+  padding: 6px 11px;
   cursor: pointer;
   white-space: nowrap;
   -webkit-tap-highlight-color: transparent;
@@ -592,24 +594,24 @@ button.hm-np:not(:disabled) {
   opacity: 0.85;
 }
 
-/* ---- Jump back in: three entry tiles ---- */
+/* ---- Jump back in: three entry tiles (compressed) ---- */
 
 .hm-jump-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  gap: 8px;
 }
 
 .hm-jump {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-height: 72px;
-  padding: 12px;
+  gap: 8px;
+  min-height: 56px;
+  padding: 9px 10px;
   text-align: left;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 15px;
+  border-radius: 12px;
   font: inherit;
   color: inherit;
   cursor: pointer;
@@ -621,8 +623,8 @@ button.hm-np:not(:disabled) {
 }
 
 .hm-jump-icon {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   flex: none;
   color: var(--accent);
 }
@@ -639,30 +641,30 @@ button.hm-np:not(:disabled) {
 .hm-jump-text b {
   display: block;
   color: var(--text);
-  font-size: var(--t-foot);
+  font-size: 12px;
   font-weight: 700;
 }
 
 .hm-jump-text small {
   display: block;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1.35;
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
-/* ---- Top story news card ---- */
+/* ---- Top story news card (compressed) ---- */
 
 .hm-news-card {
   width: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 132px;
-  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) 104px;
+  gap: 10px;
   align-items: center;
-  padding: 12px;
+  padding: 10px;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: 14px;
   font: inherit;
   color: inherit;
   text-align: left;
@@ -689,9 +691,9 @@ button.hm-np:not(:disabled) {
 }
 
 .hm-news-title {
-  margin: 4px 0;
+  margin: 3px 0;
   color: var(--text);
-  font-size: var(--t-sub);
+  font-size: 14px;
   font-weight: 700;
   line-height: 1.3;
   letter-spacing: -0.01em;
@@ -706,15 +708,15 @@ button.hm-np:not(:disabled) {
   font-size: var(--t-foot);
   line-height: 1.45;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
 .hm-news-thumb {
-  width: 132px;
-  height: 88px;
+  width: 104px;
+  height: 70px;
   object-fit: cover;
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--surface-2);
 }

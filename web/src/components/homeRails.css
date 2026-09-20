@@ -7,7 +7,7 @@
 .hrail {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .hrail-head {
@@ -15,9 +15,9 @@
   flex-direction: row;
   align-items: center;
   gap: 8px;
-  min-height: 44px;
+  min-height: 32px;
   width: 100%;
-  padding: 0 4px;
+  padding: 0 2px;
   background: none;
   border: 0;
   font: inherit;
@@ -29,7 +29,7 @@
 .hrail-title {
   flex: 1;
   color: var(--text);
-  font-size: var(--t-body);
+  font-size: var(--t-sub);
   font-weight: 700;
 }
 
@@ -47,9 +47,9 @@
   overscroll-behavior-x: contain;
   scrollbar-width: none;
   /* Bleed to the page edge so the strip scrolls rail-to-rail, like Discover's
-     shelves; the 18px matches .hm-page's horizontal padding. */
-  margin: 0 -18px;
-  padding: 2px 18px;
+     shelves; the 14px matches .hm-page's horizontal padding. */
+  margin: 0 -14px;
+  padding: 2px 14px;
 }
 
 .hrail-strip::-webkit-scrollbar {
@@ -61,7 +61,7 @@
   width: var(--game-art-rail);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   padding: 0;
   background: none;
   border: 0;
@@ -95,13 +95,13 @@
 
 .hrail-badge {
   position: absolute;
-  left: 7px;
-  bottom: 7px;
-  padding: 4px 7px;
-  border-radius: 7px;
+  left: 5px;
+  bottom: 5px;
+  padding: 3px 6px;
+  border-radius: 6px;
   background: rgba(0, 0, 0, 0.62);
   color: #fff;
-  font-size: var(--t-foot);
+  font-size: 10px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
@@ -109,9 +109,9 @@
 
 .hrail-name {
   color: var(--text);
-  font-size: var(--t-foot);
+  font-size: 11px;
   font-weight: 600;
-  line-height: 1.3;
+  line-height: 1.25;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -119,26 +119,27 @@
 }
 
 .hrail-meta {
+  font-size: 10px;
   line-height: 1.3;
 }
 
 /* Compact variant for Home's Upcoming / New releases shelves: smaller posters
-   and tighter spacing, GameTrack-style. */
+   and tighter spacing, GameTrack-style. Compressed per the approved mockup. */
 .hrail-compact .hrail-strip {
-  gap: 10px;
+  gap: 8px;
 }
 
 .hrail-compact .hrail-card {
-  width: 96px;
+  width: 76px;
 }
 
 .hrail-compact .hrail-poster {
-  width: 96px;
+  width: 76px;
 }
 
 /* Spacing between the last section and the Customize pill bar. */
 .hm-custbar-wrap {
   display: flex;
   justify-content: center;
-  margin-top: 12px;
+  margin-top: 8px;
 }
