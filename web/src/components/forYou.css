@@ -723,3 +723,99 @@
   justify-content: center;
   gap: 8px;
 }
+
+/* Expo parity: the daily mix is a transparent list, not a rounded tile. */
+.fy-list-deck {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  margin: 0;
+  overflow: visible;
+}
+
+.fy-row {
+  background: transparent;
+  border-radius: 0;
+  padding: 8px 16px;
+}
+
+.fy-row:first-child,
+.fy-row:last-child {
+  border-radius: 0;
+}
+
+.fy-row-title {
+  font-size: var(--t-body);
+  font-weight: var(--w-med);
+  line-height: 1.25;
+}
+
+.fy-row-meta {
+  font-size: 14px;
+  line-height: 20px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fy-row-reason {
+  flex: 1 1 auto;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.fy-row-reason-pill {
+  display: block;
+  box-sizing: border-box;
+  max-width: 100%;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: var(--r-xs);
+  background: color-mix(in oklab, var(--accent) 14%, var(--surface));
+  color: var(--accent);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: var(--w-med);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fy-row-icon-btn {
+  color: var(--accent);
+}
+
+.fy-list-actions .filter-btn {
+  height: 44px;
+  min-height: 44px;
+  padding: 0 4px;
+  gap: 5px;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--accent);
+  font-size: var(--t-sub);
+  font-weight: var(--w-bold);
+}
+
+.fy-list-actions .filter-btn.active {
+  color: var(--accent);
+}
+
+.fy-list-actions .filter-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.fy-list-actions .filter-count {
+  font-size: var(--t-foot);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.fy-tune-btn {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: transparent;
+}

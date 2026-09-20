@@ -75,9 +75,7 @@ export default function ForYouRow({
             title="Shows the evidence behind this recommendation"
             onClick={onWhy}
           >
-            <span className="fy-row-reason-pill">
-              {triggerLabel} <span aria-hidden="true">›</span>
-            </span>
+            <span className="fy-row-reason-pill">{triggerLabel} ›</span>
           </button>
           <span className="fy-row-actions">
             <button
