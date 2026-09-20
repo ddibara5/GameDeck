@@ -1,5 +1,6 @@
 import { Fragment, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import HomeRail from './HomeRail.jsx'
+import { NowPlayingChevron } from './HomeNowPlaying.jsx'
 import GameSheet, { preloadGameSheet } from './LazyGameSheet.jsx'
 import { HomeCustomizeBar, HomeCustomizeSheet } from './HomeCustomizer.jsx'
 import { TAB_ICONS } from './TabBar.jsx'
@@ -108,9 +109,9 @@ function HomeNews({ items, unread, onOpenNews, onOpenStory }) {
       <SectionHead
         title="Latest news"
         action={
-          <button type="button" className="hm-text-btn" onClick={onOpenNews}>
-            More news
+          <button type="button" className="hm-news-all" onClick={onOpenNews} aria-label="More news">
             {unread ? <span className="hm-dot" aria-label="New stories" /> : null}
+            <NowPlayingChevron />
           </button>
         }
       />
