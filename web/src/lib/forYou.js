@@ -366,7 +366,10 @@ function forYouProfileKey(profile, laneKeys) {
 
 // Engine-built deck snapshot for useForYouDeck: deterministic per day, filter
 // set and taste profile, reconciled against the same-day slate by game id.
-export async function loadForYouSnapshot(filters, { newBatch = false, preserve } = {}) {
+// `fresh` rebuilds the taste profile and candidate pool immediately (used when
+// a duel, reaction or wishlist change lands); `newBatch` additionally starts a
+// new daily batch with its own seed.
+export async function loadForYouSnapshot(filters, { newBatch = false, preserve, fresh = false } = {}) {
   const now = Date.now()
   const day = localDay(new Date(now))
   const key = forYouFilterKey(filters)
@@ -375,7 +378,7 @@ export async function loadForYouSnapshot(filters, { newBatch = false, preserve }
   const slate = state.slates.find((s) => s.key === key && s.day === day)
   const batch = Math.max(0, (slate?.batch ?? 0) + (newBatch ? 1 : 0))
 
-  const bundle = await loadForYouBundle(filters, { fresh: newBatch, now })
+  const bundle = await loadForYouBundle(filters, { fresh: newBatch || fresh, now })
   const { profile, laneKeys, candidates } = bundle
   const profileKey = forYouProfileKey(profile, laneKeys)
   // Reconcile a same-day slate by stable game ID, not by numeric position.

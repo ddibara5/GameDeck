@@ -46,6 +46,7 @@ export default function FeatureHub({
   onBrowse,
   onCustomize,
   onWishlistClose,
+  onOpenTaste,
 }) {
   const options = SECTIONS[kind] || SECTIONS.discover
   const isValid = (value) => options.some((option) => option.value === value)
@@ -60,6 +61,7 @@ export default function FeatureHub({
   if (Screen === ForYouTab) {
     if (onAsk) screenProps.onAsk = onAsk
     if (onBrowse) screenProps.onBrowse = onBrowse
+    if (onOpenTaste) screenProps.onOpenTaste = onOpenTaste
   } else if (Screen === DiscoverTab) {
     if (onCustomize) screenProps.onCustomize = onCustomize
     if (onAsk) screenProps.onAsk = onAsk

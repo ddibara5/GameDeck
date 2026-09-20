@@ -6,8 +6,8 @@ import './forYou.css'
 // Per-taste Show less / Default / Show more preferences feed the engine's
 // next mix; hidden games restore through recommendationDismissals.
 // PWA adaptations: the taste list comes from the tasteEvidence profile
-// (lanes + saved less/more preferences), and "View your taste profile" is
-// folded into the Your tastes group itself.
+// (lanes + saved less/more preferences). "View your taste profile" opens the
+// Settings taste sub-page through the optional onOpenTaste prop.
 const TASTE_OPTIONS = [
   { value: 'less', label: 'Show less' },
   { value: 'default', label: 'Default' },
@@ -84,6 +84,7 @@ export default function ForYouTaste({
   notice = null,
   onFilters,
   onRankings = null,
+  onOpenTaste = null,
   onPreference,
   onRestore,
 }) {
@@ -116,6 +117,14 @@ export default function ForYouTaste({
           disabled={disabled}
           onPress={onFilters}
         />
+        {onOpenTaste ? (
+          <SettingsRow
+            title="View your taste profile"
+            value="Lanes, evidence, duels"
+            disabled={disabled}
+            onPress={onOpenTaste}
+          />
+        ) : null}
         {onRankings ? (
           <SettingsRow
             title="Rate games"

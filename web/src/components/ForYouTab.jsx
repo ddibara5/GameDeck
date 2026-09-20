@@ -167,7 +167,7 @@ function OptionsContent({ pick, laneKey, laneLabel, disabled, saving, onSelect }
   )
 }
 
-export default function ForYouTab({ onAsk }) {
+export default function ForYouTab({ onAsk, onOpenTaste = null }) {
   const [filters, setFilters] = useState(() => loadForYouFilters())
   const [detailGame, setDetailGame] = useState(null)
   const [optionsPick, setOptionsPick] = useState(null)
@@ -381,6 +381,10 @@ export default function ForYouTab({ onAsk }) {
             hidden={hidden}
             disabled={saving}
             notice={notice}
+            onOpenTaste={onOpenTaste ? () => {
+              setShowTaste(false)
+              onOpenTaste()
+            } : null}
             onFilters={() => {
               setShowTaste(false)
               setShowFilters(true)

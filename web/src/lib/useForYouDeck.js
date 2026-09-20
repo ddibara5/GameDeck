@@ -87,6 +87,7 @@ export function useForYouDeck(filters) {
             : undefined
         const next = await loadForYouSnapshot(selectedFilters, {
           newBatch: kind === 'batch',
+          fresh: kind === 'taste',
           preserve,
         })
         if (ticket.current !== request) return
@@ -156,7 +157,9 @@ export function useForYouDeck(filters) {
     const onVisible = () => {
       if (document.visibilityState === 'visible') void loadRef.current('focus')
     }
-    const onTasteChange = () => void loadRef.current('focus')
+    // A duel, reaction, or wishlist change rebuilds the taste profile at once
+    // (fresh bundle) while keeping the visible deck stable by game id.
+    const onTasteChange = () => void loadRef.current('taste')
     document.addEventListener('visibilitychange', onVisible)
     window.addEventListener(WISHLIST_EVENT, onTasteChange)
     window.addEventListener(RANKING_EVENT, onTasteChange)

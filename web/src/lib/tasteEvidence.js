@@ -203,6 +203,9 @@ export function buildTasteEvidenceProfile({
   comparisons = [],
   coverage = {},
   now = Date.now(),
+  // The For You engine only asks the catalog for the top four lanes; the
+  // visible taste surface passes 9 to show every lane with evidence.
+  maxLanes = 4,
 } = {}) {
   const rankByGame = new Map((ranks || []).flatMap((row) => {
     const id = positiveId(row?.master_id)
@@ -318,7 +321,7 @@ export function buildTasteEvidenceProfile({
       evidenceLabel: tasteEvidenceLabel(positive.length, uniqueMatchups),
       exemplar: matches[0],
     }]
-  }).sort((left, right) => right.strength - left.strength || left.key.localeCompare(right.key)).slice(0, 4)
+  }).sort((left, right) => right.strength - left.strength || left.key.localeCompare(right.key)).slice(0, Math.max(0, maxLanes))
 
   const reactionDistribution = { loved: 0, liked: 0, mixed: 0, not_for_me: 0 }
   for (const rank of ranks || []) {

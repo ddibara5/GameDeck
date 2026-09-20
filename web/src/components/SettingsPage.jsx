@@ -24,6 +24,8 @@ import { MenuItem, ICONS, relTime } from './menuUI.jsx'
 import { useNavConfig, setNavConfig } from '../lib/navConfig.js'
 import LogoMark from './LogoMark.jsx'
 import { useDialogA11y } from '../lib/useDialogA11y.js'
+import TasteProfile from './TasteProfile.jsx'
+import { loadTasteProfile } from '../lib/tasteProfile.js'
 
 const REPO = 'ddibara5/GameDeck'
 const SOURCE_URL = 'https://github.com/ddibara5/GameDeck'
@@ -79,7 +81,7 @@ const TRANSPARENCY_OPTIONS = [
   { key: 'reduced', label: 'Reduced' },
 ]
 
-export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer }) {
+export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer, initialPage = null }) {
   const { mounted, closing } = useMountTransition(open)
   const nav = useNavConfig()
   const [fallbackSync, setFallbackSync] = useState(null)
@@ -102,6 +104,7 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
   const [chatsCleared, setChatsCleared] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [syncNote, setSyncNote] = useState('')
+  const [tasteSummary, setTasteSummary] = useState(null)
   const dialogRef = useDialogA11y({ active: mounted, closeOnEscape: false })
   const [lockUntil, setLockUntil] = useState(() => {
     try {
@@ -125,6 +128,13 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [mounted, onClose, stack.length])
+
+  // Deep link: open a sub-page directly (the taste profile from For You's
+  // "Tune your mix", for example). push() dedupes, so reopening is safe.
+  useEffect(() => {
+    if (mounted && initialPage) push(initialPage)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted])
 
   // Lock background scroll while the page is open, so the page behind it can't
   // scroll and its scrollbar doesn't show through.
@@ -185,6 +195,18 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
   useEffect(() => {
     if (!mounted) return undefined
     let cancelled = false
+
+    // The row answers "what does GameDeck think I like" without opening
+    // anything. Cached for ten minutes, so this is usually an IDB read.
+    loadTasteProfile()
+      .then((profile) => {
+        if (cancelled) return
+        const top = (profile.lanes || [])[0]
+        setTasteSummary(top ? `${top.label} · ${top.evidenceLabel}` : 'Not enough signal yet')
+      })
+      .catch(() => {
+        if (!cancelled) setTasteSummary(null)
+      })
 
     ;(async () => {
       // sync_runs is written only by the Exophase fallback workflow, so it is
@@ -407,6 +429,13 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
               value={sourcesValue}
               onClick={() => push('sources')}
             />
+            <MenuItem
+              glyph={ICONS.spark}
+              label="Taste profile"
+              sub="What GameDeck knows about your taste"
+              value={tasteSummary}
+              onClick={() => push('taste')}
+            />
           </div>
         </div>
 
@@ -563,6 +592,10 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer })
           Each platform syncs from its own API and they fail independently, so a dead token shows
           up here as one row that stopped moving rather than as playtime that quietly stopped.
         </p>
+      </SubPage>
+
+      <SubPage open={stack.includes('taste')} depth={depthOf('taste')} title="Taste profile" onBack={pop}>
+        <TasteProfile />
       </SubPage>
 
       <SubPage open={stack.includes('cards')} depth={depthOf('cards')} title="Game artwork" onBack={pop}>

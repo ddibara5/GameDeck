@@ -1,5 +1,6 @@
 import { supabase } from './supabase.js'
 import { idbDel, idbSet, swr } from './idbCache.js'
+import { bustTasteProfile } from './tasteProfile.js'
 export {
   REACTIONS,
   closestRankNeighbor,
@@ -15,7 +16,6 @@ export {
 const STATE_KEY = 'ranking:state'
 const SCORES_KEY = 'ranking:scores'
 const GAME_KEY = (id) => `ranking:game:${id}`
-const DISCOVER_TASTE_KEY = 'discover:tasteProfile:v3'
 const RANKING_EVENT = 'gd-ranking-change'
 
 let stateCache = null
@@ -143,11 +143,13 @@ function invalidateRankingCaches(masterId) {
   idbDel(STATE_KEY)
   idbDel(SCORES_KEY)
   // For You uses reactions and Elo as bounded taste evidence. A ranking action
-  // should be visible on the next feed render, not after its 24-hour profile TTL.
-  const clearTaste = idbDel(DISCOVER_TASTE_KEY)
+  // should be visible on the next feed render, not after a cache TTL, so bust
+  // the visible taste profile cache alongside the ranking caches.
+  const clearTaste = bustTasteProfile()
   if (typeof window !== 'undefined') {
-    clearTaste.finally(() => window.dispatchEvent(new Event(RANKING_EVENT)))
+    Promise.resolve(clearTaste).finally(() => window.dispatchEvent(new Event(RANKING_EVENT)))
   }
+  bustTasteProfile()
   if (masterId != null) {
     gameCache.delete(String(masterId))
     idbDel(GAME_KEY(Number(masterId)))

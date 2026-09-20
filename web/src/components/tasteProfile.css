@@ -1,0 +1,145 @@
+/* ---- TasteProfile (visible taste surface) ---- */
+.taste-profile {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 4px 0 24px;
+}
+.taste-profile-summary {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--muted);
+  margin: 0;
+}
+.taste-profile-group-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 0 0 8px 4px;
+}
+.taste-profile-card {
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  overflow: hidden;
+  padding: 4px 16px;
+}
+.taste-profile-lane {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.taste-profile-lane.last {
+  border-bottom: none;
+}
+.taste-profile-lane-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.taste-profile-lane-label {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+.taste-profile-chip {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+.taste-profile-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--line-soft);
+  margin: 10px 0 8px;
+  overflow: hidden;
+}
+.taste-profile-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+}
+.taste-profile-lane-evidence {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text);
+  margin: 0 0 6px;
+}
+.taste-profile-lane-detail {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted);
+  margin: 0 0 4px;
+}
+.taste-profile-lane-detail.muted {
+  color: var(--muted);
+  opacity: 0.85;
+}
+.taste-profile-leader {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.taste-profile-leader.last {
+  border-bottom: none;
+}
+.taste-profile-leader-rank {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  width: 18px;
+  flex-shrink: 0;
+  text-align: right;
+}
+.taste-profile-leader-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.taste-profile-leader-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+}
+.taste-profile-leader-meta {
+  font-size: 13px;
+  color: var(--muted);
+}
+.taste-profile-empty {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--muted);
+  margin: 12px 4px;
+}
+.taste-profile-retry,
+.taste-profile-refresh {
+  align-self: flex-start;
+  background: none;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+.taste-profile-retry:disabled,
+.taste-profile-refresh:disabled {
+  opacity: 0.5;
+}
+.taste-profile-note {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+  margin: 0;
+}

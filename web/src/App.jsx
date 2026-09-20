@@ -102,6 +102,9 @@ function GameDeckApp() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsVisited, setSettingsVisited] = useState(false)
+  // Which settings sub-page to open directly (e.g. the taste profile from
+  // For You's "Tune your mix"). Cleared when settings closes.
+  const [settingsEntry, setSettingsEntry] = useState(null)
   const [customizeOpen, setCustomizeOpen] = useState(false)
   const [customizeVisited, setCustomizeVisited] = useState(false)
   const [customizeNavOpen, setCustomizeNavOpen] = useState(false)
@@ -158,6 +161,18 @@ function GameDeckApp() {
     warmLoader(OVERLAY_LOADERS.settings)
     setSettingsVisited(true)
     setSettingsOpen(true)
+  }, [])
+
+  const openTasteProfile = useCallback(() => {
+    setSettingsEntry('taste')
+    warmLoader(OVERLAY_LOADERS.settings)
+    setSettingsVisited(true)
+    setSettingsOpen(true)
+  }, [])
+
+  const closeSettings = useCallback(() => {
+    setSettingsOpen(false)
+    setSettingsEntry(null)
   }, [])
 
   const openCustomizeRows = useCallback(() => {
@@ -460,7 +475,7 @@ function GameDeckApp() {
           {activeTab === 'activity' && <ActivityTab />}
           {activeTab === 'insights' && <InsightsTab />}
           {activeTab === 'discover' && <DiscoverTab onCustomize={openCustomizeRows} onAsk={openAsk} />}
-          {activeTab === 'foryou' && <ForYouTab onAsk={openAsk} onBrowse={() => navigateTab('discover')} />}
+          {activeTab === 'foryou' && <ForYouTab onAsk={openAsk} onBrowse={() => navigateTab('discover')} onOpenTaste={openTasteProfile} />}
           {activeTab === 'news' && <NewsTab />}
           {activeTab === 'rankings' && <RankingsTab />}
         </Suspense>
@@ -520,9 +535,10 @@ function GameDeckApp() {
         {settingsVisited ? (
           <SettingsPage
             open={settingsOpen}
-            onClose={() => setSettingsOpen(false)}
+            onClose={closeSettings}
             onOpenBar={openCustomizeBar}
             onOpenDrawer={openCustomizeNav}
+            initialPage={settingsEntry}
           />
         ) : null}
         {customizeVisited ? <CustomizeRows open={customizeOpen} onClose={() => setCustomizeOpen(false)} /> : null}

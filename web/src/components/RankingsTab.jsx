@@ -16,6 +16,7 @@ import {
   recordComparison,
   setRankReaction,
 } from '../lib/ranking.js'
+import { buildDuelReceipt, loadTasteProfile } from '../lib/tasteProfile.js'
 import './rankings.css'
 
 const SECTIONS = [
@@ -139,6 +140,7 @@ export default function RankingsTab() {
   const [selectedGame, setSelectedGame] = useState(null)
   const [sessionDuels, setSessionDuels] = useState(0)
   const [skipCutoff, setSkipCutoff] = useState(() => Date.now() - RANK_SKIP_CUTOFF_MS)
+  const [receipt, setReceipt] = useState(null)
 
   const refresh = async (force = false) => {
     setError('')
@@ -194,11 +196,41 @@ export default function RankingsTab() {
     setBusy(true)
     setError('')
     setNotice('')
+    setReceipt(null)
+    const leftId = pair.left.master_id
+    const rightId = pair.right.master_id
+    const titleOf = (id) => gameById.get(String(id))?.title || 'That game'
     try {
-      await recordComparison(pair.left.master_id, pair.right.master_id, result)
+      await recordComparison(leftId, rightId, result)
       setSessionDuels((count) => count + 1)
-      await refresh(true)
-      setNotice('Ranking updated.')
+      const nextState = await loadRankingState(true)
+      setState(nextState)
+      setSkipCutoff(Date.now() - RANK_SKIP_CUTOFF_MS)
+      if (result === 'skip') {
+        setNotice('Skipped. That pair stays out of rotation for 90 days.')
+      } else {
+        // The duel flywheel: this result is already in the taste profile
+        // (recordComparison busted its cache), so the receipt can cite the
+        // lanes the winner now feeds.
+        try {
+          const profile = await loadTasteProfile({ force: true })
+          const winnerId = result === 'left' ? leftId : rightId
+          const loserId = result === 'left' ? rightId : leftId
+          setReceipt(
+            buildDuelReceipt({
+              winnerId,
+              loserId,
+              winnerTitle: titleOf(winnerId),
+              loserTitle: titleOf(loserId),
+              result,
+              ranks: nextState.ranks,
+              profile,
+            }),
+          )
+        } catch {
+          setNotice('Ranking updated.')
+        }
+      }
     } catch (err) {
       setError(err.message || 'Could not save that comparison.')
     } finally {
@@ -327,6 +359,15 @@ export default function RankingsTab() {
           <p style={{ color: 'var(--muted)', fontSize: 'var(--t-cap)', margin: '0 0 var(--space-3)' }}>
             {sessionDuels} {sessionDuels === 1 ? 'duel' : 'duels'} this session · {totalComparisons} total comparisons
           </p>
+          {receipt ? (
+            <div className="rank-receipt" aria-live="polite">
+              <strong>{receipt.headline}</strong>
+              <span>{receipt.detail}</span>
+              {receipt.laneLabels.length ? (
+                <span>This feeds your {receipt.laneLabels.join(' and ')} taste.</span>
+              ) : null}
+            </div>
+          ) : null}
           {leftGame && rightGame && pair ? (
             <>
               <p>Which game belongs higher in your ranking?</p>
