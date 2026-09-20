@@ -4,7 +4,10 @@ import { useEffect, useRef, useState } from 'react'
 // (whether to render at all) and `closing` (apply the exit-animation class).
 // When `open` flips false, `closing` turns on for `exitMs` so the exit
 // animation can play, then the component unmounts.
-export function useMountTransition(open, exitMs = 220) {
+// Keep this default in lock-step with --overlay-out (currently var(--d-base) = 240ms).
+// A shorter JS unmount cuts the final frames off the CSS slide-out and is visible
+// as a snap at the end of Settings / Search / Customize dismissals.
+export function useMountTransition(open, exitMs = 240) {
   const [mounted, setMounted] = useState(open)
   const [closing, setClosing] = useState(false)
   const timer = useRef(null)
