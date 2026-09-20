@@ -6,8 +6,7 @@ import DiscoverRailList from './DiscoverRailList.jsx'
 import Cover from './Cover.jsx'
 import WishHeart from './WishHeart.jsx'
 import { fetchDiscoverHome, fetchGamesByIds, loadLibraryTitles, loadGamePass, normTitle } from '../lib/discover.js'
-import { releaseDayDelta, compactReleaseLabel, timingParts, releaseWindowEndTs } from '../lib/format.js'
-import TimingOverlay from './TimingOverlay.jsx'
+import { releaseCardLabel, releaseDayDelta, releaseWindowEndTs } from '../lib/format.js'
 import { useWishlist } from '../lib/wishlist.js'
 import { useRowsConfig, ROW_BY_KEY, getFilledRows, setFilledRows } from '../lib/discoverRows.js'
 import { VIBES } from '../lib/vibes.js'
@@ -550,20 +549,24 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
                 </button>
                 <div className="shelf-row">
                   {items.slice(0, RAIL_PREVIEW).map((g) => {
-                    const parts = timingParts(g.released)
-                    const metaDate = compactReleaseLabel(g.release || (g.released ? { ts: g.released } : null), g.year)
+                    const releaseMeta = releaseCardLabel({
+                      release: g.release,
+                      released: g.released,
+                      precision: g.precision,
+                      year: g.year,
+                    })
                     return (
                       <div className="shelf-card-wrap" key={g.id}>
                         <button type="button" className="shelf-card" onClick={() => setSelected(g)}>
                           <div className="shelf-poster">
                             <Cover src={g.cover} title={g.name} size="lg" sizes="112px" />
                             {isOwned(g.name) ? <span className="in-library-dot" title="In library" /> : null}
-                            <TimingOverlay parts={parts} />
                           </div>
                           <div className="shelf-card-title">{g.name}</div>
                           <div className="shelf-card-meta">
                             {g.rating ? <span className="shelf-rating">★ {g.rating}</span> : null}
-                            {metaDate ? <span className="sc-date">{metaDate}</span> : null}
+                            {g.rating && releaseMeta ? <span className="shelf-meta-sep" aria-hidden="true">·</span> : null}
+                            {releaseMeta ? <span className="sc-date">{releaseMeta}</span> : null}
                           </div>
                         </button>
                         <WishHeart game={g} active={wishIds.has(g.id)} />

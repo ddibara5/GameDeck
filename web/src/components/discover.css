@@ -1300,10 +1300,40 @@ button.shelf-head:active {
   border-radius: inherit;
 }
 
-/* Poster labels share Home typography in Browse and its expanded collections. */
-.discover-browse .shelf-card-meta, .rail-grid .shelf-card-meta { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; font-size: var(--poster-caption); font-weight: 600; line-height: 1.25; }
-.discover-browse .shelf-rating, .rail-grid .shelf-rating { color: var(--accent); font-weight: 600; }
-.discover-browse .sc-date { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* One compact metadata line across Browse and expanded collections:
+   rating + release context when both exist, otherwise whichever is useful. */
+.discover-browse .shelf-card-meta,
+.rail-grid .shelf-card-meta {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+  margin-top: 4px;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: var(--poster-caption);
+  font-weight: 600;
+  line-height: 1.25;
+}
+.discover-browse .shelf-rating,
+.rail-grid .shelf-rating {
+  flex: 0 0 auto;
+  color: var(--accent);
+  font-weight: 600;
+}
+.shelf-meta-sep {
+  flex: 0 0 auto;
+  color: var(--muted);
+}
+.discover-browse .sc-date,
+.rail-grid .sc-date {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .browse-filter-sheet .detail-title { font-family: var(--font-body); font-size: var(--collection-heading); line-height: 1.25; }
 .browse-filter-sheet .modal-close { width: 44px; height: 44px; }
 .browse-filter-sheet .filter-sheet-scroll { padding-top: 12px; }

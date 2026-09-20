@@ -27,7 +27,10 @@ export function releaseWatch(wishlist, today = new Date()) {
       .slice(0, 12)
       .map(({ item }) => item),
     outNow: dated
-      .filter(({ date }) => date <= now)
+      .filter(({ date }) => {
+        const ageDays = Math.round((now - date) / 86400000)
+        return ageDays >= 0 && ageDays <= 365
+      })
       .sort((a, b) => b.date - a.date)
       .slice(0, 12)
       .map(({ item }) => item),

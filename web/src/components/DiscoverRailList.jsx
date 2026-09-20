@@ -5,9 +5,8 @@ import WishHeart from './WishHeart.jsx'
 import Skeleton from './Skeleton.jsx'
 import { MessageState } from './AsyncState.jsx'
 import DiscoverDetail from './DiscoverDetail.jsx'
-import TimingOverlay from './TimingOverlay.jsx'
 import { fetchDiscover } from '../lib/discover.js'
-import { releaseTiming, timingParts, compactReleaseLabel } from '../lib/format.js'
+import { releaseCardLabel } from '../lib/format.js'
 import { groupByRelease } from '../lib/wishlistRelease.js'
 import { useDelayedClose } from '../lib/useDelayedClose.js'
 import { useEdgeBack } from '../lib/useEdgeBack.js'
@@ -53,22 +52,24 @@ function sortLocal(items, key) {
 }
 
 function RailCard({ g, isOwned, wishIds, onOpen }) {
-  const timing = releaseTiming(g.released)
-  const parts = timingParts(g.released)
-  // Only set when the line would otherwise be blank.
-  const metaDate = !timing && !g.rating ? compactReleaseLabel(g.release, g.year) : null
+  const releaseMeta = releaseCardLabel({
+    release: g.release,
+    released: g.released,
+    precision: g.precision,
+    year: g.year,
+  })
   return (
     <div className="shelf-card-wrap">
       <button type="button" className="shelf-card" onClick={() => onOpen(g)}>
         <div className="shelf-poster">
           <Cover src={g.cover} title={g.name} size="lg" />
           {isOwned(g.name) ? <span className="in-library-dot" title="In library" /> : null}
-          <TimingOverlay parts={parts} />
         </div>
         <div className="shelf-card-title">{g.name}</div>
         <div className="shelf-card-meta">
           {g.rating ? <span className="shelf-rating">{'★'} {g.rating}</span> : null}
-          {metaDate ? <span className="sc-date">{metaDate}</span> : null}
+          {g.rating && releaseMeta ? <span className="shelf-meta-sep" aria-hidden="true">·</span> : null}
+          {releaseMeta ? <span className="sc-date">{releaseMeta}</span> : null}
         </div>
       </button>
       <WishHeart game={g} active={wishIds.has(g.id)} />

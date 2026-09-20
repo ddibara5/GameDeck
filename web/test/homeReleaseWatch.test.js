@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import { fetchReleaseCandidates, releaseDate, releaseLabel, releaseWatch } from '../src/lib/homeReleaseWatch.js'
+import { releaseCardLabel } from '../src/lib/format.js'
 
 const home = readFileSync(new URL('../src/components/HomeTab.jsx', import.meta.url), 'utf8')
 const nowPlaying = readFileSync(new URL('../src/components/HomeNowPlaying.jsx', import.meta.url), 'utf8')
@@ -66,6 +67,7 @@ test('releaseWatch splits coming up and out now, twelve each', () => {
   for (let i = 1; i <= 15; i++) items.push({ igdb_id: i, title: `Far ${i}`, released: base + i * day })
   for (let i = 1; i <= 15; i++) items.push({ igdb_id: 100 + i, title: `Past ${i}`, released: base - i * day })
   items.push({ igdb_id: 999, title: 'Undated' })
+  items.push({ igdb_id: 1000, title: 'Stale release', released: base - 400 * day })
   const { comingUp, outNow } = releaseWatch(items, today)
   assert.equal(comingUp.length, 12)
   assert.equal(outNow.length, 12)
@@ -77,6 +79,7 @@ test('releaseWatch splits coming up and out now, twelve each', () => {
     outNow.map((i) => i.title),
     Array.from({ length: 12 }, (_, k) => `Past ${k + 1}`),
   )
+  assert.ok(!outNow.some((item) => item.title === 'Stale release'))
 })
 
 test('releaseLabel covers today, tomorrow, this week, and dated labels', () => {
@@ -89,6 +92,27 @@ test('releaseLabel covers today, tomorrow, this week, and dated labels', () => {
   assert.match(releaseLabel({ released: base + 20 * day }, today), /Oct/)
   assert.equal(releaseLabel({ release_label: 'Q4 2026' }, today), 'Q4 2026')
   assert.equal(releaseLabel({}, today), 'Date to come')
+})
+
+test('releaseCardLabel uses relative timing near release and years for old catalog games', () => {
+  const today = new Date(2026, 8, 20, 12, 0, 0)
+  const day = 86400
+  const base = Date.UTC(2026, 8, 20) / 1000
+  assert.equal(releaseCardLabel({ released: base }, today), 'Today')
+  assert.equal(releaseCardLabel({ released: base + 9 * day }, today), '9 days away')
+  assert.equal(releaseCardLabel({ released: base - 21 * day }, today), '3 weeks ago')
+  assert.equal(releaseCardLabel({ released: base + 120 * day }, today), '4 months away')
+  assert.equal(releaseCardLabel({ released: base - 350 * day }, today), '1 year ago')
+  assert.equal(releaseCardLabel({ released: base - 400 * day }, today), '2025')
+  assert.equal(
+    releaseCardLabel({ release: { ts: Date.UTC(2027, 8, 1) / 1000, precision: 'quarter' } }, today),
+    'Q3 ’27',
+  )
+  assert.equal(
+    releaseCardLabel({ release: { ts: Date.UTC(2028, 11, 31) / 1000, precision: 'year' } }, today),
+    '2028',
+  )
+  assert.equal(releaseCardLabel({ release: { precision: 'tba', label: 'TBA' } }, today), 'TBA')
 })
 
 function mockClient({ data, error, fallback }) {
