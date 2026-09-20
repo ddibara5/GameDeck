@@ -173,8 +173,11 @@
   --ease-std: cubic-bezier(0.32, 0.72, 0, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 
-  /* Overlay motion: pages and sheets enter and exit on the same clock,
-     so opening mirrors closing. */
+  /* Pushed navigation pages use a slightly slower iOS-style clock. Bottom
+     sheets stay on the faster overlay clock so direct-manipulation surfaces
+     still feel immediate. */
+  --nav-in: 0.29s;
+  --nav-out: 0.29s;
   --overlay-in: var(--d-base);
   --overlay-out: var(--d-base);
   --enter-ease: var(--ease-out);
@@ -520,12 +523,12 @@
   background: var(--bg);
   display: flex;
   flex-direction: column;
-  animation: settings-in var(--overlay-in) var(--enter-ease);
+  animation: settings-in var(--nav-in) var(--enter-ease);
   will-change: transform;
 }
 
 .settings-page.closing {
-  animation: settings-out var(--overlay-out) var(--exit-ease) forwards;
+  animation: settings-out var(--nav-out) var(--exit-ease) forwards;
 }
 
 @keyframes settings-in {
@@ -544,6 +547,18 @@
   to {
     transform: translateX(100%);
   }
+}
+
+/* During an interactive left-edge Back gesture the shared hook owns transform.
+   Keyframes are suppressed so the page follows the finger 1:1. */
+[data-edge-back-dragging='true'],
+[data-edge-back-completing='true'] {
+  animation: none !important;
+  will-change: transform;
+}
+
+[data-edge-back-dragging='true'] {
+  transition: none !important;
 }
 
 .settings-hd {
@@ -1103,11 +1118,11 @@ textarea {
   flex-direction: column;
   background: var(--bg);
   overscroll-behavior: contain;
-  animation: settings-in var(--overlay-in) var(--enter-ease);
+  animation: settings-in var(--nav-in) var(--enter-ease);
 }
 
 .global-search-page.closing {
-  animation: settings-out var(--overlay-out) var(--exit-ease) forwards;
+  animation: settings-out var(--nav-out) var(--exit-ease) forwards;
 }
 
 .global-search-header {
@@ -1482,6 +1497,17 @@ textarea {
   will-change: opacity, transform;
 }
 
+.app-header.subpage-nav,
+.app-tab-page.subpage-nav {
+  animation: settings-in var(--nav-in) var(--enter-ease);
+  will-change: transform;
+}
+
+.app-header.subpage-nav.closing,
+.app-tab-page.subpage-nav.closing {
+  animation: settings-out var(--nav-out) var(--exit-ease) forwards;
+}
+
 @keyframes app-tab-in {
   from {
     opacity: 0;
@@ -1494,7 +1520,11 @@ textarea {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .app-tab-page {
+  .app-tab-page,
+  .app-header.subpage-nav,
+  .app-tab-page.subpage-nav,
+  .app-header.subpage-nav.closing,
+  .app-tab-page.subpage-nav.closing {
     animation: none;
   }
 }
