@@ -275,13 +275,14 @@
 }
 
 /* Sticky header: circular back button (same Liquid Glass treatment as the
-   sub-page header caret), centered game title, settings gear. */
+   sub-page header caret) and settings gear. The title lives in the hero. */
 .game-page-header {
   position: sticky;
   top: 0;
   z-index: 5;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
   margin: 0 -18px;
   padding: calc(10px + env(safe-area-inset-top, 0px)) 14px 10px;
@@ -491,18 +492,6 @@
   line-height: 21px;
 }
 
-.game-page-title {
-  flex: 1;
-  min-width: 0;
-  margin: 0;
-  text-align: center;
-  font-size: var(--collection-title);
-  font-weight: 700;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 
 
 /* ---------- Related games ----------

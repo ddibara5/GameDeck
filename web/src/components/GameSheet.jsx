@@ -443,8 +443,8 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   // glitch or open misaligned). Keeps every sheet in the app on one identical path.
   //
   // The game detail renders as a full-screen page (Expo parity): a sticky header
-  // row with a circular back button, the centered game title, and the settings
-  // gear. Back returns to whatever opened the page, via requestClose.
+  // row with a circular back button and settings gear. The game title lives only
+  // in the hero below, avoiding duplicate titling.
   const page = createPortal(
     <div className={`modal-backdrop game-page-backdrop${closing ? ' closing' : ''}`} onClick={handleOverlayClick}>
       <div
@@ -460,7 +460,6 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
               <path d="M15 18l-6-6 6-6" />
             </svg>
           </button>
-          <p className="game-page-title">{title}</p>
           <HeaderSettingsButton onOpenSettings={openSettings} />
         </div>
 
