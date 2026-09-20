@@ -527,7 +527,7 @@ export default function GameSheet({ variant, game, recommendation = null, onClos
 
           {owned ? (
             <>
-              {/* Your status, pilot card. */
+              {/* Your status, pilot card. */}
               <div style={{ ...cardStyle, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
                   <span style={sectionTitleStyle}>Your status</span>
