@@ -678,6 +678,10 @@
   padding-bottom: 6px;
 }
 
+.settings-section-label {
+  margin: 0 var(--screen-gutter);
+}
+
 /* One paragraph under a list, explaining a behaviour the rows cannot show. Not a
    disabled MenuItem: a row that is not a control should not look like one. */
 .settings-note {
