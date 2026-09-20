@@ -114,7 +114,7 @@ function HomeNews({ items, unread, onOpenNews, onOpenStory }) {
           </button>
         }
       />
-      <div className="hm-news-hybrid">
+      <div className="hm-news-strip" aria-label="Recent stories">
         <button
           type="button"
           className="hm-news-lead"
@@ -134,27 +134,23 @@ function HomeNews({ items, unread, onOpenNews, onOpenStory }) {
           </span>
         </button>
 
-        {more.length ? (
-          <div className="hm-news-more" aria-label="More recent stories">
-            {more.map((item) => (
-              <button
-                type="button"
-                className="hm-news-mini"
-                key={item.id || item.primaryUrl}
-                onPointerDown={loadNewsSheet}
-                onFocus={loadNewsSheet}
-                onClick={() => onOpenStory(item)}
-                aria-label={`${item.title}. Open article.`}
-              >
-                {artFor(item) ? <img className="hm-news-mini-art" src={artFor(item)} alt="" loading="lazy" /> : null}
-                <span className="hm-news-mini-copy">
-                  <span className="hm-news-mini-title">{item.title}</span>
-                  {timeFor(item) ? <span className="hm-news-mini-time">{timeFor(item)}</span> : null}
-                </span>
-              </button>
-            ))}
-          </div>
-        ) : null}
+        {more.map((item) => (
+          <button
+            type="button"
+            className="hm-news-mini"
+            key={item.id || item.primaryUrl}
+            onPointerDown={loadNewsSheet}
+            onFocus={loadNewsSheet}
+            onClick={() => onOpenStory(item)}
+            aria-label={`${item.title}. Open article.`}
+          >
+            {artFor(item) ? <img className="hm-news-mini-art" src={artFor(item)} alt="" loading="lazy" /> : null}
+            <span className="hm-news-mini-copy">
+              <span className="hm-news-mini-title">{item.title}</span>
+              {timeFor(item) ? <span className="hm-news-mini-time">{timeFor(item)}</span> : null}
+            </span>
+          </button>
+        ))}
       </div>
     </section>
   )
