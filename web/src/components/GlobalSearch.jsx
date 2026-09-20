@@ -9,7 +9,7 @@ import { useLibraryGames } from '../lib/useLibraryGames.js'
 import { useWishlist } from '../lib/wishlist.js'
 import { useMountTransition } from '../lib/useMountTransition.js'
 import { useDialogA11y } from '../lib/useDialogA11y.js'
-import { useEdgeBack } from '../lib/useEdgeBack.js'
+import { NAV_TRANSITION_MS, useEdgeBack } from '../lib/useEdgeBack.js'
 import { lockScroll } from '../lib/scrollLock.js'
 
 const loadAskGameDeck = () => import('./AskGameDeck.jsx')
@@ -108,7 +108,7 @@ export default function GlobalSearch({
   onScopeChange,
   onModeChange,
 }) {
-  const { mounted, closing } = useMountTransition(open)
+  const { mounted, closing } = useMountTransition(open, NAV_TRANSITION_MS)
   const [query, setQuery] = useState('')
   const deferredQuery = useDeferredValue(query)
   const [scope, setScope] = useState(defaultScope)
@@ -125,7 +125,11 @@ export default function GlobalSearch({
   const { games, loading: libraryLoading } = useLibraryGames()
   const { items: wishlist, loading: wishlistLoading } = useWishlist()
 
-  useEdgeBack(onClose, { register: mounted, disabled: !mounted || closing || Boolean(selected) })
+  useEdgeBack(onClose, {
+    register: mounted,
+    disabled: !mounted || closing || Boolean(selected),
+    interactiveRef: dialogRef,
+  })
 
   useEffect(() => {
     if (!mounted) return undefined
