@@ -385,7 +385,7 @@ export default function SettingsPage({ open, onClose, onOpenBar, initialPage = n
           />
         </div>
         {syncNote ? <p className="settings-note" role="status">{syncNote}</p> : null}
-        <div className="settings-field-hd"><div className="menu-accent-label">Last reported</div></div>
+        <div className="settings-field-hd settings-section-label"><div className="menu-accent-label">Last reported</div></div>
         <div className="settings-group">
           {DIRECT_SOURCES.map((src) => (
             <MenuItem
