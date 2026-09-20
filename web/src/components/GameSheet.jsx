@@ -395,14 +395,10 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
     <div className={`modal-backdrop${closing ? ' closing' : ''}`} onClick={handleOverlayClick}>
       <div
         ref={dialogRef}
-        className="modal-sheet game-sheet game-page"
+        className={`modal-sheet game-sheet game-page${closing ? ' closing' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        style={{
-          transform: closing ? 'translateX(100%)' : undefined,
-          transition: 'transform var(--d-base) var(--ease-out)',
-        }}
       >
         <div className="game-page-header">
           <button type="button" className="header-back" onClick={requestClose} aria-label="Back">
