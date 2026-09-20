@@ -536,7 +536,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
             }
             if (!items || !items.length) return null
             return (
-              <section className={`shelf${row.kind === 'wishlist' ? ' wishlist-rail' : ''}`} key={key}>
+              <section className="shelf" key={key}>
                 <button type="button" className="shelf-head" onClick={() => setOpenRail(row)}>
                   <span className="shelf-title-wrap">
                     <span className="shelf-title">{row.label}</span>
