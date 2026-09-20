@@ -50,18 +50,19 @@ test('Home wires the section see-all navigation', () => {
   assert.match(home, /onOpenList\('releases'\)/)
 })
 
-test('Home news previews the shared For You ranking', () => {
+test('Home news previews the shared For You ranking with one uniform card style', () => {
   assert.match(home, /function HomeNews/)
   assert.match(home, /function HomeNewsArt/)
   assert.match(home, /cardArtChain\(item\)/)
   assert.match(home, /remoteImg\(art\.src, targetW\)/)
   assert.match(home, /onError=\{\(\) => setStep/)
-  assert.match(home, /entries\.slice\(1, 5\)/)
+  assert.match(home, /entries\.slice\(0, 5\)/)
   assert.match(home, /homeNewsPreview\(newsItems \|\| \[\], \{ libIndex: newsLibIndex, wishlistIds \}, 5\)/)
   assert.match(home, /buildLibraryIndex\(games\)/)
   assert.match(home, /className="hm-news-strip"/)
-  assert.match(home, /className="hm-news-lead"/)
-  assert.match(home, /className="hm-news-mini"/)
+  assert.match(home, /className="hm-news-card"/)
+  assert.doesNotMatch(home, /hm-news-lead/)
+  assert.doesNotMatch(home, /hm-news-mini/)
   assert.match(home, /className="hm-news-all"/)
   assert.match(home, /aria-label="More news"/)
   assert.match(home, /<NowPlayingChevron \/>/)
