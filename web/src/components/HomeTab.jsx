@@ -7,7 +7,7 @@ import { TAB_ICONS } from './TabBar.jsx'
 import { preloadLibrary, useLibraryGames } from '../lib/useLibraryGames.js'
 import { gameArtworkUrl } from '../lib/homeInsights.js'
 import { releaseWatch } from '../lib/homeReleaseWatch.js'
-import { cardArtChain, getNewsCache, loadNews, markRead, relTime, resolveGame, buildLibraryIndex } from '../lib/news.js'
+import { cardArtChain, getNewsCache, homeNewsPreview, loadNews, markRead, relTime, buildLibraryIndex } from '../lib/news.js'
 import { loadHomeLayout, saveHomeLayout } from '../lib/homeLayout.js'
 import { useWishlist } from '../lib/wishlist.js'
 import { gameProgress, sortRecentGames } from '../lib/homeRails.js'
@@ -118,10 +118,10 @@ function HomeNewsArt({ item, className, targetW }) {
 // Home news: one featured story plus compact swipeable follow-ups, kept to
 // roughly the same height as the old single-story card. Story taps open the
 // article sheet; the header caret remains the route to the full News tab.
-function HomeNews({ items, unread, onOpenNews, onOpenStory }) {
-  if (!items || items.length === 0) return null
-  const lead = items[0]
-  const more = items.slice(1, 5)
+function HomeNews({ entries, unread, onOpenNews, onOpenStory }) {
+  if (!entries || entries.length === 0) return null
+  const lead = entries[0]
+  const more = entries.slice(1, 5)
   const timeFor = (item) => relTime(item.publishedAt || item.createdAt)
 
   return (
@@ -142,33 +142,33 @@ function HomeNews({ items, unread, onOpenNews, onOpenStory }) {
           onPointerDown={loadNewsSheet}
           onFocus={loadNewsSheet}
           onClick={() => onOpenStory(lead)}
-          aria-label={`${lead.title}. Open article.`}
+          aria-label={`${lead.item.title}. Open article.`}
         >
-          <HomeNewsArt item={lead} className="hm-news-lead-art" targetW={640} />
+          <HomeNewsArt item={lead.item} className="hm-news-lead-art" targetW={640} />
           <span className="hm-news-lead-shade" aria-hidden="true" />
           <span className="hm-news-lead-copy">
             <span className="hm-news-lead-meta">
-              <span>{lead.gameName || 'GameDeck'}</span>
-              {timeFor(lead) ? <span>{timeFor(lead)}</span> : null}
+              <span>{lead.item.gameName || 'GameDeck'}</span>
+              {timeFor(lead.item) ? <span>{timeFor(lead.item)}</span> : null}
             </span>
-            <span className="hm-news-lead-title">{lead.title}</span>
+            <span className="hm-news-lead-title">{lead.item.title}</span>
           </span>
         </button>
 
-        {more.map((item) => (
+        {more.map((entry) => (
           <button
             type="button"
             className="hm-news-mini"
-            key={item.id || item.primaryUrl}
+            key={entry.item.id || entry.item.primaryUrl}
             onPointerDown={loadNewsSheet}
             onFocus={loadNewsSheet}
-            onClick={() => onOpenStory(item)}
-            aria-label={`${item.title}. Open article.`}
+            onClick={() => onOpenStory(entry)}
+            aria-label={`${entry.item.title}. Open article.`}
           >
-            <HomeNewsArt item={item} className="hm-news-mini-art" targetW={320} />
+            <HomeNewsArt item={entry.item} className="hm-news-mini-art" targetW={320} />
             <span className="hm-news-mini-copy">
-              <span className="hm-news-mini-title">{item.title}</span>
-              {timeFor(item) ? <span className="hm-news-mini-time">{timeFor(item)}</span> : null}
+              <span className="hm-news-mini-title">{entry.item.title}</span>
+              {timeFor(entry.item) ? <span className="hm-news-mini-time">{timeFor(entry.item)}</span> : null}
             </span>
           </button>
         ))}
@@ -182,7 +182,7 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
   // Wishlist is already a local-first SWR source. Reusing it here removes a
   // second uncached Supabase round trip from Home and keeps the preview/counts
   // in sync with the expanded Release watch page.
-  const { items: wishlistItems, loading: wishlistLoading } = useWishlist()
+  const { items: wishlistItems, ids: wishlistIds, loading: wishlistLoading } = useWishlist()
 
   // Seed from the session copy when News has already been visited. Cold starts
   // still fall through to IndexedDB via loadNews().
@@ -227,17 +227,20 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
   // Recently played library games, most recent first. Feeds the Recent play
   // rail and its full list view.
   const recentGames = useMemo(() => sortRecentGames(games || []), [games])
-  const homeNews = newsItems && newsItems.length ? newsItems.slice(0, 5) : null
 
-  // Build the heavier news/library relevance index only when the user opens the
-  // story, not on every Home/library refresh.
-  const openStoryFor = useCallback(
-    (item) => {
-      markRead(item.primaryUrl)
-      setOpenStory({ item, rel: resolveGame(item, { libIndex: buildLibraryIndex(games) }) })
-    },
-    [games],
+  // Home is a compact preview of News → For you, not a separate "newest" feed.
+  // Using the shared selector keeps the ordering identical: actively played,
+  // owned/series/wishlist relevance first, then newest stories as backfill.
+  const newsLibIndex = useMemo(() => buildLibraryIndex(games), [games])
+  const homeNews = useMemo(
+    () => homeNewsPreview(newsItems || [], { libIndex: newsLibIndex, wishlistIds }, 5),
+    [newsItems, newsLibIndex, wishlistIds],
   )
+
+  const openStoryFor = useCallback((entry) => {
+    markRead(entry.item.primaryUrl)
+    setOpenStory(entry)
+  }, [])
 
   // A library game opens the owned sheet; anything else opens the discover
   // sheet with the IGDB payload (same split as NewsTab).
@@ -307,8 +310,8 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
     if (section === 'top-story') {
       // A failed news refresh resolves to [] (loadNews never rejects), so an
       // empty digest hides the section instead of erroring the page.
-      if (!homeNews) return newsItems ? null : <LoadingCard />
-      return <HomeNews items={homeNews} unread={newsUnread} onOpenNews={() => onOpenTab('news')} onOpenStory={openStoryFor} />
+      if (!homeNews.length) return newsItems ? null : <LoadingCard />
+      return <HomeNews entries={homeNews} unread={newsUnread} onOpenNews={() => onOpenTab('news')} onOpenStory={openStoryFor} />
     }
 
     if (section === 'upcoming') {
