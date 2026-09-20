@@ -259,12 +259,12 @@
   border-top: 0;
   box-shadow: none;
   padding: 0 18px calc(116px + env(safe-area-inset-bottom, 0px));
-  animation: settings-in var(--overlay-in) var(--enter-ease);
+  animation: settings-in var(--nav-in) var(--enter-ease);
   overscroll-behavior-y: contain;
 }
 
 .modal-sheet.game-sheet.game-page.closing {
-  animation: settings-out var(--overlay-out) var(--exit-ease) forwards;
+  animation: settings-out var(--nav-out) var(--exit-ease) forwards;
 }
 
 @media (prefers-reduced-motion: reduce) {
