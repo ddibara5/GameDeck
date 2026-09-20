@@ -92,7 +92,7 @@ export function formatRelativeDay(value) {
  * branch won at the boundary. It also put the released/upcoming flip at UTC
  * midnight rather than the reader's own, which is up to 14 hours out.
  */
-export function releaseDayDelta(released) {
+export function releaseDayDelta(released, now = new Date()) {
   const ts = Number(released)
   if (!ts) return null
 
@@ -101,7 +101,8 @@ export function releaseDayDelta(released) {
   if (Number.isNaN(g.getTime())) return null
   const gameDay = Date.UTC(g.getUTCFullYear(), g.getUTCMonth(), g.getUTCDate())
   // Today, read in the reader's own timezone.
-  const n = new Date()
+  const n = new Date(now)
+  if (Number.isNaN(n.getTime())) return null
   const today = Date.UTC(n.getFullYear(), n.getMonth(), n.getDate())
 
   return Math.round((gameDay - today) / 86400000)
@@ -285,6 +286,64 @@ export function compactReleaseLabel(release, fallbackYear = null) {
   if (precision === 'quarter') return `Q${Math.floor(d.getUTCMonth() / 3) + 1} ${shortYear}`
   if (precision === 'month') return `${month} ${shortYear}`
   return `${month} ${d.getUTCDate()} ${shortYear}`
+}
+
+/**
+ * One release-information system for compact Home + Discover cards.
+ *
+ * - Precise releases within one year use relative timing.
+ * - Older releases collapse to the year.
+ * - Coarse quarter/year dates stay coarse instead of inventing precision.
+ * - TBA remains TBA.
+ */
+export function releaseCardLabel(
+  { release = null, released = null, precision = null, label = null, year = null } = {},
+  now = new Date(),
+) {
+  const normalized = release && typeof release === 'object' ? release : null
+  const ts = Number(normalized?.ts ?? released) || null
+  const datePrecision = normalized?.precision ?? precision ?? null
+  const human = normalized?.label ?? label ?? null
+  const fallbackYear = year != null ? String(year) : null
+
+  if (datePrecision === 'tba') return human || 'TBA'
+  if (!ts) return human || fallbackYear
+
+  const d = new Date(ts * 1000)
+  if (Number.isNaN(d.getTime())) return human || fallbackYear
+  const releaseYear = String(d.getUTCFullYear())
+
+  if (datePrecision === 'year') return releaseYear
+  if (datePrecision === 'quarter') {
+    const q = Math.floor(d.getUTCMonth() / 3) + 1
+    return `Q${q} ’${releaseYear.slice(-2)}`
+  }
+
+  const days = releaseDayDelta(ts, now)
+  if (days === null) return human || fallbackYear || releaseYear
+  const distance = Math.abs(days)
+
+  if (distance > 365) return releaseYear
+  if (days === 0) return 'Today'
+
+  const suffix = days > 0 ? 'away' : 'ago'
+  let value
+  let unit
+  if (distance < 14) {
+    value = distance
+    unit = 'day'
+  } else if (distance < 60) {
+    value = Math.max(1, Math.round(distance / 7))
+    unit = 'week'
+  } else if (distance < 330) {
+    value = Math.max(1, Math.round(distance / 30))
+    unit = 'month'
+  } else {
+    value = 1
+    unit = 'year'
+  }
+
+  return `${value} ${unit}${value === 1 ? '' : 's'} ${suffix}`
 }
 
 /**
