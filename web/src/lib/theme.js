@@ -10,7 +10,13 @@ const CONTRAST_KEY = 'gamedeck_contrast_v1'
 const TRANSPARENCY_KEY = 'gamedeck_transparency_v1'
 
 const MODES = new Set(['dark', 'light', 'system'])
-const FAMILIES = new Set(['curator', 'obsidian', 'xbox', 'playstation', 'neon', 'blueprint', 'cartridge', 'liquid'])
+const FAMILIES = new Set(['curator', 'obsidian', 'xbox', 'playstation', 'cartridge'])
+
+const RETIRED_FAMILY_MAP = {
+  liquid: 'obsidian',
+  neon: 'obsidian',
+  blueprint: 'obsidian',
+}
 const LOGO_STYLES = new Set(['theme', 'classic', 'glass'])
 const DISPLAY_VALUES = new Set(['system', 'standard', 'reduced'])
 const CONTRAST_VALUES = new Set(['system', 'standard', 'high'])
@@ -19,8 +25,8 @@ const LEGACY_FAMILY_MAP = {
   walnut: 'curator',
   slate: 'obsidian',
   graphite: 'obsidian',
-  sage: 'blueprint',
-  plum: 'neon',
+  sage: 'obsidian',
+  plum: 'obsidian',
 }
 
 const RETIRED_GROUND_KEYS = [
@@ -33,43 +39,28 @@ const RETIRED_GROUND_KEYS = [
 
 export const THEME_FAMILIES = [
   {
-    key: 'liquid', label: 'Liquid Glass', eyebrow: 'Material pilot',
-    description: 'Refractive glass study: luminous orb field, specular edges, floating surfaces.',
-    dark: ['#0b1132', '#1a2450', '#7dd3fc'], light: ['#e9eefb', '#f4f7ff', '#0f7fd4'],
-  },
-  {
-    key: 'curator', label: 'Curator', eyebrow: 'Editorial archive',
-    description: 'Warm paper, walnut details, bookish type and restrained movement.',
+    key: 'curator', label: 'Curator',
+    description: 'Warm paper and walnut.',
     dark: ['#211B17', '#2C2521', '#F0C184'], light: ['#F5F0E8', '#FFFCF7', '#825B32'],
   },
   {
-    key: 'obsidian', label: 'Obsidian Glass', eyebrow: 'Premium cinematic',
-    description: 'Prismatic glass, soft depth and deliberate gallery-like pacing.',
+    key: 'obsidian', label: 'Obsidian',
+    description: 'Cool slate and soft glass.',
     dark: ['#101522', '#1A2130', '#A9C2FF'], light: ['#EEF2FC', '#FAFBFF', '#3861b8'],
   },
   {
-    key: 'xbox', label: 'Xbox', eyebrow: 'Velocity dashboard',
-    description: 'Graphite tiles, directional green rails and achievement-inspired energy.',
+    key: 'xbox', label: 'Xbox',
+    description: 'Graphite and Xbox green.',
     dark: ['#070a08', '#121714', '#69c350'], light: ['#eef3ee', '#fbfdfb', '#107c10'],
   },
   {
-    key: 'playstation', label: 'PlayStation', eyebrow: 'Midnight wave',
-    description: 'Cobalt atmosphere, floating glass layers and cinematic spotlight motion.',
+    key: 'playstation', label: 'PlayStation',
+    description: 'Deep blue and cobalt.',
     dark: ['#050b18', '#0c1830', '#64a9ff'], light: ['#edf4fb', '#fbfdff', '#0068bd'],
   },
   {
-    key: 'neon', label: 'Neon Cabinet', eyebrow: 'Arcade energy',
-    description: 'Electric cyan and magenta, crisp corners and responsive snap.',
-    dark: ['#080b12', '#111725', '#00e6c7'], light: ['#eef2f3', '#fbfdfe', '#00756e'],
-  },
-  {
-    key: 'blueprint', label: 'Blueprint', eyebrow: 'Analytical studio',
-    description: 'Technical grid, precise metrics and calm information density.',
-    dark: ['#07182c', '#0d2742', '#5cc8ff'], light: ['#e7f1f7', '#f7fbfe', '#12678e'],
-  },
-  {
-    key: 'cartridge', label: 'Cartridge', eyebrow: 'Tactile retro',
-    description: 'Printed labels, hard shadows, warm plastic and pixel-era wit.',
+    key: 'cartridge', label: 'Cartridge',
+    description: 'Warm retro plastic and hard edges.',
     dark: ['#1c1a16', '#29251e', '#ff7542'], light: ['#e9e1c8', '#f8f2df', '#aa3516'],
   },
 ]
@@ -126,17 +117,26 @@ export function setTheme(pref) {
   return next
 }
 
+function normalizeThemeFamily(value) {
+  const migrated = RETIRED_FAMILY_MAP[value] || value
+  return FAMILIES.has(migrated) ? migrated : 'curator'
+}
+
 export function getThemeFamily() {
   const saved = read(FAMILY_KEY)
-  if (FAMILIES.has(saved)) return saved
-  const migrated = LEGACY_FAMILY_MAP[read(LEGACY_ACCENT_KEY)] || 'curator'
+  if (saved) {
+    const normalized = normalizeThemeFamily(saved)
+    if (normalized !== saved) write(FAMILY_KEY, normalized)
+    if (FAMILIES.has(normalized)) return normalized
+  }
+  const migrated = normalizeThemeFamily(LEGACY_FAMILY_MAP[read(LEGACY_ACCENT_KEY)] || 'curator')
   write(FAMILY_KEY, migrated)
   remove(LEGACY_ACCENT_KEY)
   return migrated
 }
 
 export function applyThemeFamily(value) {
-  const next = FAMILIES.has(value) ? value : 'curator'
+  const next = normalizeThemeFamily(value)
   cleanupRetiredAppearance()
   root().setAttribute('data-theme-family', next)
   updateThemeColor()
@@ -144,7 +144,7 @@ export function applyThemeFamily(value) {
 }
 
 export function setThemeFamily(value) {
-  const next = FAMILIES.has(value) ? value : 'curator'
+  const next = normalizeThemeFamily(value)
   write(FAMILY_KEY, next)
   return applyThemeFamily(next)
 }

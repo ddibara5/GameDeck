@@ -386,14 +386,8 @@ export default function SettingsPage({ open, onClose, onOpenBar, initialPage = n
                 <span className="theme-card-chip" />
               </span>
               <span className="theme-card-copy">
-                <span className="theme-card-eyebrow">{opt.eyebrow}</span>
                 <b>{opt.label}</b>
                 <span>{opt.description}</span>
-              </span>
-              <span className="theme-palette" aria-hidden="true">
-                {(theme === 'light' ? opt.light : opt.dark).map((color) => (
-                  <i key={color} style={{ background: color }} />
-                ))}
               </span>
               <span className="theme-card-check" aria-hidden="true">✓</span>
             </button>
