@@ -1264,8 +1264,8 @@ button.shelf-head:active {
  
 /* Expo parity: Browse compact posters are 112 x 159 (156:221 ratio). */
 .discover-browse {
-  --discover-art-width: 112px;
-  --discover-art-height: 159px;
+  --discover-art-width: var(--game-art-poster-width);
+  --discover-art-height: var(--game-art-poster-height);
 }
 .discover-browse .shelf-card,
 .discover-browse .shelf-poster {

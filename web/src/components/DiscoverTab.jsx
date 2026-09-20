@@ -1,23 +1,12 @@
-import { DiscoverHub } from './FeatureHub.jsx'
+import DiscoverBrowse from './DiscoverBrowse.jsx'
 import './discover.css'
 
-export default function DiscoverTab({
-  onCustomize,
-  onAsk,
-  onOpenTaste,
-  onTuneTaste,
-  onOpenRankings,
-}) {
+// Discover is the catalog. Personalized picks open from the Home For You tile.
+export default function DiscoverTab({ onCustomize, onAsk }) {
   return (
     <div className="discover-page discover-page-standalone">
       <div className="discover-base">
-        <DiscoverHub
-          onCustomize={onCustomize}
-          onAsk={onAsk}
-          onOpenTaste={onOpenTaste}
-          onTuneTaste={onTuneTaste}
-          onOpenRankings={onOpenRankings}
-        />
+        <DiscoverBrowse onCustomize={onCustomize} onAsk={onAsk} />
       </div>
     </div>
   )

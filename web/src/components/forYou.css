@@ -76,8 +76,8 @@
 .fy-row-cover {
   overflow: hidden;
   background: var(--surface-2);
-  width: 84px;
-  height: 126px;
+  width: var(--game-art-library-width);
+  height: var(--game-art-library-height);
   border-radius: inherit;
 }
 .fy-row-body {
@@ -664,20 +664,16 @@
 }
 
  
-/* Expo parity: For You uses the pilot's 84 x 126 row cover and 8px rhythm. */
+/* For You shares Library artwork dimensions and keeps the 8px row rhythm. */
 .fy-row-cover-frame {
   display: block;
   position: relative;
-  flex: 0 0 84px;
-  width: 84px;
-  height: 126px;
+  flex: 0 0 var(--game-art-library-width);
+  width: var(--game-art-library-width);
+  height: var(--game-art-library-height);
   overflow: hidden;
   border-radius: 8px;
   background: var(--surface-2);
-}
-.fy-row-cover-frame .sc-ov {
-  border-bottom-left-radius: inherit;
-  border-bottom-right-radius: inherit;
 }
 .fy-list-actions .filter-btn {
   position: relative;

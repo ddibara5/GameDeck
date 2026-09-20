@@ -6,6 +6,11 @@
    Dedicated hero artwork in GameSheet and Shuffle is intentionally outside this
    system because it belongs to a full-screen/modal composition, not a card feed. */
 :root {
+  /* Standard collection slots shared by Home/Browse and Library/For You. */
+  --game-art-poster-width: 112px;
+  --game-art-poster-height: 159px;
+  --game-art-library-width: 64px;
+  --game-art-library-height: 86px;
   --game-art-row: 68px;
   --game-art-compact: 52px;
   --game-art-mini: 38px;

@@ -41,7 +41,7 @@ export default function HomeRail({ title, items, onOpenAll, onOpen, compact = fa
             aria-label={`${item.title}${item.progress != null ? `, ${item.progress}% complete` : ''}`}
           >
             <span className="hrail-poster">
-              <Cover src={item.artwork} title={item.title} size="sm" className="hrail-cov" />
+              <Cover src={item.artwork} title={item.title} size="sm" className="hrail-cov" sizes="112px" />
               {item.timing ? <TimingOverlay parts={item.timing} compact /> : null}
               {item.progress != null ? (
                 <span className="hrail-badge" aria-hidden="true">

@@ -21,7 +21,7 @@
 .gd-library-card { display: flex; align-items: center; gap: 12px; width: 100%; min-width: 0; min-height: 44px; padding: 8px 0; border: 0; border-radius: 0; background: transparent; color: var(--text); text-align: left; cursor: pointer; }
 .gd-library-list .gd-library-card + .gd-library-card { border-top: 1px solid var(--line-soft); }
 .gd-library-card:active { background: color-mix(in srgb, var(--surface-2) 70%, transparent); }
-.gd-library-card .cover.cover-sm { width: 64px; height: 86px; border-radius: 8px; flex: 0 0 auto; overflow: hidden; }
+.gd-library-card .cover.cover-sm { width: var(--game-art-library-width); height: var(--game-art-library-height); border-radius: 8px; flex: 0 0 auto; overflow: hidden; }
 .gd-library-card-body { display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 4px; }
 .gd-library-title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; font-size: 16px; line-height: 20px; font-weight: 700; }
 .gd-library-platform, .gd-library-meta { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 13px; line-height: 17px; }
@@ -46,7 +46,7 @@
 
 /* Match loading placeholders to the default rows to avoid a size jump. */
 .gd-lib .skeleton-card { padding: 8px 0; }
-.gd-lib .skeleton-cover { width: 64px; height: 86px; border-radius: 8px; }
+.gd-lib .skeleton-cover { width: var(--game-art-library-width); height: var(--game-art-library-height); border-radius: 8px; }
 .gd-library-sheet > .discover-action { width: 100%; margin-top: 12px; }
 @media (hover: hover) {
   .gd-icon-button:hover, .gd-library-card:hover { background: color-mix(in srgb, var(--surface-2) 70%, transparent); }

@@ -530,16 +530,7 @@ function GameDeckApp() {
           {activeTab === 'activity' && <ActivityTab onOpenInsights={() => navigateTab('insights')} />}
           {activeTab === 'insights' && <InsightsTab />}
           {activeTab === 'discover' && (
-            <DiscoverTab
-              onCustomize={openCustomizeRows}
-              onAsk={openAsk}
-              onOpenTaste={openTasteProfile}
-              onTuneTaste={openTuneTaste}
-              onOpenRankings={() => {
-                setTuneLaunch(null)
-                navigateTab('rankings')
-              }}
-            />
+            <DiscoverTab onCustomize={openCustomizeRows} onAsk={openAsk} />
           )}
           {activeTab === 'foryou' && (
             <ForYouTab

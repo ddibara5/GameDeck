@@ -1,7 +1,6 @@
 import Cover from './Cover.jsx'
-import { timingParts, releaseLabel } from '../lib/format.js'
+import { releaseLabel } from '../lib/format.js'
 import { recommendationTrigger } from '../lib/forYouEngine.js'
-import TimingOverlay from './TimingOverlay.jsx'
 import './forYou.css'
 
 // Compact recommendation row, ported from the pilot's for-you-row.tsx:
@@ -23,7 +22,6 @@ export default function ForYouRow({
   const title = game.title || game.name
   const cover = game.artwork || game.cover
   const released = game.released ?? game.release?.ts ?? null
-  const parts = timingParts(released)
   const releaseMeta = releaseLabel(game.release || (released ? { ts: released } : null), game.year) || game.releaseLabel || 'Release TBA'
   const metadata = [
     (game.platforms || []).slice(0, 2).join(' · '),
@@ -47,8 +45,7 @@ export default function ForYouRow({
         onClick={onDetails}
       >
         <span className="fy-row-cover-frame">
-          <Cover src={cover} title={title} size="sm" className="fy-row-cover" />
-          <TimingOverlay parts={parts} compact />
+          <Cover src={cover} title={title} size="sm" className="fy-row-cover" sizes="64px" />
         </span>
       </button>
       <div className="fy-row-body">
