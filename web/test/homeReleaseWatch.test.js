@@ -56,8 +56,10 @@ test('Home news scrolls the lead story with compact follow-ups', () => {
   assert.match(home, /className="hm-news-strip"/)
   assert.match(home, /className="hm-news-lead"/)
   assert.match(home, /className="hm-news-mini"/)
+  assert.match(home, /className="hm-news-all"/)
+  assert.match(home, /aria-label="More news"/)
+  assert.match(home, /<NowPlayingChevron \/>/)
   assert.doesNotMatch(home, /hm-news-more/)
-  assert.match(home, /More news/)
   assert.doesNotMatch(home, /hm-news-summary/)
 })
 
