@@ -142,9 +142,11 @@
 
 .hrail-compact .hrail-poster {
   width: 80px;
-  /* Match the Expo "Continue playing" tile cover (80x120pt, 2:3). The corner
-     radius stays exactly as the base rule sets it (var(--r-md)); it is not
-     scaled up with the size. */
+  /* Corner radius matches the Expo rail posters proportionally: Expo's
+     compact DiscoverPosterCard uses 12px on 112px-wide posters, so
+     80px * 12/112 = 8.57px, rounded to 8.5px (per Dave, the Expo look
+     supersedes the old "keep the usual radius" rule). */
+  border-radius: 8.5px;
   aspect-ratio: 2 / 3;
 }
 
