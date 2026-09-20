@@ -4230,3 +4230,291 @@ textarea {
   outline: 3px solid color-mix(in srgb, var(--accent) 82%, white);
   outline-offset: 3px;
 }
+
+
+/* ---------- Theme simplification pass ----------
+   Themes now get their identity from palette, typography, geometry and controls,
+   not animated/gradient page grounds. This keeps artwork as the visual focus,
+   reduces compositing work, and makes light/dark mode feel like the same theme. */
+:root {
+  --theme-ground: none;
+  --theme-texture: none;
+  --theme-texture-opacity: 0;
+}
+
+:root[data-theme-family],
+:root[data-theme-family][data-theme='light'] {
+  --theme-ground: none;
+  --theme-texture: none;
+  --theme-texture-opacity: 0;
+  --theme-texture-size: auto;
+}
+
+:root[data-theme-family] :is(.app, .settings-page, .view-page)::before,
+:root[data-theme-family] :is(.app, .settings-page, .view-page)::after {
+  inset: 0;
+  animation: none !important;
+  transform: none !important;
+  will-change: auto;
+}
+
+/* Console themes keep their signature accents without animated/gradient fills. */
+:root[data-theme-family='xbox'] .tabbar-lens {
+  background: color-mix(in srgb, var(--accent) 18%, var(--glass));
+}
+
+:root[data-theme-family='xbox'] :is(
+  .completion-bar-fill,
+  .fy-deck-progress > span,
+  .np-fill,
+  .wk-gfill,
+  .bar-fill
+) {
+  background: var(--accent);
+}
+
+:root[data-theme-family='playstation'] .app-header.scrolled {
+  background: var(--glass-chip);
+}
+
+:root[data-theme-family='playstation'] .tabbar-lens,
+:root[data-theme-family='playstation'][data-theme='light'] .tabbar-lens {
+  background: color-mix(in srgb, var(--accent) 18%, var(--glass));
+}
+
+:root[data-theme-family='playstation'] :is(
+  .chart-card,
+  .hm-tile,
+  .fy-deck-open,
+  .settings-group,
+  .logo-style-option,
+  .theme-card,
+  .seg,
+  .rank-search-results
+) {
+  background: var(--surface);
+}
+
+:root[data-theme-family='playstation'] .modal-sheet {
+  background: var(--surface);
+}
+
+:root[data-theme-family='playstation'] .fy-deck-art {
+  background: var(--surface-2);
+}
+
+:root[data-theme-family='playstation'] :is(
+  .completion-bar-fill,
+  .fy-deck-progress > span,
+  .np-fill,
+  .wk-gfill,
+  .bar-fill,
+  .filter-btn.active,
+  .discover-action.primary,
+  .fy-deck-action.primary
+) {
+  background: var(--accent);
+}
+
+:root[data-theme-family='playstation'] :is(.discover-section-label, .menu-sec-label, .hm-tk) {
+  text-shadow: none;
+}
+
+/* Theme picker: five distinct choices, presented as compact rows rather than
+   large showcase cards. The preview is deliberately simple because the actual
+   themes now use flat page backgrounds too. */
+.theme-gallery {
+  gap: 8px;
+  margin: 8px var(--screen-gutter) 0;
+}
+
+:root[data-theme-family] .theme-gallery .theme-card {
+  min-height: 78px;
+  padding: 9px 10px;
+  grid-template-columns: 62px minmax(0, 1fr) 22px;
+  grid-template-rows: 1fr;
+  gap: 10px;
+  border-radius: 14px;
+  background: var(--surface) !important;
+  box-shadow: none;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  transition: border-color var(--d-fast) ease, background var(--d-fast) ease;
+}
+
+.theme-card:active {
+  transform: none;
+  background: var(--surface-2) !important;
+}
+
+.theme-card.on {
+  border-color: var(--accent);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.theme-card-preview {
+  grid-row: auto;
+  width: 62px;
+  height: 58px;
+  min-height: 58px;
+  border-radius: 10px;
+}
+
+.theme-card-grid {
+  display: none;
+}
+
+.theme-card-panel {
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  height: 28px;
+  border-radius: 7px;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  transform: none;
+}
+
+.theme-card-panel::after {
+  content: none !important;
+}
+
+.theme-card-chip {
+  left: 16px;
+  right: 24px;
+  bottom: 17px;
+  height: 5px;
+  border-radius: 999px;
+  box-shadow: none;
+}
+
+.theme-card-copy {
+  align-self: center;
+  gap: 3px;
+}
+
+.theme-card-copy b {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--t-body);
+  line-height: 1.2;
+  font-weight: var(--w-semi);
+}
+
+.theme-card-copy > span:last-child {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--t-cap);
+  line-height: 1.25;
+}
+
+.theme-card-check {
+  align-self: center;
+  width: 20px;
+  height: 20px;
+}
+
+.theme-card-curator .theme-card-preview {
+  background: #18130e;
+  border-color: #594431;
+}
+.theme-card-curator .theme-card-panel { background: #251d16; border-color: #594431; }
+.theme-card-curator .theme-card-chip { background: #d8aa62; }
+
+.theme-card-obsidian .theme-card-preview {
+  border-radius: 10px;
+  background: #0a0b0f;
+  border-color: #41465c;
+}
+.theme-card-obsidian .theme-card-panel {
+  background: #242738;
+  border-color: #41465c;
+  border-radius: 8px;
+}
+.theme-card-obsidian .theme-card-chip { background: #9ab4ff; }
+
+.theme-card-xbox .theme-card-preview {
+  border-radius: 8px;
+  background: #070a08;
+  border-color: #38533b;
+}
+.theme-card-xbox .theme-card-panel {
+  background: #121714;
+  border-color: #38533b;
+  border-left: 3px solid #69c350;
+  border-radius: 6px;
+  box-shadow: none;
+}
+.theme-card-xbox .theme-card-chip {
+  left: 16px;
+  right: 24px;
+  bottom: 17px;
+  height: 5px;
+  background: #69c350;
+}
+
+.theme-card-playstation .theme-card-preview {
+  border-radius: 10px;
+  background: #050b18;
+  border-color: #31527b;
+}
+.theme-card-playstation .theme-card-panel {
+  background: #142745;
+  border-color: #31527b;
+  border-radius: 8px;
+  box-shadow: none;
+}
+.theme-card-playstation .theme-card-chip {
+  left: 16px;
+  right: 24px;
+  bottom: 17px;
+  height: 5px;
+  background: #64a9ff;
+}
+
+.theme-card-cartridge .theme-card-preview {
+  border-radius: 4px;
+  background: #1c1a16;
+  border-color: #746951;
+}
+.theme-card-cartridge .theme-card-panel {
+  background: #29251e;
+  border-color: #746951;
+  border-radius: 2px;
+  box-shadow: 3px 3px 0 #0d0c0a;
+}
+.theme-card-cartridge .theme-card-chip {
+  background: #ff875e;
+}
+
+[data-theme='light'] .theme-card-curator .theme-card-preview { background: #f1e8d8; border-color: #d1c0a8; }
+[data-theme='light'] .theme-card-curator .theme-card-panel { background: #fbf6ed; border-color: #d1c0a8; box-shadow: none; }
+[data-theme='light'] .theme-card-curator .theme-card-chip { background: #8a5d25; }
+
+[data-theme='light'] .theme-card-obsidian .theme-card-preview { background: #edf1f8; border-color: #bdc7da; }
+[data-theme='light'] .theme-card-obsidian .theme-card-panel { background: #ffffff; border-color: #bdc7da; }
+[data-theme='light'] .theme-card-obsidian .theme-card-chip { background: #3f61bd; }
+
+[data-theme='light'] .theme-card-xbox .theme-card-preview { background: #eef3ee; border-color: #a8baa9; }
+[data-theme='light'] .theme-card-xbox .theme-card-panel { background: #fbfdfb; border-color: #a8baa9; box-shadow: none; }
+[data-theme='light'] .theme-card-xbox .theme-card-chip { background: #107c10; }
+
+[data-theme='light'] .theme-card-playstation .theme-card-preview { background: #edf4fb; border-color: #aac0da; }
+[data-theme='light'] .theme-card-playstation .theme-card-panel { background: #ffffff; border-color: #aac0da; box-shadow: none; }
+[data-theme='light'] .theme-card-playstation .theme-card-chip { background: #0068bd; }
+
+[data-theme='light'] .theme-card-cartridge .theme-card-preview { background: #e9e1c8; border-color: #aa9b75; }
+[data-theme='light'] .theme-card-cartridge .theme-card-panel { background: #f8f2df; border-color: #aa9b75; box-shadow: 3px 3px 0 #b8ad8c; }
+[data-theme='light'] .theme-card-cartridge .theme-card-chip { background: #aa3516; }
+
+@media (max-width: 420px) {
+  :root[data-theme-family] .theme-gallery .theme-card {
+    grid-template-columns: 58px minmax(0, 1fr) 20px;
+  }
+  .theme-card-preview {
+    width: 58px;
+    height: 54px;
+    min-height: 54px;
+  }
+}
