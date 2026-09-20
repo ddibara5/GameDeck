@@ -6,7 +6,7 @@ import { TAB_ICONS } from './TabBar.jsx'
 import { preloadLibrary, useLibraryGames } from '../lib/useLibraryGames.js'
 import { gameArtworkUrl } from '../lib/homeInsights.js'
 import { releaseWatch } from '../lib/homeReleaseWatch.js'
-import { getNewsCache, loadNews, markRead, resolveGame, buildLibraryIndex } from '../lib/news.js'
+import { coverSrc, getNewsCache, loadNews, markRead, relTime, resolveGame, buildLibraryIndex } from '../lib/news.js'
 import { loadHomeLayout, saveHomeLayout } from '../lib/homeLayout.js'
 import { useWishlist } from '../lib/wishlist.js'
 import { gameProgress, sortRecentGames } from '../lib/homeRails.js'
@@ -93,13 +93,20 @@ function JumpBackIn({ onOpenTab }) {
   )
 }
 
-// The featured card opens the article itself in a NewsSheet; "More news"
-// goes to the News tab.
-function TopStory({ item, unread, onOpenNews, onOpenStory }) {
+// Home news: one featured story plus compact swipeable follow-ups, kept to
+// roughly the same height as the old single-story card. Story taps open the
+// article sheet; "More news" remains the route to the full News tab.
+function HomeNews({ items, unread, onOpenNews, onOpenStory }) {
+  if (!items || items.length === 0) return null
+  const lead = items[0]
+  const more = items.slice(1, 5)
+  const artFor = (item) => item.image || coverSrc(item.gameCover, 't_cover_big') || null
+  const timeFor = (item) => relTime(item.publishedAt || item.createdAt)
+
   return (
-    <section aria-label="Top story">
+    <section aria-label="Latest news">
       <SectionHead
-        title="Top story"
+        title="Latest news"
         action={
           <button type="button" className="hm-text-btn" onClick={onOpenNews}>
             More news
@@ -107,23 +114,48 @@ function TopStory({ item, unread, onOpenNews, onOpenStory }) {
           </button>
         }
       />
-      <button
-        type="button"
-        className="hm-news-card"
-        onPointerDown={loadNewsSheet}
-        onFocus={loadNewsSheet}
-        onClick={() => onOpenStory(item)}
-        aria-label={`Top story: ${item.title}. Open article.`}
-      >
-        <span className="hm-news-copy">
-          <span className="hm-news-label">{item.gameName || 'FROM YOUR FEED'}</span>
-          <span className="hm-news-title">{item.title}</span>
-          {item.summary ? <span className="hm-news-summary">{item.summary}</span> : null}
-        </span>
-        {item.image ? (
-          <img className="hm-news-thumb" src={item.image} alt="" loading="lazy" />
+      <div className="hm-news-hybrid">
+        <button
+          type="button"
+          className="hm-news-lead"
+          onPointerDown={loadNewsSheet}
+          onFocus={loadNewsSheet}
+          onClick={() => onOpenStory(lead)}
+          aria-label={`${lead.title}. Open article.`}
+        >
+          {artFor(lead) ? <img className="hm-news-lead-art" src={artFor(lead)} alt="" loading="lazy" /> : null}
+          <span className="hm-news-lead-shade" aria-hidden="true" />
+          <span className="hm-news-lead-copy">
+            <span className="hm-news-lead-meta">
+              <span>{lead.gameName || 'GameDeck'}</span>
+              {timeFor(lead) ? <span>{timeFor(lead)}</span> : null}
+            </span>
+            <span className="hm-news-lead-title">{lead.title}</span>
+          </span>
+        </button>
+
+        {more.length ? (
+          <div className="hm-news-more" aria-label="More recent stories">
+            {more.map((item) => (
+              <button
+                type="button"
+                className="hm-news-mini"
+                key={item.id || item.primaryUrl}
+                onPointerDown={loadNewsSheet}
+                onFocus={loadNewsSheet}
+                onClick={() => onOpenStory(item)}
+                aria-label={`${item.title}. Open article.`}
+              >
+                {artFor(item) ? <img className="hm-news-mini-art" src={artFor(item)} alt="" loading="lazy" /> : null}
+                <span className="hm-news-mini-copy">
+                  <span className="hm-news-mini-title">{item.title}</span>
+                  {timeFor(item) ? <span className="hm-news-mini-time">{timeFor(item)}</span> : null}
+                </span>
+              </button>
+            ))}
+          </div>
         ) : null}
-      </button>
+      </div>
     </section>
   )
 }
@@ -178,7 +210,7 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
   // Recently played library games, most recent first. Feeds the Recent play
   // rail and its full list view.
   const recentGames = useMemo(() => sortRecentGames(games || []), [games])
-  const topStory = newsItems && newsItems.length ? newsItems[0] : null
+  const homeNews = newsItems && newsItems.length ? newsItems.slice(0, 5) : null
 
   // Build the heavier news/library relevance index only when the user opens the
   // story, not on every Home/library refresh.
@@ -258,8 +290,8 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
     if (section === 'top-story') {
       // A failed news refresh resolves to [] (loadNews never rejects), so an
       // empty digest hides the section instead of erroring the page.
-      if (!topStory) return newsItems ? null : <LoadingCard />
-      return <TopStory item={topStory} unread={newsUnread} onOpenNews={() => onOpenTab('news')} onOpenStory={openStoryFor} />
+      if (!homeNews) return newsItems ? null : <LoadingCard />
+      return <HomeNews items={homeNews} unread={newsUnread} onOpenNews={() => onOpenTab('news')} onOpenStory={openStoryFor} />
     }
 
     if (section === 'upcoming') {
