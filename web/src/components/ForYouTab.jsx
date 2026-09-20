@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { forYouLaneLabel, localDay, whyPickReasons } from '../lib/forYouEngine.js'
 import {
+  defaultForYouFilters,
   forYouFilterKey,
   loadForYouFilters,
   saveForYouFilters,
@@ -270,6 +271,7 @@ export default function ForYouTab({
 }) {
   const [filters, setFilters] = useState(() => loadForYouFilters())
   const [detailGame, setDetailGame] = useState(null)
+  const [detailRecommendation, setDetailRecommendation] = useState(null)
   const [optionsPick, setOptionsPick] = useState(null)
   const [whyPick, setWhyPick] = useState(null)
   const [showFilters, setShowFilters] = useState(false)
@@ -340,6 +342,7 @@ export default function ForYouTab({
     } else if (action === 'details') {
       setOptionsPick(null)
       setDetailGame(pick.game)
+      setDetailRecommendation(pick)
     } else if (action === 'hide') {
       setOptionsPick(null)
       void hide(pick)
@@ -420,7 +423,10 @@ export default function ForYouTab({
                     disabled={saving || refreshing}
                     saving={saving}
                     exposureRef={trackExposureRef(pick.game.id)}
-                    onDetails={() => setDetailGame(pick.game)}
+                    onDetails={() => {
+                      setDetailGame(pick.game)
+                      setDetailRecommendation(pick)
+                    }}
                     onWhy={() => setWhyPick(pick)}
                     onOptions={() => setOptionsPick(pick)}
                     onWishlist={() => void wishlist(pick)}
@@ -464,12 +470,18 @@ export default function ForYouTab({
 
       {detailGame ? (
         <LazyGameSheet
+          variant="discover"
           game={detailGame}
+          recommendation={detailRecommendation}
           onAsk={(askGame) => {
             setDetailGame(null)
+            setDetailRecommendation(null)
             if (onAsk) onAsk(askGame)
           }}
-          onClose={() => setDetailGame(null)}
+          onClose={() => {
+            setDetailGame(null)
+            setDetailRecommendation(null)
+          }}
         />
       ) : null}
 
@@ -548,13 +560,24 @@ export default function ForYouTab({
 
       {showFilters ? (
         <ForYouSheet
-          title="Filters"
+          title="For You filters"
           onClose={() => {
             setShowFilters(false)
             closeSheets()
           }}
         >
           <div className="fy-filters">
+            <div className="fy-filter-summary">
+              <div className="fy-filter-summary-title">Selected filters</div>
+              <div className="fy-filter-summary-values">
+                {filters.platforms.length ? <span>Platforms: {filters.platforms.map((key) => PLATFORM_OPTIONS.find((option) => option.key === key)?.label || key).join(' · ')}</span> : null}
+                {filters.hideOwned ? <span>Ownership: Hide owned games</span> : null}
+                {filters.scales.length !== SCALE_OPTIONS.length ? <span>Production scale: {filters.scales.map((key) => SCALE_OPTIONS.find((option) => option.key === key)?.label || key).join(' · ') || 'None'}</span> : null}
+                {filters.availability !== 'all' ? <span>Availability: Out now</span> : null}
+                {filters.mode !== 'balanced' ? <span>Discovery balance: {MODE_OPTIONS.find((option) => option.key === filters.mode)?.label || filters.mode}</span> : null}
+                {!filters.platforms.length && !filters.hideOwned && filters.scales.length === SCALE_OPTIONS.length && filters.availability === 'all' && filters.mode === 'balanced' ? <span>Default settings</span> : null}
+              </div>
+            </div>
             <div className="filter-group">
               <span className="filter-label">Production scale</span>
               <div className="filter-options">
@@ -650,10 +673,18 @@ export default function ForYouTab({
                 </button>
               </div>
             </div>
+            <p className="fy-filter-note">Wishlist games are always excluded from For You.</p>
             <div className="fy-filters-actions">
+              <button
+                type="button"
+                className="fy-filter-clear"
+                onClick={() => updateFilters(defaultForYouFilters)}
+              >
+                Clear filters
+              </button>
               <ForYouAction
                 primary
-                label="Done"
+                label="Show my mix"
                 onPress={() => {
                   setShowFilters(false)
                   closeSheets()

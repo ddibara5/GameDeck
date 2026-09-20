@@ -229,7 +229,7 @@
   border-radius: 0;
   border-top: 0;
   box-shadow: none;
-  padding: 0 18px calc(28px + env(safe-area-inset-bottom, 0px));
+  padding: 0 18px calc(116px + env(safe-area-inset-bottom, 0px));
   animation: game-page-in var(--overlay-out) var(--enter-ease);
   overscroll-behavior-y: contain;
 }
@@ -260,6 +260,132 @@
   -webkit-backdrop-filter: var(--glass-blur);
   backdrop-filter: var(--glass-blur);
   border-bottom: 1px solid var(--glass-line);
+}
+
+.game-page-hero {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.game-page-cover {
+  width: 84px;
+  height: 118px;
+  flex: 0 0 84px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.game-page-hero-copy {
+  flex: 1;
+  min-width: 0;
+  min-height: 118px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+}
+
+.gs-hero-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.gs-hero-meta,
+.gs-hero-rating,
+.gs-hero-release {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow-wrap: anywhere;
+}
+
+.gs-hero-rating,
+.gs-hero-release {
+  color: var(--muted);
+}
+
+.game-page-hero-chips {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.game-page .meta-chip {
+  color: var(--accent);
+  border-color: color-mix(in oklab, var(--accent) 35%, var(--line-soft));
+  background: color-mix(in oklab, var(--accent) 10%, var(--surface-2));
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.gs-for-you-card {
+  border: 1px solid color-mix(in oklab, var(--accent) 18%, var(--line-soft));
+  border-radius: 20px;
+  padding: 16px;
+  background: color-mix(in oklab, var(--accent) 10%, var(--surface-2));
+}
+
+.gs-for-you-label {
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.gs-for-you-reason,
+.gs-for-you-note {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.gs-for-you-reason {
+  color: var(--text);
+  font-size: 17px;
+  line-height: 1.35;
+}
+
+.gs-for-you-note {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.4;
+  margin-top: 10px;
+}
+
+.game-page-primary-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.game-page-primary,
+.game-page-secondary {
+  min-height: 46px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  font: inherit;
+  font-weight: 800;
+  font-size: 15px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.game-page-primary {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.game-page-secondary {
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
 }
 
 .game-page-title {

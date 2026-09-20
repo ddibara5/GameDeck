@@ -450,12 +450,64 @@
 }
 
 /* ---- Filters sheet ---- */
+.fy-filter-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  background: var(--surface-2);
+}
+
+.fy-filter-summary-title {
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.fy-filter-summary-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.fy-filter-summary-values span {
+  max-width: 100%;
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 10%, var(--surface));
+  overflow-wrap: anywhere;
+}
+
+.fy-filter-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.fy-filter-clear {
+  min-height: 44px;
+  flex: 1;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .fy-filters {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
-.fy-filter-group {
+.fy-filter-group,
+.fy-filters .filter-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -467,6 +519,36 @@
 }
 .fy-filters-actions .fy-action {
   flex: 1;
+}
+
+.fy-filters .filter-label {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.fy-filters .filter-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fy-filters .filter-opt {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.fy-filters .filter-opt.active {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 14%, var(--surface-2));
+  color: var(--accent);
+  font-weight: 700;
 }
 
 /* ---- Notices ---- */

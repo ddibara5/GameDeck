@@ -27,6 +27,7 @@ import {
 } from '../lib/ranking.js'
 import { safeExternalUrl } from '../lib/safeUrl.js'
 import { useDialogA11y } from '../lib/useDialogA11y.js'
+import { formatRecommendationReason } from '../lib/forYouEngine.js'
 import './gameSheet.css'
 
 const loadRankGameSheet = () => import('./RankGameSheet.jsx')
@@ -217,6 +218,32 @@ function ProgressBar({ percent, label }) {
   )
 }
 
+function ForYouContextCard({ recommendation }) {
+  if (!recommendation) return null
+  const evidence = recommendation.evidence || {}
+  const source = evidence.source?.title
+  const reason = String(
+    recommendation.reason ||
+      formatRecommendationReason({
+        source: evidence.source,
+        lane: evidence.laneEvidence,
+        shared: evidence.shared || [],
+        comparisonCoverageComplete: evidence.comparisonCoverageComplete !== false,
+      }) ||
+      'A fresh discovery from your selected filters.',
+  )
+
+  return (
+    <section className="gs-for-you-card" aria-label="Why this game was recommended">
+      <div className="gs-for-you-label">For you</div>
+      <p className="gs-for-you-reason">{reason}</p>
+      <p className="gs-for-you-note">
+        {source ? 'Based on a related game and your GameDeck activity.' : 'Based on your GameDeck activity and the filters you chose.'}
+      </p>
+    </section>
+  )
+}
+
 // One sheet for a game across Library (owned), Discover, and Wishlist. Same
 // shell and section order everywhere (hero -> Ask GameDeck -> status/primary
 // controls -> progress -> facts -> summary -> catalog -> screenshots); empty
@@ -226,7 +253,7 @@ function ProgressBar({ percent, label }) {
 // status picker + ranking + progress, not-owned games get wishlist + Ask
 // GameDeck + More like this. Owned and wishlist games fetch their IGDB blurb +
 // screenshots by id so every sheet is equally rich.
-export default function GameSheet({ variant, game, onClose, inLibrary = false, onAsk, onMoreLikeThis, onNotInterested }) {
+export default function GameSheet({ variant, game, recommendation = null, onClose, inLibrary = false, onAsk, onMoreLikeThis, onNotInterested }) {
   const owned = variant === 'owned'
   const { closing, requestClose } = useDelayedClose(onClose)
   const dialogRef = useDialogA11y({ onClose: requestClose })
@@ -253,7 +280,7 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   // we use them directly. Owned/wishlist items (and sparse Discover entries like a
   // wishlist card opened from the Discover home, which only has cover/title/year)
   // fetch it by id so every sheet is equally rich.
-  const igdbId = variant === 'discover' ? game && game.id : game && game.igdb_id
+  const igdbId = owned ? game && game.igdb_id : game && (game.id ?? game.igdb_id)
   const discoverHasMedia = Boolean(
     variant === 'discover' && game && (game.summary || (game.screenshots && game.screenshots.length))
   )
@@ -334,6 +361,7 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   if (!game) return null
 
   const title = game.title || game.name
+  const isForYou = Boolean(recommendation)
   const coverSrc = owned
     ? game.cover_igdb
       ? igdbCover(game.cover_igdb, 't_720p')
@@ -420,15 +448,18 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 6 }}>
           {/* Hero: cover + title + key metadata, pilot arrangement. */}
-          <div style={{ display: 'flex', gap: 14 }}>
-            <div style={{ width: 96, flex: '0 0 auto', borderRadius: 14, overflow: 'hidden' }}>
+          <div className="game-page-hero">
+            <div className="game-page-cover">
               <Cover src={coverSrc} title={title} size="lg" priority />
             </div>
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 5, justifyContent: 'center', minWidth: 0 }}>
+            <div className="game-page-hero-copy">
               {owned || inLibrary ? (
                 <span style={eyebrowStyle}>In your library</span>
+              ) : isForYou ? (
+                <span style={eyebrowStyle}>Discover a game</span>
               ) : null}
               <div
+                className="gs-hero-title"
                 style={{
                   color: 'var(--text)',
                   fontSize: 23,
@@ -438,17 +469,21 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
               >
                 {title}
               </div>
-              {genreYearText ? (
-                <div style={{ color: 'var(--accent)', fontWeight: 800 }}>{genreYearText}</div>
+              {isForYou && rating != null ? (
+                <div className="gs-hero-rating">IGDB {Math.round(Number(rating))}/100</div>
+              ) : !isForYou && genreYearText ? (
+                <div className="gs-hero-meta">{genreYearText}</div>
               ) : null}
-              {platformText ? (
-                <div style={{ color: 'var(--muted)' }}>{platformText}</div>
+              {isForYou && releaseText ? (
+                <div className="gs-hero-release">{releaseText}</div>
+              ) : !isForYou && platformText ? (
+                <div className="gs-hero-meta gs-hero-platforms">{platformText}</div>
               ) : null}
             </div>
           </div>
 
           {/* Ask GameDeck, pilot CTA. Owned sheets did not have this before. */}
-          {onAsk ? (
+          {onAsk && !isForYou ? (
             <button
               type="button"
               className="gs-ask"
@@ -482,9 +517,22 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
             </button>
           ) : null}
 
+          {isForYou ? (
+            <>
+              {genres.length ? (
+                <div className="chip-wrap game-page-hero-chips">
+                  {genres.map((genre) => (
+                    <span className="meta-chip" key={genre}>{genre}</span>
+                  ))}
+                </div>
+              ) : null}
+              <ForYouContextCard recommendation={recommendation} />
+            </>
+          ) : null}
+
           {owned ? (
             <>
-              {/* Your status, pilot card. */}
+              {/* Your status, pilot card. */
               <div style={{ ...cardStyle, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
                   <span style={sectionTitleStyle}>Your status</span>
@@ -585,6 +633,27 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
                 </div>
               </div>
             </>
+          ) : isForYou ? (
+            <div className="game-page-primary-actions">
+              <button
+                type="button"
+                className="game-page-primary"
+                aria-pressed={wishActive}
+                onClick={() => toggleWishlist({ id: igdbId, name: title, cover: coverSrc, year })}
+              >
+                {wishActive ? '✓ Wishlisted' : '+ Wishlist'}
+              </button>
+              {onAsk ? (
+                <button
+                  type="button"
+                  className="game-page-secondary"
+                  onClick={() => onAsk(seed)}
+                  aria-label={`Ask GameDeck about ${title}`}
+                >
+                  ✦ Ask GameDeck
+                </button>
+              ) : null}
+            </div>
           ) : (
             /* Discover / wishlist primary actions: wishlist toggle + More like this. */
             <div className="discover-actions" style={{ margin: 0 }}>
@@ -715,7 +784,7 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
                 </div>
               ) : null}
 
-              {genres.length ? (
+              {genres.length && !isForYou ? (
                 <div className="chip-wrap" style={{ margin: 0 }}>
                   {genres.map((g) => (
                     <span className="meta-chip" key={g}>
