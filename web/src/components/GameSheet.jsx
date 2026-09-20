@@ -19,11 +19,8 @@ import { useWishlist, toggleWishlist } from '../lib/wishlist.js'
 import { fetchGameById } from '../lib/discover.js'
 import { peekGameSheetMedia } from '../lib/gameSheetMedia.js'
 import {
-  REACTIONS,
   getRankingStateCache,
-  isRankingEligible,
   loadRankingState,
-  tierForPosition,
 } from '../lib/ranking.js'
 import { safeExternalUrl } from '../lib/safeUrl.js'
 import { useDialogA11y } from '../lib/useDialogA11y.js'
@@ -36,29 +33,29 @@ const loadLightbox = () => import('./Lightbox.jsx')
 const RankGameSheet = lazy(loadRankGameSheet)
 const Lightbox = lazy(loadLightbox)
 
-// ---- Pilot detail density: 18px page inset, 16px card padding, 22px radii,
-// section titles ~20px, 44px touch targets. Inline styles keep the rebuild in
-// this file only; colors come from the theme tokens.
+// Expo pilot detail density and typography. Keep these values explicit so the
+// PWA's catalog and owned-game pages stay visually aligned with the native pilot.
 const cardStyle = {
+  background: 'var(--surface)',
+  border: '1px solid var(--line-soft)',
+  borderRadius: 20,
+  padding: 12,
+}
+const statusCardStyle = {
+  ...cardStyle,
   background: 'var(--surface-2)',
-  borderRadius: 22,
-  padding: 16,
 }
 const sectionTitleStyle = {
   color: 'var(--text)',
-  fontSize: 'var(--collection-heading)',
-  fontWeight: 700,
+  fontSize: 17,
+  lineHeight: '22px',
+  fontWeight: 600,
 }
 const eyebrowStyle = {
   color: 'var(--accent)',
-  fontSize: 12,
-  fontWeight: 800,
-  letterSpacing: 1,
-  textTransform: 'uppercase',
-}
-
-function reactionLabel(reaction) {
-  return REACTIONS.find((item) => item.key === reaction)?.label || String(reaction || '').replaceAll('_', ' ')
+  fontSize: 13,
+  lineHeight: '19px',
+  fontWeight: 500,
 }
 
 function OwnedRankingAction({ game }) {
@@ -71,35 +68,20 @@ function OwnedRankingAction({ game }) {
   const { games } = useLibraryGames()
   const gameById = useMemo(() => new Map(games.map((item) => [String(item.master_id), item])), [games])
 
-  useEffect(() => {
-    let alive = true
-    loadRankingState(false, (fresh) => {
-      if (alive) setRankingState(fresh)
-    })
-      .then((state) => {
-        if (alive) setRankingState(state)
-      })
-      .catch(() => {})
-    return () => { alive = false }
-  }, [])
-
   const ranks = rankingState?.ranks || []
-  const index = ranks.findIndex((item) => String(item.master_id) === String(game.master_id))
-  const rank = index >= 0 ? ranks[index] : null
-  const eligible = Boolean(rank) || isRankingEligible(game, explicitStatus(game))
-  if (!eligible) return null
-
-  const tier = rank ? tierForPosition(index, ranks.length) : null
+  const rank = ranks.find((item) => String(item.master_id) === String(game.master_id)) || null
 
   async function openRanking() {
     if (opening) return
     setError('')
-    if (!rankingState) {
+    let state = rankingState
+    if (!state) {
       setOpening(true)
       try {
-        setRankingState(await loadRankingState())
+        state = await loadRankingState()
+        setRankingState(state)
       } catch (err) {
-        setError(err.message || 'Could not load your ranking.')
+        setError(err.message || 'Could not load your rating.')
         setOpening(false)
         return
       }
@@ -116,18 +98,15 @@ function OwnedRankingAction({ game }) {
 
   return (
     <>
-      <button type="button" className="game-sheet-rank" disabled={opening} onPointerDown={loadRankGameSheet} onFocus={loadRankGameSheet} onClick={openRanking}>
-        <span>
-          <small>My ranking</small>
-          <strong>
-            {rank
-              ? `${reactionLabel(rank.reaction)} · ${Math.round(rank.score)} · Tier ${tier}`
-              : opening
-                ? 'Opening…'
-                : 'Rank this game'}
-          </strong>
-        </span>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-9 6" /></svg>
+      <button
+        type="button"
+        className="game-sheet-rate"
+        disabled={opening}
+        onPointerDown={loadRankGameSheet}
+        onFocus={loadRankGameSheet}
+        onClick={openRanking}
+      >
+        {opening ? 'Opening…' : 'Rate / edit game'}
       </button>
       {error ? <p className="rank-error" role="alert">{error}</p> : null}
       {rankVisited ? (
@@ -189,9 +168,9 @@ function MediaSkeleton({ owned }) {
 
 function Metric({ label, value }) {
   return (
-    <div style={{ width: '50%', paddingRight: 10 }}>
+    <div style={{ width: '50%', paddingRight: 10, display: 'flex', flexDirection: 'column', gap: 2 }}>
       <div style={{ color: 'var(--muted)', fontSize: 12 }}>{label}</div>
-      <div style={{ color: 'var(--text)', fontSize: 15, fontWeight: 600 }}>{value}</div>
+      <div style={{ color: 'var(--text)', fontSize: 15, lineHeight: '20px', fontWeight: 500 }}>{value}</div>
     </div>
   )
 }
@@ -219,27 +198,6 @@ function ProgressBar({ percent, label }) {
   )
 }
 
-function ForYouContextCard({ recommendation }) {
-  if (!recommendation) return null
-  const evidence = recommendation.evidence || {}
-  const source = evidence.source?.title
-  const reason = String(
-    recommendation.reason ||
-      (evidence.shared?.length
-        ? `Explore more ${evidence.shared.slice(0, 2).join(' and ')} games.`
-        : 'A fresh discovery from your selected filters.'),
-  )
-
-  return (
-    <section className="gs-for-you-card" aria-label="Why this game was recommended">
-      <div className="gs-for-you-label">For you</div>
-      <p className="gs-for-you-reason">{reason}</p>
-      <p className="gs-for-you-note">
-        {source ? 'Based on a related game and your GameDeck activity.' : 'Based on your GameDeck activity and the filters you chose.'}
-      </p>
-    </section>
-  )
-}
 
 // One sheet for a game across Library (owned), Discover, and Wishlist. Same
 // shell and section order everywhere (hero -> Ask GameDeck -> status/primary
@@ -250,7 +208,7 @@ function ForYouContextCard({ recommendation }) {
 // status picker + ranking + progress, not-owned games get wishlist + Ask
 // GameDeck + More like this. Owned and wishlist games fetch their IGDB blurb +
 // screenshots by id so every sheet is equally rich.
-export default function GameSheet({ variant, game, recommendation = null, onClose, inLibrary = false, onAsk, onMoreLikeThis, onNotInterested }) {
+export default function GameSheet({ variant, game, onClose, inLibrary = false, onAsk, onNotInterested }) {
   const owned = variant === 'owned'
   const { closing, requestClose } = useDelayedClose(onClose)
   const dialogRef = useDialogA11y({ onClose: requestClose })
@@ -358,7 +316,6 @@ export default function GameSheet({ variant, game, recommendation = null, onClos
   if (!game) return null
 
   const title = game.title || game.name
-  const isForYou = Boolean(recommendation)
   const coverSrc = owned
     ? game.cover_igdb
       ? igdbCover(game.cover_igdb, 't_720p')
@@ -397,7 +354,7 @@ export default function GameSheet({ variant, game, recommendation = null, onClos
     len > 0 ? Math.max(0, Math.min(100, Math.round(((game.playtime_minutes || 0) / len) * 100))) : null
   const achievementPct = Math.round(Number(game.percent) || 0)
   const progressPercent = storyPct ?? achievementPct
-  const progressLabel = storyPct != null ? 'Story progress' : 'Achievement completion'
+  const progressLabel = storyPct != null ? 'Estimated story progress' : 'Achievement completion'
   const playtime = game.playtime_label || minutesToHhm(game.playtime_minutes)
 
   const wishActive = wishIds.has(Number(igdbId))
@@ -443,7 +400,7 @@ export default function GameSheet({ variant, game, recommendation = null, onClos
           <HeaderSettingsButton onOpenSettings={openSettings} />
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 6 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
           {/* Hero: cover + title + key metadata, pilot arrangement. */}
           <div className="game-page-hero">
             <div className="game-page-cover">
@@ -452,9 +409,9 @@ export default function GameSheet({ variant, game, recommendation = null, onClos
             <div className="game-page-hero-copy">
               {owned || inLibrary ? (
                 <span style={eyebrowStyle}>In your library</span>
-              ) : isForYou ? (
+              ) : (
                 <span style={eyebrowStyle}>Discover a game</span>
-              ) : null}
+              )}
               <div
                 className="gs-hero-title"
                 style={{
@@ -466,85 +423,49 @@ export default function GameSheet({ variant, game, recommendation = null, onClos
               >
                 {title}
               </div>
-              {isForYou && rating != null ? (
+              {owned ? (
+                genreYearText ? <div className="gs-hero-meta">{genreYearText}</div> : null
+              ) : rating != null ? (
                 <div className="gs-hero-rating">IGDB {Math.round(Number(rating))}/100</div>
-              ) : !isForYou && genreYearText ? (
-                <div className="gs-hero-meta">{genreYearText}</div>
               ) : null}
-              {isForYou && releaseText ? (
+              {owned ? (
+                platformText ? <div className="gs-hero-meta gs-hero-platforms">{platformText}</div> : null
+              ) : releaseText ? (
                 <div className="gs-hero-release">{releaseText}</div>
-              ) : !isForYou && platformText ? (
-                <div className="gs-hero-meta gs-hero-platforms">{platformText}</div>
               ) : null}
             </div>
           </div>
 
-          {/* Ask GameDeck, pilot CTA. Owned sheets did not have this before. */}
-          {onAsk && !isForYou ? (
-            <button
-              type="button"
-              className="gs-ask"
-              onClick={() => onAsk(seed)}
-              aria-label={`Ask GameDeck about ${title}`}
-              style={{
-                display: 'flex',
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 9,
-                width: '100%',
-                minHeight: 46,
-                padding: '8px 14px',
-                border: 0,
-                borderRadius: 16,
-                background: 'var(--accent)',
-                color: 'var(--bg)',
-                cursor: 'pointer',
-                font: 'inherit',
-                textAlign: 'left',
-              }}
-            >
-              <span aria-hidden="true" style={{ fontSize: 17, fontWeight: 800 }}>✦</span>
-              <span style={{ flex: 1 }}>
-                <span style={{ display: 'block', fontWeight: 800 }}>Ask GameDeck</span>
-                <span style={{ display: 'block', fontSize: 11, opacity: 0.72 }}>
-                  Get guidance using your GameDeck context
-                </span>
-              </span>
-              <span aria-hidden="true" style={{ fontSize: 19 }}>›</span>
-            </button>
+
+          {!owned && genres.length ? (
+            <div className="chip-wrap game-page-hero-chips">
+              {genres.slice(0, 5).map((genre) => (
+                <span className="meta-chip" key={genre}>{genre}</span>
+              ))}
+            </div>
           ) : null}
 
-          {isForYou ? (
-            <>
-              {genres.length ? (
-                <div className="chip-wrap game-page-hero-chips">
-                  {genres.map((genre) => (
-                    <span className="meta-chip" key={genre}>{genre}</span>
-                  ))}
-                </div>
-              ) : null}
-              <ForYouContextCard recommendation={recommendation} />
-            </>
-          ) : null}
 
           {owned ? (
             <>
+              <OwnedRankingAction game={game} />
+
               {/* Your status, pilot card. */}
-              <div style={{ ...cardStyle, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
+              <div style={{ ...statusCardStyle, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 6 }}>
                   <span style={sectionTitleStyle}>Your status</span>
                   <span
                     style={{
                       color: pinned ? 'var(--accent)' : 'var(--muted)',
                       fontSize: 12,
-                      fontWeight: 800,
+                      fontWeight: 600,
                       letterSpacing: 0.7,
                     }}
                   >
                     {pinned ? 'SET BY YOU' : 'GAMEDECK SUGGESTION'}
                   </span>
                 </div>
-                <div style={{ display: 'flex', gap: 6 }} role="group" aria-label="Your status for this game">
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }} role="group" aria-label="Your status for this game">
                   {STATUSES.map((s) => {
                     const active = status === s
                     const isPinned = pinned && active
@@ -554,19 +475,14 @@ export default function GameSheet({ variant, game, recommendation = null, onClos
                         type="button"
                         aria-pressed={active}
                         onClick={() => {
-                          // Tapping the status you already chose clears it, which is
-                          // the only route back to the derived value. That branch of
-                          // setStatus deletes the row; until now nothing in the app
-                          // called it, so a status was permanent once set.
-                          const clearing = pinned && status === s
-                          setStatus(game.master_id, clearing ? null : s)
-                          setPinned(!clearing)
-                          setStatusState(clearing ? derivedStatus(game) : s)
+                          setStatus(game.master_id, s)
+                          setPinned(true)
+                          setStatusState(s)
                         }}
                         style={{
-                          flex: 1,
+                          flexGrow: 1,
                           minHeight: 44,
-                          padding: '0 4px',
+                          padding: '8px 12px',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -575,8 +491,8 @@ export default function GameSheet({ variant, game, recommendation = null, onClos
                           background: active ? 'var(--accent)' : 'var(--surface)',
                           color: active ? 'var(--bg)' : 'var(--text)',
                           font: 'inherit',
-                          fontSize: 12,
-                          fontWeight: 800,
+                          fontSize: 15,
+                          fontWeight: 600,
                           cursor: 'pointer',
                         }}
                       >
@@ -585,19 +501,51 @@ export default function GameSheet({ variant, game, recommendation = null, onClos
                     )
                   })}
                 </div>
-                <p style={{ color: 'var(--muted)', fontSize: 13, lineHeight: '20px', margin: 0 }}>
+                <p style={{ color: 'var(--muted)', fontSize: 15, lineHeight: '21px', margin: 0 }}>
                   {pinned
-                    ? 'Set by you. Tap it again to clear.'
-                    : 'Worked out from your playtime. Tap to set your own.'}
+                    ? 'Your saved status is used across GameDeck.'
+                    : 'Based on your activity. Choose one to set your own status.'}
                 </p>
+                {pinned ? (
+                  <button
+                    type="button"
+                    className="game-sheet-status-reset"
+                    onClick={() => {
+                      setStatus(game.master_id, null)
+                      setPinned(false)
+                      setStatusState(derivedStatus(game))
+                    }}
+                  >
+                    Use activity-based status
+                  </button>
+                ) : null}
               </div>
 
-              <OwnedRankingAction game={game} />
+              {onAsk ? (
+                <button
+                  type="button"
+                  className="gs-ask"
+                  onClick={() => onAsk(seed)}
+                  aria-label={`Ask GameDeck about ${title}`}
+                >
+                  <span aria-hidden="true" className="gs-ask-icon">✦</span>
+                  <span className="gs-ask-copy">
+                    <strong>Ask GameDeck</strong>
+                    <small>Get guidance using your GameDeck context</small>
+                  </span>
+                  <span aria-hidden="true" className="gs-ask-chevron">›</span>
+                </button>
+              ) : null}
 
               {/* Your progress, pilot card + metrics grid. */}
-              <div style={{ ...cardStyle, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ ...cardStyle, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <span style={sectionTitleStyle}>Your progress</span>
                 <ProgressBar percent={progressPercent} label={progressLabel} />
+                {storyPct != null ? (
+                  <p className="gs-progress-note">
+                    Estimated from your playtime and typical story length. It does not measure in-game completion.
+                  </p>
+                ) : null}
                 <div style={{ display: 'flex', flexWrap: 'wrap', rowGap: 10 }}>
                   <Metric label="Status" value={STATUS_LABELS[status] || status} />
                   <Metric label="Playtime" value={playtime || 'Not recorded'} />
@@ -612,13 +560,13 @@ export default function GameSheet({ variant, game, recommendation = null, onClos
               </div>
 
               {/* At a glance, pilot card + metrics grid. */}
-              <div style={{ ...cardStyle, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ ...cardStyle, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <span style={sectionTitleStyle}>At a glance</span>
                 <div style={{ display: 'flex', flexWrap: 'wrap', rowGap: 10 }}>
                   <Metric label="Last played" value={formatDate(game.last_played) || 'Not recorded'} />
                   <Metric
                     label="Story length"
-                    value={len > 0 ? `~${Math.round(len / 60)}h` : 'Not available'}
+                    value={len > 0 ? minutesToHhm(len) : 'Not available'}
                   />
                   <Metric
                     label="IGDB rating"
@@ -630,7 +578,7 @@ export default function GameSheet({ variant, game, recommendation = null, onClos
                 </div>
               </div>
             </>
-          ) : isForYou ? (
+          ) : (
             <div className="game-page-primary-actions">
               <button
                 type="button"
@@ -651,32 +599,8 @@ export default function GameSheet({ variant, game, recommendation = null, onClos
                 </button>
               ) : null}
             </div>
-          ) : (
-            /* Discover / wishlist primary actions: wishlist toggle + More like this. */
-            <div className="discover-actions" style={{ margin: 0 }}>
-              <button
-                type="button"
-                className={`discover-action wish-action${wishActive ? ' on' : ''}`}
-                aria-pressed={wishActive}
-                aria-label={wishActive ? 'Remove from wishlist' : 'Add to wishlist'}
-                onClick={() => toggleWishlist({ id: igdbId, name: title, cover: coverSrc, year })}
-              >
-                <svg viewBox="0 0 24 24" width="17" height="17" fill={wishActive ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 21s-7-4.5-9.5-8.5A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6.5C19 16.5 12 21 12 21z" />
-                </svg>
-              </button>
-              {onMoreLikeThis ? (
-                <button
-                  type="button"
-                  className="discover-action"
-                  style={{ flex: 1, minHeight: 46 }}
-                  onClick={() => onMoreLikeThis(seed)}
-                >
-                  More like this
-                </button>
-              ) : null}
-            </div>
           )}
+
 
           {mediaPending ? (
             <MediaSkeleton owned={owned} />
@@ -686,14 +610,14 @@ export default function GameSheet({ variant, game, recommendation = null, onClos
               {summary ? (
                 <div style={cardStyle}>
                   <div style={{ ...sectionTitleStyle, marginBottom: 10 }}>About this game</div>
-                  <p style={{ color: 'var(--muted)', lineHeight: '21px', margin: 0 }}>{summary}</p>
+                  <p style={{ color: 'var(--text)', fontSize: 15, lineHeight: '21px', fontWeight: 400, margin: 0 }}>{summary}</p>
                 </div>
               ) : null}
 
               {/* Catalog details, pilot card. */}
               {hasCatalogFacts || url ? (
-                <div style={{ ...cardStyle, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <span style={sectionTitleStyle}>Catalog details</span>
+                <div style={{ ...cardStyle, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <span style={sectionTitleStyle}>{owned ? 'Catalog details' : 'At a glance'}</span>
                   {studio ? (
                     <div>
                       <div style={{ color: 'var(--muted)', fontSize: 13 }}>Studio</div>
@@ -714,19 +638,14 @@ export default function GameSheet({ variant, game, recommendation = null, onClos
                       </div>
                     </div>
                   ) : null}
-                  {rating != null && !owned ? (
-                    <div>
-                      <div style={{ color: 'var(--muted)', fontSize: 13 }}>IGDB rating</div>
-                      <div style={{ color: 'var(--text)', fontSize: 'var(--collection-title)', fontWeight: 600 }}>{rating} / 100</div>
-                    </div>
-                  ) : null}
+
                   {safeGameUrl ? (
                     <a
                       className="detail-link"
                       href={safeGameUrl}
                       target="_blank"
                       rel="noreferrer noopener"
-                      style={{ color: 'var(--accent)', fontWeight: 800 }}
+                      style={{ color: 'var(--accent)', fontSize: 15, fontWeight: 600 }}
                     >
                       View on IGDB
                     </a>
@@ -737,7 +656,7 @@ export default function GameSheet({ variant, game, recommendation = null, onClos
                       href={safeAchievementsUrl}
                       target="_blank"
                       rel="noreferrer noopener"
-                      style={{ color: 'var(--accent)', fontWeight: 800 }}
+                      style={{ color: 'var(--accent)', fontSize: 15, fontWeight: 600 }}
                     >
                       View achievements
                     </a>
@@ -749,6 +668,7 @@ export default function GameSheet({ variant, game, recommendation = null, onClos
               {screenshots.length ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <span style={sectionTitleStyle}>Screenshots</span>
+                  <span className="gs-screenshot-hint">Tap to enlarge</span>
                   <div className="shot-strip" style={{ margin: '0 -18px', paddingLeft: 18, paddingRight: 18 }}>
                     {screenshots.map((s, i) => (
                       <button
@@ -781,15 +701,7 @@ export default function GameSheet({ variant, game, recommendation = null, onClos
                 </div>
               ) : null}
 
-              {genres.length && !isForYou ? (
-                <div className="chip-wrap" style={{ margin: 0 }}>
-                  {genres.map((g) => (
-                    <span className="meta-chip" key={g}>
-                      {g}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
+
             </>
           )}
 
