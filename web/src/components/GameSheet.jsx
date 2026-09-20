@@ -27,7 +27,6 @@ import {
 } from '../lib/ranking.js'
 import { safeExternalUrl } from '../lib/safeUrl.js'
 import { useDialogA11y } from '../lib/useDialogA11y.js'
-import { formatRecommendationReason } from '../lib/forYouEngine.js'
 import './gameSheet.css'
 
 const loadRankGameSheet = () => import('./RankGameSheet.jsx')
@@ -224,13 +223,9 @@ function ForYouContextCard({ recommendation }) {
   const source = evidence.source?.title
   const reason = String(
     recommendation.reason ||
-      formatRecommendationReason({
-        source: evidence.source,
-        lane: evidence.laneEvidence,
-        shared: evidence.shared || [],
-        comparisonCoverageComplete: evidence.comparisonCoverageComplete !== false,
-      }) ||
-      'A fresh discovery from your selected filters.',
+      (evidence.shared?.length
+        ? `Explore more ${evidence.shared.slice(0, 2).join(' and ')} games.`
+        : 'A fresh discovery from your selected filters.'),
   )
 
   return (
