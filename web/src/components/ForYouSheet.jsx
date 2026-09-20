@@ -1,5 +1,8 @@
+import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useDialogA11y } from '../lib/useDialogA11y.js'
 import { useDelayedClose } from '../lib/useDelayedClose.js'
+import { lockScroll } from '../lib/scrollLock.js'
 import './forYou.css'
 
 // Modal page sheet for the For You surfaces ("Why this pick", "Tune your
@@ -15,8 +18,11 @@ export default function ForYouSheet({
 }) {
   const { closing, requestClose } = useDelayedClose(onClose)
   const dialogRef = useDialogA11y({ active: true, onClose: busy || closing ? null : requestClose })
+  useEffect(() => lockScroll(), [])
 
-  return (
+  // Page transitions create containing blocks for fixed descendants. Keep all
+  // For You sheets at the viewport level, like the shared game detail page.
+  return createPortal(
     <div
       className={`modal-backdrop${closing ? ' closing' : ''}`}
       onClick={(event) => {
@@ -44,6 +50,7 @@ export default function ForYouSheet({
         </div>
         <div className="filter-sheet-scroll fy-sheet-scroll">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

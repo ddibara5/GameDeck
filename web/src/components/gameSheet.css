@@ -291,6 +291,15 @@
   background: var(--surface-2);
 }
 
+.game-page-cover .cover-lg {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  margin: 0;
+  aspect-ratio: auto;
+  border-radius: inherit;
+}
+
 .game-page-hero-copy {
   flex: 1;
   min-width: 0;
@@ -302,10 +311,7 @@
 }
 
 .gs-hero-title {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  overflow: hidden;
+  display: block;
   overflow-wrap: anywhere;
 }
 

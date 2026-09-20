@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { lockScroll } from '../lib/scrollLock.js'
 import DiscoverDetail from './DiscoverDetail.jsx'
 import DiscoverRailList from './DiscoverRailList.jsx'
 import Cover from './Cover.jsx'
@@ -155,6 +157,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
   const [defaultNotice, setDefaultNotice] = useState(0)
   const [openFilterSection, setOpenFilterSection] = useState(null)
   const filterDialogRef = useDialogA11y({ active: showFilters, onClose: () => setShowFilters(false) })
+  useEffect(() => showFilters ? lockScroll() : undefined, [showFilters])
 
   const [rails, setRails] = useState({}) // key -> games[]; a key is undefined until its batch resolves
 
@@ -584,7 +587,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
         Customize rows
       </button>
 
-      {showFilters ? (
+      {showFilters ? createPortal(
         <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && setShowFilters(false)}>
           <div ref={filterDialogRef} className="modal-sheet filter-sheet discover-filter-sheet" role="dialog" aria-modal="true" aria-label="Filters">
             <div className="modal-handle" />
@@ -754,7 +757,8 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       ) : null}
 
       {defaultNotice ? (
