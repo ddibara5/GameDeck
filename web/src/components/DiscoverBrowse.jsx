@@ -30,6 +30,7 @@ import {
 } from '../lib/productionScale.js'
 import { useDialogA11y } from '../lib/useDialogA11y.js'
 import DiscoverFilterButton from './DiscoverFilterButton.jsx'
+import { HomeCustomizeBar } from './HomeCustomizer.jsx'
 import BrowseFilterFields from './BrowseFilterFields.jsx'
 import DiscoverDefaultControl from './DiscoverDefaultControl.jsx'
 
@@ -491,9 +492,6 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
       <div className="discover-section-toolbar">
         <h2 className="discover-section-label">Explore games</h2>
         <div className="discover-section-actions">
-          <button type="button" className="discover-layout-button" aria-label="Customize rows" aria-haspopup="dialog" onClick={() => onCustomize?.()}>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="7" rx="1" /><rect x="3" y="14" width="18" height="7" rx="1" /></svg>
-          </button>
           <DiscoverFilterButton activeCount={activeFilterCount} onClick={openFilters} />
         </div>
       </div>
@@ -577,6 +575,11 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
               </section>
             )
       })}
+
+      <div className="discover-customize-wrap">
+        <HomeCustomizeBar onPress={() => onCustomize?.()} />
+      </div>
+
       {showFilters ? createPortal(
         <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && setShowFilters(false)}>
           <div ref={filterDialogRef} className="modal-sheet filter-sheet discover-filter-sheet browse-filter-sheet" role="dialog" aria-modal="true" aria-label="Discover filters">
