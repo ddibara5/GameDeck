@@ -649,18 +649,17 @@
 }
 
 .ns-title {
-  font-size: var(--t-t2);
+  font-size: var(--t-t3);
   font-weight: var(--w-bold);
-  line-height: 1.2;
-  letter-spacing: var(--t-t2-tr);
+  line-height: 1.22;
+  letter-spacing: var(--t-t3-tr);
   color: var(--text);
   margin: 0 0 12px;
 }
 
 .ns-sum {
-  font-size: var(--t-body);
-  line-height: 1.5;
+  font-size: var(--t-sub);
+  line-height: 1.52;
   color: var(--text);
-  letter-spacing: var(--t-body-tr);
   margin: 14px 0 0;
 }
