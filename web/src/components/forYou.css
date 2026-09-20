@@ -610,6 +610,19 @@
   gap: 12px;
   padding: 0 16px;
 }
+.fy-list-head .detail-title {
+  margin: 0;
+  font-family: inherit;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 25px;
+}
+.fy-list-head .detail-sub {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--muted);
+}
 .fy-list-head > :first-child {
   min-width: 0;
 }

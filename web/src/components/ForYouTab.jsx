@@ -353,7 +353,7 @@ export default function ForYouTab({
     <div className="fy-list">
       <div className="fy-list-head">
         <div>
-          <h1 className="detail-title">Your daily mix</h1>
+          <h2 className="detail-title">Your daily mix</h2>
           <p className="detail-sub">
             {deck ? `${deck.length} picks for you` : 'A little familiar. A little unexpected.'}
           </p>
