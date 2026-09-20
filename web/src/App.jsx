@@ -210,6 +210,26 @@ function GameDeckApp() {
     writeLocation({ tab, view: null, searchOpen: false, searchScope: null, searchMode: null }, replace)
   }, [writeLocation])
 
+  // "Tune this taste" from a For You explanation sheet: push Rankings
+  // compare mode with the lane-anchored duel, and clear the launch when the
+  // duel returns after a decided duel. Any other entry into Rankings
+  // (bottom nav, Home entry points, Menu drawer) clears a leftover launch
+  // so it fires exactly once.
+  const [tuneLaunch, setTuneLaunch] = useState(null)
+
+  const openTuneTaste = useCallback(
+    (launch) => {
+      setTuneLaunch(launch)
+      navigateTab('rankings')
+    },
+    [navigateTab],
+  )
+
+  const handleReturnToForYou = useCallback(() => {
+    setTuneLaunch(null)
+    navigateTab('foryou')
+  }, [navigateTab])
+
   const openSearch = useCallback(() => {
     const scope = defaultSearchScope({ activeTab, view })
     loadGlobalSearch()
@@ -466,6 +486,7 @@ function GameDeckApp() {
             <HomeTab
               onOpenTab={(t) => {
                 closeView()
+                if (t === 'rankings') setTuneLaunch(null)
                 navigateTab(t)
               }}
               onOpenList={openView}
@@ -475,9 +496,9 @@ function GameDeckApp() {
           {activeTab === 'activity' && <ActivityTab />}
           {activeTab === 'insights' && <InsightsTab />}
           {activeTab === 'discover' && <DiscoverTab onCustomize={openCustomizeRows} onAsk={openAsk} />}
-          {activeTab === 'foryou' && <ForYouTab onAsk={openAsk} onBrowse={() => navigateTab('discover')} onOpenTaste={openTasteProfile} />}
+          {activeTab === 'foryou' && <ForYouTab onAsk={openAsk} onBrowse={() => navigateTab('discover')} onOpenTaste={openTasteProfile} onTuneTaste={openTuneTaste} />}
           {activeTab === 'news' && <NewsTab />}
-          {activeTab === 'rankings' && <RankingsTab />}
+          {activeTab === 'rankings' && <RankingsTab launch={tuneLaunch} onReturnToForYou={handleReturnToForYou} />}
         </Suspense>
       </main>
       {view ? (
@@ -507,6 +528,10 @@ function GameDeckApp() {
           active={view ? null : activeTab}
           onChange={(t) => {
             closeView()
+            // A tune launch is consumed once: clear it when the user opens
+            // Rankings from the bottom nav. Kept out of navigateTab so
+            // openTuneTaste's own navigation does not clear the fresh launch.
+            if (t === 'rankings') setTuneLaunch(null)
             navigateTab(t)
           }}
           onSearch={openSearch}
@@ -527,6 +552,7 @@ function GameDeckApp() {
         searchPinned={!nav.barShown}
         onOpenTab={(t) => {
           closeView()
+          if (t === 'rankings') setTuneLaunch(null)
           navigateTab(t)
         }}
         onWarmTab={(t) => warmLoader(TAB_LOADERS[t])}

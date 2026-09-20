@@ -9,6 +9,7 @@ import {
   RANK_REACTIONS,
   RANK_REACTION_LABELS,
   RANK_SKIP_CUTOFF_MS,
+  chooseAnchoredRankingPair,
   chooseRankingPair,
   getRankingStateCache,
   isRankingEligible,
@@ -16,6 +17,7 @@ import {
   recordComparison,
   setRankReaction,
 } from '../lib/ranking.js'
+import { publishLaneDuelReceipt, shouldReturnFromLaneDuel } from '../lib/laneDuel.js'
 import { buildDuelReceipt, loadTasteProfile } from '../lib/tasteProfile.js'
 import './rankings.css'
 
@@ -123,9 +125,11 @@ function CompareCard({ game, score, onPick, disabled }) {
   )
 }
 
-export default function RankingsTab() {
+export default function RankingsTab({ launch = null, onReturnToForYou = null }) {
   const cachedState = getRankingStateCache()
-  const [section, setSection] = useState('ranking')
+  const [laneFocus, setLaneFocus] = useState(() => launch?.laneKey || null)
+  const [laneLabel] = useState(() => launch?.laneLabel || null)
+  const [section, setSection] = useState(() => (launch?.laneKey ? 'compare' : 'ranking'))
   const { games, loading: gamesLoading } = useLibraryGames()
   const statuses = useStatusMap()
   const [state, setState] = useState(() => cachedState || { ranks: [], comparisons: [] })
@@ -172,6 +176,31 @@ export default function RankingsTab() {
   )
   const rankedIds = useMemo(() => new Set(ranked.map(({ rank }) => String(rank.master_id))), [ranked])
   const eligibleIds = useMemo(() => new Set(eligible.map((game) => String(game.master_id))), [eligible])
+  // Slice 4: lane-anchored duel. laneSet is the launch's lane members;
+  // laneItems are ranked, eligible (owned) games that belong to the lane.
+  const laneSet = useMemo(
+    () => new Set((launch?.laneMemberIds || []).map(Number)),
+    [launch],
+  )
+  const laneItems = useMemo(
+    () =>
+      ranked.filter(
+        ({ rank }) =>
+          eligibleIds.has(String(rank.master_id)) && laneSet.has(Number(rank.master_id)),
+      ),
+    [ranked, eligibleIds, laneSet],
+  )
+  const laneAnchorId = launch?.anchorId ? Number(launch.anchorId) : null
+  const laneAnchorPresent =
+    laneAnchorId == null || laneItems.some(({ rank }) => Number(rank.master_id) === laneAnchorId)
+  // Too few lane games (or a missing anchor) degrades to standard compare.
+  useEffect(() => {
+    if (loading || gamesLoading) return
+    if (laneFocus && (laneItems.length < 2 || !laneAnchorPresent)) {
+      setNotice('Not enough ranked games in this lane for a duel yet.')
+      setLaneFocus(null)
+    }
+  }, [laneFocus, laneItems, laneAnchorPresent, loading, gamesLoading])
   const searchResults = useMemo(() => {
     if (!searchOpen) return []
     const query = rankQuery.trim().toLowerCase()
@@ -186,10 +215,16 @@ export default function RankingsTab() {
       })
       .slice(0, 8)
   }, [searchOpen, rankQuery, games, eligible, rankedIds])
-  const pair = useMemo(
-    () => chooseRankingPair(ranked.map((item) => item.rank), state.comparisons, skipCutoff),
-    [ranked, state.comparisons, skipCutoff],
-  )
+  const pair = useMemo(() => {
+    if (!laneFocus) {
+      return chooseRankingPair(ranked.map((item) => item.rank), state.comparisons, skipCutoff)
+    }
+    const laneRanks = laneItems.map((item) => item.rank)
+    if (laneAnchorId != null) {
+      return chooseAnchoredRankingPair(laneRanks, state.comparisons, skipCutoff, laneAnchorId)
+    }
+    return chooseRankingPair(laneRanks, state.comparisons, skipCutoff)
+  }, [laneFocus, ranked, laneItems, laneAnchorId, state.comparisons, skipCutoff])
 
   const compare = async (result) => {
     if (!pair || busy) return
@@ -209,6 +244,24 @@ export default function RankingsTab() {
       if (result === 'skip') {
         setNotice('Skipped. That pair stays out of rotation for 90 days.')
       } else {
+        // Slice 4: a decided lane duel publishes an in-memory receipt and
+        // returns to For You; the slice-3 transient receipt is skipped since
+        // we navigate away. Skips keep the 90-day notice and do not return.
+        if (shouldReturnFromLaneDuel(launch, laneFocus, result)) {
+          const winnerId = result === 'left' ? leftId : rightId
+          const loserId = result === 'left' ? rightId : leftId
+          await publishLaneDuelReceipt({
+            recommendationId: launch.recommendationId,
+            laneKey: launch.laneKey,
+            laneLabel,
+            winnerId,
+            winnerTitle: titleOf(winnerId),
+            loserId,
+            loserTitle: titleOf(loserId),
+          })
+          onReturnToForYou?.()
+          return
+        }
         // The duel flywheel: this result is already in the taste profile
         // (recordComparison busted its cache), so the receipt can cite the
         // lanes the winner now feeds.
@@ -258,6 +311,7 @@ export default function RankingsTab() {
 
   const leftGame = pair ? gameById.get(String(pair.left.master_id)) : null
   const rightGame = pair ? gameById.get(String(pair.right.master_id)) : null
+  const anchorGame = laneFocus && laneAnchorId != null ? gameById.get(String(laneAnchorId)) : null
   const totalComparisons = (state.comparisons || []).length
 
   return (
@@ -278,6 +332,9 @@ export default function RankingsTab() {
               onClick={() => {
                 setSection(item.key)
                 setSearchOpen(false)
+                // Leaving lane mode for the ranking list clears the lane
+                // focus; a fresh "Tune this taste" launch re-arms it.
+                if (item.key === 'ranking') setLaneFocus(null)
               }}
             >
               {item.label}
@@ -356,6 +413,25 @@ export default function RankingsTab() {
 
       {section === 'compare' ? (
         <div className="rank-compare">
+          {laneFocus ? (
+            <div className="rank-lane-intro" style={{ margin: '0 0 var(--space-3)' }}>
+              <p style={{ fontWeight: 700, margin: '0 0 4px' }}>
+                Tuning your {laneLabel || laneFocus} taste
+              </p>
+              {anchorGame ? (
+                <p style={{ color: 'var(--muted)', fontSize: 'var(--t-foot)', margin: '0 0 var(--space-2)' }}>
+                  Anchored on {anchorGame.title}
+                </p>
+              ) : null}
+              <button
+                type="button"
+                className="rank-skip"
+                onClick={() => setLaneFocus(null)}
+              >
+                Back to standard Compare
+              </button>
+            </div>
+          ) : null}
           <p style={{ color: 'var(--muted)', fontSize: 'var(--t-cap)', margin: '0 0 var(--space-3)' }}>
             {sessionDuels} {sessionDuels === 1 ? 'duel' : 'duels'} this session · {totalComparisons} total comparisons
           </p>

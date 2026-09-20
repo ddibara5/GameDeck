@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { forYouLaneLabel, localDay } from '../lib/forYouEngine.js'
 import {
   forYouFilterKey,
@@ -7,6 +7,7 @@ import {
 } from '../lib/forYou.js'
 import { useForYouDeck } from '../lib/useForYouDeck.js'
 import { useRecommendationDismissals } from '../lib/recommendationDismissals.js'
+import { resolveTuneLaunch, consumeLaneDuelReceipt } from '../lib/laneDuel.js'
 import ForYouAction from './ForYouAction.jsx'
 import ForYouRow from './ForYouRow.jsx'
 import ForYouSheet from './ForYouSheet.jsx'
@@ -39,7 +40,7 @@ function toggleInList(list, key, { allowEmpty = true } = {}) {
   return next
 }
 
-function WhyContent({ pick, laneLabel }) {
+function WhyContent({ pick, laneLabel, tuneLaunch, onTuneTaste }) {
   const game = pick.game
   const title = game.title || game.name
   const cover = game.artwork || game.cover
@@ -100,6 +101,13 @@ function WhyContent({ pick, laneLabel }) {
       ) : null}
       {noteParts.length ? (
         <p className="fy-why-note">{noteParts.join(' ')}</p>
+      ) : null}
+      {tuneLaunch ? (
+        <ForYouAction
+          primary
+          label="Tune this taste"
+          onPress={() => onTuneTaste(tuneLaunch)}
+        />
       ) : null}
     </div>
   )
@@ -167,13 +175,14 @@ function OptionsContent({ pick, laneKey, laneLabel, disabled, saving, onSelect }
   )
 }
 
-export default function ForYouTab({ onAsk, onOpenTaste = null }) {
+export default function ForYouTab({ onAsk, onOpenTaste = null, onTuneTaste = null }) {
   const [filters, setFilters] = useState(() => loadForYouFilters())
   const [detailGame, setDetailGame] = useState(null)
   const [optionsPick, setOptionsPick] = useState(null)
   const [whyPick, setWhyPick] = useState(null)
   const [showFilters, setShowFilters] = useState(false)
   const [showTaste, setShowTaste] = useState(false)
+  const [tunedCard, setTunedCard] = useState(null)
   const {
     snapshot,
     loading,
@@ -192,6 +201,15 @@ export default function ForYouTab({ onAsk, onOpenTaste = null }) {
     clearNotice,
   } = useForYouDeck(filters)
   const { items: hidden } = useRecommendationDismissals()
+
+  // Lane-duel receipts are in-memory and consume-once: a decided "Tune this
+  // taste" duel marks the tuned card with a badge without reloading the
+  // day's slate, so deck ids and ordering stay fixed.
+  useEffect(() => {
+    void consumeLaneDuelReceipt().then((receipt) => {
+      if (receipt) setTunedCard(receipt)
+    })
+  }, [])
 
   const key = forYouFilterKey(filters)
   const deck = snapshot?.key === key && snapshot.day === localDay() ? snapshot.deck : null
@@ -290,6 +308,11 @@ export default function ForYouTab({ onAsk, onOpenTaste = null }) {
                     key={pick.game.id}
                     pick={pick}
                     laneLabel={forYouLaneLabel(pick, snapshot.laneKeys)}
+                    tasteUpdate={
+                      tunedCard && tunedCard.recommendationId === pick.game.id
+                        ? tunedCard.cardLabel
+                        : null
+                    }
                     disabled={saving || refreshing}
                     saving={saving}
                     exposureRef={trackExposureRef(pick.game.id)}
@@ -364,6 +387,15 @@ export default function ForYouTab({ onAsk, onOpenTaste = null }) {
           <WhyContent
             pick={whyPick}
             laneLabel={forYouLaneLabel(whyPick, snapshot?.laneKeys)}
+            tuneLaunch={
+              onTuneTaste
+                ? resolveTuneLaunch(whyPick, snapshot?.evidenceProfile)
+                : null
+            }
+            onTuneTaste={(launch) => {
+              setWhyPick(null)
+              onTuneTaste(launch)
+            }}
           />
         </ForYouSheet>
       ) : null}

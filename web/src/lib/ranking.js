@@ -181,6 +181,11 @@ export async function recordComparison(leftId, rightId, result) {
 
 // --- Expo pilot parity: ranking list + compare (duel) mode ---
 
+// Slice 4: lane-anchored duel pairing lives in the node-safe rankingPairs
+// module (this module imports supabase, which is browser-only). Re-exported
+// here so components keep importing from ranking.js.
+export { chooseAnchoredRankingPair, eligibleOwnedLaneRankings } from './rankingPairs.js'
+
 export const RANK_REACTIONS = ['loved', 'liked', 'mixed', 'not_for_me']
 
 export const RANK_REACTION_LABELS = {
