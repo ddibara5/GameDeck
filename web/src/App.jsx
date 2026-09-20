@@ -5,7 +5,7 @@ import HeaderSettingsButton from './components/HeaderSettingsButton.jsx'
 import TabBar from './components/TabBar.jsx'
 import { useNewsUnread } from './lib/newsUnread.js'
 import { useNavConfig, getNavConfig, visibleKeys, TAB_BY_KEY } from './lib/navConfig.js'
-import { overlaysOpen } from './lib/useEdgeBack.js'
+import { useEdgeBack, overlaysOpen } from './lib/useEdgeBack.js'
 import { warmOnIdle } from './lib/warmChunks.js'
 import AuthGate from './components/AuthGate.jsx'
 import { useAppSession } from './lib/appAuth.js'
@@ -429,16 +429,11 @@ function GameDeckApp() {
       // A full-screen overlay (Wishlist, status/smart lists) is open: an edge
       // swipe-in goes back to close it. There is no drawer anymore, so an edge
       // swipe never opens anything.
+      // (Home sub-pages use the edge-back stack below, not this handler, so a
+      // sheet opened over them owns the gesture while it's up.)
       if (view) {
         if (!viewClosing && fromEdge && dx > OPEN_DX) {
           closeView()
-          tracking = false
-        }
-      } else if (!searchOpen && SUBPAGE_TABS.includes(activeTab)) {
-        // A Home sub-page (For You, Rankings, Insights, News): the edge swipe
-        // mirrors the header back caret and returns to Home.
-        if (fromEdge && dx > OPEN_DX) {
-          goHome()
           tracking = false
         }
       }
@@ -455,7 +450,19 @@ function GameDeckApp() {
       window.removeEventListener('touchmove', onMove)
       window.removeEventListener('touchend', onEnd)
     }
-  }, [settingsOpen, customizeOpen, customizeBarOpen, view, viewClosing, activeTab, searchOpen, goHome])
+  }, [settingsOpen, customizeOpen, customizeBarOpen, view, viewClosing])
+
+  // Home sub-pages (For You, Rankings, Insights, News): the edge swipe mirrors
+  // the header back caret and returns to Home. This registers in the edge-back
+  // stack (like the overlays do) instead of consulting the global boolean, so
+  // a sheet opened over the sub page registers later and owns the gesture
+  // while it's up; App's entry only fires when it is topmost. Suppressed while
+  // Settings / Customize is up (they have their own edge-back handling).
+  const onSubPage = !view && !searchOpen && SUBPAGE_TABS.includes(activeTab)
+  useEdgeBack(goHome, {
+    register: onSubPage,
+    disabled: !onSubPage || settingsOpen || customizeOpen || customizeBarOpen,
+  })
 
   return (
     // `bar-off` collapses --tabbar-height to zero for everything inside, which

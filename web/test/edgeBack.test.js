@@ -55,3 +55,25 @@ test('unregistering an unknown id is a no-op', () => {
   unregisterEdgeBack(a)
   assert.equal(overlaysOpen(), false)
 })
+
+test('sub-page back entry yields to a sheet opened over it, then reclaims the gesture', () => {
+  // Models App's fix: on a Home sub page (For You, Rankings, Insights, News)
+  // App registers its back-to-Home intent in the edge-back stack (the
+  // useEdgeBack register:true path). A sheet opened over the sub page
+  // registers later, so topmost arbitration (not the global boolean) decides.
+  const appEntry = registerEdgeBack()
+  assert.equal(isEdgeBackTopmost(appEntry), true)
+
+  // A game/rank/news sheet opens over the sub page: it owns the gesture now.
+  const sheet = registerEdgeBack()
+  assert.equal(isEdgeBackTopmost(appEntry), false)
+  assert.equal(isEdgeBackTopmost(sheet), true)
+
+  // Sheet closes: the gesture returns to the sub page's back entry.
+  unregisterEdgeBack(sheet)
+  assert.equal(isEdgeBackTopmost(appEntry), true)
+
+  // Leaving the sub page unregisters App's entry; the stack is empty again.
+  unregisterEdgeBack(appEntry)
+  assert.equal(overlaysOpen(), false)
+})
