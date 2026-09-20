@@ -311,7 +311,7 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
     setSettingsUp(true)
     window.dispatchEvent(new CustomEvent('gamedeck:open-settings'))
   }, [])
-  useEdgeBack(requestClose, { disabled: settingsUp || shotIndex !== null })
+  useEdgeBack(requestClose, { disabled: closing || settingsUp || shotIndex !== null })
 
   if (!game) return null
 
