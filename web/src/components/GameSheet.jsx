@@ -28,6 +28,8 @@ import {
 import { safeExternalUrl } from '../lib/safeUrl.js'
 import { useDialogA11y } from '../lib/useDialogA11y.js'
 import './gameSheet.css'
+// OwnedRankingAction renders before the lazy ranking editor is opened.
+import './rankings.css'
 
 const loadRankGameSheet = () => import('./RankGameSheet.jsx')
 const loadLightbox = () => import('./Lightbox.jsx')
