@@ -15,7 +15,7 @@ import {
   faviconFor,
 } from '../lib/news.js'
 import { remoteImg } from '../lib/format.js'
-import { addToWishlist } from '../lib/wishlist.js'
+import { addToWishlist, useWishlist } from '../lib/wishlist.js'
 import { safeExternalUrl } from '../lib/safeUrl.js'
 import { useDialogA11y } from '../lib/useDialogA11y.js'
 import './news.css'
@@ -166,7 +166,11 @@ export default function NewsSheet({ item, rel, onClose, onOpenGame }) {
 
 function GameRow({ item, rel, onOpen }) {
   const [imgFailed, setImgFailed] = useState(false)
-  const owned = rel.status === 'library' || rel.status === 'wishlist'
+  const [adding, setAdding] = useState(false)
+  const { ids: wishlistIds } = useWishlist()
+  const gameId = Number(item.gameIgdbId) || 0
+  const wishlisted = rel.status === 'wishlist' || (gameId > 0 && wishlistIds.has(gameId))
+  const owned = rel.status === 'library' || wishlisted
   // Three sources, narrowest first: the story's own cover, then the matched
   // library row's IGDB id, then whatever art the platform sync stored. Only the
   // first two are IGDB image ids; cover_small is a full platform url and must
@@ -199,18 +203,26 @@ function GameRow({ item, rel, onOpen }) {
         </span>
         <span className="news-game-meta">
           <span className="news-game-name">{rel.row?.title || item.gameName}</span>
-          {rel.status ? <StatusPill status={rel.status} /> : null}
+          {rel.status === 'library' ? <StatusPill status="library" /> : wishlisted ? <StatusPill status="wishlist" /> : rel.status ? <StatusPill status={rel.status} /> : null}
         </span>
       </Hit>
-      {!owned ? (
+      {!owned && gameId > 0 ? (
         <button
           type="button"
           className="news-game-btn primary"
-          onClick={() =>
-            addToWishlist({ id: item.gameIgdbId, name: item.gameName, cover: item.gameCover })
-          }
+          disabled={adding}
+          aria-busy={adding}
+          onClick={async () => {
+            if (adding) return
+            setAdding(true)
+            try {
+              await addToWishlist({ id: gameId, name: item.gameName, cover: item.gameCover })
+            } finally {
+              setAdding(false)
+            }
+          }}
         >
-          + Wishlist
+          {adding ? 'Adding…' : '+ Wishlist'}
         </button>
       ) : null}
     </div>
