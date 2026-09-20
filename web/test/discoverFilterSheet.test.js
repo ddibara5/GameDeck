@@ -108,15 +108,16 @@ test('Browse and For You expose explicit saved-default controls', async () => {
   assert.match(styles, /@media \(max-width: 480px\)[\s\S]*?\.filter-default-meta\s*{[\s\S]*?position: static/)
 })
 
-test('Customize rows entry styling is available before its lazy editor loads', async () => {
-  const [baseStyles, editorStyles, browse] = await Promise.all([
-    readFile(new URL('../src/index.css', import.meta.url), 'utf8'),
-    readFile(new URL('../src/components/customizeRows.css', import.meta.url), 'utf8'),
+test('Discover row customization uses the same bottom Customize treatment as Home', async () => {
+  const [browse, discoverStyles, homeCustomizer] = await Promise.all([
     readFile(new URL('../src/components/DiscoverBrowse.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/discover.css', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/HomeCustomizer.jsx', import.meta.url), 'utf8'),
   ])
 
-  assert.match(baseStyles, /\.customize-btn\s*{[\s\S]*?width: calc\(100% - 32px\)/)
-  assert.match(baseStyles, /\.customize-btn svg\s*{[\s\S]*?width: 18px/)
-  assert.doesNotMatch(editorStyles, /\.customize-btn/)
-  assert.match(browse, /className="discover-layout-button" aria-label="Customize rows"[\s\S]*?<svg[^>]*aria-hidden="true"/)
+  assert.match(browse, /import \{ HomeCustomizeBar \} from '\.\/HomeCustomizer\.jsx'/)
+  assert.match(browse, /className="discover-customize-wrap"[\s\S]*?<HomeCustomizeBar onPress=\{\(\) => onCustomize\?\.\(\)\}/)
+  assert.doesNotMatch(browse, /discover-layout-button/)
+  assert.match(discoverStyles, /\.discover-customize-wrap\s*{[\s\S]*?justify-content: center/)
+  assert.match(homeCustomizer, /className="hc-bar"/)
 })
