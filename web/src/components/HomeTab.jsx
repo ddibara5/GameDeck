@@ -4,13 +4,12 @@ import GameSheet, { preloadGameSheet } from './LazyGameSheet.jsx'
 import { HomeCustomizeBar, HomeCustomizeSheet } from './HomeCustomizer.jsx'
 import { TAB_ICONS } from './TabBar.jsx'
 import { preloadLibrary, useLibraryGames } from '../lib/useLibraryGames.js'
-import { useStatusMap } from '../lib/userStatus.js'
 import { gameArtworkUrl } from '../lib/homeInsights.js'
 import { releaseWatch } from '../lib/homeReleaseWatch.js'
 import { getNewsCache, loadNews, markRead, resolveGame, buildLibraryIndex } from '../lib/news.js'
 import { loadHomeLayout, saveHomeLayout } from '../lib/homeLayout.js'
 import { useWishlist } from '../lib/wishlist.js'
-import { gameProgress, libraryTitleKey, sortRecentGames, wishlistProgress } from '../lib/homeRails.js'
+import { gameProgress, sortRecentGames } from '../lib/homeRails.js'
 import { libraryCover, releaseCardLabel } from '../lib/format.js'
 import './homeCards.css'
 import './homeRails.css'
@@ -131,8 +130,6 @@ function TopStory({ item, unread, onOpenNews, onOpenStory }) {
 
 export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
   const { games, loading: libraryLoading, error: libraryError } = useLibraryGames()
-  const statusMap = useStatusMap()
-
   // Wishlist is already a local-first SWR source. Reusing it here removes a
   // second uncached Supabase round trip from Home and keeps the preview/counts
   // in sync with the expanded Release watch page.
@@ -176,14 +173,6 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
     }
   }, [])
 
-  const libraryByIgdb = useMemo(
-    () => new Map(games.flatMap((game) => (game.igdb_id != null ? [[game.igdb_id, game]] : []))),
-    [games],
-  )
-  const libraryByTitle = useMemo(
-    () => new Map(games.map((game) => [libraryTitleKey(game.title), game])),
-    [games],
-  )
   const releases = useMemo(() => releaseWatch(wishlistItems), [wishlistItems])
 
   // Recently played library games, most recent first. Feeds the Recent play
@@ -221,7 +210,6 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
     key: String(item.igdb_id ?? item.title),
     title: item.title,
     artwork: gameArtworkUrl(item.cover, null),
-    progress: wishlistProgress(item, libraryByIgdb, libraryByTitle),
     meta: releaseCardLabel({
       released: item.released,
       precision: item.date_precision,
