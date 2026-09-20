@@ -4552,3 +4552,145 @@ textarea {
     min-height: 54px;
   }
 }
+
+
+/* ---------- Bottom navigation legibility pass ----------
+   Finance Hub's floating nav uses a nearly opaque (~94%) surface with moderate
+   blur. GameDeck keeps that same readability baseline while preserving each
+   theme's own palette, geometry and active-accent language. */
+:root {
+  --nav-surface: color-mix(in srgb, var(--surface) 94%, transparent);
+  --nav-idle: color-mix(in srgb, var(--text) 72%, var(--muted));
+  --nav-active: var(--text);
+  --nav-active-icon: var(--accent);
+  --nav-border: color-mix(in srgb, var(--text) 18%, var(--glass-line));
+  --nav-blur: blur(16px) saturate(135%);
+}
+
+:root[data-theme-family='curator'] {
+  --nav-surface: color-mix(in srgb, var(--surface) 95%, transparent);
+  --nav-idle: color-mix(in srgb, var(--text) 74%, var(--muted));
+  --nav-border: color-mix(in srgb, var(--accent) 18%, var(--line));
+}
+
+:root[data-theme-family='obsidian'] {
+  --nav-surface: color-mix(in srgb, var(--surface) 93%, transparent);
+  --nav-idle: color-mix(in srgb, var(--text) 76%, var(--muted));
+  --nav-border: color-mix(in srgb, var(--accent) 26%, var(--line));
+}
+
+:root[data-theme-family='xbox'] {
+  --nav-surface: color-mix(in srgb, var(--surface) 95%, transparent);
+  --nav-idle: color-mix(in srgb, var(--text) 78%, var(--muted));
+  --nav-active: color-mix(in srgb, var(--text) 94%, white);
+  --nav-border: color-mix(in srgb, var(--accent) 30%, var(--line));
+  --nav-blur: blur(14px) saturate(125%);
+}
+
+:root[data-theme-family='playstation'] {
+  --nav-surface: color-mix(in srgb, var(--surface) 94%, transparent);
+  --nav-idle: color-mix(in srgb, var(--text) 78%, var(--muted));
+  --nav-active: #f8fbff;
+  --nav-border: color-mix(in srgb, var(--accent) 30%, var(--line));
+  --nav-blur: blur(18px) saturate(140%);
+}
+
+:root[data-theme-family='cartridge'] {
+  --nav-surface: color-mix(in srgb, var(--surface) 98%, transparent);
+  --nav-idle: color-mix(in srgb, var(--text) 80%, var(--muted));
+  --nav-border: color-mix(in srgb, var(--text) 24%, var(--line));
+  --nav-blur: none;
+}
+
+:root[data-theme='light'] {
+  --nav-surface: color-mix(in srgb, var(--surface) 96%, transparent);
+  --nav-idle: color-mix(in srgb, var(--text) 72%, var(--muted));
+  --nav-active: var(--text);
+}
+
+:root[data-theme-family='playstation'][data-theme='light'] {
+  --nav-idle: #365572;
+  --nav-active: #123f68;
+  --nav-active-icon: #075f9f;
+}
+
+:root[data-theme-family='xbox'][data-theme='light'] {
+  --nav-idle: #405945;
+  --nav-active: #14251a;
+  --nav-active-icon: #107c10;
+}
+
+:root[data-theme-family='curator'][data-theme='light'] {
+  --nav-idle: #5d5246;
+  --nav-active: #2c251d;
+}
+
+:root[data-theme-family='obsidian'][data-theme='light'] {
+  --nav-idle: #4e596e;
+  --nav-active: #171a24;
+}
+
+:root[data-theme-family='cartridge'][data-theme='light'] {
+  --nav-idle: #594f3d;
+  --nav-active: #242016;
+}
+
+.tabbar,
+.global-search-trigger {
+  background: var(--nav-surface);
+  border-color: var(--nav-border);
+  -webkit-backdrop-filter: var(--nav-blur);
+  backdrop-filter: var(--nav-blur);
+}
+
+.tabbar-btn {
+  color: var(--nav-idle);
+  font-weight: var(--w-semi);
+}
+
+.tabbar-btn.active {
+  color: var(--nav-active);
+  font-weight: var(--w-bold);
+}
+
+.tabbar-btn.active .tabbar-icon {
+  color: var(--nav-active-icon);
+}
+
+.tabbar-icon svg,
+.global-search-trigger svg {
+  stroke-width: 1.95;
+}
+
+.global-search-trigger {
+  color: var(--nav-idle);
+}
+
+:root[data-theme-family='playstation'] .tabbar-btn,
+:root[data-theme-family='playstation'][data-theme='light'] .tabbar-btn {
+  color: var(--nav-idle);
+  font-weight: var(--w-semi);
+}
+
+:root[data-theme-family='playstation'] .tabbar-btn.active,
+:root[data-theme-family='playstation'][data-theme='light'] .tabbar-btn.active {
+  color: var(--nav-active);
+}
+
+:root[data-theme-family='playstation'] .tabbar-btn.active .tabbar-icon,
+:root[data-theme-family='playstation'][data-theme='light'] .tabbar-btn.active .tabbar-icon {
+  color: var(--nav-active-icon);
+}
+
+:root[data-theme-family='playstation'] .global-search-trigger,
+:root[data-theme-family='playstation'][data-theme='light'] .global-search-trigger {
+  color: var(--nav-idle);
+}
+
+/* Reduced transparency remains stronger than the normal nav material. */
+:root[data-transparency='reduced'] .tabbar,
+:root[data-transparency='reduced'] .global-search-trigger {
+  background: var(--surface);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
