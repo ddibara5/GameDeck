@@ -127,6 +127,11 @@ function GameDeckApp() {
   // Blank while a full-screen overlay is up: Wishlist and the status lists
   // print their own heading, and two would disagree about where you are.
   const headerTitle = view ? '' : TAB_BY_KEY[activeTab]?.label || ''
+  // The Home sub-pages (For You, Rankings, Insights, News - reached from
+  // Jump back in, the Top story / More news, and the Library entries) show a
+  // back caret at the top that returns to the Home tab. The full-screen
+  // overlays (Wishlist, rail lists) already carry their own back control.
+  const showHeaderBack = !view && !searchOpen && ['foryou', 'rankings', 'insights', 'news'].includes(activeTab)
 
   const writeLocation = useCallback((next, replace = false) => {
     const href = buildAppLocation(window.location.href, next)
@@ -194,6 +199,18 @@ function GameDeckApp() {
   // (bottom nav, Home entry points, Library entry point) clears a leftover launch
   // so it fires exactly once.
   const [tuneLaunch, setTuneLaunch] = useState(null)
+
+  // Back caret in the header of the Home sub-pages (For You, Rankings,
+  // Insights, News): one tap returns to Home. Same fresh-start rule as the
+  // bottom bar - leaving Rankings clears a leftover tune launch.
+  const goHome = useCallback(() => {
+    if (viewTimer.current) {
+      clearTimeout(viewTimer.current)
+      viewTimer.current = null
+    }
+    if (activeTab === 'rankings') setTuneLaunch(null)
+    navigateTab('home')
+  }, [activeTab, navigateTab])
 
   const openTuneTaste = useCallback(
     (launch) => {
@@ -431,6 +448,18 @@ function GameDeckApp() {
           fade in when the large title scrolled off is gone with the second row,
           because the title it stood in for never leaves now. */}
       <header className={`app-header${scrolled ? ' scrolled' : ''}`}>
+        {showHeaderBack ? (
+          <button
+            type="button"
+            className="header-back"
+            onClick={goHome}
+            aria-label="Back to Home"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </button>
+        ) : null}
         {headerTitle ? (
           <h1 className="page-title">
             <Brand label={headerTitle} />

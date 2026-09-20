@@ -81,17 +81,52 @@ export function recommendationTrigger(pick, laneLabel) {
   return trigger.charAt(0).toUpperCase() + trigger.slice(1)
 }
 
+// Canonical display labels for known lane keys. The canonical source for the
+// taste lanes is TASTE_LANES in tasteEvidence.js; the API PRESETS in
+// api/discover.js add arpg / fromsoft / rockstar for catalog lanes. Keys are
+// kept here (not imported) so this module stays import-light for tests.
+const LANE_DISPLAY_LABELS = {
+  soulslike: 'Soulslike',
+  openworld: 'Open world',
+  survival: 'Survival',
+  story: 'Story rich',
+  postapoc: 'Post-apocalyptic',
+  horror: 'Horror',
+  jrpg: 'JRPG',
+  stealth: 'Stealth',
+  metroidvania: 'Metroidvania',
+  arpg: 'ARPG',
+  fromsoft: 'FromSoftware',
+  rockstar: 'Rockstar',
+}
+
+// Format any lane key as a human-readable display label: canonical labels for
+// known keys; otherwise split camelCase and dash/underscore separators, then
+// title-case each word. Every rendered lane name keeps real spaces so label
+// text can never concatenate (e.g. in accessibility trees or string builds).
+export function formatLaneLabel(key) {
+  const raw = String(key || '').trim()
+  if (!raw || raw === 'new') return null
+  const known = LANE_DISPLAY_LABELS[raw.toLowerCase()]
+  if (known) return known
+  const words = raw
+    .replace(/[-_]+/g, ' ')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .split(/\s+/)
+    .filter(Boolean)
+  if (!words.length) return null
+  return words
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+}
+
 // Resolve the human label for a recommendation's lane. The engine picks carry
 // the full lane evidence (including its label); the laneKeys param is kept
 // for API parity with the pilot's for-you.ts.
 export function forYouLaneLabel(pick, laneKeys = []) {
   const lane = pick?.evidence?.laneEvidence
   if (lane?.label) return lane.label
-  const key = pick?.evidence?.lane ?? pick?.laneKey
-  if (!key || key === 'new') return null
-  return String(key)
-    .replace(/[-_]/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase())
+  return formatLaneLabel(pick?.evidence?.lane ?? pick?.laneKey)
 }
 
 // Derive the "Why this pick" reason rows for a deck pick. The engine emits a

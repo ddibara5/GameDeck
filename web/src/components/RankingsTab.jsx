@@ -18,6 +18,7 @@ import {
   setRankReaction,
 } from '../lib/ranking.js'
 import { publishLaneDuelReceipt, shouldReturnFromLaneDuel } from '../lib/laneDuel.js'
+import { formatLaneLabel } from '../lib/forYouEngine.js'
 import { buildDuelReceipt, loadTasteProfile } from '../lib/tasteProfile.js'
 import './rankings.css'
 
@@ -416,7 +417,7 @@ export default function RankingsTab({ launch = null, onReturnToForYou = null }) 
           {laneFocus ? (
             <div className="rank-lane-intro" style={{ margin: '0 0 var(--space-3)' }}>
               <p style={{ fontWeight: 700, margin: '0 0 4px' }}>
-                Tuning your {laneLabel || laneFocus} taste
+                Tuning your {laneLabel || formatLaneLabel(laneFocus) || laneFocus} taste
               </p>
               {anchorGame ? (
                 <p style={{ color: 'var(--muted)', fontSize: 'var(--t-foot)', margin: '0 0 var(--space-2)' }}>

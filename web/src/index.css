@@ -927,6 +927,54 @@ textarea {
   flex: 1;
 }
 
+/* Back caret for the Home sub-pages (For You, Rankings, Insights, News):
+   a Liquid Glass circle in the header's own language, with the accent chevron
+   the full-screen overlays already use (.wl-back). 40px so it sits centered in
+   the 56px header row. */
+.header-back {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--glass-line);
+  border-radius: 50%;
+  background: var(--glass);
+  color: var(--accent);
+  box-shadow: var(--e-nav);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--d-base) var(--ease-spring), background var(--d-fast) var(--ease-out);
+}
+
+.header-back:active {
+  transform: scale(0.94);
+}
+
+.header-back:hover {
+  background: color-mix(in oklab, var(--glass) 78%, var(--accent));
+}
+
+.header-back:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.header-back svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 /* One continuous lens moves through the glass instead of drawing a smaller
    capsule inside each button. Its footprint is the full tab slot, clipped by
    the bar at the ends, so Home and Activity inherit the bar's outer curve. */

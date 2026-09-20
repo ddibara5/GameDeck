@@ -98,8 +98,8 @@ function WhyContent({ pick, laneLabel, tuneLaunch, onTuneTaste }) {
       ) : null}
       {laneLabel ? (
         <p className="fy-why-note">
-          Served from the {laneLabel} catalog lane because your profile ranks
-          it in your top tastes.
+          Served from the{' '}{laneLabel}{' '}catalog lane because your profile
+          ranks it in your top tastes.
         </p>
       ) : null}
       {noteParts.length ? (
