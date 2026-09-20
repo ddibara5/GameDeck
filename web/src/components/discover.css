@@ -339,11 +339,6 @@
 
 /* ---------- Wishlist ---------- */
 
-/* Faint tint so the "Your wishlist" rail reads as pinned/special. */
-.wishlist-rail {
-  background: rgba(200, 169, 126, 0.05);
-}
-
 /* Overlay heart, always a sibling of the card button (never nested). */
 .shelf-card-wrap,
 .discover-card-wrap {
