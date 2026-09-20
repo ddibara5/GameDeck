@@ -53,3 +53,7 @@
 }
 
 .gd-library-sheet .detail-title { font-family: var(--font-body); font-size: var(--collection-heading); font-weight: 700; line-height: 1.25; }
+
+/* Shared FilterBuilder supplies the cards/options; match Browse's sheet chrome. */
+.gd-library-filter-sheet .filter-sheet-head { padding-bottom: 8px; }
+.gd-library-filter-sheet .filter-sheet-scroll { padding-top: 12px; }

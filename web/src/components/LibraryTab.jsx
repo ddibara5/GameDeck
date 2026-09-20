@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import LibraryGameCard from './LibraryGameCard.jsx'
+import FilterBuilder, { singleFilter } from './FilterBuilder.jsx'
 import GameDetail from './GameDetail.jsx'
 import Skeleton from './Skeleton.jsx'
 import { MessageState } from './AsyncState.jsx'
@@ -85,6 +86,7 @@ export default function LibraryTab() {
   const [genre, setGenre] = useState('any')
   const [showSearch, setShowSearch] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
+  const [filterResetKey, setFilterResetKey] = useState(0)
   const [showView, setShowView] = useState(false)
   const closeControls = () => { setShowFilters(false); setShowView(false) }
   const controlsOpen = showFilters || showView
@@ -132,6 +134,7 @@ export default function LibraryTab() {
     (vibe !== 'any' ? 1 : 0)
 
   function resetFilters() {
+    setFilterResetKey((value) => value + 1)
     setQuery('')
     setPlatformFilter('all')
     setStatusFilter('all')
@@ -305,100 +308,31 @@ export default function LibraryTab() {
 
       {showFilters ? createPortal(
         <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && setShowFilters(false)}>
-          <div ref={filterDialogRef} className="modal-sheet filter-sheet gd-library-sheet" role="dialog" aria-modal="true" aria-label="Filters">
+          <div ref={filterDialogRef} className="modal-sheet filter-sheet discover-filter-sheet gd-library-sheet gd-library-filter-sheet" role="dialog" aria-modal="true" aria-label="Library filters">
             <div className="modal-handle" />
             <button type="button" className="modal-close" aria-label="Close filters" onClick={() => setShowFilters(false)}>&times;</button>
-            <div className="detail-title">Filters</div>
-
-            <div className="filter-group">
-              <span className="filter-label">Status</span>
-              <div className="filter-options">
-                {STATUS_FILTERS.map((o) => (
-                  <button
-                    key={o.key}
-                    type="button"
-                    className={`filter-opt${statusFilter === o.key ? ' active' : ''}`}
-                    aria-pressed={statusFilter === o.key}
-                    onClick={() => setStatusFilter(o.key)}
-                  >
-                    {o.label}
-                  </button>
-                ))}
-              </div>
+            <div className="filter-sheet-head">
+              <div className="detail-title">Library filters</div>
             </div>
-
-            <div className="filter-group">
-              <span className="filter-label">Platform</span>
-              <div className="filter-options">
-                {PLATFORM_FILTERS.map((o) => (
-                  <button
-                    key={o.key}
-                    type="button"
-                    className={`filter-opt${platformFilter === o.key ? ' active' : ''}`}
-                    aria-pressed={platformFilter === o.key}
-                    onClick={() => setPlatformFilter(o.key)}
-                  >
-                    {o.label}
-                  </button>
-                ))}
-              </div>
+            <div className="filter-sheet-scroll">
+              <FilterBuilder key={filterResetKey} fields={[
+                singleFilter('status', 'Status', statusFilter, 'all', STATUS_FILTERS.map(({ key, label }) => ({ value: key, label })), setStatusFilter),
+                singleFilter('platform', 'Platform', platformFilter, 'all', PLATFORM_FILTERS.map(({ key, label }) => ({ value: key, label })), setPlatformFilter),
+                ...(genres.length ? [singleFilter('genre', 'Genre', genre, 'any', [
+                  { value: 'any', label: 'All genres' },
+                  ...genres.map((value) => ({ value, label: value.replace(' (RPG)', '') })),
+                ], setGenre)] : []),
+                ...(vibes.length ? [singleFilter('vibe', 'Vibe', vibe, 'any', [
+                  { value: 'any', label: 'Any vibe' },
+                  ...vibes.map(({ key, label }) => ({ value: key, label })),
+                ], setVibe)] : []),
+                ...(query.trim() ? [{
+                  id: 'search', label: 'Title search', active: true, summary: query,
+                  onRemove: () => setQuery(''),
+                  editor: <input className="search-input" aria-label="Filter by game title" value={query} onChange={(event) => setQuery(event.target.value)} />,
+                }] : []),
+              ]} />
             </div>
-
-            {genres.length ? (
-              <div className="filter-group">
-                <span className="filter-label">Genre</span>
-                <div className="filter-options">
-                  <button
-                    type="button"
-                    className={`filter-opt${genre === 'any' ? ' active' : ''}`}
-                    aria-pressed={genre === 'any'}
-                    onClick={() => setGenre('any')}
-                  >
-                    All genres
-                  </button>
-                  {genres.map((g) => (
-                    <button
-                      key={g}
-                      type="button"
-                      className={`filter-opt${genre === g ? ' active' : ''}`}
-                      aria-pressed={genre === g}
-                      onClick={() => setGenre(genre === g ? 'any' : g)}
-                    >
-                      {g.replace(' (RPG)', '')}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            {/* Same six categories as Discover and the shuffler, from lib/vibes.js.
-                Only chips that can return something are offered. */}
-            {vibes.length ? (
-              <div className="filter-group">
-                <span className="filter-label">Vibe</span>
-                <div className="filter-options">
-                  <button
-                    type="button"
-                    className={`filter-opt${vibe === 'any' ? ' active' : ''}`}
-                    aria-pressed={vibe === 'any'}
-                    onClick={() => setVibe('any')}
-                  >
-                    Any
-                  </button>
-                  {vibes.map((v) => (
-                    <button
-                      key={v.key}
-                      type="button"
-                      className={`filter-opt${vibe === v.key ? ' active' : ''}`}
-                      aria-pressed={vibe === v.key}
-                      onClick={() => setVibe(vibe === v.key ? 'any' : v.key)}
-                    >
-                      {v.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
 
             <div className="filter-sheet-actions">
               <button type="button" className="discover-action" onClick={resetFilters}>
