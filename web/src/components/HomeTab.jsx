@@ -120,8 +120,7 @@ function HomeNewsArt({ item, className, targetW }) {
 // article sheet; the header caret remains the route to the full News tab.
 function HomeNews({ entries, unread, onOpenNews, onOpenStory }) {
   if (!entries || entries.length === 0) return null
-  const lead = entries[0]
-  const more = entries.slice(1, 5)
+  const visible = entries.slice(0, 5)
   const timeFor = (item) => relTime(item.publishedAt || item.createdAt)
 
   return (
@@ -136,39 +135,24 @@ function HomeNews({ entries, unread, onOpenNews, onOpenStory }) {
         }
       />
       <div className="hm-news-strip" aria-label="Recent stories">
-        <button
-          type="button"
-          className="hm-news-lead"
-          onPointerDown={loadNewsSheet}
-          onFocus={loadNewsSheet}
-          onClick={() => onOpenStory(lead)}
-          aria-label={`${lead.item.title}. Open article.`}
-        >
-          <HomeNewsArt item={lead.item} className="hm-news-lead-art" targetW={640} />
-          <span className="hm-news-lead-shade" aria-hidden="true" />
-          <span className="hm-news-lead-copy">
-            <span className="hm-news-lead-meta">
-              <span>{lead.item.gameName || 'GameDeck'}</span>
-              {timeFor(lead.item) ? <span>{timeFor(lead.item)}</span> : null}
-            </span>
-            <span className="hm-news-lead-title">{lead.item.title}</span>
-          </span>
-        </button>
-
-        {more.map((entry) => (
+        {visible.map((entry) => (
           <button
             type="button"
-            className="hm-news-mini"
+            className="hm-news-card"
             key={entry.item.id || entry.item.primaryUrl}
             onPointerDown={loadNewsSheet}
             onFocus={loadNewsSheet}
             onClick={() => onOpenStory(entry)}
             aria-label={`${entry.item.title}. Open article.`}
           >
-            <HomeNewsArt item={entry.item} className="hm-news-mini-art" targetW={320} />
-            <span className="hm-news-mini-copy">
-              <span className="hm-news-mini-title">{entry.item.title}</span>
-              {timeFor(entry.item) ? <span className="hm-news-mini-time">{timeFor(entry.item)}</span> : null}
+            <HomeNewsArt item={entry.item} className="hm-news-card-art" targetW={480} />
+            <span className="hm-news-card-shade" aria-hidden="true" />
+            <span className="hm-news-card-copy">
+              <span className="hm-news-card-meta">
+                <span>{entry.item.gameName || 'GameDeck'}</span>
+                {timeFor(entry.item) ? <span>{timeFor(entry.item)}</span> : null}
+              </span>
+              <span className="hm-news-card-title">{entry.item.title}</span>
             </span>
           </button>
         ))}
