@@ -127,7 +127,7 @@ export default function SettingsPage({ open, onClose, onOpenBar, initialPage = n
       if (stack.length) pop()
       else onClose()
     },
-    { register: mounted, disabled: !mounted },
+    { register: mounted, disabled: !mounted || closing },
   )
 
   // Load freshness data + version once when the page opens.
