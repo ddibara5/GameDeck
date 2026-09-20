@@ -125,7 +125,7 @@ export default function GlobalSearch({
   const { games, loading: libraryLoading } = useLibraryGames()
   const { items: wishlist, loading: wishlistLoading } = useWishlist()
 
-  useEdgeBack(onClose, { register: mounted, disabled: !mounted || Boolean(selected) })
+  useEdgeBack(onClose, { register: mounted, disabled: !mounted || closing || Boolean(selected) })
 
   useEffect(() => {
     if (!mounted) return undefined
