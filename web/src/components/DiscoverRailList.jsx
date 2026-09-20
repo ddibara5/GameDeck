@@ -7,7 +7,7 @@ import { MessageState } from './AsyncState.jsx'
 import DiscoverDetail from './DiscoverDetail.jsx'
 import TimingOverlay from './TimingOverlay.jsx'
 import { fetchDiscover } from '../lib/discover.js'
-import { releaseTiming, timingParts, shelfMetaDate } from '../lib/format.js'
+import { releaseTiming, timingParts, compactReleaseLabel } from '../lib/format.js'
 import { groupByRelease } from '../lib/wishlistRelease.js'
 import { useDelayedClose } from '../lib/useDelayedClose.js'
 import { useEdgeBack } from '../lib/useEdgeBack.js'
@@ -56,7 +56,7 @@ function RailCard({ g, isOwned, wishIds, onOpen }) {
   const timing = releaseTiming(g.released)
   const parts = timingParts(g.released)
   // Only set when the line would otherwise be blank.
-  const metaDate = shelfMetaDate(g, timing)
+  const metaDate = !timing && !g.rating ? compactReleaseLabel(g.release, g.year) : null
   return (
     <div className="shelf-card-wrap">
       <button type="button" className="shelf-card" onClick={() => onOpen(g)}>

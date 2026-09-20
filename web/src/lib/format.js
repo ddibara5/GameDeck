@@ -258,6 +258,36 @@ export function releaseLabel(release, fallbackYear = null) {
 }
 
 /**
+ * Compact release label for Discover cards, where horizontal space is tight.
+ * Keeps the same date precision as releaseLabel but abbreviates the year:
+ *   day     -> "Sep 29 ’26"
+ *   month   -> "Sep ’26"
+ *   quarter -> "Q3 ’26"
+ *   year    -> "2026"
+ *   tba     -> "TBA" / IGDB wording
+ */
+export function compactReleaseLabel(release, fallbackYear = null) {
+  const year = fallbackYear != null ? String(fallbackYear) : null
+  if (!release || typeof release !== 'object') return year
+  const { ts, precision } = release
+  const human = release.label || null
+
+  if (precision === 'tba') return human || 'TBA'
+  if (!ts) return human || year
+
+  const d = new Date(Number(ts) * 1000)
+  if (Number.isNaN(d.getTime())) return human || year
+
+  const y = d.getUTCFullYear()
+  const shortYear = `’${String(y).slice(-2)}`
+  const month = RELEASE_MONTHS[d.getUTCMonth()].slice(0, 3)
+  if (precision === 'year') return String(y)
+  if (precision === 'quarter') return `Q${Math.floor(d.getUTCMonth() / 3) + 1} ${shortYear}`
+  if (precision === 'month') return `${month} ${shortYear}`
+  return `${month} ${d.getUTCDate()} ${shortYear}`
+}
+
+/**
  * Fallback text for a Discover card's meta line, used only when the card has
  * nothing else to put there: no release countdown and no rating.
  *

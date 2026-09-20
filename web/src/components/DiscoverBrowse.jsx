@@ -6,7 +6,7 @@ import DiscoverRailList from './DiscoverRailList.jsx'
 import Cover from './Cover.jsx'
 import WishHeart from './WishHeart.jsx'
 import { fetchDiscoverHome, fetchGamesByIds, loadLibraryTitles, loadGamePass, normTitle } from '../lib/discover.js'
-import { releaseDayDelta, releaseLabel, timingParts, releaseWindowEndTs } from '../lib/format.js'
+import { releaseDayDelta, compactReleaseLabel, timingParts, releaseWindowEndTs } from '../lib/format.js'
 import TimingOverlay from './TimingOverlay.jsx'
 import { useWishlist } from '../lib/wishlist.js'
 import { useRowsConfig, ROW_BY_KEY, getFilledRows, setFilledRows } from '../lib/discoverRows.js'
@@ -551,7 +551,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
                 <div className="shelf-row">
                   {items.slice(0, RAIL_PREVIEW).map((g) => {
                     const parts = timingParts(g.released)
-                    const metaDate = releaseLabel(g.release || (g.released ? { ts: g.released } : null), g.year)
+                    const metaDate = compactReleaseLabel(g.release || (g.released ? { ts: g.released } : null), g.year)
                     return (
                       <div className="shelf-card-wrap" key={g.id}>
                         <button type="button" className="shelf-card" onClick={() => setSelected(g)}>
