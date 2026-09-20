@@ -527,7 +527,7 @@ function GameDeckApp() {
           {activeTab === 'library' && (
             <LibraryTab />
           )}
-          {activeTab === 'activity' && <ActivityTab onOpenInsights={() => navigateTab('insights')} />}
+          {activeTab === 'activity' && <ActivityTab />}
           {activeTab === 'insights' && <InsightsTab />}
           {activeTab === 'discover' && (
             <DiscoverTab onCustomize={openCustomizeRows} onAsk={openAsk} />

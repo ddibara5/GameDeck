@@ -104,15 +104,15 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  font-size: var(--t-body);
-  font-weight: var(--w-med);
+  font-size: var(--collection-title);
+  font-weight: var(--w-semi);
   line-height: 1.25;
   overflow-wrap: anywhere;
 }
 .fy-row-meta {
   color: var(--muted);
-  font-size: 14px;
-  line-height: 20px;
+  font-size: var(--collection-meta);
+  line-height: 1.3;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -152,8 +152,8 @@
   border-radius: var(--r-xs);
   background: color-mix(in oklab, var(--accent) 14%, var(--surface));
   color: var(--accent);
-  font-size: 14px;
-  line-height: 20px;
+  font-size: var(--collection-meta);
+  line-height: 1.3;
   font-weight: var(--w-med);
   white-space: nowrap;
   overflow: hidden;
@@ -366,7 +366,8 @@
   flex-shrink: 0;
 }
 .fy-why-title {
-  font-size: 17px;
+  font-size: var(--collection-heading);
+  font-family: var(--font-body);
   font-weight: 700;
   color: var(--text);
   margin: 0;
@@ -613,14 +614,14 @@
 .fy-list-head .detail-title {
   margin: 0;
   font-family: inherit;
-  font-size: 20px;
+  font-size: var(--collection-heading);
   font-weight: 700;
-  line-height: 25px;
+  line-height: 1.25;
 }
 .fy-list-head .detail-sub {
   margin: 6px 0 0;
-  font-size: 14px;
-  line-height: 20px;
+  font-size: var(--collection-meta);
+  line-height: 1.3;
   color: var(--muted);
 }
 .fy-list-head > :first-child {
@@ -657,7 +658,8 @@
   align-items: center;
 }
 .fy-empty-title {
-  font-size: 17px;
+  font-size: var(--collection-heading);
+  font-family: var(--font-body);
   font-weight: 700;
   color: var(--text);
   margin: 0;
@@ -737,3 +739,5 @@
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
+
+.fy-sheet .detail-title { font-family: var(--font-body); font-size: var(--collection-heading); font-weight: 700; line-height: 1.25; }

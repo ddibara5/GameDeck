@@ -306,7 +306,7 @@
 }
 
 .wl-rt {
-  font-size: var(--t-sub);
+  font-size: var(--collection-title);
   font-weight: var(--w-semi);
   white-space: nowrap;
   overflow: hidden;
@@ -317,7 +317,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: var(--t-cap);
+  font-size: var(--collection-meta);
   color: var(--muted);
   margin-top: 4px;
 }

@@ -28,7 +28,7 @@
 .hrail-title {
   flex: 1;
   color: var(--text);
-  font-size: var(--t-sub);
+  font-size: var(--collection-heading);
   font-weight: 700;
 }
 
@@ -109,7 +109,7 @@
 
 .hrail-name {
   color: var(--text);
-  font-size: 11px;
+  font-size: var(--poster-caption);
   font-weight: 600;
   line-height: 1.25;
   display: -webkit-box;
@@ -133,7 +133,7 @@
 /* Date labels ("In 5 days", "Sep 30", "x days ago") match the game title's
    size and weight on the Home rails; the muted color comes from .hm-muted. */
 .hrail-compact .hrail-meta {
-  font-size: 11px;
+  font-size: var(--poster-caption);
   font-weight: 600;
   line-height: 1.25;
 }

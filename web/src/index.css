@@ -89,6 +89,13 @@
      handles the small end better than a hand-picked constant can.
 
      Nothing outside this block should declare a raw px font-size. */
+  /* Home-led collection hierarchy: compact posters, readable rows and sections. */
+  --collection-heading: var(--t-sub);
+  --collection-title: var(--t-sub);
+  --collection-meta: var(--t-foot);
+  --poster-caption: var(--t-cap2);
+  --collection-gap: 8px;
+
   --t-cap2: 11px;
   --t-cap: 12px;
   --t-foot: 13px;
@@ -1735,7 +1742,7 @@ textarea {
 }
 
 .game-title {
-  font-size: var(--t-sub);
+  font-size: var(--collection-title);
   font-weight: var(--w-semi);
   color: var(--text);
   white-space: nowrap;
@@ -1747,7 +1754,7 @@ textarea {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: var(--t-cap);
+  font-size: var(--collection-meta);
   color: var(--muted);
 }
 
@@ -1763,7 +1770,7 @@ textarea {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: var(--t-cap);
+  font-size: var(--collection-meta);
   color: var(--muted);
 }
 

@@ -5,10 +5,11 @@ import GameDetail from './GameDetail.jsx'
 import Skeleton from './Skeleton.jsx'
 import { MessageState } from './AsyncState.jsx'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
-import { TAB_ICONS } from './TabBar.jsx'
+import { activityDate, activityProgress } from '../lib/activityPresentation.js'
+import { preloadGameSheet } from './LazyGameSheet.jsx'
 import { getRecentActivityCache, loadRecentActivity } from '../lib/recentActivity.js'
 import { eventDay, daysBetween } from '../lib/playWeek.js'
-import { formatRelativeDay, platformMeta, libraryCover } from '../lib/format.js'
+import { platformMeta, libraryCover, formatDate } from '../lib/format.js'
 import './activity.css'
 
 // How far back the feed reads. Deep enough to scroll for a while, still one small
@@ -47,7 +48,7 @@ export function annotate(rows) {
   )
 }
 
-export default function ActivityTab({ onOpenInsights }) {
+export default function ActivityTab() {
   const cachedEvents = getRecentActivityCache({ days: WINDOW_DAYS, limit: MAX_ROWS })
   const [events, setEvents] = useState(() => cachedEvents || [])
   const [loading, setLoading] = useState(() => !cachedEvents)
@@ -100,9 +101,9 @@ export default function ActivityTab({ onOpenInsights }) {
     const groups = []
     const byLabel = new Map()
     for (const row of rows) {
-      const label = formatRelativeDay(row.event_date)
+      const label = formatDate(row.event_date, 'Unknown date')
       if (!byLabel.has(label)) {
-        const group = { label, items: [] }
+        const group = { label, ...activityDate(row.event_date), items: [] }
         byLabel.set(label, group)
         groups.push(group)
       }
@@ -112,19 +113,7 @@ export default function ActivityTab({ onOpenInsights }) {
   }, [rows])
 
   return (
-    <div>
-      {/* Insights used to live in the drawer; with the drawer gone this entry
-          tile is its home inside Activity, alongside Home's "Jump back in". */}
-      <button type="button" className="activity-insights" onClick={onOpenInsights} aria-label="Open Insights: playtime and taste trends">
-        <span className="activity-insights-icon" aria-hidden="true">{TAB_ICONS.insights}</span>
-        <span className="activity-insights-text">
-          <b>Insights</b>
-          <small>Playtime and taste trends</small>
-        </span>
-        <svg className="hm-chev accent" viewBox="0 0 10 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-          <path d="M2 2l6 6-6 6" />
-        </svg>
-      </button>
+    <div className="activity-page">
       {loading ? (
         <Skeleton count={6} />
       ) : error ? (
@@ -133,9 +122,12 @@ export default function ActivityTab({ onOpenInsights }) {
         <MessageState title="Nothing here yet">Your play history builds up daily. Check back soon.</MessageState>
       ) : (
         <>
-          {grouped.map((group, groupIndex) => (
-            <section key={group.label}>
-              <div className={`activity-group-label${groupIndex === 0 ? ' first' : ''}`}>{group.label}</div>
+          {grouped.map((group) => (
+            <section className="activity-group" key={group.label}>
+              <div className="activity-group-label">
+                <h2>{group.weekday}</h2>
+                <span>{group.date}</span>
+              </div>
               <div className="day-card">
                 {group.items.map((row, idx) => (
                   <ActivityRow
@@ -157,11 +149,9 @@ export default function ActivityTab({ onOpenInsights }) {
 }
 
 function ActivityRow({ row, game, onOpen }) {
-  const { label, color } = platformMeta(row.environment)
-  const pctTo = Number(row.percent_after) || 0
-  const from = row.pctFrom == null ? 0 : row.pctFrom
-  const gain = Math.max(pctTo - from, 0)
-  const continued = row.dayN > 1
+  const { label } = platformMeta(row.environment)
+  const progress = activityProgress(row, game)
+  const Row = game ? 'button' : 'div'
   const ach = Number(row.achievements_delta) || 0
   const mins = Number(row.minutes_delta) || 0
 
@@ -171,55 +161,36 @@ function ActivityRow({ row, game, onOpen }) {
   const cover = libraryCover(game, row.cover_small)
 
   return (
-    <button
-      type="button"
+    <Row
+      type={game ? 'button' : undefined}
       className={`activity-row${game ? '' : ' flat'}`}
+      onPointerDown={game ? preloadGameSheet : undefined}
+      onFocus={game ? preloadGameSheet : undefined}
       onClick={game ? () => onOpen(game) : undefined}
       aria-label={game ? `Open ${row.title}` : undefined}
     >
-      <Cover src={cover} title={row.title} size="sm" />
+      <Cover src={cover} title={row.title} size="sm" sizes="64px" />
       <div className="activity-body">
-        <div className="activity-head">
-          <span className="activity-title">{row.title}</span>
-          {continued ? <span className="activity-chip">Day {row.dayN}</span> : null}
-          {mins > 0 ? <span className="activity-mins"><Hhm mins={mins} /></span> : null}
-        </div>
+        <span className="activity-title">{row.title}</span>
         <div className="activity-detail">
-          <span className="platform-dot" style={{ background: color }} />
           {label}
-          {ach > 0 ? (
-            <>
-              <span className="activity-sep">·</span>
-              {`+${ach} ${ach === 1 ? 'achievement' : 'achievements'}`}
-            </>
-          ) : null}
-          {row.total_awards > 0 ? (
-            <>
-              <span className="activity-sep">·</span>
-              {`${row.earned_awards_after ?? 0} of ${row.total_awards}`}
-            </>
-          ) : null}
+          {ach > 0 ? ` · +${ach} ${ach === 1 ? 'achievement' : 'achievements'}` : ''}
+          {row.total_awards > 0 ? ` · ${row.earned_awards_after ?? 0} of ${row.total_awards}` : ''}
         </div>
-        {pctTo > 0 ? (
-          <div className="activity-arc">
-            <div className="arc-track">
-              <span className="arc-base" style={{ width: `${from}%` }} />
-              <span className="arc-gain" style={{ left: `${from}%`, width: `${gain}%` }} />
-            </div>
-            <span className="arc-txt">
-              {row.pctFrom == null ? (
-                <>
-                  <b>{pctTo}%</b> complete
-                </>
-              ) : (
-                <>
-                  {row.pctFrom}% → <b>{pctTo}%</b>
-                </>
-              )}
+        {mins > 0 ? <span className="activity-mins"><Hhm mins={mins} /></span> : null}
+        {progress ? (
+          <div className="activity-progress">
+            <span className="activity-progress-track" aria-hidden="true">
+              <span style={{ width: `${progress.percent}%` }} />
             </span>
+            <span className="activity-progress-label">{progress.label} · {progress.percent}%</span>
           </div>
         ) : null}
       </div>
-    </button>
+      <span className="activity-trailing">
+        <span className="activity-chip">Day {row.dayN}</span>
+        {game ? <svg className="activity-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg> : null}
+      </span>
+    </Row>
   )
 }

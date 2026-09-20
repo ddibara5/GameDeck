@@ -1,182 +1,32 @@
-/* Activity tab: the session timeline, plus the Insights entry tile that moved
-   here with the drawer. ActivityTab is the only consumer of every class in
-   here and it is lazy-loaded, so this ships with its chunk. Nothing another
-   surface paints on first load may be defined in this file - which is exactly
-   why the week block's styles left for insights.css when the block itself
-   moved to the Insights tab. */
-
-/* Insights entry tile: the drawer's Insights row reborn as a card at the top
-   of Activity. Same visual language as Home's jump tiles. */
-.activity-insights {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: calc(100% - var(--screen-gutter) * 2);
-  margin: var(--space-3) var(--screen-gutter) 0;
-  padding: 14px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.activity-insights:active {
-  opacity: 0.7;
-}
-
-.activity-insights-icon {
-  width: 24px;
-  height: 24px;
-  flex: none;
-  color: var(--accent);
-}
-
-.activity-insights-icon svg {
-  width: 100%;
-  height: 100%;
-}
-
-.activity-insights-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.activity-insights-text b {
-  display: block;
-  font-size: var(--t-body);
-  font-weight: var(--w-semi);
-  color: var(--text);
-}
-
-.activity-insights-text small {
-  display: block;
-  font-size: var(--t-foot);
-  color: var(--muted);
-  margin-top: 2px;
-}
-
-.activity-group-label {
-  font-size: var(--t-body);
-  font-weight: var(--w-semi);
-  color: var(--text);
-  letter-spacing: var(--t-body-tr);
-  margin: var(--space-5) var(--screen-gutter) var(--space-2);
-}
-
-.activity-group-label.first {
-  margin-top: var(--space-3);
-}
-
-/* ---------------------------------------------------------------- day groups */
-
-/* The date label already establishes each group, so the old rounded day slab
-   repeated the same hierarchy. Keep the grouping in the DOM and the dividers
-   between multiple sessions, but let the rows share the continuous canvas. */
-.day-card {
-  position: relative;
-  margin: 0 var(--screen-gutter) var(--space-4);
-  padding: 0;
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-}
-
-/* THE RAIL AND THE NODE ARE GONE, and the 18px of gutter they held with them.
-   Measured before removing them: 180 days of v_recent_activity is 14 rows across
-   13 days - 1.08 rows per day - and 13 of the 14 are one game in one unbroken
-   run. The rail was drawn per day card and inset 10px top and bottom, so on that
-   feed it was a 45px stub carrying exactly one dot, twelve times, with a label
-   and a 10px gap between each. A line that never spans two things is not a
-   spine, and a node that is always alone on it marks nothing.
-
-   Continuity has not been lost with them: it was never what the dot carried. The
-   "Day N" chip is computed across rows in annotate() and is the thing that
-   actually says a run is continuing. */
-.activity-row {
-  position: relative;
-  display: flex;
-  gap: 11px;
-  width: 100%;
-  padding: 9px 0;
-  text-align: left;
-  border: none;
-  background: none;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.activity-row + .activity-row { border-top: 1px solid var(--line-soft); }
-.activity-row:active { background: rgba(255, 255, 255, 0.03); }
-[data-theme='light'] .activity-row:active { background: rgba(0, 0, 0, 0.03); }
-/* A row whose game is no longer in the library has nothing to open. It still
-   renders, it just stops pretending to be a button. */
+/* History is a continuous timeline; Insights is reached from Home. */
+.activity-page { padding: 8px var(--screen-gutter) var(--safe-bottom); }
+.activity-group + .activity-group { margin-top: var(--collection-gap); }
+.activity-group-label { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; min-height: 32px; padding: 8px 0 4px; }
+.activity-group-label h2 { margin: 0; font-family: var(--font-body); font-size: var(--collection-heading); line-height: 1.25; font-weight: 700; overflow-wrap: anywhere; }
+.activity-group-label > span { color: var(--muted); font-size: var(--collection-meta); line-height: 1.3; text-align: right; }
+.day-card { background: transparent; margin: 0; padding: 0; }
+.activity-row { display: flex; align-items: flex-start; gap: 12px; width: 100%; min-width: 0; min-height: 44px; padding: 12px 0; border: 0; border-bottom: 1px solid var(--line-soft); border-radius: 0; background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
 .activity-row.flat { cursor: default; }
-
-.activity-row .cover {
-  width: var(--game-art-compact);
-  height: auto;
-  aspect-ratio: 3 / 4;
-  border-radius: var(--r-xs);
-  flex: none;
+.activity-row:not(.flat):active { background: var(--surface-2); }
+.activity-row .cover { width: var(--game-art-library-width); height: var(--game-art-library-height); border-radius: 8px; flex: 0 0 auto; }
+.activity-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.activity-title { font-size: var(--collection-title); line-height: 1.25; font-weight: 600; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.activity-detail { color: var(--muted); font-size: var(--collection-meta); line-height: 1.3; overflow-wrap: anywhere; }
+.activity-mins { font-size: var(--collection-title); font-weight: 600; line-height: 1.25; font-variant-numeric: tabular-nums; }
+.activity-mins .u { font: inherit; color: inherit; }
+.activity-progress { display: flex; flex-direction: column; gap: 4px; }
+.activity-progress-track { display: block; height: 4px; background: var(--surface-2); border-radius: 2px; overflow: hidden; }
+.activity-progress-track > span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
+.activity-progress-label { color: var(--accent); font-size: var(--collection-meta); line-height: 1.3; font-weight: 600; overflow-wrap: anywhere; }
+.activity-trailing { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; align-self: center; gap: 12px; }
+.activity-chip { padding: 3px 8px; border-radius: 999px; color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); font-size: var(--t-cap2); line-height: 1.25; font-weight: 600; white-space: nowrap; }
+.activity-chevron { width: 20px; height: 24px; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.activity-page .skeleton-list { padding: 0; }
+.activity-page .skeleton-cover { width: var(--game-art-library-width); height: var(--game-art-library-height); }
+@media (max-width: 359px) {
+  .activity-row { gap: 8px; }
+  .activity-chip { padding: 3px 5px; }
 }
-
-.activity-body { flex: 1; min-width: 0; }
-.activity-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 2px; }
-.activity-title {
-  font-size: var(--t-sub);
-  font-weight: var(--w-semi);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+@media (hover: hover) {
+  .activity-row:not(.flat):hover { background: color-mix(in srgb, var(--surface-2) 70%, transparent); }
 }
-.activity-mins { margin-left: auto; font-size: var(--t-sub); font-weight: var(--w-bold); white-space: nowrap; flex: none; }
-.activity-mins .u { font-size: var(--t-cap2); color: var(--muted); font-weight: var(--w-semi); }
-
-.activity-detail {
-  font-size: var(--t-cap);
-  color: var(--muted);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-bottom: 7px;
-}
-.activity-sep { opacity: 0.45; }
-
-/* "Day N" of an unbroken run. Deliberately a chip rather than a merged card: the
-   daily timeline is the point of this tab, so continuity is annotated, not collapsed. */
-.activity-chip {
-  font-size: var(--t-cap2);
-  font-weight: var(--w-bold);
-  letter-spacing: 0.03em;
-  padding: 2px 6px;
-  border-radius: var(--r-pill);
-  flex: none;
-  background: rgba(200, 169, 126, 0.16);
-  color: var(--accent);
-}
-[data-theme='light'] .activity-chip { background: rgba(156, 116, 73, 0.15); }
-
-/* Completion the day actually moved. The walnut segment is where the day started,
-   the accent segment is what it added, so a 2 -> 9 day reads differently from a
-   9 -> 12 day. Both come from percent_after; nothing here is a second copy of the
-   lifetime total, which the Library already owns. */
-.activity-arc { display: flex; align-items: center; gap: 8px; }
-.arc-track {
-  flex: 1;
-  height: 4px;
-  border-radius: 3px;
-  background: var(--surface-2);
-  position: relative;
-  overflow: hidden;
-}
-.arc-base { position: absolute; top: 0; bottom: 0; left: 0; background: var(--walnut); }
-.arc-gain { position: absolute; top: 0; bottom: 0; background: var(--accent); }
-.arc-txt { font-size: var(--t-cap2); color: var(--muted); white-space: nowrap; flex: none; }
-.arc-txt b { color: var(--accent); font-weight: var(--w-bold); }

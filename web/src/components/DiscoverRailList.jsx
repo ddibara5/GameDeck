@@ -67,7 +67,7 @@ function RailCard({ g, isOwned, wishIds, onOpen }) {
         </div>
         <div className="shelf-card-title">{g.name}</div>
         <div className="shelf-card-meta">
-          {g.rating ? <span>{'★'} {g.rating}</span> : null}
+          {g.rating ? <span className="shelf-rating">{'★'} {g.rating}</span> : null}
           {metaDate ? <span className="sc-date">{metaDate}</span> : null}
         </div>
       </button>

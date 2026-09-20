@@ -199,6 +199,7 @@ test('every destination is reachable in the finished build', async () => {
   assert.match(app, /<LibraryTab \/>/)
   assert.match(browse, /row.kind === 'wishlist'/)
   assert.match(browse, /onClick=\{\(\) => setOpenRail\(row\)\}/)
-  // Insights: Activity entry point.
-  assert.match(activity, /onOpenInsights/)
+  // Insights remains on Home; Activity is a single history destination.
+  assert.doesNotMatch(activity, /onOpenInsights|activity-insights/)
+  assert.match(app, /activeTab === 'insights'/)
 })

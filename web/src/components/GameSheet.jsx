@@ -46,8 +46,8 @@ const cardStyle = {
 }
 const sectionTitleStyle = {
   color: 'var(--text)',
-  fontSize: 20,
-  fontWeight: 800,
+  fontSize: 'var(--collection-heading)',
+  fontWeight: 700,
 }
 const eyebrowStyle = {
   color: 'var(--accent)',
@@ -459,9 +459,9 @@ export default function GameSheet({ variant, game, recommendation = null, onClos
                 className="gs-hero-title"
                 style={{
                   color: 'var(--text)',
-                  fontSize: 23,
-                  lineHeight: '27px',
-                  fontWeight: 800,
+                  fontSize: 'var(--t-t3)',
+                  lineHeight: 1.25,
+                  fontWeight: 700,
                 }}
               >
                 {title}
@@ -697,19 +697,19 @@ export default function GameSheet({ variant, game, recommendation = null, onClos
                   {studio ? (
                     <div>
                       <div style={{ color: 'var(--muted)', fontSize: 13 }}>Studio</div>
-                      <div style={{ color: 'var(--text)', fontSize: 16, fontWeight: 600 }}>{studio}</div>
+                      <div style={{ color: 'var(--text)', fontSize: 'var(--collection-title)', fontWeight: 600 }}>{studio}</div>
                     </div>
                   ) : null}
                   {releaseText ? (
                     <div>
                       <div style={{ color: 'var(--muted)', fontSize: 13 }}>Released</div>
-                      <div style={{ color: 'var(--text)', fontSize: 16, fontWeight: 600 }}>{releaseText}</div>
+                      <div style={{ color: 'var(--text)', fontSize: 'var(--collection-title)', fontWeight: 600 }}>{releaseText}</div>
                     </div>
                   ) : null}
                   {platforms.length ? (
                     <div>
                       <div style={{ color: 'var(--muted)', fontSize: 13 }}>Platforms</div>
-                      <div style={{ color: 'var(--text)', fontSize: 16, fontWeight: 600 }}>
+                      <div style={{ color: 'var(--text)', fontSize: 'var(--collection-title)', fontWeight: 600 }}>
                         {platforms.join(' · ')}
                       </div>
                     </div>
@@ -717,7 +717,7 @@ export default function GameSheet({ variant, game, recommendation = null, onClos
                   {rating != null && !owned ? (
                     <div>
                       <div style={{ color: 'var(--muted)', fontSize: 13 }}>IGDB rating</div>
-                      <div style={{ color: 'var(--text)', fontSize: 16, fontWeight: 600 }}>{rating} / 100</div>
+                      <div style={{ color: 'var(--text)', fontSize: 'var(--collection-title)', fontWeight: 600 }}>{rating} / 100</div>
                     </div>
                   ) : null}
                   {safeGameUrl ? (
