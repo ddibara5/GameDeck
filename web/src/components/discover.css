@@ -166,9 +166,9 @@
   min-height: 36px;
   padding: 0 14px;
   border-radius: var(--r-pill);
-  border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--muted);
+  border: 1px solid var(--control-track-border);
+  background: var(--control-track-bg);
+  color: var(--control-idle-text);
   font-size: var(--t-foot);
   font-weight: var(--w-semi);
   white-space: nowrap;
@@ -177,9 +177,10 @@
 }
 
 .preset-chip.active {
-  color: var(--text);
-  background: var(--surface-2);
-  border-color: var(--line-soft);
+  color: var(--control-selected-text);
+  background: var(--control-selected-bg);
+  border-color: var(--control-selected-border);
+  box-shadow: inset 0 0 0 1px var(--control-selected-border);
 }
 
 .discover-card {

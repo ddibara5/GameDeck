@@ -4694,3 +4694,180 @@ textarea {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
+
+
+/* ---------- Stateful control contrast pass ----------
+   Segmented controls, choice chips and switches use dedicated state tokens so
+   their selected/unselected contrast does not drift with a theme's general
+   surface or muted palette. */
+:root {
+  --control-track-bg: color-mix(in srgb, var(--surface) 96%, var(--bg));
+  --control-track-border: color-mix(in srgb, var(--text) 22%, var(--line));
+  --control-idle-text: color-mix(in srgb, var(--text) 76%, var(--muted));
+  --control-selected-bg: color-mix(in srgb, var(--surface-2) 96%, var(--text) 4%);
+  --control-selected-text: var(--text);
+  --control-selected-border: color-mix(in srgb, var(--text) 24%, var(--line));
+  --control-accent-bg: var(--accent);
+  --control-accent-ink: var(--bg);
+  --control-switch-off: color-mix(in srgb, var(--text) 20%, var(--surface-2));
+  --control-switch-thumb: var(--text);
+  --control-switch-on: var(--accent);
+  --control-switch-on-thumb: var(--bg);
+}
+
+:root[data-theme-family='curator'] {
+  --control-idle-text: #c9bba9;
+  --control-selected-bg: #3a2c20;
+  --control-selected-border: #745b43;
+  --control-accent-ink: #21170e;
+  --control-switch-off: #4a3a2e;
+}
+
+:root[data-theme-family='obsidian'] {
+  --control-idle-text: #c4cada;
+  --control-selected-bg: #303449;
+  --control-selected-border: #5a6280;
+  --control-accent-ink: #0b0d14;
+  --control-switch-off: #34394d;
+}
+
+:root[data-theme-family='xbox'] {
+  --control-idle-text: #c3d0c4;
+  --control-selected-bg: #233126;
+  --control-selected-border: #4a6d4e;
+  --control-accent-ink: #071008;
+  --control-switch-off: #263329;
+}
+
+:root[data-theme-family='playstation'] {
+  --control-idle-text: #c7d5e5;
+  --control-selected-bg: #1b355a;
+  --control-selected-border: #4478ad;
+  --control-accent-ink: #061326;
+  --control-switch-off: #1d3656;
+}
+
+:root[data-theme-family='cartridge'] {
+  --control-idle-text: #d5c9aa;
+  --control-selected-bg: #443d30;
+  --control-selected-border: #8b7c5b;
+  --control-accent-ink: #1b160f;
+  --control-switch-off: #514938;
+}
+
+:root[data-theme='light'] {
+  --control-track-bg: color-mix(in srgb, var(--surface) 94%, var(--bg));
+  --control-track-border: color-mix(in srgb, var(--text) 26%, var(--line));
+  --control-idle-text: color-mix(in srgb, var(--text) 82%, var(--muted));
+  --control-selected-bg: var(--surface-2);
+  --control-selected-text: var(--text);
+  --control-selected-border: color-mix(in srgb, var(--text) 20%, var(--line));
+  --control-switch-off: color-mix(in srgb, var(--text) 16%, var(--surface-2));
+  --control-switch-thumb: #ffffff;
+}
+
+:root[data-theme-family='curator'][data-theme='light'] {
+  --control-idle-text: #54493e;
+  --control-track-border: #c0ad92;
+  --control-selected-bg: #fffdf8;
+  --control-selected-border: #bca98f;
+  --control-accent-ink: #fffaf2;
+  --control-switch-off: #d6c8b5;
+}
+
+:root[data-theme-family='obsidian'][data-theme='light'] {
+  --control-idle-text: #4d5669;
+  --control-track-border: #aeb9ce;
+  --control-selected-bg: #ffffff;
+  --control-selected-border: #a7b3ca;
+  --control-accent-ink: #ffffff;
+  --control-switch-off: #c9d0df;
+}
+
+:root[data-theme-family='xbox'][data-theme='light'] {
+  --control-idle-text: #405744;
+  --control-track-border: #97ad99;
+  --control-selected-bg: #ffffff;
+  --control-selected-border: #91a894;
+  --control-accent-ink: #ffffff;
+  --control-switch-off: #c6d2c7;
+}
+
+:root[data-theme-family='playstation'][data-theme='light'] {
+  --control-idle-text: #3f5b78;
+  --control-track-border: #98b2cf;
+  --control-selected-bg: #ffffff;
+  --control-selected-border: #91abc9;
+  --control-accent-ink: #ffffff;
+  --control-switch-off: #c3d4e5;
+}
+
+:root[data-theme-family='cartridge'][data-theme='light'] {
+  --control-idle-text: #514936;
+  --control-track-border: #9f916c;
+  --control-selected-bg: #fffaf0;
+  --control-selected-border: #9a8a65;
+  --control-accent-ink: #fffaf0;
+  --control-switch-off: #d1c6a9;
+}
+
+.seg,
+.global-search-modebar {
+  background: var(--control-track-bg);
+  border-color: var(--control-track-border);
+}
+
+.seg-btn,
+.global-search-modebar button:first-child,
+.filter-opt,
+.chip,
+.preset-chip {
+  color: var(--control-idle-text);
+}
+
+.seg-btn.active,
+.global-search-modebar button.active,
+.preset-chip.active {
+  background: var(--control-selected-bg);
+  color: var(--control-selected-text);
+  box-shadow:
+    inset 0 0 0 1px var(--control-selected-border),
+    0 1px 3px color-mix(in srgb, var(--bg) 18%, transparent);
+}
+
+.filter-opt.active,
+.chip.active {
+  background: var(--control-accent-bg);
+  color: var(--control-accent-ink);
+  border-color: var(--control-accent-bg);
+  font-weight: var(--w-bold);
+}
+
+/* Theme-specific Xbox ranking rules used to bypass the shared segmented
+   treatment. Keep the Xbox accent identity in the border, but use the same
+   readable selected/unselected states as every other segmented control. */
+:root[data-theme-family='xbox'] .rank-tabs .seg-btn {
+  color: var(--control-idle-text);
+}
+
+:root[data-theme-family='xbox'] .rank-tabs .seg-btn.active {
+  background: var(--control-selected-bg);
+  color: var(--control-selected-text);
+  box-shadow:
+    inset 0 0 0 1px var(--control-selected-border),
+    inset 3px 0 0 var(--accent);
+}
+
+@media (prefers-contrast: more) {
+  :root[data-contrast='system'] {
+    --control-idle-text: var(--text);
+    --control-track-border: color-mix(in srgb, var(--text) 42%, var(--line));
+    --control-selected-border: color-mix(in srgb, var(--text) 46%, var(--line));
+  }
+}
+
+:root[data-contrast='high'] {
+  --control-idle-text: var(--text);
+  --control-track-border: color-mix(in srgb, var(--text) 42%, var(--line));
+  --control-selected-border: color-mix(in srgb, var(--text) 46%, var(--line));
+}

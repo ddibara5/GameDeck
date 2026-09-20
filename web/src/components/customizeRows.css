@@ -98,15 +98,15 @@
   padding: 0;
   position: relative;
   cursor: pointer;
-  background: var(--surface-2);
-  box-shadow: inset 0 0 0 1px var(--line);
+  background: var(--control-switch-off);
+  box-shadow: inset 0 0 0 1px var(--control-track-border);
   transition: background var(--d-fast) ease;
   -webkit-tap-highlight-color: transparent;
 }
 
 .cz-toggle.on {
-  background: var(--accent);
-  box-shadow: none;
+  background: var(--control-switch-on);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--control-switch-on) 74%, var(--text));
 }
 
 /* At the visible-tab floor, the last on-switches lock (can't hide any more). */
@@ -122,13 +122,13 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #8a8073;
+  background: var(--control-switch-thumb);
   transition: left var(--d-fast) ease, background var(--d-fast) ease;
 }
 
 .cz-toggle.on i {
   left: 21px;
-  background: var(--bg);
+  background: var(--control-switch-on-thumb);
 }
 
 .cz-reset {
