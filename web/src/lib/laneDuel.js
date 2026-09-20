@@ -59,26 +59,36 @@ export function shouldReturnFromLaneDuel(launch, activeLaneKey, result) {
 // Resolve a tune launch for a For You pick: the evidence source game anchors
 // the duel, falling back to the first lane source with a reaction or duel
 // history. Returns null when there is no lane or no anchorable game.
+//
+// Shape notes: buildTasteEvidenceProfile() lanes carry an exemplar and the
+// source list lives at the profile level (sources[].laneKeys); the For You
+// engine adapts sources with a string `id` instead of `masterId`. Both the
+// legacy lane.sources shape and the production shapes are accepted.
 export function resolveTuneLaunch(pick, evidenceProfile) {
   const laneKey = pick?.evidence?.lane || null
   const lane = laneKey
     ? (evidenceProfile?.lanes || []).find((item) => item.key === laneKey)
     : null
   if (!lane) return null
+  const laneSources = Array.isArray(lane.sources)
+    ? lane.sources
+    : (evidenceProfile?.sources || []).filter(
+        (source) => Array.isArray(source?.laneKeys) && source.laneKeys.includes(lane.key),
+      )
   const anchor =
     pick?.evidence?.source ??
-    (lane.sources || []).find(
+    laneSources.find(
       (source) => source?.reaction != null || (source?.comparisonCount || 0) > 0,
     ) ??
     null
-  const anchorId = positiveId(anchor?.masterId)
+  const anchorId = positiveId(anchor?.masterId ?? anchor?.id)
   if (!anchorId) return null
   return parseTuneLaunch({
     laneKey: lane.key,
     laneLabel: lane.label,
     anchorId,
     recommendationId: positiveId(pick?.game?.id),
-    laneMemberIds: (lane.sources || []).map((source) => source?.masterId),
+    laneMemberIds: laneSources.map((source) => source?.masterId ?? source?.id),
     returnToForYou: true,
   })
 }

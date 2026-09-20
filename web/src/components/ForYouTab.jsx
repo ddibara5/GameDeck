@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { forYouLaneLabel, localDay } from '../lib/forYouEngine.js'
+import { forYouLaneLabel, localDay, whyPickReasons } from '../lib/forYouEngine.js'
 import {
   forYouFilterKey,
   loadForYouFilters,
@@ -62,6 +62,9 @@ function WhyContent({ pick, laneLabel, tuneLaunch, onTuneTaste }) {
       'Comparison coverage is partial: this pick relies more on your ratings and play history until you compare more games.',
     )
   }
+  // The engine emits a singular `reason` string; derive rows defensively so
+  // the sheet can never throw on production-shaped picks.
+  const reasons = whyPickReasons(pick)
   return (
     <div className="fy-why">
       <div className="fy-why-head">
@@ -75,7 +78,7 @@ function WhyContent({ pick, laneLabel, tuneLaunch, onTuneTaste }) {
       </div>
       <section aria-label="Why this pick">
         <h4 className="fy-why-section-title">Why this</h4>
-        {pick.reasons.map((reason, index) => (
+        {reasons.map((reason, index) => (
           <div className="fy-why-item" key={`${reason.label}-${index}`}>
             <div className="fy-why-source">{reason.label}</div>
             <p className="fy-why-detail">{reason.detail}</p>

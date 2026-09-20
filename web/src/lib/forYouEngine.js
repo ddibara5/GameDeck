@@ -94,6 +94,16 @@ export function forYouLaneLabel(pick, laneKeys = []) {
     .replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
+// Derive the "Why this pick" reason rows for a deck pick. The engine emits a
+// singular `reason` string; a richer `reasons` array is only present when a
+// breakdown was built. Always returns an array so the sheet can never throw
+// on production-shaped picks.
+export function whyPickReasons(pick) {
+  if (Array.isArray(pick?.reasons) && pick.reasons.length) return pick.reasons
+  if (pick?.reason) return [{ label: pick.kind || 'Why this pick', detail: pick.reason }]
+  return []
+}
+
 // A soft diversity hint, never an ownership/exclusion identity.
 export function familyKey(title, parent = null) {
   const id = typeof parent === 'number' && Number.isSafeInteger(parent) && parent > 0 ? parent : null
