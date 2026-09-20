@@ -100,34 +100,44 @@
   padding: 2px var(--screen-gutter) 6px;
 }
 
-.discover-section-label,
-.discover-section-toolbar > span:first-child {
-  color: var(--muted);
-  font-size: var(--t-cap);
-  font-weight: var(--w-bold);
-  letter-spacing: .07em;
-  text-transform: uppercase;
+.discover-section-label {
+  min-width: 0;
+  margin: 0;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 20px;
+  line-height: 25px;
+  font-weight: 700;
 }
 
 .discover-section-actions {
-  min-width: 0;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-3);
+  gap: 8px;
 }
 
-.discover-section-toolbar .filter-btn {
-  position: relative;
-  width: 40px;
-  min-width: 40px;
-  height: 40px;
-  padding: 0;
+.discover-section-toolbar .filter-btn,
+.discover-layout-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-width: 44px;
+  width: auto;
+  height: 44px;
+  gap: 6px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
 }
-
-.discover-section-toolbar .filter-btn.active {
-  color: var(--bg);
-}
+.discover-section-toolbar .filter-btn.active { background: transparent; color: var(--accent); }
+.discover-section-toolbar .filter-btn svg,
+.discover-layout-button svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.discover-section-toolbar .filter-count { position: static; min-width: 0; height: auto; padding: 0; background: none; color: inherit; font-size: 14px; line-height: 20px; }
 
 /* ---------- Browse: shared search + filter ---------- */
 
@@ -208,12 +218,19 @@
    beneath it rather than floating between two rows. Halving both to 8 and 4,
    which was the tighter option reviewed alongside this, breaks that. */
 .discover-browse .shelf-head {
-  padding: 6px 16px;
+  min-height: 44px;
+  padding: 8px var(--screen-gutter);
 }
+.discover-browse .shelf-title-wrap { width: 100%; justify-content: space-between; gap: 12px; }
+.discover-browse .shelf-title { font-size: 20px; line-height: 25px; font-weight: 700; }
+.discover-browse .shelf-caret { flex: 0 0 auto; }
+.discover-browse .shelf + .shelf { margin-top: 20px; }
 
 .discover-browse .shelf-row {
-  padding-bottom: 4px;
+  padding: 8px var(--screen-gutter) 4px;
+  scrollbar-width: none;
 }
+.discover-browse .shelf-row::-webkit-scrollbar { display: none; }
 
 .discover-browse .shelf-card,
 .discover-browse .shelf-poster {
@@ -256,12 +273,16 @@
    worth a skipped line under every short title, which is the thing you actually
    notice. */
 .discover-browse .shelf-card-title {
+  margin-top: 6px;
+  font-size: 16px;
+  line-height: 20px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
   white-space: normal;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  line-height: 1.25;
 }
 
 
@@ -1286,4 +1307,23 @@ button.shelf-head:active {
   aspect-ratio: auto;
   margin: 0;
   border-radius: inherit;
+}
+
+/* Browse metadata follows the native rail hierarchy without changing Home. */
+.discover-browse .shelf-card-meta { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; font-size: 13px; line-height: 17px; }
+.discover-browse .shelf-rating { color: var(--accent); font-weight: 700; }
+.discover-browse .sc-date { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.browse-filter-sheet .detail-title { font-size: 20px; line-height: 25px; }
+.browse-filter-sheet .modal-close { width: 44px; height: 44px; }
+.browse-filter-sheet .filter-sheet-scroll { padding-top: 12px; }
+.browse-filter-sheet .filter-sheet-head { padding-bottom: 8px; }
+.browse-default-settings { margin-top: 20px; }
+.browse-default-settings > summary { display: list-item; width: fit-content; min-height: 44px; padding: 10px 0; color: var(--accent); font-size: 16px; cursor: pointer; }
+.browse-default-settings > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.browse-default-settings .filter-default-block { margin: 0; padding: 8px 0; }
+.browse-default-settings .filter-default-row { padding-right: 0; }
+.browse-default-settings .filter-default-meta { position: static; margin-top: 8px; }
+.browse-default-settings .filter-default-meta button { min-height: 44px; white-space: normal; }
+@media (hover: hover) {
+  .discover-section-toolbar .filter-btn:hover, .discover-layout-button:hover { background: var(--surface-2); }
 }

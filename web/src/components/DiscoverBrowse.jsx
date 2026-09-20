@@ -6,7 +6,7 @@ import DiscoverRailList from './DiscoverRailList.jsx'
 import Cover from './Cover.jsx'
 import WishHeart from './WishHeart.jsx'
 import { fetchDiscoverHome, fetchGamesByIds, loadLibraryTitles, loadGamePass, normTitle } from '../lib/discover.js'
-import { releaseDayDelta, releaseTiming, timingParts, shelfMetaDate, releaseWindowEndTs } from '../lib/format.js'
+import { releaseDayDelta, releaseLabel, timingParts, releaseWindowEndTs } from '../lib/format.js'
 import TimingOverlay from './TimingOverlay.jsx'
 import { useWishlist } from '../lib/wishlist.js'
 import { useRowsConfig, ROW_BY_KEY, getFilledRows, setFilledRows } from '../lib/discoverRows.js'
@@ -31,9 +31,7 @@ import {
 } from '../lib/productionScale.js'
 import { useDialogA11y } from '../lib/useDialogA11y.js'
 import DiscoverFilterButton from './DiscoverFilterButton.jsx'
-import DiscoverPreferenceFields from './DiscoverPreferenceFields.jsx'
-import DiscoverFilterDisclosure from './DiscoverFilterDisclosure.jsx'
-import DiscoverProductionScaleField from './DiscoverProductionScaleField.jsx'
+import BrowseFilterFields from './BrowseFilterFields.jsx'
 import DiscoverDefaultControl from './DiscoverDefaultControl.jsx'
 
 const CURRENT_YEAR = new Date().getFullYear()
@@ -155,7 +153,6 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
   const [saveAsDefault, setSaveAsDefault] = useState(false)
   const [defaultsRestored, setDefaultsRestored] = useState(false)
   const [defaultNotice, setDefaultNotice] = useState(0)
-  const [openFilterSection, setOpenFilterSection] = useState(null)
   const filterDialogRef = useDialogA11y({ active: showFilters, onClose: () => setShowFilters(false) })
   useEffect(() => showFilters ? lockScroll() : undefined, [showFilters])
 
@@ -414,7 +411,6 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
     setDraftPrefs({ ...prefs, platforms: [...prefs.platforms] })
     setSaveAsDefault(false)
     setDefaultsRestored(false)
-    setOpenFilterSection(null)
     setShowFilters(true)
   }
 
@@ -424,7 +420,6 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
     setDraftPrefs({ ...savedPrefs, platforms: [...savedPrefs.platforms] })
     setSaveAsDefault(false)
     setDefaultsRestored(false)
-    setOpenFilterSection(null)
   }
 
   function applyDraftFilters() {
@@ -457,7 +452,6 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
     setDraftPrefs({ ...DEFAULT_DISCOVER_PREFS, platforms: [...DEFAULT_DISCOVER_PREFS.platforms] })
     setSaveAsDefault(false)
     setDefaultsRestored(true)
-    setOpenFilterSection(null)
   }
 
   function setDraftAvailability(status) {
@@ -496,8 +490,13 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
   return (
     <div className="discover-browse">
       <div className="discover-section-toolbar">
-        <span className="discover-section-label">Explore games</span>
-        <DiscoverFilterButton activeCount={activeFilterCount} onClick={openFilters} />
+        <h2 className="discover-section-label">Explore games</h2>
+        <div className="discover-section-actions">
+          <button type="button" className="discover-layout-button" aria-label="Customize rows" aria-haspopup="dialog" onClick={() => onCustomize?.()}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="7" rx="1" /><rect x="3" y="14" width="18" height="7" rx="1" /></svg>
+          </button>
+          <DiscoverFilterButton activeCount={activeFilterCount} onClick={openFilters} />
+        </div>
       </div>
       {rowsConfig.order.map((key) => {
             if (!rowsConfig.enabled[key]) return null
@@ -551,21 +550,19 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
                 </button>
                 <div className="shelf-row">
                   {items.slice(0, RAIL_PREVIEW).map((g) => {
-                    const timing = releaseTiming(g.released)
                     const parts = timingParts(g.released)
-                    // Only set when the line would otherwise be blank.
-                    const metaDate = shelfMetaDate(g, timing)
+                    const metaDate = releaseLabel(g.release || (g.released ? { ts: g.released } : null), g.year)
                     return (
                       <div className="shelf-card-wrap" key={g.id}>
                         <button type="button" className="shelf-card" onClick={() => setSelected(g)}>
                           <div className="shelf-poster">
-                            <Cover src={g.cover} title={g.name} size="lg" />
+                            <Cover src={g.cover} title={g.name} size="lg" sizes="112px" />
                             {isOwned(g.name) ? <span className="in-library-dot" title="In library" /> : null}
                             <TimingOverlay parts={parts} />
                           </div>
                           <div className="shelf-card-title">{g.name}</div>
                           <div className="shelf-card-meta">
-                            {g.rating ? <span>★ {g.rating}</span> : null}
+                            {g.rating ? <span className="shelf-rating">★ {g.rating}</span> : null}
                             {metaDate ? <span className="sc-date">{metaDate}</span> : null}
                           </div>
                         </button>
@@ -577,172 +574,41 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
               </section>
             )
       })}
-      <button type="button" className="customize-btn" onClick={() => onCustomize && onCustomize()}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <line x1="4" y1="7" x2="20" y2="7" />
-          <circle cx="9" cy="7" r="2.3" fill="var(--surface)" />
-          <line x1="4" y1="17" x2="20" y2="17" />
-          <circle cx="15" cy="17" r="2.3" fill="var(--surface)" />
-        </svg>
-        Customize rows
-      </button>
-
       {showFilters ? createPortal(
         <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && setShowFilters(false)}>
-          <div ref={filterDialogRef} className="modal-sheet filter-sheet discover-filter-sheet" role="dialog" aria-modal="true" aria-label="Filters">
+          <div ref={filterDialogRef} className="modal-sheet filter-sheet discover-filter-sheet browse-filter-sheet" role="dialog" aria-modal="true" aria-label="Discover filters">
             <div className="modal-handle" />
             <button type="button" className="modal-close" aria-label="Close filters" onClick={() => setShowFilters(false)}>&times;</button>
             <div className="filter-sheet-head">
-              <div className="detail-title">Filters</div>
+              <div className="detail-title">Discover filters</div>
             </div>
 
             <div className="filter-sheet-scroll">
-              <DiscoverProductionScaleField
-                selectedScales={draftFilters.scales}
-                onToggle={toggleDraftScale}
-              />
-
-              <div className="filter-group filter-group-compact">
-                <span className="filter-label">Availability</span>
-                <div className="filter-options filter-segments">
-                  {AVAILABILITY.map((option) => (
-                    <button
-                      key={option.key}
-                      type="button"
-                      className={`filter-opt${draftFilters.status === option.key ? ' active' : ''}`}
-                      aria-pressed={draftFilters.status === option.key}
-                      onClick={() => setDraftAvailability(option.key)}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <DiscoverPreferenceFields
+              <BrowseFilterFields
+                filters={draftFilters}
+                setFilters={setDraftFilters}
                 prefs={draftPrefs || prefs}
-                onChange={setDraftPrefs}
-                deferred
-                compact
+                setPrefs={setDraftPrefs}
+                preset={draftPreset}
+                setPreset={setDraftPreset}
+                onAvailability={setDraftAvailability}
+                onScale={toggleDraftScale}
+                genres={GENRES}
+                vibes={VIBES}
+                years={YEARS}
+                sorts={SORTS}
+                availability={AVAILABILITY}
               />
-
-              <div className="filter-disclosures">
-                <DiscoverFilterDisclosure
-                  label="Genre"
-                  value={(GENRES.find((option) => option.key === draftFilters.genre) || GENRES[0]).label}
-                  open={openFilterSection === 'genre'}
-                  onToggle={() => setOpenFilterSection((section) => (section === 'genre' ? null : 'genre'))}
-                >
-                  <div className="filter-options">
-                    {GENRES.map((option) => (
-                      <button
-                        key={option.key}
-                        type="button"
-                        className={`filter-opt${draftFilters.genre === option.key ? ' active' : ''}`}
-                        aria-pressed={draftFilters.genre === option.key}
-                        onClick={() => {
-                          setDraftFilters((current) => ({ ...current, genre: option.key }))
-                          setOpenFilterSection(null)
-                        }}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                </DiscoverFilterDisclosure>
-
-                <DiscoverFilterDisclosure
-                  label="Vibe"
-                  value={(VIBES.find((vibe) => vibe.key === draftPreset) || { label: 'Any vibe' }).label}
-                  open={openFilterSection === 'vibe'}
-                  onToggle={() => setOpenFilterSection((section) => (section === 'vibe' ? null : 'vibe'))}
-                >
-                  <div className="filter-options">
-                    <button
-                      type="button"
-                      className={`filter-opt${draftPreset === null ? ' active' : ''}`}
-                      aria-pressed={draftPreset === null}
-                      onClick={() => {
-                        setDraftPreset(null)
-                        setOpenFilterSection(null)
-                      }}
-                    >
-                      Any vibe
-                    </button>
-                    {VIBES.map((vibe) => (
-                      <button
-                        key={vibe.key}
-                        type="button"
-                        className={`filter-opt${draftPreset === vibe.key ? ' active' : ''}`}
-                        aria-pressed={draftPreset === vibe.key}
-                        onClick={() => {
-                          setDraftPreset(vibe.key)
-                          setOpenFilterSection(null)
-                        }}
-                      >
-                        {vibe.label}
-                      </button>
-                    ))}
-                  </div>
-                </DiscoverFilterDisclosure>
-
-                <DiscoverFilterDisclosure
-                  label="Release year"
-                  value={draftFilters.year === 'all' ? 'Any year' : String(draftFilters.year)}
-                  open={openFilterSection === 'year'}
-                  onToggle={() => setOpenFilterSection((section) => (section === 'year' ? null : 'year'))}
-                >
-                  <div className="filter-options">
-                    {YEARS.map((year) => (
-                      <button
-                        key={year}
-                        type="button"
-                        className={`filter-opt${String(draftFilters.year) === String(year) ? ' active' : ''}`}
-                        aria-pressed={String(draftFilters.year) === String(year)}
-                        onClick={() => {
-                          setDraftFilters((current) => ({ ...current, year }))
-                          setOpenFilterSection(null)
-                        }}
-                      >
-                        {year === 'all' ? 'Any year' : year}
-                      </button>
-                    ))}
-                  </div>
-                </DiscoverFilterDisclosure>
-
-                <DiscoverFilterDisclosure
-                  label="Sort by"
-                  value={(SORTS.find((option) => option.key === draftFilters.sort) || SORTS[0]).label}
-                  open={openFilterSection === 'sort'}
-                  onToggle={() => setOpenFilterSection((section) => (section === 'sort' ? null : 'sort'))}
-                >
-                  <div className="filter-options">
-                    {SORTS.map((option) => (
-                      <button
-                        key={option.key}
-                        type="button"
-                        className={`filter-opt${draftFilters.sort === option.key ? ' active' : ''}`}
-                        aria-pressed={draftFilters.sort === option.key}
-                        onClick={() => {
-                          setDraftFilters((current) => ({ ...current, sort: option.key }))
-                          setOpenFilterSection(null)
-                        }}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                </DiscoverFilterDisclosure>
-              </div>
-
+              <details className="browse-default-settings">
+                <summary>Default settings</summary>
+                <DiscoverDefaultControl
+                  checked={saveAsDefault}
+                  onChange={setSaveAsDefault}
+                  onRestore={restoreGameDeckDefaults}
+                  restored={defaultsRestored}
+                />
+              </details>
             </div>
-
-            <DiscoverDefaultControl
-              checked={saveAsDefault}
-              onChange={setSaveAsDefault}
-              onRestore={restoreGameDeckDefaults}
-              restored={defaultsRestored}
-            />
 
             <div className="filter-sheet-actions">
               <button

@@ -1,5 +1,5 @@
 import Cover from './Cover.jsx'
-import { releaseTiming, timingParts, shelfMetaDate } from '../lib/format.js'
+import { releaseTiming, timingParts, releaseLabel } from '../lib/format.js'
 import { recommendationTrigger } from '../lib/forYouEngine.js'
 import TimingOverlay from './TimingOverlay.jsx'
 import './forYou.css'
@@ -25,7 +25,7 @@ export default function ForYouRow({
   const released = game.released ?? game.release?.ts ?? null
   const timing = releaseTiming(released)
   const parts = timingParts(released)
-  const releaseMeta = shelfMetaDate(game, timing) || game.releaseLabel || game.year || 'Release TBA'
+  const releaseMeta = releaseLabel(game.release || (released ? { ts: released } : null), game.year) || game.releaseLabel || 'Release TBA'
   const metadata = [
     (game.platforms || []).slice(0, 2).join(' · '),
     game.rating ? `★ ${game.rating}` : null,

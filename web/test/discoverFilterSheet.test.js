@@ -6,22 +6,20 @@ import {
   normalizeDiscoverFilterDefaults,
 } from '../src/lib/discoverFilterDefaults.js'
 
-test('Discover keeps quick filters visible and long lists behind summaries', async () => {
-  const [source, scaleField] = await Promise.all([
+test('Discover groups selected draft filters in the shared builder', async () => {
+  const [source, fields] = await Promise.all([
     readFile(new URL('../src/components/DiscoverBrowse.jsx', import.meta.url), 'utf8'),
-    readFile(new URL('../src/components/DiscoverProductionScaleField.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/BrowseFilterFields.jsx', import.meta.url), 'utf8'),
   ])
-
-  assert.match(source, /DiscoverProductionScaleField/)
-  assert.match(scaleField, /Production scale/)
-  assert.match(scaleField, /production-scale-options/)
-  assert.match(source, /DiscoverFilterDisclosure/)
-  assert.match(source, /label="Genre"/)
-  assert.match(source, /label="Vibe"/)
-  assert.match(source, /label="Release year"/)
-  assert.match(source, /label="Sort by"/)
-  assert.match(source, /applyDraftFilters/)
-  assert.doesNotMatch(source, /Filtering every row|results-head|resetAll/)
+  assert.match(source, /<BrowseFilterFields/)
+  assert.match(fields, /<FilterBuilder fields=\{fields\}/)
+  for (const label of ['Platforms', 'Ownership', 'Production scale', 'Availability', 'Genre', 'Vibe', 'Release year', 'Sort by']) {
+    assert.ok(fields.includes(`'${label}'`))
+  }
+  assert.match(source, /filters=\{draftFilters\}/)
+  assert.match(source, /prefs=\{draftPrefs \|\| prefs\}/)
+  assert.match(source, /onClick=\{applyDraftFilters\}/)
+  assert.doesNotMatch(fields, /setDiscoverPrefs|setDiscoverFilterDefaults/)
 })
 
 test('For You uses the same staged, compact production-scale filter pattern', async () => {
@@ -120,5 +118,5 @@ test('Customize rows entry styling is available before its lazy editor loads', a
   assert.match(baseStyles, /\.customize-btn\s*{[\s\S]*?width: calc\(100% - 32px\)/)
   assert.match(baseStyles, /\.customize-btn svg\s*{[\s\S]*?width: 18px/)
   assert.doesNotMatch(editorStyles, /\.customize-btn/)
-  assert.match(browse, /className="customize-btn"[\s\S]*?<svg[^>]*aria-hidden="true"/)
+  assert.match(browse, /className="discover-layout-button" aria-label="Customize rows"[\s\S]*?<svg[^>]*aria-hidden="true"/)
 })
