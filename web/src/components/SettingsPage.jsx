@@ -7,10 +7,6 @@ import {
   THEME_FAMILIES,
   getThemeFamily,
   setThemeFamily,
-  getLogoStyle,
-  setLogoStyle,
-  getArtworkSize,
-  setArtworkSize,
   getMotion,
   setMotion,
   getContrast,
@@ -21,11 +17,7 @@ import {
 import { useMountTransition } from '../lib/useMountTransition.js'
 import { lockScroll } from '../lib/scrollLock.js'
 import { MenuItem, ICONS, relTime } from './menuUI.jsx'
-import { useNavConfig, setNavConfig } from '../lib/navConfig.js'
-import LogoMark from './LogoMark.jsx'
 import { useDialogA11y } from '../lib/useDialogA11y.js'
-import TasteProfile from './TasteProfile.jsx'
-import { loadTasteProfile } from '../lib/tasteProfile.js'
 
 const REPO = 'ddibara5/GameDeck'
 const SOURCE_URL = 'https://github.com/ddibara5/GameDeck'
@@ -51,18 +43,6 @@ const MODE_OPTIONS = [
   { key: 'system', label: 'System' },
 ]
 
-const LOGO_STYLE_OPTIONS = [
-  { key: 'theme', label: 'Theme default', sub: 'Chosen by each theme' },
-  { key: 'classic', label: 'Classic', sub: 'Clean, flat layers' },
-  { key: 'glass', label: 'Glass', sub: 'Translucent depth and highlights' },
-]
-
-const ARTWORK_SIZE_OPTIONS = [
-  { key: 's', label: 'Small' },
-  { key: 'm', label: 'Medium' },
-  { key: 'l', label: 'Large' },
-]
-
 const MOTION_OPTIONS = [
   { key: 'system', label: 'System' },
   { key: 'standard', label: 'Standard' },
@@ -83,15 +63,11 @@ const TRANSPARENCY_OPTIONS = [
 
 export default function SettingsPage({ open, onClose, onOpenBar, initialPage = null }) {
   const { mounted, closing } = useMountTransition(open)
-  const nav = useNavConfig()
   const [fallbackSync, setFallbackSync] = useState(null)
-  const [latestPlay, setLatestPlay] = useState(null)
   const [sourceSync, setSourceSync] = useState({})
   const [version, setVersion] = useState(null)
   const [theme, setThemeState] = useState(() => getTheme())
   const [family, setFamily] = useState(() => getThemeFamily())
-  const [logoStyle, setLogoStyleState] = useState(() => getLogoStyle())
-  const [artworkSize, setArtworkSizeState] = useState(() => getArtworkSize())
   const [motion, setMotionState] = useState(() => getMotion())
   const [contrast, setContrastState] = useState(() => getContrast())
   const [transparency, setTransparencyState] = useState(() => getTransparency())
@@ -104,7 +80,6 @@ export default function SettingsPage({ open, onClose, onOpenBar, initialPage = n
   const [chatsCleared, setChatsCleared] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [syncNote, setSyncNote] = useState('')
-  const [tasteSummary, setTasteSummary] = useState(null)
   const dialogRef = useDialogA11y({ active: mounted, closeOnEscape: false })
   const [lockUntil, setLockUntil] = useState(() => {
     try {
@@ -196,25 +171,12 @@ export default function SettingsPage({ open, onClose, onOpenBar, initialPage = n
     if (!mounted) return undefined
     let cancelled = false
 
-    // The row answers "what does GameDeck think I like" without opening
-    // anything. Cached for ten minutes, so this is usually an IDB read.
-    loadTasteProfile()
-      .then((profile) => {
-        if (cancelled) return
-        const top = (profile.lanes || [])[0]
-        setTasteSummary(top ? `${top.label} · ${top.evidenceLabel}` : 'Not enough signal yet')
-      })
-      .catch(() => {
-        if (!cancelled) setTasteSummary(null)
-      })
-
     ;(async () => {
       // sync_runs is written only by the Exophase fallback workflow, so it is
       // labelled as such. The direct syncs stamp direct_synced_at on the rows
       // they own instead, which is what the per-source rows below read.
-      const [syncRes, actRes, ...srcRes] = await Promise.all([
+      const [syncRes, ...srcRes] = await Promise.all([
         supabase.from('sync_runs').select('ran_at').not('games_seen', 'is', null).order('id', { ascending: false }).limit(1),
-        supabase.from('games').select('last_played').not('last_played', 'is', null).order('last_played', { ascending: false }).limit(1),
         ...DIRECT_SOURCES.map((s) =>
           supabase
             .from('games')
@@ -227,7 +189,6 @@ export default function SettingsPage({ open, onClose, onOpenBar, initialPage = n
       ])
       if (cancelled) return
       if (syncRes.data && syncRes.data[0]) setFallbackSync(syncRes.data[0].ran_at)
-      if (actRes.data && actRes.data[0]) setLatestPlay(actRes.data[0].last_played)
 
       const next = {}
       DIRECT_SOURCES.forEach((s, i) => {
@@ -284,7 +245,7 @@ export default function SettingsPage({ open, onClose, onOpenBar, initialPage = n
   }
 
   function clearChats() {
-    if (!window.confirm('Clear all recommender chat history on this device?')) return
+    if (!window.confirm('Clear Ask GameDeck chats on this device? Your ratings, taste profile and recommendation preferences will not change.')) return
     try {
       localStorage.removeItem(CHATS_KEY)
       sessionStorage.removeItem(ACTIVE_CHAT_KEY)
@@ -309,38 +270,17 @@ export default function SettingsPage({ open, onClose, onOpenBar, initialPage = n
     setFamily(setThemeFamily(key))
   }
 
-  function changeLogoStyle(key) {
-    setLogoStyleState(setLogoStyle(key))
-  }
-
-  function changeArtworkSize(key) {
-    setArtworkSizeState(setArtworkSize(key))
-  }
-
   if (!mounted) return null
 
   const locked = Date.now() < lockUntil
   const versionValue = version ? `${version.sha} · ${relTime(version.date) || ''}`.trim().replace(/·\s*$/, '').trim() : '-'
 
   const labelOf = (opts, key) => (opts.find((o) => o.key === key) || {}).label || '-'
-  // Each Appearance row carries the setting it leads to, so the root list answers
-  // "what is my theme" without opening anything. That is the whole reason these
-  // three moved behind rows instead of staying a wall of controls: a sub-page you
-  // have to open to read is worse than the wall it replaced.
   const familyValue = labelOf(THEME_FAMILIES, family)
   const themeValue = `${familyValue} · ${labelOf(MODE_OPTIONS, theme)}`
-  const logoStyleValue = labelOf(LOGO_STYLE_OPTIONS, logoStyle)
-  const artworkValue = labelOf(ARTWORK_SIZE_OPTIONS, artworkSize)
   const displayValue = [motion, contrast, transparency].every((value) => value === 'system')
     ? 'Follow System'
     : 'Customized'
-  // The oldest of the four sync stamps, because the question this section answers
-  // is "is anything stale", and the answer to that is never the freshest one.
-  const syncStamps = [...DIRECT_SOURCES.map((s2) => sourceSync[s2.key]), fallbackSync].filter(Boolean)
-  const oldestSync = syncStamps.length === DIRECT_SOURCES.length + 1
-    ? syncStamps.reduce((a, b) => (new Date(b) < new Date(a) ? b : a))
-    : null
-  const sourcesValue = oldestSync ? `Oldest ${relTime(oldestSync)}` : '-'
 
   return (
     <div ref={dialogRef} className={`settings-page${closing ? ' closing' : ''}`} role="dialog" aria-modal="true" aria-label="Settings">
@@ -354,89 +294,36 @@ export default function SettingsPage({ open, onClose, onOpenBar, initialPage = n
       </div>
 
       <div className="settings-body">
-        <div className="settings-section">
-          <div className="menu-sec-label">Appearance</div>
-          <div className="settings-group">
+        <div className="settings-group">
             <MenuItem
               glyph={ICONS.appear}
               label="Appearance"
-              sub="Theme, display and motion"
+              sub="Theme, light & dark, accessibility"
               value={themeValue}
               onClick={() => push('appearance')}
             />
-          </div>
+            <MenuItem glyph={ICONS.nav} label="Navigation" sub="Bottom bar tabs, order and labels" onClick={onOpenBar} />
         </div>
-
-        <div className="settings-section">
-          <div className="menu-sec-label">Navigation</div>
-          <div className="settings-group">
-            {/* The switch sits above the editor it governs, and says where the
-                tabs go rather than what the switch does, because the strip
-                vanishing already says that. */}
-            <MenuItem
-              glyph={ICONS.eye}
-              label="Show bottom bar"
-              sub="Search stays on screen when the bar is hidden"
-              toggle={nav.barShown}
-              onClick={() => setNavConfig({ barShown: !nav.barShown })}
-            />
-            <MenuItem glyph={ICONS.nav} label="Bottom bar" sub="Which tabs, and in what order" onClick={onOpenBar} />
-          </div>
-        </div>
-
-        {/* One header, two cards. "Direct sources" and "Fallback" were architecture
-            vocabulary, and worse, they put Exophase's timestamp in a different card
-            from the three it is meant to be compared against. The job of this screen
-            is spotting a stale source, which is a scan down one list.
-
-            Latest play stays out of that list on purpose: it is when you last PLAYED,
-            not when we last synced, so sitting among sync times it reads as staleness
-            when nothing is wrong. */}
-        <div className="settings-section">
-          <div className="menu-sec-label">Data &amp; sync</div>
-          <div className="settings-group">
+        <div className="settings-group">
             <MenuItem
               glyph={ICONS.refresh}
-              label="Sync now"
-              sub={syncNote || 'Pulls all four sources. Takes a few minutes.'}
-              value={syncing ? 'Syncing' : 'Refresh'}
-              valueAccent
-              onClick={triggerRefresh}
-              disabled={syncing || locked}
-              chevron={false}
-            />
-            <MenuItem
-              glyph={ICONS.clock}
-              label="Latest play"
-              sub="Newest session across all platforms"
-              value={relTime(latestPlay) || '-'}
-              disabled
-              chevron={false}
-            />
-            {/* Four read-only timestamps and a profile link were five of the
-                seventeen rows on the root list, and none of them is a control.
-                They are what you open when something looks stale, so they move
-                behind the one row that says whether anything IS - the OLDEST of
-                the four, because the freshest can never answer that. */}
-            <MenuItem
-              glyph={ICONS.layers}
-              label="Sources"
-              sub="When each platform last reported"
-              value={sourcesValue}
+              label="Data & sync"
+              sub="Refresh your library and check each source"
               onClick={() => push('sources')}
             />
             <MenuItem
-              glyph={ICONS.spark}
-              label="Taste profile"
-              sub="What GameDeck knows about your taste"
-              value={tasteSummary}
-              onClick={() => push('taste')}
+              glyph={ICONS.key}
+              label="Account & device"
+              sub="Sign-in and chats saved on this device"
+              onClick={() => push('account')}
             />
-          </div>
         </div>
+        <div className="settings-group">
+          <MenuItem glyph={ICONS.info} label="About" sub="Version and source code" onClick={() => push('about')} />
+        </div>
+      </div>
 
-        <div className="settings-section">
-          <div className="menu-sec-label">Privacy &amp; device</div>
+      <SubPage open={stack.includes('account')} depth={depthOf('account')} title="Account & device" onBack={pop}>
           <div className="settings-group">
             <MenuItem
               glyph={ICONS.key}
@@ -449,8 +336,8 @@ export default function SettingsPage({ open, onClose, onOpenBar, initialPage = n
             />
             <MenuItem
               glyph={ICONS.spark}
-              label="Recommender history"
-              sub={chatsCleared ? 'Cleared on this device' : null}
+              label="Clear Ask GameDeck chats"
+              sub={chatsCleared ? 'Cleared on this device' : 'Only chats saved on this device'}
               value={chatsCleared ? 'Cleared' : 'Clear'}
               valueAccent={!chatsCleared}
               onClick={clearChats}
@@ -458,28 +345,28 @@ export default function SettingsPage({ open, onClose, onOpenBar, initialPage = n
               chevron={false}
             />
           </div>
-        </div>
+          <p className="settings-note" role="status">
+            {chatsCleared ? 'Chats cleared. ' : ''}Your ratings, taste profile and recommendation preferences are kept.
+          </p>
+      </SubPage>
 
-        <div className="settings-section">
-          <div className="menu-sec-label">About</div>
+      <SubPage open={stack.includes('about')} depth={depthOf('about')} title="About" onBack={pop}>
           <div className="settings-group">
             <MenuItem glyph={ICONS.info} label="Version" value={versionValue} disabled chevron={false} />
             <MenuItem glyph={ICONS.code} label="Source" value="GitHub" href={SOURCE_URL} />
           </div>
-        </div>
-      </div>
+      </SubPage>
 
       <SubPage open={stack.includes('appearance')} depth={depthOf('appearance')} title="Appearance" onBack={pop}>
         <div className="settings-group">
           <MenuItem glyph={ICONS.appear} label="Theme" sub="The complete visual language" value={familyValue} onClick={() => push('themes')} />
-          <MenuItem glyph={ICONS.spark} label="Light & dark" sub="Choose a mode or follow your device" value={labelOf(MODE_OPTIONS, theme)} onClick={() => push('mode')} />
-          <MenuItem glyph={ICONS.eye} label="Display & motion" sub="Motion, contrast and transparency" value={displayValue} onClick={() => push('display')} />
-          <MenuItem glyph={ICONS.layers} label="Logo style" sub="The mark used inside GameDeck" value={logoStyleValue} onClick={() => push('logo')} />
-          <MenuItem glyph={ICONS.image} label="Game artwork" sub="One cover size across every tab" value={artworkValue} onClick={() => push('cards')} />
         </div>
-        <p className="settings-note">
-          A theme controls its own atmosphere, material, typography, shapes and motion. Background is no longer a separate setting.
-        </p>
+        <Field label="Light & dark" hint="System follows your device and updates automatically.">
+          <Seg options={MODE_OPTIONS} value={theme} onPick={changeTheme} name="Light and dark mode" />
+        </Field>
+        <div className="settings-group">
+          <MenuItem glyph={ICONS.eye} label="Accessibility" sub="Motion, contrast and transparency" value={displayValue} onClick={() => push('display')} />
+        </div>
       </SubPage>
 
       <SubPage open={stack.includes('themes')} depth={depthOf('themes')} title="Theme" onBack={pop}>
@@ -514,13 +401,7 @@ export default function SettingsPage({ open, onClose, onOpenBar, initialPage = n
         </div>
       </SubPage>
 
-      <SubPage open={stack.includes('mode')} depth={depthOf('mode')} title="Light & dark" onBack={pop}>
-        <Field label="Appearance mode" hint="System follows your device and updates automatically.">
-          <Seg options={MODE_OPTIONS} value={theme} onPick={changeTheme} name="Light and dark mode" />
-        </Field>
-      </SubPage>
-
-      <SubPage open={stack.includes('display')} depth={depthOf('display')} title="Display & motion" onBack={pop}>
+      <SubPage open={stack.includes('display')} depth={depthOf('display')} title="Accessibility" onBack={pop}>
         <Field label="Motion" hint="Reduced removes decorative movement and shortens transitions.">
           <Seg options={MOTION_OPTIONS} value={motion} onPick={(key) => setMotionState(setMotion(key))} name="Motion" />
         </Field>
@@ -532,35 +413,21 @@ export default function SettingsPage({ open, onClose, onOpenBar, initialPage = n
         </Field>
       </SubPage>
 
-      <SubPage open={stack.includes('logo')} depth={depthOf('logo')} title="Logo style" onBack={pop}>
-        <div className="logo-style-options" role="radiogroup" aria-label="In-app logo style">
-          {LOGO_STYLE_OPTIONS.map((opt) => (
-            <button
-              key={opt.key}
-              type="button"
-              className={`logo-style-option${logoStyle === opt.key ? ' on' : ''}`}
-              onClick={() => changeLogoStyle(opt.key)}
-              role="radio"
-              aria-checked={logoStyle === opt.key}
-            >
-              <span className="logo-style-preview">
-                <LogoMark variant={opt.key === 'theme' ? undefined : opt.key} className="logo-style-mark" />
-              </span>
-              <span className="logo-style-copy">
-                <b>{opt.label}</b>
-                <span>{opt.sub}</span>
-              </span>
-              <span className="logo-style-check" aria-hidden="true">✓</span>
-            </button>
-          ))}
+      <SubPage open={stack.includes('sources')} depth={depthOf('sources')} title="Data & sync" onBack={pop}>
+        <div className="settings-group">
+          <MenuItem
+            glyph={ICONS.refresh}
+            label="Sync now"
+            sub="Pulls all four sources. Takes a few minutes."
+            value={syncing ? 'Syncing…' : locked ? 'In progress' : 'Refresh'}
+            valueAccent
+            onClick={triggerRefresh}
+            disabled={syncing || locked}
+            chevron={false}
+          />
         </div>
-        <p className="settings-note">
-          Theme default uses glass in Obsidian and the classic mark elsewhere. This changes the logo
-          inside GameDeck; the installed Home Screen icon stays unchanged.
-        </p>
-      </SubPage>
-
-      <SubPage open={stack.includes('sources')} depth={depthOf('sources')} title="Sources" onBack={pop}>
+        {syncNote ? <p className="settings-note" role="status">{syncNote}</p> : null}
+        <div className="settings-field-hd"><div className="menu-accent-label">Last reported</div></div>
         <div className="settings-group">
           {DIRECT_SOURCES.map((src) => (
             <MenuItem
@@ -585,30 +452,12 @@ export default function SettingsPage({ open, onClose, onOpenBar, initialPage = n
           <MenuItem glyph={ICONS.link} label="Exophase profile" href={EXOPHASE_PROFILE_URL} />
         </div>
         <p className="settings-note">
-          Each platform syncs from its own API and they fail independently, so a dead token shows
-          up here as one row that stopped moving rather than as playtime that quietly stopped.
+          Sources refresh independently. Exophase is the backup and runs every six hours;
+          an older timestamp here does not necessarily mean a problem.
         </p>
       </SubPage>
 
-      <SubPage open={stack.includes('taste')} depth={depthOf('taste')} title="Taste profile" onBack={pop}>
-        <TasteProfile />
-      </SubPage>
 
-      <SubPage open={stack.includes('cards')} depth={depthOf('cards')} title="Game artwork" onBack={pop}>
-        <Field label="Cover size" hint="Medium is about 15% larger than the previous default">
-          <Seg options={ARTWORK_SIZE_OPTIONS} value={artworkSize} onPick={changeArtworkSize} name="Game artwork size" />
-        </Field>
-        <div className="settings-artwork-scope" aria-label="Applies everywhere">
-          <strong>Applies everywhere</strong>
-          <ul>
-            <li>Home cards</li>
-            <li>Library rows</li>
-            <li>Browse, For You, and search</li>
-            <li>Release Watch and Wishlist</li>
-            <li>Rankings, Activity, and Insights</li>
-          </ul>
-        </div>
-      </SubPage>
     </div>
   )
 }

@@ -9,7 +9,7 @@
 //   Insights  - Activity entry point, and Home's "Jump back in" tile
 //   For You   - Home's "Jump back in" tile
 //   News      - Home's top story and "More news" tile
-//   Search    - detached button in the dock, stays when the bar is hidden
+//   Search    - detached button in the always-visible dock
 //   Settings  - gear in the Home header
 //
 // Destinations with bar: false render as tabs but the bar editor cannot place
@@ -58,7 +58,7 @@ const BAR_KEYS = BAR_CATALOG.map((d) => d.key)
 
 // The approved default bar order (matches the Expo pilot). The migration below
 // adopts this order for every profile; membership choices (which tabs show),
-// labels, and bar visibility are still the user's and carry over.
+// and labels are still the user's and carry over. The bar is always visible.
 const EXPO_BAR = ['home', 'discover', 'library', 'activity']
 
 function defaults() {
@@ -84,7 +84,7 @@ function readStored() {
 
 // Legacy drawer-era state (order, collapsed groups) is ignored on read and
 // never written back. The bar order moves to the approved Expo order; the
-// user's membership choices, labels, and bar visibility carry over. A tab the
+// user's membership choices and labels carry over. A tab the
 // user had on the bar before (only Rankings was ever extra) stays on the bar.
 // Once a config carries barModel: 2, reads reconcile the saved bar order
 // instead of rebuilding it, so the bar editor's reorder survives reloads.
@@ -98,7 +98,9 @@ function migrate(stored) {
     }
   }
   const labels = typeof stored.labels === 'boolean' ? stored.labels : base.labels
-  const barShown = typeof stored.barShown === 'boolean' ? stored.barShown : base.barShown
+  // Retired the hide-bar control: recover older hidden profiles without
+  // resetting their tab order, membership, labels, or landing destination.
+  const barShown = true
   if (stored.barModel === BAR_MODEL && Array.isArray(stored.bar)) {
     const seen = new Set()
     const bar = []
@@ -126,7 +128,7 @@ export function getNavConfig() {
 }
 
 export function setNavConfig(patch) {
-  const next = { ...migrate(readStored()), ...(patch || {}) }
+  const next = { ...migrate(readStored()), ...(patch || {}), barShown: true }
   try {
     localStorage.setItem(KEY, JSON.stringify(next))
   } catch {

@@ -45,10 +45,7 @@ export default function CustomizeBar({ open, onClose }) {
     const tabs = order.filter((k) => enabled[k])
     return (
       <div className="cz-prev">
-        {/* The preview keeps rendering while the bar is switched off: this is
-            where you arrange it for when it comes back. Only the label changes,
-            because "on the bar now" would be a claim about the screen. */}
-        <div className="cz-prev-l">{nav.barShown ? 'On the bar now' : 'The bar, currently hidden'}</div>
+        <div className="cz-prev-l">On the bar now</div>
         <div className="cz-prev-bar">
           <TabBar tabs={tabs} active={tabs[0]} onChange={() => {}} showLabels={nav.labels} />
         </div>

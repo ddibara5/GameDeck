@@ -229,7 +229,10 @@ export function initTheme() {
   applyTheme(getTheme())
   applyThemeFamily(getThemeFamily())
   applyLogoStyle(getLogoStyle())
-  applyArtworkSize(getArtworkSize())
+  // Global artwork scaling is retired. Keep the preference helpers for
+  // migration/tests, but always start the app on the shared medium semantic
+  // slots so old Small/Large choices cannot make collections drift apart.
+  applyArtworkSize('m')
   root().setAttribute('data-motion', getMotion())
   root().setAttribute('data-contrast', getContrast())
   root().setAttribute('data-transparency', getTransparency())

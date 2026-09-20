@@ -55,12 +55,10 @@ test('one token system reaches every repeatable game-art surface', () => {
   assert.match(css('components/rankings.css'), /var\(--game-art-duel\)/)
 })
 
-test('Settings exposes one artwork control and an informational scope list', () => {
+test('Settings no longer exposes a global artwork control', () => {
   const settings = readFileSync(new URL('../src/components/SettingsPage.jsx', import.meta.url), 'utf8')
 
-  assert.match(settings, /label="Game artwork"/)
-  assert.match(settings, /label="Cover size"/)
-  assert.match(settings, /Applies everywhere/)
+  assert.doesNotMatch(settings, /label="Game artwork"|label="Cover size"|Applies everywhere/)
   assert.doesNotMatch(settings, /Shelf posters|List rows|getShelfSize|getListSize/)
 })
 

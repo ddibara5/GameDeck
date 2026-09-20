@@ -69,7 +69,7 @@ test('the default bar follows the approved Expo order', () => {
   })
 })
 
-test('migration adopts the Expo order but keeps membership, labels and visibility', () => {
+test('migration adopts the Expo order but keeps membership and labels', () => {
   const stored = {
     order: ['home', 'library', 'activity', 'insights', 'rankings', 'discover', 'news', 'wishlist', 'foryou'],
     bar: ['home', 'library', 'discover', 'activity'],
@@ -84,7 +84,7 @@ test('migration adopts the Expo order but keeps membership, labels and visibilit
     // discover was disabled in the stored config, so it is hidden.
     assert.deepEqual(visibleKeys(config), ['home', 'library', 'activity'])
     assert.equal(config.labels, true)
-    assert.equal(config.barShown, false)
+    assert.equal(config.barShown, true)
     // Drawer-era state is not carried over.
     assert.ok(!('order' in config))
     assert.ok(!('collapsed' in config))
