@@ -145,7 +145,9 @@ export function useEdgeBack(
 ) {
   const idRef = useRef(0)
   const backRef = useRef(onBack)
+  const disabledRef = useRef(disabled)
   backRef.current = onBack
+  disabledRef.current = disabled
 
   useEffect(() => {
     if (!register) return undefined
@@ -243,7 +245,7 @@ export function useEdgeBack(
       if (!ownsGesture()) return
 
       if (e.cancelable) e.preventDefault()
-      if (disabled) return
+      if (disabledRef.current) return
 
       const targets = refsToElements(interactiveRef, interactiveRefs)
       if (!targets.length) {
@@ -301,5 +303,5 @@ export function useEdgeBack(
       window.removeEventListener('touchend', onEnd)
       window.removeEventListener('touchcancel', onCancel)
     }
-  }, [disabled, register, interactiveRef, interactiveRefs, deferBack, settleMs])
+  }, [register, interactiveRef, interactiveRefs, deferBack, settleMs])
 }
