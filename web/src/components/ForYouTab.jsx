@@ -9,6 +9,7 @@ import { useForYouDeck } from '../lib/useForYouDeck.js'
 import { useRecommendationDismissals } from '../lib/recommendationDismissals.js'
 import { resolveTuneLaunch, consumeLaneDuelReceipt } from '../lib/laneDuel.js'
 import ForYouAction from './ForYouAction.jsx'
+import DiscoverFilterButton from './DiscoverFilterButton.jsx'
 import ForYouRow from './ForYouRow.jsx'
 import ForYouSheet from './ForYouSheet.jsx'
 import ForYouTaste from './ForYouTaste.jsx'
@@ -40,31 +41,61 @@ function toggleInList(list, key, { allowEmpty = true } = {}) {
   return next
 }
 
-function WhyContent({ pick, laneLabel, tuneLaunch, onTuneTaste }) {
+function countLabel(count, singular, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`
+}
+
+function reactionLabel(reaction) {
+  return reaction
+    ? reaction.replaceAll('_', ' ').replace(/^./, (letter) => letter.toUpperCase())
+    : 'Play history'
+}
+
+function sourceDuelSummary(duel, complete) {
+  if (!duel?.decidedComparisons) return null
+  const record = `${countLabel(duel.wins, 'recorded win')} and ${countLabel(duel.losses, 'recorded loss', 'recorded losses')} across ${countLabel(duel.decidedComparisons, 'decided comparison')}`
+  const opponents = duel.uniqueOpponentsDefeated
+    ? ` ${complete ? 'Ranked' : 'Within that history, ranked'} above ${countLabel(duel.uniqueOpponentsDefeated, 'unique opponent')}.`
+    : ''
+  return complete ? `${record}.${opponents}` : `Available duel history includes ${record}.${opponents}`
+}
+
+function WhyContent({ pick, laneLabel, evidenceProfile, tuneLaunch, onTuneTaste }) {
   const game = pick.game
   const title = game.title || game.name
   const cover = game.artwork || game.cover
   const metadata = [
-    (game.platforms || []).slice(0, 2).join(' \u00b7 '),
+    (game.platforms || []).slice(0, 2).join(' · '),
     game.releaseLabel ?? game.year ?? 'Release TBA',
   ]
     .filter(Boolean)
-    .join(' \u00b7 ')
-  const laneEvidence = pick.evidence?.laneEvidence
+    .join(' · ')
+  const evidence = pick.evidence || {}
+  const laneEvidence = evidence.laneEvidence
+  const activeLane = evidenceProfile?.lanes?.find((lane) => lane.key === evidence.lane)
+  const supportingSources = (evidenceProfile?.sources || [])
+    .filter((source) => {
+      const keys = Array.isArray(source.laneKeys) ? source.laneKeys : []
+      const id = String(source.masterId ?? source.id ?? '')
+      const sourceId = String(evidence.source?.masterId ?? evidence.source?.id ?? '')
+      return keys.includes(evidence.lane) && id && id !== sourceId
+    })
+    .slice(0, evidence.source ? 2 : 3)
   const noteParts = []
   if (laneEvidence?.evidenceLabel) {
-    noteParts.push(
-      `Evidence coverage: ${laneEvidence.evidenceLabel}.`,
-    )
+    noteParts.push(`Evidence coverage: ${laneEvidence.evidenceLabel}.`)
   }
-  if (pick.evidence?.comparisonCoverageComplete === false) {
+  if (evidence.comparisonCoverageComplete === false) {
     noteParts.push(
       'Comparison coverage is partial: this pick relies more on your ratings and play history until you compare more games.',
     )
   }
-  // The engine emits a singular `reason` string; derive rows defensively so
-  // the sheet can never throw on production-shaped picks.
   const reasons = whyPickReasons(pick)
+  const duelEvidence = sourceDuelSummary(
+    evidence.source?.duel,
+    evidence.comparisonCoverageComplete,
+  )
+
   return (
     <div className="fy-why">
       <div className="fy-why-head">
@@ -85,21 +116,59 @@ function WhyContent({ pick, laneLabel, tuneLaunch, onTuneTaste }) {
           </div>
         ))}
       </section>
-      {pick.matchBreakdown?.length ? (
-        <section aria-label="Match breakdown">
-          <h4 className="fy-why-section-title">Match breakdown</h4>
-          {pick.matchBreakdown.map((row, index) => (
-            <div className="fy-why-item" key={`${row.title}-${index}`}>
-              <div className="fy-why-source">{row.title}</div>
-              <p className="fy-why-detail">{row.text}</p>
+      {laneEvidence ? (
+        <section aria-label="Taste evidence">
+          <h4 className="fy-why-section-title">Taste evidence</h4>
+          <div className="fy-why-item">
+            <div className="fy-why-source">{laneEvidence.evidenceLabel || 'Taste signal'}</div>
+            <p className="fy-why-detail">
+              {laneEvidence.positiveSourceCount > 0
+                ? countLabel(laneEvidence.positiveSourceCount, 'positively rated game')
+                : `${countLabel(laneEvidence.supportingGameCount, 'game')} from play history`}
+              {laneEvidence.uniqueMatchups > 0
+                ? ` · ${evidence.comparisonCoverageComplete ? '' : 'at least '}${countLabel(laneEvidence.uniqueMatchups, 'unique matchup')}${evidence.comparisonCoverageComplete ? '' : ' in available history'}`
+                : ''}
+              {laneEvidence.label ? ` · ${laneEvidence.label} taste` : ''}
+            </p>
+          </div>
+        </section>
+      ) : null}
+      {evidence.source ? (
+        <section aria-label="Closest taste signal">
+          <h4 className="fy-why-section-title">Closest taste signal</h4>
+          <div className="fy-why-item">
+            <div className="fy-why-source">{evidence.source.title}</div>
+            <p className="fy-why-detail">
+              {reactionLabel(evidence.source.reaction)}
+              {duelEvidence ? ` · ${duelEvidence}` : ''}
+            </p>
+            {evidence.shared?.length ? (
+              <p className="fy-why-detail">Shared with this pick: {evidence.shared.join(' · ')}</p>
+            ) : null}
+          </div>
+        </section>
+      ) : evidence.shared?.length ? (
+        <section aria-label="Shared traits">
+          <h4 className="fy-why-section-title">Shared traits</h4>
+          <p className="fy-why-detail">{evidence.shared.join(' · ')}</p>
+        </section>
+      ) : null}
+      {supportingSources.length ? (
+        <section aria-label="Supporting taste signals">
+          <h4 className="fy-why-section-title">
+            Also shaping your {activeLane?.label?.toLowerCase() || 'taste'}
+          </h4>
+          {supportingSources.map((source) => (
+            <div className="fy-why-item" key={String(source.masterId ?? source.id)}>
+              <div className="fy-why-source">{source.title}</div>
+              <p className="fy-why-detail">{reactionLabel(source.reaction)}</p>
             </div>
           ))}
         </section>
       ) : null}
       {laneLabel ? (
         <p className="fy-why-note">
-          Served from the{' '}{laneLabel}{' '}catalog lane because your profile
-          ranks it in your top tastes.
+          Served from the {laneLabel} catalog lane because your profile ranks it in your top tastes.
         </p>
       ) : null}
       {noteParts.length ? (
@@ -112,6 +181,14 @@ function WhyContent({ pick, laneLabel, tuneLaunch, onTuneTaste }) {
           onPress={() => onTuneTaste(tuneLaunch)}
         />
       ) : null}
+      {!evidence.lane ? (
+        <p className="fy-why-note">
+          This discovery adds variety to your mix. It is not a claim that you will love this game.
+        </p>
+      ) : null}
+      <p className="fy-why-note">
+        Your mix balances taste evidence, recent activity, catalog quality, and variety. IGDB ratings reflect public opinion, not a personal match score.
+      </p>
     </div>
   )
 }
@@ -124,6 +201,12 @@ function OptionsContent({ pick, laneKey, laneLabel, disabled, saving, onSelect }
       icon: '\u{1F516}',
       label: 'Add to Wishlist',
       sub: 'Move it to your Wishlist instead of the mix.',
+    },
+    {
+      key: 'details',
+      icon: '↗',
+      label: 'View game details',
+      sub: 'Open the full game page.',
     },
   ]
   if (laneKey) {
@@ -178,7 +261,13 @@ function OptionsContent({ pick, laneKey, laneLabel, disabled, saving, onSelect }
   )
 }
 
-export default function ForYouTab({ onAsk, onOpenTaste = null, onTuneTaste = null }) {
+export default function ForYouTab({
+  onAsk,
+  onBrowse = null,
+  onOpenTaste = null,
+  onTuneTaste = null,
+  onOpenRankings = null,
+}) {
   const [filters, setFilters] = useState(() => loadForYouFilters())
   const [detailGame, setDetailGame] = useState(null)
   const [optionsPick, setOptionsPick] = useState(null)
@@ -216,12 +305,12 @@ export default function ForYouTab({ onAsk, onOpenTaste = null, onTuneTaste = nul
 
   const key = forYouFilterKey(filters)
   const deck = snapshot?.key === key && snapshot.day === localDay() ? snapshot.deck : null
-  const today = new Date().toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  })
-
+  const filterCount = filters
+    ? Number(filters.platforms.length > 0) +
+      Number(filters.scales.length !== SCALE_OPTIONS.length) +
+      Number(filters.hideOwned) +
+      Number(filters.availability !== 'all')
+    : 0
   const updateFilters = (next) => {
     setFilters(next)
     saveForYouFilters(next)
@@ -248,6 +337,9 @@ export default function ForYouTab({ onAsk, onOpenTaste = null, onTuneTaste = nul
     } else if (action === 'why') {
       setOptionsPick(null)
       setWhyPick(pick)
+    } else if (action === 'details') {
+      setOptionsPick(null)
+      setDetailGame(pick.game)
     } else if (action === 'hide') {
       setOptionsPick(null)
       void hide(pick)
@@ -258,22 +350,31 @@ export default function ForYouTab({ onAsk, onOpenTaste = null, onTuneTaste = nul
     <div className="fy-list">
       <div className="fy-list-head">
         <div>
-          <h1 className="detail-title">Daily Mix</h1>
-          <p className="detail-sub">{today}</p>
+          <h1 className="detail-title">Your daily mix</h1>
+          <p className="detail-sub">
+            {deck ? `${deck.length} picks for you` : 'A little familiar. A little unexpected.'}
+          </p>
         </div>
         <div className="fy-list-actions">
-          <ForYouAction
-            compact
-            label="Tune your mix"
-            accessibilityLabel="Tune your mix preferences"
-            onPress={() => setShowTaste(true)}
-          />
-          <ForYouAction
-            compact
+          <DiscoverFilterButton
             label="Filters"
-            accessibilityLabel="Open For You filters"
-            onPress={() => setShowFilters(true)}
+            activeCount={filterCount}
+            onClick={() => setShowFilters(true)}
           />
+          <button
+            type="button"
+            className="fy-tune-btn"
+            aria-label="Tune your mix"
+            disabled={!snapshot || saving}
+            onClick={() => setShowTaste(true)}
+          >
+            <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true">
+              <path d="M4 6h16M4 12h16M4 18h16" />
+              <circle cx="9" cy="6" r="2" fill="var(--surface)" />
+              <circle cx="15" cy="12" r="2" fill="var(--surface)" />
+              <circle cx="10" cy="18" r="2" fill="var(--surface)" />
+            </svg>
+          </button>
         </div>
       </div>
 
@@ -343,11 +444,19 @@ export default function ForYouTab({ onAsk, onOpenTaste = null, onTuneTaste = nul
               <p className="detail-sub">
                 Try widening your platforms, scales, or discovery balance.
               </p>
-              <ForYouAction
-                primary
-                label="Adjust filters"
-                onPress={() => setShowFilters(true)}
-              />
+              <div className="fy-empty-actions">
+                <ForYouAction
+                  primary
+                  label="Adjust filters"
+                  onPress={() => setShowFilters(true)}
+                />
+                {onBrowse ? (
+                  <ForYouAction
+                    label="Explore Browse"
+                    onPress={onBrowse}
+                  />
+                ) : null}
+              </div>
             </div>
           )}
         </>
@@ -390,6 +499,7 @@ export default function ForYouTab({ onAsk, onOpenTaste = null, onTuneTaste = nul
           <WhyContent
             pick={whyPick}
             laneLabel={forYouLaneLabel(whyPick, snapshot?.laneKeys)}
+            evidenceProfile={snapshot?.evidenceProfile}
             tuneLaunch={
               onTuneTaste
                 ? resolveTuneLaunch(whyPick, snapshot?.evidenceProfile)
@@ -412,6 +522,10 @@ export default function ForYouTab({ onAsk, onOpenTaste = null, onTuneTaste = nul
           <ForYouTaste
             lanes={snapshot?.evidenceProfile?.lanes ?? []}
             less={snapshot?.state?.less ?? []}
+            onRankings={onOpenRankings ? () => {
+              setShowTaste(false)
+              onOpenRankings()
+            } : null}
             more={snapshot?.state?.more ?? []}
             hidden={hidden}
             disabled={saving}

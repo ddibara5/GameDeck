@@ -4,8 +4,7 @@ import { useState } from 'react'
 // { label, options: [{ value, label }], value, onChange }.
 import SegmentedControl from './SegmentedControl.jsx'
 import ForYouTab from './ForYouTab.jsx'
-import DiscoverTab from './DiscoverTab.jsx'
-import NewsTab from './NewsTab.jsx'
+import DiscoverBrowse from './DiscoverBrowse.jsx'
 import LibraryTab from './LibraryTab.jsx'
 import WishlistTab from './WishlistTab.jsx'
 import RankingsTab from './RankingsTab.jsx'
@@ -25,8 +24,7 @@ import './featureHub.css'
 const SECTIONS = {
   discover: [
     { value: 'for-you', label: 'For You', Screen: ForYouTab },
-    { value: 'browse', label: 'Browse', Screen: DiscoverTab },
-    { value: 'news', label: 'News', Screen: NewsTab },
+    { value: 'browse', label: 'Browse', Screen: DiscoverBrowse },
   ],
   library: [
     { value: 'games', label: 'Games', Screen: LibraryTab },
@@ -47,6 +45,8 @@ export default function FeatureHub({
   onCustomize,
   onWishlistClose,
   onOpenTaste,
+  onTuneTaste,
+  onOpenRankings,
 }) {
   const options = SECTIONS[kind] || SECTIONS.discover
   const isValid = (value) => options.some((option) => option.value === value)
@@ -60,9 +60,11 @@ export default function FeatureHub({
   const screenProps = {}
   if (Screen === ForYouTab) {
     if (onAsk) screenProps.onAsk = onAsk
-    if (onBrowse) screenProps.onBrowse = onBrowse
+    screenProps.onBrowse = onBrowse || (() => setSelected('browse'))
     if (onOpenTaste) screenProps.onOpenTaste = onOpenTaste
-  } else if (Screen === DiscoverTab) {
+    if (onTuneTaste) screenProps.onTuneTaste = onTuneTaste
+    if (onOpenRankings) screenProps.onOpenRankings = onOpenRankings
+  } else if (Screen === DiscoverBrowse) {
     if (onCustomize) screenProps.onCustomize = onCustomize
     if (onAsk) screenProps.onAsk = onAsk
   } else if (Screen === WishlistTab) {

@@ -13,7 +13,7 @@ import { loadNews, markRead, resolveGame, buildLibraryIndex } from '../lib/news.
 import { fetchGameById } from '../lib/discover.js'
 import { loadHomeLayout, saveHomeLayout } from '../lib/homeLayout.js'
 import { gameProgress, libraryTitleKey, sortRecentGames, wishlistProgress } from '../lib/homeRails.js'
-import { libraryCover } from '../lib/format.js'
+import { libraryCover, timingParts } from '../lib/format.js'
 import './homeCards.css'
 import './homeRails.css'
 
@@ -237,14 +237,22 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
   const libraryReady = !libraryLoading || games.length > 0
   const libraryBroken = Boolean(libraryError) && games.length === 0
 
-  const toWishlistRailItem = (item, dateMode) => ({
-    key: String(item.igdb_id ?? item.title),
-    title: item.title,
-    artwork: gameArtworkUrl(item.cover, null),
-    progress: wishlistProgress(item, libraryByIgdb, libraryByTitle),
-    meta: dateMode === 'age' ? releasedAgoLabel(item) : releaseLabel(item),
-    source: item,
-  })
+  const toWishlistRailItem = (item, dateMode) => {
+    const timing = timingParts(item.released)
+    return {
+      key: String(item.igdb_id ?? item.title),
+      title: item.title,
+      artwork: gameArtworkUrl(item.cover, null),
+      progress: wishlistProgress(item, libraryByIgdb, libraryByTitle),
+      timing,
+      meta: timing
+        ? null
+        : dateMode === 'age'
+          ? releasedAgoLabel(item)
+          : releaseLabel(item),
+      source: item,
+    }
+  }
 
   const renderSection = (section) => {
     if (section === 'continue-playing') {

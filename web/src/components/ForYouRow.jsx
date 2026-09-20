@@ -1,5 +1,7 @@
 import Cover from './Cover.jsx'
+import { releaseTiming, timingParts, shelfMetaDate } from '../lib/format.js'
 import { recommendationTrigger } from '../lib/forYouEngine.js'
+import TimingOverlay from './TimingOverlay.jsx'
 import './forYou.css'
 
 // Compact recommendation row, ported from the pilot's for-you-row.tsx:
@@ -20,12 +22,17 @@ export default function ForYouRow({
   const game = pick.game
   const title = game.title || game.name
   const cover = game.artwork || game.cover
+  const released = game.released ?? game.release?.ts ?? null
+  const timing = releaseTiming(released)
+  const parts = timingParts(released)
+  const releaseMeta = shelfMetaDate(game, timing) || game.releaseLabel || game.year || 'Release TBA'
   const metadata = [
-    (game.platforms || []).slice(0, 2).join(' \u00b7 '),
-    game.releaseLabel ?? game.year ?? 'Release TBA',
+    (game.platforms || []).slice(0, 2).join(' · '),
+    game.rating ? `★ ${game.rating}` : null,
+    timing ? null : releaseMeta,
   ]
     .filter(Boolean)
-    .join(' \u00b7 ')
+    .join(' · ')
   const triggerLabel = recommendationTrigger(pick, laneLabel)
   const evidenceLabel = pick.evidence?.laneEvidence?.evidenceLabel
   const accessibilityEvidence = evidenceLabel
@@ -40,7 +47,10 @@ export default function ForYouRow({
         aria-label={`View details for ${title}`}
         onClick={onDetails}
       >
-        <Cover src={cover} title={title} size="sm" className="fy-row-cover" />
+        <span className="fy-row-cover-frame">
+          <Cover src={cover} title={title} size="sm" className="fy-row-cover" />
+          <TimingOverlay parts={parts} compact />
+        </span>
       </button>
       <div className="fy-row-body">
         <button

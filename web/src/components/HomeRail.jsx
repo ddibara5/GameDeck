@@ -1,5 +1,6 @@
 import Cover from './Cover.jsx'
 import { NowPlayingChevron } from './HomeNowPlaying.jsx'
+import TimingOverlay from './TimingOverlay.jsx'
 import './homeRails.css'
 
 // Web port of the pilot's HomeGameRail (home-cards.tsx, Sept 11 commit): one
@@ -41,6 +42,7 @@ export default function HomeRail({ title, items, onOpenAll, onOpen, compact = fa
           >
             <span className="hrail-poster">
               <Cover src={item.artwork} title={item.title} size="sm" className="hrail-cov" />
+              {item.timing ? <TimingOverlay parts={item.timing} compact /> : null}
               {item.progress != null ? (
                 <span className="hrail-badge" aria-hidden="true">
                   {item.progress}%

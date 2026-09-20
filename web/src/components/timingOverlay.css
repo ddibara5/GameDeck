@@ -1,0 +1,45 @@
+
+/* Shared release timing overlay used by Home, For You, and Browse. */
+.sc-ov {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: block;
+  padding: 20px 9px 7px;
+  border-bottom-left-radius: inherit;
+  border-bottom-right-radius: inherit;
+  background: linear-gradient(to top, rgba(10, 9, 8, 0.92), rgba(10, 9, 8, 0));
+  pointer-events: none;
+}
+.sc-ov-big {
+  display: block;
+  font-size: var(--t-t3);
+  font-weight: var(--w-bold);
+  line-height: 1;
+  letter-spacing: var(--t-t3-tr);
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+.sc-ov-lab {
+  display: block;
+  min-height: 13px;
+  margin-top: 1px;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: var(--t-cap2);
+  line-height: 1.2;
+}
+.sc-ov.today .sc-ov-big { color: #6fd3a3; }
+
+.sc-ov.sc-ov-compact {
+  padding: 14px 6px 5px;
+  border-bottom-left-radius: inherit;
+  border-bottom-right-radius: inherit;
+}
+.sc-ov-compact .sc-ov-big {
+  font-size: 18px;
+}
+.sc-ov-compact .sc-ov-lab {
+  min-height: 11px;
+  font-size: 10px;
+}

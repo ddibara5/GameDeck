@@ -542,3 +542,102 @@
   color: var(--text);
   margin: 0;
 }
+
+ 
+/* Expo parity: For You uses the pilot's 84 x 126 row cover and 8px rhythm. */
+.fy-row {
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 16px;
+}
+.fy-row-cover-frame {
+  position: relative;
+  flex: 0 0 84px;
+  width: 84px;
+  height: 126px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+.fy-row-cover {
+  width: 84px;
+  height: 126px;
+  border-radius: inherit;
+}
+.fy-row-cover-frame .sc-ov {
+  border-bottom-left-radius: inherit;
+  border-bottom-right-radius: inherit;
+}
+.fy-row-body {
+  gap: 3px;
+  padding-top: 0;
+}
+.fy-row-title-btn {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+.fy-row-meta {
+  line-height: 1.35;
+}
+.fy-row-foot {
+  align-items: center;
+  margin-top: 0;
+}
+.fy-row-reason {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+.fy-row-icon-btn {
+  width: 44px;
+  height: 44px;
+}
+.fy-list {
+  gap: 8px;
+}
+.fy-list-actions {
+  align-items: center;
+  gap: 4px;
+}
+.fy-list-actions .filter-btn {
+  position: relative;
+  width: auto;
+  min-width: 82px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0 10px;
+  gap: 6px;
+  border-radius: var(--r-pill);
+  color: var(--text);
+  font-size: var(--t-foot);
+  font-weight: var(--w-semi);
+}
+.fy-list-actions .filter-btn.active {
+  color: var(--bg);
+}
+.filter-btn-label {
+  white-space: nowrap;
+}
+.fy-tune-btn {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  color: var(--accent);
+  cursor: pointer;
+}
+.fy-tune-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.fy-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}

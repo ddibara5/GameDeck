@@ -10,3 +10,17 @@
 .fhub-seg {
   padding: 4px 18px 6px;
 }
+
+ 
+/* The hub switch is intentionally lighter than the settings segmented control. */
+.fhub-seg {
+  padding: 4px 14px 6px;
+}
+.fhub-seg .seg {
+  padding: 2px;
+}
+.fhub-seg .seg-btn {
+  min-height: 34px;
+  padding: 5px 4px;
+  font-size: var(--t-cap);
+}

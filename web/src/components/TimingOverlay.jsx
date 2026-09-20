@@ -8,10 +8,12 @@
 // Returns null rather than an empty scrim when there is no timing, so a game with
 // no release date (or one over a year old, where releaseTiming gives up) keeps a
 // clean cover.
-export default function TimingOverlay({ parts }) {
+import './timingOverlay.css'
+
+export default function TimingOverlay({ parts, compact = false }) {
   if (!parts) return null
   return (
-    <span className={`sc-ov ${parts.tone}`}>
+    <span className={`sc-ov ${parts.tone}${compact ? ' sc-ov-compact' : ''}`}>
       <span className="sc-ov-big">{parts.big}</span>
       {/* Always rendered, even empty ("Today" has no unit): the caption reserves
           its line in CSS so every figure in a row shares one baseline. Held open

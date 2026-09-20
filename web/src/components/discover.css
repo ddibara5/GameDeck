@@ -1239,3 +1239,51 @@ button.shelf-head:active {
     animation: none;
   }
 }
+
+ 
+/* Expo parity: Browse compact posters are 112 x 159 (156:221 ratio). */
+.discover-browse {
+  --discover-art-width: 112px;
+  --discover-art-height: 159px;
+}
+.discover-browse .shelf-card,
+.discover-browse .shelf-poster {
+  width: var(--discover-art-width, var(--game-art-rail));
+}
+.discover-browse .shelf-poster {
+  height: var(--discover-art-height);
+  aspect-ratio: 156 / 221;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.discover-browse .shelf-poster .cover-lg {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  aspect-ratio: auto;
+  margin: 0;
+  border-radius: inherit;
+}
+.discover-browse .shelf-poster-sk {
+  height: 100%;
+  aspect-ratio: auto;
+  border-radius: inherit;
+}
+.discover-browse .sc-ov {
+  border-bottom-left-radius: inherit;
+  border-bottom-right-radius: inherit;
+}
+.rail-grid .shelf-poster {
+  aspect-ratio: 156 / 221;
+  overflow: hidden;
+  border-radius: 12px;
+}
+.rail-grid .shelf-poster .cover-lg {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  aspect-ratio: auto;
+  margin: 0;
+  border-radius: inherit;
+}

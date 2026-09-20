@@ -493,7 +493,7 @@ export default function DiscoverBrowse({ onAsk, onCustomize }) {
   return (
     <div className="discover-browse">
       <div className="discover-section-toolbar">
-        <span className="discover-section-label">Browse games</span>
+        <span className="discover-section-label">Explore games</span>
         <DiscoverFilterButton activeCount={activeFilterCount} onClick={openFilters} />
       </div>
       {rowsConfig.order.map((key) => {
