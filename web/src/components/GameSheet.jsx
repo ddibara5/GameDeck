@@ -325,21 +325,8 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
     interactiveRef: dialogRef,
   })
 
-  if (!game) return null
-
-  const title = game.title || game.name
-  const coverSrc = owned
-    ? game.cover_igdb
-      ? igdbCover(game.cover_igdb, 't_720p')
-      : game.cover_small
-    : game.cover
-  const genres = (media && media.genres) || game.genres || []
-  const platforms = (media && media.platforms) || game.platforms || []
-  const companies = (media && media.companies) || game.companies || []
-  const summary = (media && media.summary) || game.summary || null
-  const screenshots = (media && media.screenshots) || game.screenshots || []
   const similarGameIds = useMemo(() => {
-    const source = (media && media.similarGameIds) || game.similarGameIds || []
+    const source = (media && media.similarGameIds) || (game && game.similarGameIds) || []
     const current = Number(igdbId)
     return [...new Set(source.map(Number).filter((id) => id && id !== current))].slice(0, 10)
   }, [media, game, igdbId])
@@ -377,6 +364,19 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
     }
   }, [similarGameIds])
 
+  if (!game) return null
+
+  const title = game.title || game.name
+  const coverSrc = owned
+    ? game.cover_igdb
+      ? igdbCover(game.cover_igdb, 't_720p')
+      : game.cover_small
+    : game.cover
+  const genres = (media && media.genres) || game.genres || []
+  const platforms = (media && media.platforms) || game.platforms || []
+  const companies = (media && media.companies) || game.companies || []
+  const summary = (media && media.summary) || game.summary || null
+  const screenshots = (media && media.screenshots) || game.screenshots || []
   const url = (media && media.url) || game.url || null
   const year = game.release_year || game.year || (media && media.year) || null
   // Exact release date, as precise as IGDB actually is about it (a full day for
