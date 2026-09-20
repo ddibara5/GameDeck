@@ -363,7 +363,7 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   const seed = owned
     ? { master_id: game.master_id, id: igdbId, name: title, year, genres }
     : { id: igdbId, name: title, year, genres }
-  const hasCatalogFacts = Boolean(studio || releaseText || platforms.length || rating != null)
+  const hasCatalogFacts = Boolean(studio || releaseText || platforms.length || safeGameUrl || (owned && safeAchievementsUrl))
 
   const handleOverlayClick = (e) => {
     if (e.target === e.currentTarget) requestClose()
