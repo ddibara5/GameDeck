@@ -126,7 +126,14 @@
 /* Compact variant for Home's Upcoming / New releases shelves: smaller posters
    and tighter spacing, GameTrack-style. Compressed per the approved mockup. */
 .hrail-compact .hrail-strip {
-  gap: 8px;
+  gap: 6px;
+}
+
+/* Tighten the vertical rhythm between the two release rails: Upcoming renders
+   inside .hm-rw-wrap, so when New releases follows it directly the page gap
+   collapses from 8px to 4px. */
+.hm-rw-wrap + .hrail {
+  margin-top: -4px;
 }
 
 .hrail-compact .hrail-card {
@@ -135,6 +142,14 @@
 
 .hrail-compact .hrail-poster {
   width: 76px;
+}
+
+/* Date labels ("In 5 days", "Sep 30", "x days ago") match the game title's
+   size and weight on the Home rails; the muted color comes from .hm-muted. */
+.hrail-compact .hrail-meta {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.25;
 }
 
 /* Spacing between the last section and the Customize pill bar. */

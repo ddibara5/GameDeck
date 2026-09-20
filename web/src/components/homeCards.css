@@ -515,12 +515,12 @@ button.hm-np:not(:disabled) {
 }
 
 /* ---- Continue playing hero: compact ----
-   Compressed sizing per the approved compressed mockup (64px 2:3 cover,
-   15px title, slim 4px bar). */
+   80px 2:3 cover (Dave: bigger than the compressed mockup's 64px), 15px
+   title, slim 4px bar, comfortable internal row spacing. */
 
 .hm-continue {
   display: grid;
-  grid-template-columns: 64px minmax(0, 1fr);
+  grid-template-columns: 80px minmax(0, 1fr);
   gap: 10px;
   align-items: center;
   padding: 9px 10px;
@@ -528,11 +528,22 @@ button.hm-np:not(:disabled) {
   border: 1px solid var(--line);
   border-radius: 16px;
   overflow: hidden;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.hm-continue-cover {
-  width: 64px;
-  /* IGDB covers are 2:3 portrait; a 3/4 box cropped the art top and bottom. */
+.hm-continue:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* IGDB covers are 2:3 portrait. .cover-sm fixes height:52px, which combined
+   with an explicit width cancels aspect-ratio and collapses the box to
+   landscape; the triple-class selector beats .cover-sm in the cascade
+   regardless of stylesheet order, so the box stays the full 2:3 portrait. */
+.cover.cover-sm.hm-continue-cover {
+  width: 80px;
+  height: 120px;
   aspect-ratio: 2 / 3;
   border-radius: 9px;
   overflow: hidden;
@@ -575,23 +586,6 @@ button.hm-np:not(:disabled) {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-}
-
-.hm-continue-btn {
-  border: 0;
-  border-radius: 9px;
-  background: var(--accent);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 6px 11px;
-  cursor: pointer;
-  white-space: nowrap;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.hm-continue-btn:active {
-  opacity: 0.85;
 }
 
 /* ---- Jump back in: three entry tiles (compressed) ---- */

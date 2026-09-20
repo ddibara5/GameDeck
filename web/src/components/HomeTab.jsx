@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import HomeRail from './HomeRail.jsx'
 import GameSheet, { preloadGameSheet } from './LazyGameSheet.jsx'
+import NewsSheet from './NewsSheet.jsx'
 import { HomeCustomizeBar, HomeCustomizeSheet } from './HomeCustomizer.jsx'
 import { TAB_ICONS } from './TabBar.jsx'
 import Cover from './Cover.jsx'
@@ -9,7 +10,8 @@ import { useStatusMap, effectiveStatus } from '../lib/userStatus.js'
 import { supabase } from '../lib/supabase.js'
 import { gameArtworkUrl } from '../lib/homeInsights.js'
 import { fetchReleaseCandidates, releaseLabel, releasedAgoLabel, releaseWatch } from '../lib/homeReleaseWatch.js'
-import { loadNews } from '../lib/news.js'
+import { loadNews, markRead, resolveGame, buildLibraryIndex } from '../lib/news.js'
+import { fetchGameById } from '../lib/discover.js'
 import { loadHomeLayout, saveHomeLayout } from '../lib/homeLayout.js'
 import { selectContinueGame } from '../lib/homeContinue.js'
 import { gameProgress, libraryTitleKey, wishlistProgress } from '../lib/homeRails.js'
@@ -60,15 +62,29 @@ function SectionHead({ title, action }) {
 }
 
 // Compact continue-playing hero: small cover, tight padding, slim progress
-// bar. Platform, total playtime, and story progress, with a View game button
-// that opens the game sheet.
+// bar. Platform, total playtime, and story progress. The whole tile is the
+// tap target and opens the game sheet (same role/button + keyboard pattern
+// as the wishlist rows).
 function ContinuePlaying({ game, onView }) {
   const { label: platformLabel } = platformMeta(game.environment)
   const playtime = minutesToHhm(game.playtime_minutes)
   const progress = gameProgress(game)
+  const open = () => onView(game)
   return (
-    <section className="hm-continue" aria-label={`Continue playing ${game.title}`}>
-      <Cover src={libraryCover(game)} title={game.title} size="sm" className="hm-continue-cover" priority />
+    <section
+      className="hm-continue"
+      role="button"
+      tabIndex={0}
+      onClick={open}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          open()
+        }
+      }}
+      aria-label={`Continue playing ${game.title}. Open game.`}
+    >
+      <Cover src={libraryCover(game)} title={game.title} size="sm" className="hm-continue-cover" sizes="160px" priority />
       <div className="hm-continue-copy">
         <div className="hm-eyebrow">Continue playing</div>
         <h2 className="hm-continue-title">{game.title}</h2>
@@ -89,17 +105,11 @@ function ContinuePlaying({ game, onView }) {
             </div>
             <div className="hm-continue-bottom">
               <span className="hm-muted">About {progress}% through the story</span>
-              <button type="button" className="hm-continue-btn" onClick={() => onView(game)}>
-                View game
-              </button>
             </div>
           </>
         ) : (
           <div className="hm-continue-bottom">
             <span className="hm-muted">{playtime} so far</span>
-            <button type="button" className="hm-continue-btn" onClick={() => onView(game)}>
-              View game
-            </button>
           </div>
         )}
       </div>
@@ -140,7 +150,9 @@ function JumpBackIn({ onOpenTab }) {
   )
 }
 
-function TopStory({ item, unread, onOpenNews }) {
+// The featured card opens the article itself in a NewsSheet; "More news"
+// goes to the News tab.
+function TopStory({ item, unread, onOpenNews, onOpenStory }) {
   return (
     <section aria-label="Top story">
       <SectionHead
@@ -152,7 +164,7 @@ function TopStory({ item, unread, onOpenNews }) {
           </button>
         }
       />
-      <button type="button" className="hm-news-card" onClick={onOpenNews} aria-label={`Top story: ${item.title}. Open News.`}>
+      <button type="button" className="hm-news-card" onClick={() => onOpenStory(item)} aria-label={`Top story: ${item.title}. Open article.`}>
         <span className="hm-news-copy">
           <span className="hm-news-label">{item.gameName || 'FROM YOUR FEED'}</span>
           <span className="hm-news-title">{item.title}</span>
@@ -191,6 +203,10 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
   }, [])
 
   const [selectedGame, setSelectedGame] = useState(null)
+
+  // The featured top story's article sheet. { item, rel }, same shape as
+  // NewsTab's openStory, so the card opens the article itself.
+  const [openStory, setOpenStory] = useState(null)
 
   const runRef = useRef(0)
 
@@ -252,6 +268,31 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
   )
   const topStory = newsItems && newsItems.length ? newsItems[0] : null
 
+  // Relevance for the featured story's sheet: library index only (no wishlist
+  // or Game Pass sets on Home), so the sheet can show "Because you're playing
+  // X" and prefer library art when it applies.
+  const newsSets = useMemo(() => ({ libIndex: buildLibraryIndex(games) }), [games])
+
+  const openStoryFor = useCallback(
+    (item) => {
+      markRead(item.primaryUrl)
+      setOpenStory({ item, rel: resolveGame(item, newsSets) })
+    },
+    [newsSets],
+  )
+
+  // A library game opens the owned sheet; anything else opens the discover
+  // sheet with the IGDB payload (same split as NewsTab).
+  const openGameFor = useCallback(async (item, rel) => {
+    if (rel && rel.row) {
+      setSelectedGame({ game: rel.row, variant: 'owned' })
+      return
+    }
+    if (!item.gameIgdbId) return
+    const g = await fetchGameById(item.gameIgdbId)
+    if (g) setSelectedGame({ game: g, variant: 'discover' })
+  }, [])
+
   const libraryReady = !libraryLoading || games.length > 0
   const libraryBroken = Boolean(libraryError) && games.length === 0
 
@@ -289,7 +330,7 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
       // A failed news refresh resolves to [] (loadNews never rejects), so an
       // empty digest hides the section instead of erroring the page.
       if (!topStory) return newsItems ? null : <LoadingCard />
-      return <TopStory item={topStory} unread={newsUnread} onOpenNews={() => onOpenTab('news')} />
+      return <TopStory item={topStory} unread={newsUnread} onOpenNews={() => onOpenTab('news')} onOpenStory={openStoryFor} />
     }
 
     if (section === 'upcoming') {
@@ -381,6 +422,15 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
           variant={selectedGame.variant}
           game={selectedGame.game}
           onClose={() => setSelectedGame(null)}
+        />
+      ) : null}
+
+      {openStory ? (
+        <NewsSheet
+          item={openStory.item}
+          rel={openStory.rel}
+          onClose={() => setOpenStory(null)}
+          onOpenGame={openGameFor}
         />
       ) : null}
     </div>
