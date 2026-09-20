@@ -618,7 +618,7 @@ button.hm-np:not(:disabled) {
 
 .hm-news-card {
   position: relative;
-  flex: 0 0 218px;
+  flex: 0 0 236px;
   height: 172px;
   padding: 0;
   overflow: hidden;
@@ -709,6 +709,6 @@ button.hm-np:not(:disabled) {
 
 @media (max-width: 360px) {
   .hm-news-card {
-    flex-basis: 202px;
+    flex-basis: 220px;
   }
 }

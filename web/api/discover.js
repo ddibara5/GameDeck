@@ -271,6 +271,10 @@ const GAME_FIELDS =
   'release_dates.date,release_dates.category,release_dates.human,' +
   'game_type,parent_game,version_parent';
 
+// Similar-game ids are useful on detail pages, but adding them to every Browse
+// rail would inflate every catalog payload. Keep them on direct id hydration only.
+const DETAIL_GAME_FIELDS = `${GAME_FIELDS},similar_games`;
+
 // Alternate editions ("Deluxe Edition", "Game of the Year Edition") are separate
 // IGDB rows pointing at the real game via version_parent. They are never what you
 // want in a release list, and unlike the game_type enum this field is not
@@ -412,6 +416,11 @@ function normalize(g) {
     // game_types table; parentGame is set on DLC, expansions and episodes.
     gameType: g.game_type != null ? g.game_type : null,
     parentGame: g.parent_game != null ? g.parent_game : null,
+    versionParent: g.version_parent != null ? g.version_parent : null,
+    similarGameIds: (g.similar_games || [])
+      .map((item) => Number(item && typeof item === 'object' ? item.id : item))
+      .filter(Boolean)
+      .slice(0, 20),
   };
 }
 
@@ -509,7 +518,7 @@ export default async function handler(req, res) {
       .map((s) => parseInt(s, 10))
       .filter(Boolean);
     if (idList.length) {
-      const body = `${GAME_FIELDS}; where id = (${idList.slice(0, 20).join(',')}); limit ${idList.length};`;
+      const body = `${DETAIL_GAME_FIELDS}; where id = (${idList.slice(0, 20).join(',')}); limit ${idList.length};`;
       const rows = await igdb('games', body);
       res.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate=604800');
       res.status(200).json({ games: rows.map(normalize) });
