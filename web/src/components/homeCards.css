@@ -514,6 +514,30 @@ button.hm-np:not(:disabled) {
   flex: none;
 }
 
+.hm-news-all {
+  min-width: 44px;
+  min-height: 44px;
+  margin: -8px -8px -8px 0;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hm-news-all .hm-chev {
+  color: var(--accent);
+}
+
+.hm-news-all:active {
+  opacity: 0.7;
+}
+
 /* ---- Jump back in: three entry tiles (compressed) ---- */
 
 .hm-jump-grid {
@@ -578,10 +602,10 @@ button.hm-np:not(:disabled) {
 .hm-news-strip {
   display: flex;
   gap: 8px;
-  width: calc(100% + 28px);
+  width: calc(100% + 14px);
   height: 124px;
-  margin: 0 -14px;
-  padding: 0 14px;
+  margin: 0 -14px 0 0;
+  padding: 0 14px 0 0;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
