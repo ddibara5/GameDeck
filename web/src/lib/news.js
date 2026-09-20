@@ -469,6 +469,24 @@ export function splitForYou(items, sets) {
   return { forYou, also }
 }
 
+/**
+ * Compact Home preview of the newest News week.
+ *
+ * This intentionally reuses splitForYou() rather than maintaining a second Home
+ * ranking. Personalized stories come first in the exact same order as News →
+ * For you; if fewer than `limit` qualify, newest non-personalized stories fill
+ * the remaining slots. Older weeks never displace the current week's preview.
+ */
+export function homeNewsPreview(rows, sets, limit = 5) {
+  const newestWeek = groupByWeek(rows || [])[0]
+  if (!newestWeek) return []
+
+  const split = splitForYou(newestWeek.items, sets)
+  const personal = split.forYou.slice(0, limit)
+  if (personal.length >= limit) return personal
+  return [...personal, ...split.also.slice(0, limit - personal.length)]
+}
+
 // --- Per-story read state --------------------------------------------------
 // Keyed on primary_url, NOT on news.id. The digest rewrites its week in place,
 // so ids are not stable across runs and id-keyed marks would silently reset.
