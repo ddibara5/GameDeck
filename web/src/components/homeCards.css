@@ -473,3 +473,247 @@ button.hm-np:not(:disabled) {
     animation: none;
   }
 }
+
+/* ---- Approved Home redesign: section chrome ---- */
+
+.hm-sec-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+
+.hm-sec-title {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--t-body);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.hm-text-btn {
+  border: 0;
+  background: transparent;
+  padding: 6px 0 6px 12px;
+  color: var(--accent);
+  font-size: var(--t-foot);
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hm-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex: none;
+}
+
+/* ---- Continue playing hero: compact ---- */
+
+.hm-continue {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.hm-continue-cover {
+  width: 92px;
+  aspect-ratio: 3 / 4;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.hm-continue-copy {
+  min-width: 0;
+}
+
+.hm-continue-title {
+  margin: 4px 0 2px;
+  color: var(--text);
+  font-size: var(--t-t3);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hm-continue-bar {
+  height: 5px;
+  border-radius: 99px;
+  background: var(--surface-3, var(--line));
+  overflow: hidden;
+  margin: 10px 0 8px;
+}
+
+.hm-continue-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.hm-continue-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hm-continue-btn {
+  border: 0;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  font-size: var(--t-foot);
+  font-weight: 700;
+  padding: 8px 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hm-continue-btn:active {
+  opacity: 0.85;
+}
+
+/* ---- Jump back in: three entry tiles ---- */
+
+.hm-jump-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.hm-jump {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 72px;
+  padding: 12px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hm-jump:active {
+  opacity: 0.7;
+}
+
+.hm-jump-icon {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  color: var(--accent);
+}
+
+.hm-jump-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.hm-jump-text {
+  min-width: 0;
+}
+
+.hm-jump-text b {
+  display: block;
+  color: var(--text);
+  font-size: var(--t-foot);
+  font-weight: 700;
+}
+
+.hm-jump-text small {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+  margin-top: 2px;
+}
+
+/* ---- Top story news card ---- */
+
+.hm-news-card {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 132px;
+  gap: 14px;
+  align-items: center;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hm-news-card:active {
+  opacity: 0.85;
+}
+
+.hm-news-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.hm-news-label {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hm-news-title {
+  margin: 4px 0;
+  color: var(--text);
+  font-size: var(--t-sub);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hm-news-summary {
+  color: var(--muted);
+  font-size: var(--t-foot);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hm-news-thumb {
+  width: 132px;
+  height: 88px;
+  object-fit: cover;
+  border-radius: 12px;
+  background: var(--surface-2);
+}

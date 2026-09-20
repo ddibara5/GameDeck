@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { lockScroll } from './lib/scrollLock.js'
 import Brand from './components/Brand.jsx'
-import Menu from './components/Menu.jsx'
+import HeaderSettingsButton from './components/HeaderSettingsButton.jsx'
 import TabBar from './components/TabBar.jsx'
 import { useNewsUnread } from './lib/newsUnread.js'
 import { useNavConfig, getNavConfig, visibleKeys, TAB_BY_KEY } from './lib/navConfig.js'
@@ -52,12 +52,10 @@ const GlobalSearch = lazy(loadGlobalSearch)
 const OVERLAY_LOADERS = {
   settings: () => import('./components/SettingsPage.jsx'),
   rows: () => import('./components/CustomizeRows.jsx'),
-  nav: () => import('./components/CustomizeNav.jsx'),
   bar: () => import('./components/CustomizeBar.jsx'),
 }
 const SettingsPage = lazy(OVERLAY_LOADERS.settings)
 const CustomizeRows = lazy(OVERLAY_LOADERS.rows)
-const CustomizeNav = lazy(OVERLAY_LOADERS.nav)
 const CustomizeBar = lazy(OVERLAY_LOADERS.bar)
 const VALID_TABS = new Set(Object.keys(TAB_BY_KEY))
 
@@ -75,11 +73,11 @@ const warmLoader = (loader) => {
   Promise.resolve().then(loader).catch(() => {})
 }
 
-// Drawer edge-swipe: open with a swipe in from the left edge, close with a left swipe.
+// Edge swipe: a swipe in from the left edge goes back out of a nested view.
+// There is no drawer anymore, so an edge swipe never opens anything.
 const EDGE_PX = 24
 const OPEN_DX = 60
-const CLOSE_DX = 60
-// Keep a drawer-opened view mounted through its slide-out (matches --overlay-out).
+// Keep a closing view mounted through its slide-out (matches --overlay-out).
 const VIEW_EXIT_MS = 220
 
 export default function App() {
@@ -99,7 +97,6 @@ function GameDeckApp() {
   // Open on whatever tab is leftmost in the saved layout (not always Library), so
   // reordering the tab bar also changes the landing tab.
   const [activeTab, setActiveTab] = useState(() => initialShell.current.tab)
-  const [menuOpen, setMenuOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsVisited, setSettingsVisited] = useState(false)
   // Which settings sub-page to open directly (e.g. the taste profile from
@@ -107,8 +104,6 @@ function GameDeckApp() {
   const [settingsEntry, setSettingsEntry] = useState(null)
   const [customizeOpen, setCustomizeOpen] = useState(false)
   const [customizeVisited, setCustomizeVisited] = useState(false)
-  const [customizeNavOpen, setCustomizeNavOpen] = useState(false)
-  const [customizeNavVisited, setCustomizeNavVisited] = useState(false)
   const [customizeBarOpen, setCustomizeBarOpen] = useState(false)
   const [customizeBarVisited, setCustomizeBarVisited] = useState(false)
   const [searchOpen, setSearchOpen] = useState(() => initialShell.current.searchOpen)
@@ -121,15 +116,15 @@ function GameDeckApp() {
   // Live tab bar layout (order + which tabs show + label visibility).
   const nav = useNavConfig()
   const visibleTabs = visibleKeys(nav)
-  // A drawer-opened overlay view (Wishlist / status lists) shown over the active tab.
+  // A full-screen overlay view (Wishlist / status lists) shown over the active tab.
   const [view, setView] = useState(() => initialShell.current.view)
   const [viewClosing, setViewClosing] = useState(false)
   const viewTimer = useRef(null)
   // Header goes frosted + shows a separator once the page is scrolled off the top.
   const [scrolled, setScrolled] = useState(false)
   // Unread dot on the News tab when a newer weekly drop is available.
-  const newsUnread = useNewsUnread(nav.barShown && visibleTabs.includes('news'))
-  // Blank while a drawer-opened overlay is up: Wishlist and the status lists
+  const newsUnread = useNewsUnread(true)
+  // Blank while a full-screen overlay is up: Wishlist and the status lists
   // print their own heading, and two would disagree about where you are.
   const headerTitle = view ? '' : TAB_BY_KEY[activeTab]?.label || ''
 
@@ -140,21 +135,10 @@ function GameDeckApp() {
         ...(window.history.state || {}),
         gamedeckShell: true,
         gamedeckSearch: Boolean(next.searchOpen),
-        gamedeckMenu: false,
       },
       '',
       href,
     )
-  }, [])
-
-  // The drawer is an action available from every root tab, not another place in
-  // browser history. Root edge-swipes open it; only nested pages own Back.
-  const openMenu = useCallback(() => {
-    setMenuOpen(true)
-  }, [])
-
-  const closeMenu = useCallback(() => {
-    setMenuOpen(false)
   }, [])
 
   const openSettings = useCallback(() => {
@@ -181,19 +165,13 @@ function GameDeckApp() {
     setCustomizeOpen(true)
   }, [])
 
-  const openCustomizeNav = useCallback(() => {
-    warmLoader(OVERLAY_LOADERS.nav)
-    setCustomizeNavVisited(true)
-    setCustomizeNavOpen(true)
-  }, [])
-
   const openCustomizeBar = useCallback(() => {
     warmLoader(OVERLAY_LOADERS.bar)
     setCustomizeBarVisited(true)
     setCustomizeBarOpen(true)
   }, [])
 
-  // Bottom-bar and drawer tabs are peers. Switching between them replaces the
+  // Bar tabs and entry-point tabs are peers. Switching between them replaces the
   // current root destination so browser Back never walks across the tab bar.
   const navigateTab = useCallback((tab, { replace = true } = {}) => {
     if (!VALID_TABS.has(tab)) return
@@ -213,7 +191,7 @@ function GameDeckApp() {
   // "Tune this taste" from a For You explanation sheet: push Rankings
   // compare mode with the lane-anchored duel, and clear the launch when the
   // duel returns after a decided duel. Any other entry into Rankings
-  // (bottom nav, Home entry points, Menu drawer) clears a leftover launch
+  // (bottom nav, Home entry points, Library entry point) clears a leftover launch
   // so it fires exactly once.
   const [tuneLaunch, setTuneLaunch] = useState(null)
 
@@ -295,7 +273,7 @@ function GameDeckApp() {
     setSearchAskContext(null)
     writeLocation({ tab: activeTab, view: v, searchOpen: false, searchScope: null, searchMode: null })
   }
-  // Animate the view out (slide + fade, like the drawer), then unmount it.
+  // Animate the view out (slide + fade), then unmount it.
   const closeView = () => {
     if (!view || viewClosing) return
     setViewClosing(true)
@@ -316,8 +294,8 @@ function GameDeckApp() {
 
   // When the visible set changes (the user edits Navigation) and that change
   // hides the tab they're currently on, snap to the first visible tab so the bar
-  // isn't left highlighting nothing. Opening a hidden tab from the drawer's
-  // "More" list doesn't change the visible set, so it isn't snapped away.
+  // isn't left highlighting nothing. Opening a hidden tab from an entry point
+  // doesn't change the visible set, so it isn't snapped away.
   const visibleKey = visibleTabs.join('|')
   const prevVisibleKey = useRef(visibleKey)
   useEffect(() => {
@@ -342,7 +320,6 @@ function GameDeckApp() {
     const onPopState = () => {
       const fallback = visibleKeys(getNavConfig())[0] || 'home'
       const next = readAppLocation(window.location.href, VALID_TABS, fallback)
-      setMenuOpen(false)
       setActiveTab(next.tab)
       setView(next.view)
       setViewClosing(false)
@@ -367,17 +344,6 @@ function GameDeckApp() {
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
-
-  // Opening the drawer is intent: the next tap is likely to be Wishlist or a
-  // status list. Warm those small chunks during the drawer animation
-  // so their first open does not wait on a request. These are not launch work and
-  // hidden tabs remain excluded from the ordinary idle queue.
-  useEffect(() => {
-    if (!menuOpen) return
-    warmLoader(VIEW_LOADERS.wishlist)
-    warmLoader(VIEW_LOADERS.list)
-    warmLoader(OVERLAY_LOADERS.settings)
-  }, [menuOpen])
 
   // Fetch the code for the OTHER tabs in the bar once the page has loaded, one at
   // a time on idle. Run once on mount and never re-run: the point is to spend the
@@ -413,8 +379,8 @@ function GameDeckApp() {
       if (!tracking) return
       // Full-screen pages with their own edge-back swipe (Settings / Customize,
       // and any overlay registered via useEdgeBack, e.g. the Discover rail page):
-      // don't also open the app drawer behind them on an edge swipe.
-      if (settingsOpen || customizeOpen || customizeNavOpen || customizeBarOpen || overlaysOpen()) return
+      // don't also act on the edge swipe behind them.
+      if (settingsOpen || customizeOpen || customizeBarOpen || overlaysOpen()) return
       const t = e.touches && e.touches[0]
       if (!t) return
       const dx = t.clientX - startX
@@ -422,24 +388,17 @@ function GameDeckApp() {
       // Only act on a clearly horizontal gesture, so vertical scrolling is untouched.
       if (Math.abs(dx) <= Math.abs(dy)) return
       // Claim the gesture before the action threshold. Without this, iOS can
-      // perform its native history swipe while GameDeck opens the drawer or
-      // closes a nested view, producing two actions from one finger movement.
-      if (((fromEdge && dx > 0) || (menuOpen && dx < 0)) && e.cancelable) e.preventDefault()
-      // A drawer-opened overlay (Wishlist, status/smart lists) is open: an edge
-      // swipe-in goes back to close it instead of opening the app drawer.
+      // perform its native history swipe while GameDeck closes a nested view,
+      // producing two actions from one finger movement.
+      if (fromEdge && dx > 0 && e.cancelable) e.preventDefault()
+      // A full-screen overlay (Wishlist, status/smart lists) is open: an edge
+      // swipe-in goes back to close it. There is no drawer anymore, so an edge
+      // swipe never opens anything.
       if (view) {
         if (!viewClosing && fromEdge && dx > OPEN_DX) {
           closeView()
           tracking = false
         }
-        return
-      }
-      if (!menuOpen && fromEdge && dx > OPEN_DX) {
-        openMenu()
-        tracking = false
-      } else if (menuOpen && dx < -CLOSE_DX) {
-        closeMenu()
-        tracking = false
       }
     }
     const onEnd = () => {
@@ -454,7 +413,7 @@ function GameDeckApp() {
       window.removeEventListener('touchmove', onMove)
       window.removeEventListener('touchend', onEnd)
     }
-  }, [closeMenu, menuOpen, openMenu, settingsOpen, customizeOpen, customizeNavOpen, customizeBarOpen, view, viewClosing])
+  }, [settingsOpen, customizeOpen, customizeBarOpen, view, viewClosing])
 
   return (
     // `bar-off` collapses --tabbar-height to zero for everything inside, which
@@ -464,9 +423,9 @@ function GameDeckApp() {
       {/* ONE ROW, not two. The bar and the large title were a 44px lockup saying
           the app's name inside the app, above a 48px title saying what the
           highlighted tab already says - 92px before the subtitle had even
-          started. They are the same row now: the mark, the tab name at its full
-          34px, and the caret, in a 56px bar that shrinks the name to 17px on
-          scroll. Nothing got smaller at rest; a row went away.
+          started. They are the same row now: the mark and the tab name at its
+          full 34px, in a 56px bar that shrinks the name to 17px on scroll.
+          Nothing got smaller at rest; a row went away.
 
           There is one <h1> and one copy of the title. The stand-in that used to
           fade in when the large title scrolled off is gone with the second row,
@@ -474,11 +433,16 @@ function GameDeckApp() {
       <header className={`app-header${scrolled ? ' scrolled' : ''}`}>
         {headerTitle ? (
           <h1 className="page-title">
-            <Brand onOpen={openMenu} label={headerTitle} />
+            <Brand label={headerTitle} />
           </h1>
         ) : (
-          <Brand onOpen={openMenu} />
+          <Brand />
         )}
+        {/* Settings lives behind the Home header's gear. No other tab carries
+            it; the drawer that used to pin it is gone. */}
+        {activeTab === 'home' && !view ? (
+          <HeaderSettingsButton onOpenSettings={openSettings} />
+        ) : null}
       </header>
       <main className="app-main">
         <Suspense fallback={<ChunkFallback label={`Opening ${headerTitle || 'GameDeck'}…`} />}>
@@ -490,10 +454,21 @@ function GameDeckApp() {
                 navigateTab(t)
               }}
               onOpenList={openView}
+              newsUnread={newsUnread}
             />
           )}
-          {activeTab === 'library' && <LibraryTab />}
-          {activeTab === 'activity' && <ActivityTab />}
+          {activeTab === 'library' && (
+            <LibraryTab
+              onOpenRankings={() => {
+                // Same fresh-start rule as every other Rankings entry: a tune
+                // launch fires exactly once.
+                setTuneLaunch(null)
+                navigateTab('rankings')
+              }}
+              onOpenWishlist={() => openView('wishlist')}
+            />
+          )}
+          {activeTab === 'activity' && <ActivityTab onOpenInsights={() => navigateTab('insights')} />}
           {activeTab === 'insights' && <InsightsTab />}
           {activeTab === 'discover' && <DiscoverTab onCustomize={openCustomizeRows} onAsk={openAsk} />}
           {activeTab === 'foryou' && <ForYouTab onAsk={openAsk} onBrowse={() => navigateTab('discover')} onOpenTaste={openTasteProfile} onTuneTaste={openTuneTaste} />}
@@ -506,7 +481,7 @@ function GameDeckApp() {
           <Suspense fallback={<ChunkFallback label="Opening list…" overlay />}>
             {/* Wishlist and Release watch share the same cached rows, list,
                 sorting, density and sheet. Release watch adds a three-way scope
-                control and opens on Upcoming; the drawer Wishlist stays on All. */}
+                control and opens on Upcoming; Wishlist stays on All. */}
             {view === 'wishlist' || view === 'releases' || view === 'released' ? (
               <WishlistTab
                 onClose={closeView}
@@ -519,43 +494,24 @@ function GameDeckApp() {
           </Suspense>
         </div>
       ) : null}
-      {/* Unmounted rather than hidden when the bar is off: a display:none bar
-          still answers to the a11y tree in some readers, and there is nothing
-          here worth keeping mounted. The drawer holds every destination it
-          carried, so nothing becomes unreachable. */}
-      {nav.barShown ? (
-        <TabBar
-          active={view ? null : activeTab}
-          onChange={(t) => {
-            closeView()
-            // A tune launch is consumed once: clear it when the user opens
-            // Rankings from the bottom nav. Kept out of navigateTab so
-            // openTuneTaste's own navigation does not clear the fresh launch.
-            if (t === 'rankings') setTuneLaunch(null)
-            navigateTab(t)
-          }}
-          onSearch={openSearch}
-          onWarm={(t) => warmLoader(TAB_LOADERS[t])}
-          tabs={visibleTabs}
-          showLabels={nav.labels}
-          badges={{ news: newsUnread }}
-        />
-      ) : null}
-      <Menu
-        open={menuOpen}
-        onClose={closeMenu}
-        activeTab={view ? null : activeTab}
-        onOpenWishlist={() => openView('wishlist')}
-        onOpenList={(key) => openView(key)}
-        onOpenSettings={openSettings}
-        onSearch={openSearch}
-        searchPinned={!nav.barShown}
-        onOpenTab={(t) => {
+      {/* The dock stays mounted when the bar is hidden: Search remains reachable
+          as the same floating button, and TabBar's searchOnly mode drops the
+          strip but keeps the trigger. Nothing becomes unreachable. */}
+      <TabBar
+        active={view ? null : activeTab}
+        onChange={(t) => {
           closeView()
+          // A tune launch is consumed once: clear it when the user opens
+          // Rankings from the bottom nav. Kept out of navigateTab so
+          // openTuneTaste's own navigation does not clear the fresh launch.
           if (t === 'rankings') setTuneLaunch(null)
           navigateTab(t)
         }}
-        onWarmTab={(t) => warmLoader(TAB_LOADERS[t])}
+        onSearch={openSearch}
+        onWarm={(t) => warmLoader(TAB_LOADERS[t])}
+        tabs={nav.barShown ? visibleTabs : []}
+        searchOnly={!nav.barShown}
+        showLabels={nav.labels}
       />
       <Suspense fallback={null}>
         {settingsVisited ? (
@@ -563,12 +519,10 @@ function GameDeckApp() {
             open={settingsOpen}
             onClose={closeSettings}
             onOpenBar={openCustomizeBar}
-            onOpenDrawer={openCustomizeNav}
             initialPage={settingsEntry}
           />
         ) : null}
         {customizeVisited ? <CustomizeRows open={customizeOpen} onClose={() => setCustomizeOpen(false)} /> : null}
-        {customizeNavVisited ? <CustomizeNav open={customizeNavOpen} onClose={() => setCustomizeNavOpen(false)} /> : null}
         {customizeBarVisited ? <CustomizeBar open={customizeBarOpen} onClose={() => setCustomizeBarOpen(false)} /> : null}
       </Suspense>
       {searchVisited ? (

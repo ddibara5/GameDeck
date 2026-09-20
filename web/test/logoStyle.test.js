@@ -36,12 +36,10 @@ test('logo style defaults safely and persists a valid choice', () => {
 
 test('all in-app brand surfaces use the shared theme-aware mark', () => {
   const brand = readFileSync(new URL('../src/components/Brand.jsx', import.meta.url), 'utf8')
-  const menu = readFileSync(new URL('../src/components/Menu.jsx', import.meta.url), 'utf8')
   const mark = readFileSync(new URL('../src/components/LogoMark.jsx', import.meta.url), 'utf8')
   const css = readFileSync(new URL('../src/index.css', import.meta.url), 'utf8')
 
   assert.match(brand, /<LogoMark className="brand-mark"/)
-  assert.match(menu, /<LogoMark className="drawer-logo-mark"/)
   assert.match(mark, /logo-classic/)
   assert.match(mark, /logo-glass/)
   assert.match(css, /data-logo-style=["']glass["']/)

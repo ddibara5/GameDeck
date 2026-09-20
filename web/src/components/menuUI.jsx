@@ -1,5 +1,5 @@
-// Shared drawer / settings UI: relative-time formatter, icon set, and the
-// MenuItem row. Used by both the left drawer (Menu) and the Settings page.
+// Shared settings UI: relative-time formatter, icon set, and the MenuItem row.
+// Used by the Settings page. (The drawer that once shared it is gone.)
 
 export function relTime(ts) {
   if (!ts) return null

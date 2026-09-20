@@ -7,10 +7,10 @@ const home = readFileSync(new URL('../src/components/HomeTab.jsx', import.meta.u
 const nowPlaying = readFileSync(new URL('../src/components/HomeNowPlaying.jsx', import.meta.url), 'utf8')
 const releaseWatchSrc = readFileSync(new URL('../src/components/HomeReleaseWatch.jsx', import.meta.url), 'utf8')
 
-test('Home renders its four sections in the saved layout order', () => {
+test('Home renders its five sections in the saved layout order', () => {
   assert.match(home, /loadHomeLayout\(\)/)
   assert.match(home, /saveHomeLayout\(/)
-  for (const id of ['statistics', 'recent-play', 'new-releases', 'upcoming']) {
+  for (const id of ['continue-playing', 'jump-back-in', 'top-story', 'upcoming', 'new-releases']) {
     assert.ok(home.includes(`'${id}'`), `section ${id} rendered`)
   }
   assert.match(home, /homeLayout\.hidden\.includes\(section\)/)
@@ -39,8 +39,11 @@ test('Home release watch errors when the wishlist fails with no data', () => {
 })
 
 test('Home wires the section see-all navigation', () => {
-  assert.match(home, /onOpenTab\('insights'\)/)
-  assert.match(home, /onOpenTab\('activity'\)/)
+  // The Jump back in tiles navigate by key (For You, Rankings, Insights);
+  // the release rails open their list overlays.
+  assert.match(home, /key: 'foryou'/)
+  assert.match(home, /key: 'rankings'/)
+  assert.match(home, /key: 'insights'/)
   assert.match(home, /onOpenList\('released'\)/)
   assert.match(home, /onOpenList\('releases'\)/)
 })

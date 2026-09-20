@@ -1,8 +1,63 @@
-/* Activity tab: the session timeline, and nothing else. ActivityTab is the only
-   consumer of every class in here and it is lazy-loaded, so this ships with its
-   chunk. Nothing another surface paints on first load may be defined in this file
-   - which is exactly why the week block's styles left for insights.css when the
-   block itself moved to the Insights tab. */
+/* Activity tab: the session timeline, plus the Insights entry tile that moved
+   here with the drawer. ActivityTab is the only consumer of every class in
+   here and it is lazy-loaded, so this ships with its chunk. Nothing another
+   surface paints on first load may be defined in this file - which is exactly
+   why the week block's styles left for insights.css when the block itself
+   moved to the Insights tab. */
+
+/* Insights entry tile: the drawer's Insights row reborn as a card at the top
+   of Activity. Same visual language as Home's jump tiles. */
+.activity-insights {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: calc(100% - var(--screen-gutter) * 2);
+  margin: var(--space-3) var(--screen-gutter) 0;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.activity-insights:active {
+  opacity: 0.7;
+}
+
+.activity-insights-icon {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  color: var(--accent);
+}
+
+.activity-insights-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.activity-insights-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.activity-insights-text b {
+  display: block;
+  font-size: var(--t-body);
+  font-weight: var(--w-semi);
+  color: var(--text);
+}
+
+.activity-insights-text small {
+  display: block;
+  font-size: var(--t-foot);
+  color: var(--muted);
+  margin-top: 2px;
+}
 
 .activity-group-label {
   font-size: var(--t-body);

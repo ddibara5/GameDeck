@@ -42,9 +42,8 @@ export function newestStamp(rows) {
   return best
 }
 
-// Only tabs that can display the badge enable this hook. A profile that keeps
-// News in the drawer no longer pays for a launch query whose result has nowhere
-// to render.
+// The unread dot renders on Home's "More news" entry. The hook stays cheap:
+// one latest-stamp query at launch, then a local event when news is seen.
 export function useNewsUnread(enabled = true) {
   const [unread, setUnread] = useState(false)
 

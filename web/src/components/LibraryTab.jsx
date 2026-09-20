@@ -12,6 +12,8 @@ import { hasVibe, availableVibes } from '../lib/vibes.js'
 import { topGenres } from '../lib/gameGenres.js'
 import { useDialogA11y } from '../lib/useDialogA11y.js'
 import { preloadGameSheet } from './LazyGameSheet.jsx'
+import { TAB_ICONS } from './TabBar.jsx'
+import { DEST_ICONS } from './destIcons.jsx'
 
 // Matches the Expo pilot's status model: backlog / playing / finished are computed
 // from your activity (see userStatus.derivedStatus, the pilot's derivedGameStatus),
@@ -132,6 +134,22 @@ function GridGameCard({ game, onSelect, statusMap }) {
 // file; the class names are gd- prefixed so they cannot collide.
 const LIBRARY_STYLES = `
 .gd-lib { max-width: 430px; margin: 0 auto; width: 100%; padding-bottom: var(--safe-bottom); }
+/* Entry points that moved here with the drawer: Rankings and Wishlist. Two
+   compact tiles above the toolbar, same visual language as Home's jump tiles. */
+.gd-entries { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.gd-entry {
+  display: flex; align-items: center; gap: 10px;
+  min-height: 64px; padding: 10px 12px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  font: inherit; color: inherit; text-align: left; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.gd-entry:active { opacity: 0.7; }
+.gd-entry-icon { width: 22px; height: 22px; flex: none; color: var(--accent); }
+.gd-entry-icon svg { width: 100%; height: 100%; }
+.gd-entry-text { min-width: 0; }
+.gd-entry-text b { display: block; font-size: var(--t-foot); font-weight: 700; color: var(--text); }
+.gd-entry-text small { display: block; font-size: 11px; line-height: 1.35; color: var(--muted); margin-top: 2px; }
 .gd-search-row { display: flex; gap: 8px; margin-top: 10px; }
 .gd-search-wrap { position: relative; flex: 1; min-width: 0; }
 .gd-search-wrap .search-input { padding-right: 44px; }
@@ -177,7 +195,7 @@ const LIBRARY_STYLES = `
 .gd-grid-meta { font-size: var(--t-cap); color: var(--muted); }
 `
 
-export default function LibraryTab() {
+export default function LibraryTab({ onOpenRankings, onOpenWishlist }) {
   const { games, loading, error } = useLibraryGames()
   const [query, setQuery] = useState('')
   const [platformFilter, setPlatformFilter] = useState('all')
@@ -311,6 +329,24 @@ export default function LibraryTab() {
   return (
     <div className="gd-lib">
       <style>{LIBRARY_STYLES}</style>
+      {/* Rankings and Wishlist live here now: the drawer that used to list
+          them is gone, and Library is their home surface. */}
+      <div className="gd-entries">
+        <button type="button" className="gd-entry" onClick={onOpenRankings}>
+          <span className="gd-entry-icon" aria-hidden="true">{TAB_ICONS.rankings}</span>
+          <span className="gd-entry-text">
+            <b>Rankings</b>
+            <small>Your explicit game order</small>
+          </span>
+        </button>
+        <button type="button" className="gd-entry" onClick={onOpenWishlist}>
+          <span className="gd-entry-icon" aria-hidden="true">{DEST_ICONS.wishlist}</span>
+          <span className="gd-entry-text">
+            <b>Wishlist</b>
+            <small>Games you want next</small>
+          </span>
+        </button>
+      </div>
       <div className="library-sticky">
         <div className="library-toolbar">
           <span className="library-toolbar-note">{summary}</span>

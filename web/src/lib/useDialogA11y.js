@@ -55,7 +55,7 @@ function isolateDialog(dialog) {
 }
 
 /**
- * Shared modal behavior for GameDeck's sheets, drawers, and full-screen pages:
+ * Shared modal behavior for GameDeck's sheets, slide-overs, and full-screen pages:
  * isolate background content, move focus inside, trap Tab, close the topmost
  * dialog on Escape, and restore focus to the opener on unmount.
  */

@@ -29,7 +29,7 @@ export function overlaysOpen() {
  *              CLOSED. The count follows this effect, so a component that its
  *              parent renders unconditionally and that merely returns null when
  *              closed will hold the count above zero for the whole session and
- *              suppress the drawer swipe app-wide. `disabled` does not cover
+ *              suppress the edge-back swipe app-wide. `disabled` does not cover
  *              this: it suppresses the gesture, not the registration, and the
  *              two are deliberately separate (a drag-reorder disables the
  *              gesture while the overlay is very much still up).

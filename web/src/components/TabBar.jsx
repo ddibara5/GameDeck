@@ -1,13 +1,12 @@
 import { TAB_BY_KEY } from '../lib/navConfig.js'
 
-// Per-tab line icons. Labels live in navConfig (TAB_META) so the editor and the
-// drawer's "More" list share one source of truth; the drawer also renders these
-// same icons for any hidden tab.
+// Per-tab line icons. Labels live in navConfig (TAB_META) so the bar and the
+// bar editor share one source of truth.
 // Icon language follows the Expo pilot's tab-destinations symbols: safari
 // (compass) for Discover, waveform.path.ecg for Activity, books.vertical for
 // Library, chart.bar for Insights, list.number for Rankings, newspaper for
-// News, and heart for Wishlist (in destIcons). Ask stays the detached search
-// utility, matching the pilot's Search action rather than a tab.
+// News. Ask stays the detached search utility, matching the pilot's Search
+// action rather than a tab.
 export const TAB_ICONS = {
   // HomeDeck's house, copied path for path from its `Qt.home` so the two apps
   // open on the same mark. Ours was a roofline over an open-bottomed box: no
@@ -68,7 +67,7 @@ export const TAB_ICONS = {
   ),
 }
 
-export default function TabBar({ tabs, active, onChange, onWarm, onSearch, badges, showLabels = true }) {
+export default function TabBar({ tabs, active, onChange, onWarm, onSearch, badges, showLabels = true, searchOnly = false }) {
   const activeIndex = tabs.indexOf(active)
   // The detached search utility owns a fixed 62px touch target. Six destination
   // labels beside it would squeeze below a useful reading width on a 390px
@@ -77,7 +76,12 @@ export default function TabBar({ tabs, active, onChange, onWarm, onSearch, badge
   const renderLabels = showLabels && tabs.length < 6
 
   return (
-    <div className="app-dock">
+    <div className={`app-dock${searchOnly ? ' dock-search-only' : ''}`}>
+      {/* searchOnly is the hidden-bar state: the strip is gone but Search stays
+          reachable as the same floating button, bottom-right where it always
+          is. Nothing else on the bar needs a fallback, because every bar tab is
+          also reachable from the remaining entry points (see navConfig). */}
+      {searchOnly ? null : (
       <nav
         className={`tabbar${renderLabels ? '' : ' icons-only'}${activeIndex >= 0 ? ' has-active' : ''}`}
         aria-label="Main navigation"
@@ -107,6 +111,7 @@ export default function TabBar({ tabs, active, onChange, onWarm, onSearch, badge
           )
         })}
       </nav>
+      )}
       <button type="button" className="global-search-trigger" aria-label="Search GameDeck" onClick={onSearch}>
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <circle cx="10.5" cy="10.5" r="6.5" />

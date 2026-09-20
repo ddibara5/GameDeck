@@ -5,6 +5,7 @@ import GameDetail from './GameDetail.jsx'
 import Skeleton from './Skeleton.jsx'
 import { MessageState } from './AsyncState.jsx'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
+import { TAB_ICONS } from './TabBar.jsx'
 import { getRecentActivityCache, loadRecentActivity } from '../lib/recentActivity.js'
 import { eventDay, daysBetween } from '../lib/playWeek.js'
 import { formatRelativeDay, platformMeta, libraryCover } from '../lib/format.js'
@@ -46,7 +47,7 @@ export function annotate(rows) {
   )
 }
 
-export default function ActivityTab() {
+export default function ActivityTab({ onOpenInsights }) {
   const cachedEvents = getRecentActivityCache({ days: WINDOW_DAYS, limit: MAX_ROWS })
   const [events, setEvents] = useState(() => cachedEvents || [])
   const [loading, setLoading] = useState(() => !cachedEvents)
@@ -112,6 +113,18 @@ export default function ActivityTab() {
 
   return (
     <div>
+      {/* Insights used to live in the drawer; with the drawer gone this entry
+          tile is its home inside Activity, alongside Home's "Jump back in". */}
+      <button type="button" className="activity-insights" onClick={onOpenInsights} aria-label="Open Insights: playtime and taste trends">
+        <span className="activity-insights-icon" aria-hidden="true">{TAB_ICONS.insights}</span>
+        <span className="activity-insights-text">
+          <b>Insights</b>
+          <small>Playtime and taste trends</small>
+        </span>
+        <svg className="hm-chev accent" viewBox="0 0 10 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+          <path d="M2 2l6 6-6 6" />
+        </svg>
+      </button>
       {loading ? (
         <Skeleton count={6} />
       ) : error ? (

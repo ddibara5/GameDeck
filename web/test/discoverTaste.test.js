@@ -300,7 +300,9 @@ test('Discover is Browse while For You is an independent root destination', asyn
   assert.match(forYou, /lib\/forYou\.js|loadForYouDeck/)
   assert.match(app, /foryou: \(\) => import\('\.\/components\/ForYouTab\.jsx'\)/)
   assert.match(app, /activeTab === 'foryou'/)
-  assert.match(nav, /key: 'foryou'[\s\S]*?group: 'explore'[\s\S]*?kind: 'tab'/)
+  // The drawer is gone, so destinations carry no group; For You stays an
+  // independent tab that is reachable as an entry point rather than a bar slot.
+  assert.match(nav, /key: 'foryou'[\s\S]*?kind: 'tab'[\s\S]*?bar: false/)
 })
 
 test('For You collapses taste controls into the shared Discover filter pattern', async () => {

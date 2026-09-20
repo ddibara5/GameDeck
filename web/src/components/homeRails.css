@@ -122,6 +122,20 @@
   line-height: 1.3;
 }
 
+/* Compact variant for Home's Upcoming / New releases shelves: smaller posters
+   and tighter spacing, GameTrack-style. */
+.hrail-compact .hrail-strip {
+  gap: 10px;
+}
+
+.hrail-compact .hrail-card {
+  width: 96px;
+}
+
+.hrail-compact .hrail-poster {
+  width: 96px;
+}
+
 /* Spacing between the last section and the Customize pill bar. */
 .hm-custbar-wrap {
   display: flex;

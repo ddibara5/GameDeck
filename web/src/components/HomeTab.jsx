@@ -1,28 +1,38 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import HomeRail from './HomeRail.jsx'
-import HomeRecentPlay from './HomeRecentPlay.jsx'
 import GameSheet, { preloadGameSheet } from './LazyGameSheet.jsx'
 import { HomeCustomizeBar, HomeCustomizeSheet } from './HomeCustomizer.jsx'
+import { TAB_ICONS } from './TabBar.jsx'
+import Cover from './Cover.jsx'
 import { preloadLibrary, useLibraryGames } from '../lib/useLibraryGames.js'
-import { loadRecentActivity } from '../lib/recentActivity.js'
+import { useStatusMap, effectiveStatus } from '../lib/userStatus.js'
 import { supabase } from '../lib/supabase.js'
-import { gameArtworkUrl, summarizeWeekActivity } from '../lib/homeInsights.js'
+import { gameArtworkUrl } from '../lib/homeInsights.js'
 import { fetchReleaseCandidates, releaseLabel, releasedAgoLabel, releaseWatch } from '../lib/homeReleaseWatch.js'
+import { loadNews } from '../lib/news.js'
 import { loadHomeLayout, saveHomeLayout } from '../lib/homeLayout.js'
-import { gameProgress, libraryTitleKey, sortRecentGames, wishlistProgress } from '../lib/homeRails.js'
+import { selectContinueGame } from '../lib/homeContinue.js'
+import { gameProgress, libraryTitleKey, wishlistProgress } from '../lib/homeRails.js'
+import { libraryCover, minutesToHhm, platformMeta } from '../lib/format.js'
 import './homeCards.css'
 import './homeRails.css'
 
-// Home mirrors the Expo pilot's Sept 11 home screen: four sections (Statistics,
-// Recent play, New releases, Upcoming) rendered in the user's saved layout
-// order, skippable and reorderable through the Customize bar/sheet. The two
-// release rails read the wishlist; Recent play and Statistics read the library
-// plus the last 7 days of v_recent_activity. Tabs unmount when inactive, so
-// this mount effect reloads every time Home opens, including when coming back
-// from Insights or the game sheets.
+// Home: the approved compact layout. Five sections in the user's saved order
+// (gamedeck_home_layout_v2), each hideable and reorderable through the
+// Customize bar/sheet:
+//
+//   continue-playing  one compact hero for the most recently played
+//                     in-progress game; hidden when there is none
+//   jump-back-in      three entry tiles: For You, Rankings, Insights
+//   top-story         featured news card, plus More news
+//   upcoming          wishlist Release watch, coming up
+//   new-releases      wishlist Release watch, out now
+//
+// For You, News, Rankings and Insights are reachable only from here and their
+// own entry points; none of them sits on the bottom bar (see navConfig).
 
-const ACTIVITY_DAYS = 7
-const ACTIVITY_LIMIT = 400
+// Most recently played game that is still in progress: has playtime and is not
+// finished or abandoned. Null when there is nothing to continue.
 
 function LoadingCard() {
   return <div className="hm-card skeleton hm-skel" role="status" aria-label="Loading" />
@@ -40,18 +50,133 @@ function ErrorCard({ title, detail, onRetry }) {
   )
 }
 
-export default function HomeTab({ onOpenTab, onOpenList }) {
-  const { games, loading: libraryLoading, error: libraryError } = useLibraryGames()
+function SectionHead({ title, action }) {
+  return (
+    <div className="hm-sec-head">
+      <h2 className="hm-sec-title">{title}</h2>
+      {action}
+    </div>
+  )
+}
 
-  // Activity snapshot: local-first; onFresh publishes the network rows as soon
-  // as they arrive so the cards upgrade without waiting for the full pass.
-  const [activityRows, setActivityRows] = useState(null)
-  const [activityFailed, setActivityFailed] = useState(false)
+// Compact continue-playing hero: small cover, tight padding, slim progress
+// bar. Platform, total playtime, and story progress, with a View game button
+// that opens the game sheet.
+function ContinuePlaying({ game, onView }) {
+  const { label: platformLabel } = platformMeta(game.environment)
+  const playtime = minutesToHhm(game.playtime_minutes)
+  const progress = gameProgress(game)
+  return (
+    <section className="hm-continue" aria-label={`Continue playing ${game.title}`}>
+      <Cover src={libraryCover(game)} title={game.title} size="sm" className="hm-continue-cover" priority />
+      <div className="hm-continue-copy">
+        <div className="hm-eyebrow">Continue playing</div>
+        <h2 className="hm-continue-title">{game.title}</h2>
+        <div className="hm-muted">
+          {platformLabel} · {playtime}
+        </div>
+        {progress != null ? (
+          <>
+            <div
+              className="hm-continue-bar"
+              role="progressbar"
+              aria-valuenow={progress}
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-label={`${progress} percent story progress`}
+            >
+              <span style={{ width: `${progress}%` }} />
+            </div>
+            <div className="hm-continue-bottom">
+              <span className="hm-muted">About {progress}% through the story</span>
+              <button type="button" className="hm-continue-btn" onClick={() => onView(game)}>
+                View game
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="hm-continue-bottom">
+            <span className="hm-muted">{playtime} so far</span>
+            <button type="button" className="hm-continue-btn" onClick={() => onView(game)}>
+              View game
+            </button>
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
+const JUMP_TILES = [
+  { key: 'foryou', title: 'For You', sub: 'Fresh picks from your taste', icon: 'foryou' },
+  { key: 'rankings', title: 'Rankings', sub: 'Choose between two games', icon: 'rankings' },
+  { key: 'insights', title: 'Insights', sub: 'Playtime and taste trends', icon: 'insights' },
+]
+
+function JumpBackIn({ onOpenTab }) {
+  return (
+    <section aria-label="Jump back in">
+      <SectionHead title="Jump back in" />
+      <div className="hm-jump-grid">
+        {JUMP_TILES.map((tile) => (
+          <button
+            key={tile.key}
+            type="button"
+            className="hm-jump"
+            onClick={() => onOpenTab(tile.key)}
+            aria-label={`${tile.title}: ${tile.sub}`}
+          >
+            <span className="hm-jump-icon" aria-hidden="true">
+              {TAB_ICONS[tile.icon]}
+            </span>
+            <span className="hm-jump-text">
+              <b>{tile.title}</b>
+              <small>{tile.sub}</small>
+            </span>
+          </button>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function TopStory({ item, unread, onOpenNews }) {
+  return (
+    <section aria-label="Top story">
+      <SectionHead
+        title="Top story"
+        action={
+          <button type="button" className="hm-text-btn" onClick={onOpenNews}>
+            More news
+            {unread ? <span className="hm-dot" aria-label="New stories" /> : null}
+          </button>
+        }
+      />
+      <button type="button" className="hm-news-card" onClick={onOpenNews} aria-label={`Top story: ${item.title}. Open News.`}>
+        <span className="hm-news-copy">
+          <span className="hm-news-label">{item.gameName || 'FROM YOUR FEED'}</span>
+          <span className="hm-news-title">{item.title}</span>
+          {item.summary ? <span className="hm-news-summary">{item.summary}</span> : null}
+        </span>
+        {item.image ? (
+          <img className="hm-news-thumb" src={item.image} alt="" loading="lazy" />
+        ) : null}
+      </button>
+    </section>
+  )
+}
+
+export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
+  const { games, loading: libraryLoading, error: libraryError } = useLibraryGames()
+  const statusMap = useStatusMap()
 
   // Release candidates, plain (a refresh failure is soft - the line under the
   // card says so; the card keeps whatever it has).
   const [releaseItems, setReleaseItems] = useState(null)
   const [releaseFailed, setReleaseFailed] = useState(false)
+
+  // News: the featured top story.
+  const [newsItems, setNewsItems] = useState(null)
 
   // Home section layout: order + visibility, persisted for Dave.
   const [homeLayout, setHomeLayout] = useState(() => loadHomeLayout())
@@ -65,8 +190,7 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
     setHomeLayout(next)
   }, [])
 
-  const [playingGame, setPlayingGame] = useState(null)
-  const [wishlistGame, setWishlistGame] = useState(null)
+  const [selectedGame, setSelectedGame] = useState(null)
 
   const runRef = useRef(0)
 
@@ -86,46 +210,32 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
     )
   }
 
+  const loadTopStory = () => {
+    const runId = runRef.current
+    // loadNews never rejects: a failed refresh resolves to the cached digest
+    // or [], so the section hides itself when there is nothing to feature.
+    return loadNews().then((rows) => {
+      if (runRef.current === runId) setNewsItems(rows || [])
+    })
+  }
+
   useEffect(() => {
     const runId = ++runRef.current
-    let alive = true
-    const active = () => alive && runRef.current === runId
 
-    setActivityFailed(false)
     setReleaseFailed(false)
 
-    const activityTask = loadRecentActivity(
-      { days: ACTIVITY_DAYS, limit: ACTIVITY_LIMIT },
-      (rows) => {
-        if (active()) setActivityRows(rows)
-      },
-      { throwOnError: true },
-    ).then(
-      (rows) => {
-        if (active()) setActivityRows(rows)
-      },
-      () => {
-        if (active()) setActivityFailed(true)
-      },
-    )
-
     const releaseTask = loadRelease()
+    const newsTask = loadTopStory()
 
-    // Parallel: each card publishes its own snapshot, so nothing waits on the
-    // slowest request. The allSettled keeps the promise chain observed.
-    Promise.allSettled([activityTask, releaseTask])
+    // Parallel: each section publishes its own snapshot, so nothing waits on
+    // the slowest request. The allSettled keeps the promise chain observed.
+    Promise.allSettled([releaseTask, newsTask])
     return () => {
-      alive = false
+      runRef.current += 1
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const insights = activityRows ? summarizeWeekActivity(activityRows) : null
-
-  // Recent play rail: the last-14-days library games, most recently played
-  // first. The wishlist rails look up each item's library match for the
-  // progress badge, by igdb_id first and normalized title second.
-  const playing = useMemo(() => sortRecentGames(games), [games])
   const libraryByIgdb = useMemo(
     () => new Map(games.flatMap((game) => (game.igdb_id != null ? [[game.igdb_id, game]] : []))),
     [games],
@@ -136,29 +246,14 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
   )
   const releases = useMemo(() => releaseWatch(releaseItems || []), [releaseItems])
 
+  const continueGame = useMemo(
+    () => selectContinueGame(games, (game) => effectiveStatus(game, statusMap)),
+    [games, statusMap],
+  )
+  const topStory = newsItems && newsItems.length ? newsItems[0] : null
+
   const libraryReady = !libraryLoading || games.length > 0
   const libraryBroken = Boolean(libraryError) && games.length === 0
-
-  const retryActivity = () => {
-    setActivityFailed(false)
-    loadRecentActivity(
-      { days: ACTIVITY_DAYS, limit: ACTIVITY_LIMIT },
-      (rows) => setActivityRows(rows),
-      { throwOnError: true },
-    ).then(
-      (rows) => setActivityRows(rows),
-      () => setActivityFailed(true),
-    )
-  }
-
-  const toPlayingRailItem = (game) => ({
-    key: String(game.master_id ?? game.title),
-    title: game.title,
-    artwork: gameArtworkUrl(game.cover_igdb, game.cover_standard),
-    progress: gameProgress(game),
-    meta: null,
-    source: game,
-  })
 
   const toWishlistRailItem = (item, dateMode) => ({
     key: String(item.igdb_id ?? item.title),
@@ -170,21 +265,7 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
   })
 
   const renderSection = (section) => {
-    if (section === 'statistics') {
-      if (activityFailed && !activityRows) {
-        return (
-          <ErrorCard
-            title="Couldn't load recent activity."
-            detail="Check your connection and try again."
-            onRetry={retryActivity}
-          />
-        )
-      }
-      if (insights) return <HomeRecentPlay snapshot={insights} onOpen={() => onOpenTab('insights')} />
-      return <LoadingCard />
-    }
-
-    if (section === 'recent-play') {
+    if (section === 'continue-playing') {
       if (libraryBroken) {
         return (
           <ErrorCard
@@ -195,27 +276,20 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
         )
       }
       if (!libraryReady) return <LoadingCard />
-      if (!playing.length) return null
-      return (
-        <HomeRail
-          title="Recent play"
-          items={playing.map(toPlayingRailItem)}
-          onOpenAll={() => onOpenTab('activity')}
-          onOpen={setPlayingGame}
-        />
-      )
+      // Hidden when there is nothing in progress, rather than an empty card.
+      if (!continueGame) return null
+      return <ContinuePlaying game={continueGame} onView={(game) => setSelectedGame({ game, variant: 'owned' })} />
     }
 
-    if (section === 'new-releases') {
-      if (!releases.outNow.length) return null
-      return (
-        <HomeRail
-          title="New releases"
-          items={releases.outNow.map((item) => toWishlistRailItem(item, 'age'))}
-          onOpenAll={() => onOpenList('released')}
-          onOpen={setWishlistGame}
-        />
-      )
+    if (section === 'jump-back-in') {
+      return <JumpBackIn onOpenTab={onOpenTab} />
+    }
+
+    if (section === 'top-story') {
+      // A failed news refresh resolves to [] (loadNews never rejects), so an
+      // empty digest hides the section instead of erroring the page.
+      if (!topStory) return newsItems ? null : <LoadingCard />
+      return <TopStory item={topStory} unread={newsUnread} onOpenNews={() => onOpenTab('news')} />
     }
 
     if (section === 'upcoming') {
@@ -225,9 +299,10 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
           {releases.comingUp.length ? (
             <HomeRail
               title="Upcoming"
+              compact
               items={releases.comingUp.map((item) => toWishlistRailItem(item, 'release'))}
               onOpenAll={() => onOpenList('releases')}
-              onOpen={setWishlistGame}
+              onOpen={(item) => setSelectedGame({ game: item, variant: 'wishlist' })}
             />
           ) : null}
           {releaseFailed ? (
@@ -238,6 +313,19 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
             </button>
           ) : null}
         </div>
+      )
+    }
+
+    if (section === 'new-releases') {
+      if (!releases.outNow.length) return null
+      return (
+        <HomeRail
+          title="New releases"
+          compact
+          items={releases.outNow.map((item) => toWishlistRailItem(item, 'age'))}
+          onOpenAll={() => onOpenList('released')}
+          onOpen={(item) => setSelectedGame({ game: item, variant: 'wishlist' })}
+        />
       )
     }
 
@@ -257,7 +345,7 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
       )
     ) : null
 
-  const showSpinner = !libraryReady && !activityRows && releaseItems === null && !activityFailed
+  const showSpinner = !libraryReady && releaseItems === null && newsItems === null
 
   return (
     <div className="hm-page">
@@ -288,11 +376,12 @@ export default function HomeTab({ onOpenTab, onOpenList }) {
         onClose={() => setCustomizeOpen(false)}
       />
 
-      {playingGame ? (
-        <GameSheet variant="library" game={playingGame} onClose={() => setPlayingGame(null)} />
-      ) : null}
-      {wishlistGame ? (
-        <GameSheet variant="wishlist" game={wishlistGame} onClose={() => setWishlistGame(null)} />
+      {selectedGame ? (
+        <GameSheet
+          variant={selectedGame.variant}
+          game={selectedGame.game}
+          onClose={() => setSelectedGame(null)}
+        />
       ) : null}
     </div>
   )

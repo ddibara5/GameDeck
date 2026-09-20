@@ -81,7 +81,7 @@ const TRANSPARENCY_OPTIONS = [
   { key: 'reduced', label: 'Reduced' },
 ]
 
-export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer, initialPage = null }) {
+export default function SettingsPage({ open, onClose, onOpenBar, initialPage = null }) {
   const { mounted, closing } = useMountTransition(open)
   const nav = useNavConfig()
   const [fallbackSync, setFallbackSync] = useState(null)
@@ -370,21 +370,17 @@ export default function SettingsPage({ open, onClose, onOpenBar, onOpenDrawer, i
         <div className="settings-section">
           <div className="menu-sec-label">Navigation</div>
           <div className="settings-group">
-            {/* Two rows, not one. They edit two independent orders, and a single
-                row leading to a page that edited both is what made the bar and
-                the drawer feel like one thing. */}
             {/* The switch sits above the editor it governs, and says where the
                 tabs go rather than what the switch does, because the strip
                 vanishing already says that. */}
             <MenuItem
               glyph={ICONS.eye}
               label="Show bottom bar"
-              sub="Everything stays in the drawer"
+              sub="Search stays on screen when the bar is hidden"
               toggle={nav.barShown}
               onClick={() => setNavConfig({ barShown: !nav.barShown })}
             />
             <MenuItem glyph={ICONS.nav} label="Bottom bar" sub="Which tabs, and in what order" onClick={onOpenBar} />
-            <MenuItem glyph={ICONS.layers} label="Drawer" sub="Group order, and what each group holds" onClick={onOpenDrawer} />
           </div>
         </div>
 

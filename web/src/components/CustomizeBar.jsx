@@ -10,22 +10,21 @@ import {
   resetNavConfig,
 } from '../lib/navConfig.js'
 
-// The bottom bar's editor. Order and membership only; it cannot touch the drawer.
+// The bottom bar's editor: order and membership only. There is no drawer
+// anymore, so the bar is the whole navigation map it edits.
 //
 // The preview is the real TabBar rendered against the working order, not a
-// picture of one, so it cannot drift from what ships. It is here and not in the
-// drawer editor because the bar is a SPATIAL thing: five icons across 390px is
-// the actual constraint, and reading a vertical list to predict a horizontal
-// strip is work the screen can do for you. Quiet Deck starts with four, while
-// the editor still makes every eligible destination available.
+// picture of one, so it cannot drift from what ships. The bar is a SPATIAL
+// thing: five icons across 390px is the actual constraint, and reading a
+// vertical list to predict a horizontal strip is work the screen can do for
+// you. Quiet Deck starts with four, while the editor still makes every
+// eligible destination available.
 //
 // These three are module level on purpose. CustomizeList re-syncs from storage
 // whenever `getConfig`'s identity changes, so an inline arrow here would re-read
 // the saved layout on every parent render.
 const getBarConfig = () => {
   const c = getNavConfig()
-  // Only the bar's fields are handed over. The drawer's order is not read, not
-  // written, and cannot be disturbed by anything this editor does.
   return { order: c.bar, enabled: c.enabled }
 }
 const setBarConfig = (c) => setNavConfig({ bar: c.order, enabled: c.enabled })

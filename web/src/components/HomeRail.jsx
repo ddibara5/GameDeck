@@ -13,11 +13,11 @@ import './homeRails.css'
 // days"); onOpen receives the item's `source` (the library game or wishlist
 // row) so the caller can open its sheet.
 
-export default function HomeRail({ title, items, onOpenAll, onOpen }) {
+export default function HomeRail({ title, items, onOpenAll, onOpen, compact = false }) {
   if (!items || items.length === 0) return null
 
   return (
-    <section className="hrail" aria-label={title}>
+    <section className={`hrail${compact ? ' hrail-compact' : ''}`} aria-label={title}>
       <button
         type="button"
         className="hrail-head"

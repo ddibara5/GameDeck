@@ -1,19 +1,22 @@
 // Home section layout preferences: the standing order and visibility of the
-// four Home sections (Statistics, Recent play, New releases, Upcoming).
+// Home sections (Continue playing, Jump back in, Top story, Upcoming,
+// New releases).
 //
-// Port of the Expo pilot's Sept 11 commit (src/lib/home-layout-preferences.ts).
-// The PWA is localStorage-only and single session, so the key is device-level
-// rather than account-scoped: home layout is a standing UI preference, like
-// the Discover prefs (`gamedeck_discover_prefs_v1`), not per-account identity
-// state like the first-run setup (`gamedeck_setup_v1_<email>`).
+// The key moved to _v2 with the Home redesign (2026-09-19): the redesign
+// replaced the old four sections (Statistics, Recent play, New releases,
+// Upcoming) with five new ones, so a stored v1 order no longer describes the
+// page. v2 starts every profile on the approved mockup order; the customize
+// sheet (show/hide, reorder, local persistence) works exactly as before from
+// there.
 
-const KEY = 'gamedeck_home_layout_v1'
+const KEY = 'gamedeck_home_layout_v2'
 
 export const homeSectionOptions = [
-  { id: 'statistics', label: 'Statistics' },
-  { id: 'recent-play', label: 'Recent play' },
-  { id: 'new-releases', label: 'New releases' },
+  { id: 'continue-playing', label: 'Continue playing' },
+  { id: 'jump-back-in', label: 'Jump back in' },
+  { id: 'top-story', label: 'Top story' },
   { id: 'upcoming', label: 'Upcoming' },
+  { id: 'new-releases', label: 'New releases' },
 ]
 
 const SECTION_IDS = homeSectionOptions.map(({ id }) => id)
