@@ -6,7 +6,6 @@ import { libraryCover } from '../lib/format.js'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
 import { explicitStatus, useStatusMap } from '../lib/userStatus.js'
 import {
-  RANK_REACTIONS,
   RANK_REACTION_LABELS,
   RANK_SKIP_CUTOFF_MS,
   chooseAnchoredRankingPair,
@@ -15,7 +14,7 @@ import {
   isRankingEligible,
   loadRankingState,
   recordComparison,
-  setRankReaction,
+  tierForPosition,
 } from '../lib/ranking.js'
 import { publishLaneDuelReceipt, shouldReturnFromLaneDuel } from '../lib/laneDuel.js'
 import { formatLaneLabel } from '../lib/forYouEngine.js'
@@ -36,61 +35,40 @@ function reactionDisplay(reaction) {
   return RANK_REACTION_LABELS[reaction] || String(reaction || '').replaceAll('_', ' ') || 'Unrated'
 }
 
-function RankedRow({ game, rank, position, saving, onSaveReaction, onOpen }) {
+function RankedRow({ game, rank, position, total, onEdit, onOpen }) {
   const comparisons = Number(rank.comparison_count) || 0
+  const tier = tierForPosition(position - 1, total)
+
   return (
     <li className="rank-item">
-      <div className="rank-row" style={{ cursor: 'default' }}>
-        <div className="rank-place" aria-hidden="true">{position}</div>
+      <div className="rank-row">
         <button
           type="button"
+          className="rank-row-open"
           onClick={() => onOpen(game)}
-          aria-label={`Open ${game.title}`}
-          style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer' }}
+          aria-label={'Open ' + game.title + ', ranked ' + position}
         >
+          <span className="rank-place" aria-hidden="true">{position}</span>
           <Cover src={libraryCover(game)} title={game.title} />
-        </button>
-        <div className="rank-row-copy">
-          <button
-            type="button"
-            onClick={() => onOpen(game)}
-            aria-label={`Open ${game.title}, ranked ${position}`}
-            style={{ background: 'none', border: 0, padding: 0, color: 'inherit', font: 'inherit', textAlign: 'left', cursor: 'pointer' }}
-          >
+          <span className="rank-row-copy">
             <strong>{game.title}</strong>
-          </button>
-          <div className="rank-row-meta">
-            <span className="rank-summary">
-              {formatScore(rank.score)} · {reactionDisplay(rank.reaction)} · {comparisons} {comparisons === 1 ? 'comparison' : 'comparisons'}
+            <span className="rank-row-meta">
+              <span className="rank-summary">
+                {reactionDisplay(rank.reaction)} · {formatScore(rank.score)} score · {comparisons} {comparisons === 1 ? 'comparison' : 'comparisons'}
+              </span>
             </span>
-          </div>
-          <label style={{ display: 'block', marginTop: 6 }}>
-            <span style={{ display: 'block', marginBottom: 4, color: 'var(--muted)', fontSize: 'var(--t-cap)' }}>Your reaction</span>
-            <select
-              value={rank.reaction || ''}
-              disabled={saving}
-              onChange={(event) => onSaveReaction(rank.master_id, event.target.value)}
-              aria-label={`Reaction for ${game.title}`}
-              style={{
-                width: '100%',
-                minHeight: 44,
-                boxSizing: 'border-box',
-                padding: '0 12px',
-                border: '1px solid var(--line-soft)',
-                borderRadius: 'var(--r-sm)',
-                background: 'var(--surface-2)',
-                color: 'var(--text)',
-                font: 'inherit',
-                opacity: saving ? 0.6 : 1,
-              }}
-            >
-              <option value="" disabled>Choose a reaction…</option>
-              {RANK_REACTIONS.map((key) => (
-                <option key={key} value={key}>{RANK_REACTION_LABELS[key]}</option>
-              ))}
-            </select>
-          </label>
-        </div>
+          </span>
+        </button>
+
+        <button
+          type="button"
+          className="rank-edit"
+          onClick={() => onEdit(game, rank)}
+          aria-label={'Edit ranking for ' + game.title + ', tier ' + tier}
+        >
+          <span className={'rank-tier tier-' + tier.toLowerCase()}>{tier}</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+        </button>
       </div>
     </li>
   )
@@ -98,31 +76,18 @@ function RankedRow({ game, rank, position, saving, onSaveReaction, onOpen }) {
 
 function CompareCard({ game, score, onPick, disabled }) {
   return (
-    <div className="rank-duel-card" style={{ cursor: 'default' }}>
+    <button
+      type="button"
+      className="rank-duel-card"
+      onClick={onPick}
+      disabled={disabled}
+      aria-label={'Rank ' + game.title + ' higher'}
+    >
       <Cover src={libraryCover(game)} title={game.title} size="lg" />
       <strong>{game.title}</strong>
-      <span>{formatScore(score)} score</span>
-      <button
-        type="button"
-        onClick={onPick}
-        disabled={disabled}
-        aria-label={`Rank ${game.title} higher`}
-        style={{
-          width: '100%',
-          minHeight: 44,
-          border: 0,
-          borderRadius: 999,
-          background: 'var(--accent)',
-          color: 'var(--bg)',
-          font: 'inherit',
-          fontWeight: 700,
-          cursor: 'pointer',
-          opacity: disabled ? 0.5 : 1,
-        }}
-      >
-        This one
-      </button>
-    </div>
+      <span className="rank-duel-score">{formatScore(score)} score</span>
+      <span className="rank-duel-pick" aria-hidden="true">Rank higher</span>
+    </button>
   )
 }
 
@@ -136,7 +101,6 @@ export default function RankingsTab({ launch = null, onReturnToForYou = null }) 
   const [state, setState] = useState(() => cachedState || { ranks: [], comparisons: [] })
   const [loading, setLoading] = useState(() => !cachedState)
   const [busy, setBusy] = useState(false)
-  const [savingReaction, setSavingReaction] = useState(null)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [rankQuery, setRankQuery] = useState('')
@@ -292,23 +256,7 @@ export default function RankingsTab({ launch = null, onReturnToForYou = null }) 
     }
   }
 
-  const saveReaction = async (masterId, reaction) => {
-    if (!reaction || busy || savingReaction) return
-    setSavingReaction(masterId)
-    setError('')
-    setNotice('')
-    try {
-      await setRankReaction(masterId, reaction)
-      await refresh(true)
-      setNotice('Ranking updated.')
-    } catch (err) {
-      setError(err.message || 'Could not save that reaction.')
-    } finally {
-      setSavingReaction(null)
-    }
-  }
-
-  if (loading || gamesLoading) return <div className="rank-page"><p className="rank-empty">Building your ranking…</p></div>
+  if (loading || gamesLoading) return <div className="rank-page"><p className="rank-state" aria-live="polite">Building your ranking…</p></div>
 
   const leftGame = pair ? gameById.get(String(pair.left.master_id)) : null
   const rightGame = pair ? gameById.get(String(pair.right.master_id)) : null
@@ -316,11 +264,7 @@ export default function RankingsTab({ launch = null, onReturnToForYou = null }) 
   const totalComparisons = (state.comparisons || []).length
 
   return (
-    <section
-      className="rank-page"
-      aria-label="Rankings"
-      style={{ maxWidth: 430, paddingBottom: 'calc(var(--space-5) + env(safe-area-inset-bottom))' }}
-    >
+    <section className="rank-page" aria-label="Rankings">
       <header className="rank-head">
         <div className="seg rank-tabs" role="tablist" aria-label="Ranking sections">
           {SECTIONS.map((item) => (
@@ -347,17 +291,28 @@ export default function RankingsTab({ launch = null, onReturnToForYou = null }) 
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6" /><path d="m16 16 4 4" /></svg>
             <input
               type="search"
+              className="rank-search-input"
               value={rankQuery}
               placeholder="Search your library to rank"
               aria-label="Search your library to rank"
+              aria-expanded={searchOpen}
+              aria-controls={searchOpen ? 'rank-search-results' : undefined}
+              aria-autocomplete="list"
+              autoComplete="off"
               onFocus={() => setSearchOpen(true)}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  setSearchOpen(false)
+                  event.currentTarget.blur()
+                }
+              }}
               onChange={(event) => {
                 setRankQuery(event.target.value)
                 setSearchOpen(true)
               }}
             />
             {searchOpen ? (
-              <div className="rank-search-results" role="listbox" aria-label="Library games">
+              <div id="rank-search-results" className="rank-search-results" role="listbox" aria-label="Library games">
                 {searchResults.length ? searchResults.map((game) => {
                   const isRanked = rankedIds.has(String(game.master_id))
                   const canRank = eligibleIds.has(String(game.master_id)) && !isRanked
@@ -369,7 +324,7 @@ export default function RankingsTab({ launch = null, onReturnToForYou = null }) 
                       aria-selected="false"
                       disabled={!canRank}
                       onClick={() => {
-                        setRankTarget(game)
+                        setRankTarget({ game, rank: null })
                         setSearchOpen(false)
                       }}
                     >
@@ -387,11 +342,11 @@ export default function RankingsTab({ launch = null, onReturnToForYou = null }) 
       </header>
 
       {error ? <p className="rank-error" role="alert">{error}</p> : null}
-      {notice ? <p style={{ color: 'var(--muted)', fontSize: 'var(--t-foot)' }}>{notice}</p> : null}
+      {notice ? <p className="rank-notice" role="status">{notice}</p> : null}
 
       {section === 'ranking' ? (
         <>
-          <p style={{ color: 'var(--muted)', fontSize: 'var(--t-cap)', margin: '0 0 var(--space-2)' }}>
+          <p className="rank-count">
             {ranked.length} {ranked.length === 1 ? 'game' : 'games'} ranked
           </p>
           {ranked.length ? (
@@ -402,40 +357,34 @@ export default function RankingsTab({ launch = null, onReturnToForYou = null }) 
                   game={game}
                   rank={rank}
                   position={index + 1}
-                  saving={savingReaction === rank.master_id}
-                  onSaveReaction={saveReaction}
+                  total={ranked.length}
+                  onEdit={(targetGame, targetRank) => setRankTarget({ game: targetGame, rank: targetRank })}
                   onOpen={setSelectedGame}
                 />
               ))}
             </ol>
-          ) : <p className="rank-empty">Search above to rank a game and start your list.</p>}
+          ) : <p className="rank-state rank-state--empty">Search above to rank a game and start your list.</p>}
         </>
       ) : null}
 
       {section === 'compare' ? (
         <div className="rank-compare">
           {laneFocus ? (
-            <div className="rank-lane-intro" style={{ margin: '0 0 var(--space-3)' }}>
-              <p style={{ fontWeight: 700, margin: '0 0 4px' }}>
-                Tuning your {laneLabel || formatLaneLabel(laneFocus) || laneFocus} taste
-              </p>
-              {anchorGame ? (
-                <p style={{ color: 'var(--muted)', fontSize: 'var(--t-foot)', margin: '0 0 var(--space-2)' }}>
-                  Anchored on {anchorGame.title}
-                </p>
-              ) : null}
-              <button
-                type="button"
-                className="rank-skip"
-                onClick={() => setLaneFocus(null)}
-              >
-                Back to standard Compare
+            <div className="rank-lane-intro">
+              <div>
+                <strong>Tuning your {laneLabel || formatLaneLabel(laneFocus) || laneFocus} taste</strong>
+                {anchorGame ? <span>Anchored on {anchorGame.title}</span> : null}
+              </div>
+              <button type="button" className="rank-lane-reset" onClick={() => setLaneFocus(null)}>
+                Standard compare
               </button>
             </div>
           ) : null}
-          <p style={{ color: 'var(--muted)', fontSize: 'var(--t-cap)', margin: '0 0 var(--space-3)' }}>
+
+          <p className="rank-compare-meta">
             {sessionDuels} {sessionDuels === 1 ? 'duel' : 'duels'} this session · {totalComparisons} total comparisons
           </p>
+
           {receipt ? (
             <div className="rank-receipt" aria-live="polite">
               <strong>{receipt.headline}</strong>
@@ -445,28 +394,32 @@ export default function RankingsTab({ launch = null, onReturnToForYou = null }) 
               ) : null}
             </div>
           ) : null}
+
           {leftGame && rightGame && pair ? (
             <>
-              <p>Which game belongs higher in your ranking?</p>
-              <div className="rank-duel">
+              <div className="rank-compare-copy">
+                <strong>Which game belongs higher?</strong>
+                <span>Tap the game you would rank above the other.</span>
+              </div>
+              <div className="rank-duel" key={String(pair.left.master_id) + '-' + String(pair.right.master_id) + '-' + sessionDuels}>
                 <CompareCard game={leftGame} score={pair.left.score} disabled={busy} onPick={() => compare('left')} />
-                <span className="rank-vs">or</span>
                 <CompareCard game={rightGame} score={pair.right.score} disabled={busy} onPick={() => compare('right')} />
               </div>
               <button type="button" className="rank-skip" disabled={busy} onClick={() => compare('skip')}>Too different</button>
-              <small>Skipped pairs stay out of rotation for 90 days.</small>
+              <p className="rank-skip-note">Skipped pairs stay out of rotation for 90 days.</p>
             </>
           ) : (
-            <p className="rank-empty">Rank at least two games, or come back after a skipped pair leaves rotation.</p>
+            <p className="rank-state rank-state--empty">No comparison is ready. Rank at least two eligible games, or try again after a skipped pair expires.</p>
           )}
         </div>
       ) : null}
 
       <RankGameSheet
         open={Boolean(rankTarget)}
-        game={rankTarget}
+        game={rankTarget?.game || null}
         ranks={ranked.map((item) => item.rank)}
         gameById={gameById}
+        existingRank={rankTarget?.rank || null}
         onClose={() => setRankTarget(null)}
         onSaved={() => refresh(true)}
       />

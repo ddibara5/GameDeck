@@ -480,3 +480,100 @@
   color: var(--text);
   font-size: 15px;
 }
+
+
+/* ---------- Rankings parity pass: 2026-09 ----------
+   Align Rankings with the compact continuous-canvas Library/Activity language.
+   Shared theme/control tokens own states; ranking-specific CSS owns only hierarchy. */
+.rank-page { max-width: 640px; padding: 8px var(--screen-gutter) calc(var(--space-5) + env(safe-area-inset-bottom)); }
+.rank-head { margin: 0; }
+.rank-tabs { margin: 0 0 10px; }
+.rank-count, .rank-notice, .rank-compare-meta, .rank-skip-note { margin: 0; color: var(--muted); font-family: var(--font-supporting); font-size: var(--collection-meta); line-height: 1.3; }
+.rank-count { margin-bottom: 4px; }
+.rank-notice { margin: 0 0 8px; }
+.rank-search-wrap { margin-bottom: 10px; }
+.rank-search-wrap > input { border-color: var(--line-soft); border-radius: 12px; background: var(--surface); font-family: var(--font-supporting); font-size: var(--collection-title); }
+.rank-search-wrap > input:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 72%, transparent); outline-offset: 1px; }
+.rank-search-results { padding: 4px; border-radius: 14px; box-shadow: 0 14px 34px color-mix(in srgb, #000 22%, transparent); }
+.rank-search-results > button { min-height: 72px; grid-template-columns: var(--game-art-library-width) minmax(0, 1fr); gap: 12px; padding: 8px; border-radius: 10px; }
+.rank-search-results .cover { width: var(--game-art-library-width); height: var(--game-art-library-height); border-radius: 8px; aspect-ratio: auto; }
+.rank-search-results strong { font-family: var(--font-supporting); font-size: var(--collection-title); font-weight: var(--w-semi); line-height: 1.25; }
+.rank-search-results small, .rank-search-results > p { font-family: var(--font-supporting); font-size: var(--collection-meta); line-height: 1.3; }
+
+.rank-row { grid-template-columns: minmax(0, 1fr) 48px; gap: 4px; min-height: 80px; padding: 0; cursor: default; }
+.rank-row:active { opacity: 1; }
+.rank-row-open { min-width: 0; min-height: 80px; display: grid; grid-template-columns: 32px var(--game-art-library-width) minmax(0, 1fr); gap: 12px; align-items: center; padding: 8px 0; border: 0; background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.rank-row-open:active { background: color-mix(in srgb, var(--surface-2) 70%, transparent); }
+.rank-row-open .cover { width: var(--game-art-library-width); height: var(--game-art-library-height); border-radius: 8px; aspect-ratio: auto; flex: 0 0 auto; }
+.rank-place { width: 32px; color: var(--muted); font-family: var(--font-heading); font-size: var(--t-t2); font-weight: var(--w-semi); letter-spacing: -0.035em; line-height: 1; text-align: center; }
+.rank-row-copy { gap: 4px; }
+.rank-row-copy strong { font-family: var(--font-supporting); font-size: var(--collection-title); font-weight: var(--w-semi); line-height: 1.25; }
+.rank-summary { font-family: var(--font-supporting); font-size: var(--collection-meta); line-height: 1.3; text-transform: none; }
+.rank-edit { width: 48px; min-height: 44px; display: inline-flex; align-items: center; justify-content: flex-end; gap: 3px; padding: 0; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
+.rank-edit svg { width: 18px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.rank-tier { padding: 3px 7px; border-radius: 999px; font-family: var(--font-ui-label); font-size: var(--t-cap2); font-weight: var(--w-semi); line-height: 1.2; }
+
+.rank-row-open:focus-visible, .rank-edit:focus-visible, .rank-duel-card:focus-visible, .rank-skip:focus-visible, .rank-lane-reset:focus-visible, .rank-sheet-reactions button:focus-visible, .rank-sheet-save:focus-visible, .rank-sheet-duel > button:focus-visible, .rank-sheet-later:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 75%, transparent); outline-offset: 2px; }
+
+.rank-compare { padding: 4px 0 0; border: 0; border-radius: 0; background: transparent; text-align: left; }
+.rank-lane-intro { min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 8px; padding: 8px 0; border-bottom: 1px solid var(--line-soft); }
+.rank-lane-intro > div { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.rank-lane-intro strong { font-family: var(--font-supporting); font-size: var(--collection-title); font-weight: var(--w-semi); line-height: 1.25; }
+.rank-lane-intro span { overflow: hidden; color: var(--muted); font-family: var(--font-supporting); font-size: var(--collection-meta); line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
+.rank-lane-reset { min-height: 44px; flex: 0 0 auto; padding: 0; border: 0; background: transparent; color: var(--accent); font: inherit; font-size: var(--collection-meta); font-weight: var(--w-semi); }
+.rank-compare-meta { margin-bottom: 12px; }
+.rank-compare-copy { display: flex; flex-direction: column; gap: 3px; margin: 4px 0 10px; text-align: center; }
+.rank-compare-copy strong { color: var(--text); font-family: var(--font-heading); font-size: var(--collection-heading); font-weight: var(--w-semi); line-height: 1.25; }
+.rank-compare-copy span { color: var(--muted); font-family: var(--font-supporting); font-size: var(--collection-meta); line-height: 1.3; }
+
+.rank-duel { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: stretch; margin: 0 0 8px; animation: rank-pair-in var(--d-fast) ease both; }
+.rank-duel-card { min-width: 0; min-height: 44px; display: grid; grid-template-rows: auto minmax(2.5em, auto) auto auto; align-content: start; justify-items: stretch; gap: 6px; padding: 8px; border: 1px solid var(--line-soft); border-radius: 14px; background: var(--surface); color: var(--text); font: inherit; text-align: left; cursor: pointer; box-shadow: none; transition: transform var(--d-fast) ease, background var(--d-fast) ease, border-color var(--d-fast) ease; }
+.rank-duel-card .cover-lg { width: 100%; max-width: none; margin: 0; aspect-ratio: 3 / 4; border-radius: 10px; }
+.rank-duel-card strong { min-height: 2.5em; display: -webkit-box; overflow: hidden; font-family: var(--font-supporting); font-size: var(--collection-title); font-weight: var(--w-semi); line-height: 1.25; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.rank-duel-card .rank-duel-score { color: var(--muted); font-family: var(--font-supporting); font-size: var(--collection-meta); line-height: 1.3; }
+.rank-duel-card .rank-duel-pick { color: var(--accent); font-family: var(--font-ui-label); font-size: var(--collection-meta); font-weight: var(--w-semi); line-height: 1.3; }
+.rank-duel-card:not(:disabled):active { transform: scale(.985); background: var(--surface-2); }
+.rank-duel-card:disabled, .rank-skip:disabled { opacity: .55; cursor: default; }
+.rank-skip { display: block; min-height: 44px; margin: 0 auto; padding: 0 12px; color: var(--muted); font-family: var(--font-supporting); font-size: var(--collection-meta); text-decoration: none; }
+.rank-skip-note { margin-top: -4px; text-align: center; }
+.rank-receipt { gap: 3px; margin: 0 0 12px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); font-family: var(--font-supporting); font-size: var(--collection-meta); line-height: 1.3; }
+.rank-receipt strong { font-size: var(--collection-title); font-weight: var(--w-semi); }
+.rank-state { margin: 0; padding: var(--space-6) var(--space-4); color: var(--muted); font-family: var(--font-supporting); font-size: var(--collection-meta); line-height: 1.4; text-align: center; }
+.rank-state--empty { padding-top: var(--space-5); }
+.rank-error { margin: 0 0 8px; font-family: var(--font-supporting); font-size: var(--collection-meta); line-height: 1.3; }
+
+.rank-game-sheet { padding: 12px var(--screen-gutter) calc(20px + env(safe-area-inset-bottom)); }
+.rank-game-sheet > .rank-sheet-cover { width: min(var(--game-art-sheet), 112px); max-width: 112px; margin: 4px auto 10px; border-radius: 10px; }
+.rank-game-sheet > h2, .rank-sheet-compare h2 { font-family: var(--font-heading); font-size: var(--t-t2); font-weight: var(--w-semi); line-height: 1.2; }
+.rank-sheet-intro, .rank-sheet-compare > p { margin: 4px 0 12px; font-family: var(--font-supporting); font-size: var(--collection-meta); line-height: 1.35; }
+.rank-sheet-card { padding: 12px 0 0; border: 0; border-top: 1px solid var(--line-soft); border-radius: 0; background: transparent; }
+.rank-sheet-card h3 { font-family: var(--font-supporting); font-size: var(--collection-title); font-weight: var(--w-semi); line-height: 1.25; }
+.rank-sheet-card p { font-family: var(--font-supporting); font-size: var(--collection-meta); line-height: 1.3; }
+.rank-sheet-reactions { gap: 8px; margin: 12px 0; }
+.rank-sheet-reactions button { min-height: 44px; border-color: var(--control-track-border); background: var(--control-track-bg); color: var(--control-idle-text); font-family: var(--font-ui-label); font-size: var(--collection-meta); font-weight: var(--w-semi); }
+.rank-sheet-reactions button.active { border-color: var(--control-selected-border); background: var(--control-selected-bg); color: var(--control-selected-text); box-shadow: inset 0 0 0 1px var(--control-selected-border); }
+.rank-sheet-preview { align-items: center; margin: 12px 0; padding: 10px 0; border-top: 1px solid var(--line-soft); border-bottom: 1px solid var(--line-soft); font-family: var(--font-supporting); font-size: var(--collection-meta); line-height: 1.3; }
+.rank-sheet-preview strong { font-family: var(--font-heading); font-size: var(--t-t2); font-weight: var(--w-semi); }
+.rank-sheet-save { min-height: 48px; border-radius: 14px; color: var(--control-accent-ink); font-family: var(--font-ui-label); font-weight: var(--w-semi); }
+.rank-sheet-card > small { font-family: var(--font-supporting); font-size: var(--collection-meta); line-height: 1.3; }
+.rank-sheet-compare { padding: 10px 0 0; }
+.rank-sheet-duel { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin: 12px 0 4px; }
+.rank-sheet-duel > span { display: none; }
+.rank-sheet-duel > button { min-width: 0; min-height: 44px; gap: 6px; padding: 8px; border-radius: 14px; background: var(--surface); box-shadow: none; }
+.rank-sheet-duel .cover { width: 100%; max-width: none; border-radius: 10px; }
+.rank-sheet-duel strong { min-height: 2.5em; display: -webkit-box; overflow: hidden; font-family: var(--font-supporting); font-size: var(--collection-meta); font-weight: var(--w-semi); line-height: 1.25; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.rank-sheet-later { color: var(--muted); font-family: var(--font-supporting); font-size: var(--collection-meta); }
+
+:root[data-theme-family='xbox'] .rank-duel-card, :root[data-theme-family='playstation'] .rank-duel-card { border-left-width: 1px; background: var(--surface); border-color: var(--line-soft); box-shadow: none; }
+
+@keyframes rank-pair-in { from { opacity: .35; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 359px) {
+  .rank-row-open { grid-template-columns: 28px var(--game-art-library-width) minmax(0, 1fr); gap: 8px; }
+  .rank-place { width: 28px; font-size: var(--t-t3); }
+  .rank-duel { gap: 8px; }
+  .rank-duel-card { padding: 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rank-duel { animation: none; }
+  .rank-duel-card { transition: none; }
+}

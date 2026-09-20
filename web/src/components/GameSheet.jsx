@@ -106,7 +106,7 @@ function OwnedRankingAction({ game }) {
         onFocus={loadRankGameSheet}
         onClick={openRanking}
       >
-        {opening ? 'Opening…' : 'Rate / edit game'}
+        {opening ? 'Opening…' : rank ? 'Edit ranking' : 'Rank game'}
       </button>
       {error ? <p className="rank-error" role="alert">{error}</p> : null}
       {rankVisited ? (

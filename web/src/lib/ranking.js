@@ -149,7 +149,6 @@ function invalidateRankingCaches(masterId) {
   if (typeof window !== 'undefined') {
     Promise.resolve(clearTaste).finally(() => window.dispatchEvent(new Event(RANKING_EVENT)))
   }
-  bustTasteProfile()
   if (masterId != null) {
     gameCache.delete(String(masterId))
     idbDel(GAME_KEY(Number(masterId)))
