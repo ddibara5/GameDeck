@@ -358,41 +358,6 @@
   overflow-wrap: anywhere;
 }
 
-.gs-for-you-card {
-  border: 1px solid color-mix(in oklab, var(--accent) 18%, var(--line-soft));
-  border-radius: 20px;
-  padding: 16px;
-  background: color-mix(in oklab, var(--accent) 10%, var(--surface-2));
-}
-
-.gs-for-you-label {
-  color: var(--accent);
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  margin-bottom: 8px;
-}
-
-.gs-for-you-reason,
-.gs-for-you-note {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-
-.gs-for-you-reason {
-  color: var(--text);
-  font-size: var(--collection-title);
-  line-height: 1.35;
-}
-
-.gs-for-you-note {
-  color: var(--muted);
-  font-size: var(--collection-meta);
-  line-height: 1.4;
-  margin-top: 10px;
-}
-
 .game-page-primary-actions {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
