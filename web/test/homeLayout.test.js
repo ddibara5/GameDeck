@@ -25,11 +25,11 @@ const SECTION_IDS = homeSectionOptions.map((option) => option.id)
 
 test('the section catalog holds the five redesigned sections', () => {
   assert.deepEqual(SECTION_IDS, [
-    'continue-playing',
     'jump-back-in',
+    'new-releases',
     'top-story',
     'upcoming',
-    'new-releases',
+    'continue-playing',
   ])
 })
 
@@ -76,7 +76,7 @@ test('load drops unknown ids and dedupes the order', () => {
     assert.deepEqual(loadHomeLayout(), {
       // User order survives; unknown ids are gone; sections missing from the
       // stored order are appended in catalog order.
-      order: ['upcoming', 'jump-back-in', 'continue-playing', 'top-story', 'new-releases'],
+      order: ['upcoming', 'jump-back-in', 'new-releases', 'top-story', 'continue-playing'],
       hidden: ['top-story'],
     })
   } finally {
@@ -91,10 +91,10 @@ test('load appends defaults to a partial stored order', () => {
   try {
     assert.deepEqual(loadHomeLayout().order, [
       'top-story',
-      'continue-playing',
       'jump-back-in',
-      'upcoming',
       'new-releases',
+      'upcoming',
+      'continue-playing',
     ])
   } finally {
     delete globalThis.localStorage
@@ -110,7 +110,7 @@ test('save normalizes before writing to storage', () => {
       hidden: ['top-story', 'bogus'],
     })
     assert.deepEqual(JSON.parse(storage.getItem(HOME_LAYOUT_KEY)), {
-      order: ['upcoming', 'jump-back-in', 'continue-playing', 'top-story', 'new-releases'],
+      order: ['upcoming', 'jump-back-in', 'new-releases', 'top-story', 'continue-playing'],
       hidden: ['top-story'],
     })
   } finally {

@@ -1,6 +1,6 @@
 // Home section layout preferences: the standing order and visibility of the
-// Home sections (Recent play, Jump back in, Top story, Upcoming,
-// New releases).
+// Home sections (Jump back in, New releases, Top story, Upcoming,
+// Recent play).
 //
 // The key moved to _v2 with the Home redesign (2026-09-19): the redesign
 // replaced the old four sections (Statistics, Recent play, New releases,
@@ -12,11 +12,11 @@
 const KEY = 'gamedeck_home_layout_v2'
 
 export const homeSectionOptions = [
-  { id: 'continue-playing', label: 'Recent play' },
   { id: 'jump-back-in', label: 'Jump back in' },
+  { id: 'new-releases', label: 'New releases' },
   { id: 'top-story', label: 'Top story' },
   { id: 'upcoming', label: 'Upcoming' },
-  { id: 'new-releases', label: 'New releases' },
+  { id: 'continue-playing', label: 'Recent play' },
 ]
 
 const SECTION_IDS = homeSectionOptions.map(({ id }) => id)

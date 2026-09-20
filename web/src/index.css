@@ -4871,3 +4871,53 @@ textarea {
   --control-track-border: color-mix(in srgb, var(--text) 42%, var(--line));
   --control-selected-border: color-mix(in srgb, var(--text) 46%, var(--line));
 }
+
+
+/* ---------- Theme typography consistency ----------
+   Every visual family keeps its own authored voice, but the hierarchy is now
+   semantic: display type owns route/section headings, body type owns supporting
+   copy, and label type remains reserved for compact UI labels. */
+:root {
+  --font-heading: var(--font-display);
+  --font-supporting: var(--font-body);
+  --font-ui-label: var(--font-label);
+}
+
+:root[data-theme-family] :is(
+  .brand-title,
+  .hm-sec-title,
+  .hrail-title,
+  .gd-library-count,
+  .discover-section-label,
+  .discover-browse-header h1,
+  .discover-browse .shelf-title,
+  .activity-group-label h2,
+  .news-week-label,
+  .chart-title,
+  .settings-hd-title,
+  .game-page-title,
+  .detail-title,
+  .fy-taste-group-title,
+  .filter-sheet-title
+) {
+  font-family: var(--font-heading);
+}
+
+:root[data-theme-family] :is(
+  .hm-muted,
+  .hm-jump-text small,
+  .hrail-meta,
+  .gd-library-platform,
+  .gd-library-meta,
+  .activity-detail,
+  .news-row-meta,
+  .ins-sub,
+  .gs-hero-meta,
+  .gs-hero-rating,
+  .gs-hero-release,
+  .settings-field-hint,
+  .menu-item .menu-sub,
+  .discover-card-tags
+) {
+  font-family: var(--font-supporting);
+}

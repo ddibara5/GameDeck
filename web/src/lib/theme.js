@@ -96,7 +96,7 @@ function updateThemeColor() {
 
 export function getTheme() {
   const value = read(MODE_KEY)
-  return MODES.has(value) ? value : 'dark'
+  return MODES.has(value) ? value : 'light'
 }
 
 export function resolveTheme(pref) {
@@ -111,7 +111,7 @@ export function applyTheme(pref) {
 }
 
 export function setTheme(pref) {
-  const next = MODES.has(pref) ? pref : 'dark'
+  const next = MODES.has(pref) ? pref : 'light'
   write(MODE_KEY, next)
   applyTheme(next)
   return next
