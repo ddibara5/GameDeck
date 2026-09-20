@@ -13,7 +13,7 @@ import './homeRails.css'
 // onOpen receives the item's source (the library game or wishlist row) so the
 // caller can open its sheet.
 
-export default function HomeRail({ title, items, onOpenAll, onOpen, compact = false }) {
+export default function HomeRail({ title, items, totalCount = null, onOpenAll, onOpen, compact = false, priority = false }) {
   if (!items || items.length === 0) return null
 
   return (
@@ -26,12 +26,12 @@ export default function HomeRail({ title, items, onOpenAll, onOpen, compact = fa
       >
         <span className="hrail-title">{title}</span>
         <span className="hrail-count" aria-hidden="true">
-          {items.length}
+          {totalCount ?? items.length}
         </span>
         <NowPlayingChevron />
       </button>
       <div className="hrail-strip">
-        {items.map((item) => (
+        {items.map((item, index) => (
           <button
             key={item.key}
             type="button"
@@ -40,7 +40,14 @@ export default function HomeRail({ title, items, onOpenAll, onOpen, compact = fa
             aria-label={`${item.title}${item.progress != null ? `, ${item.progress}% complete` : ''}`}
           >
             <span className="hrail-poster">
-              <Cover src={item.artwork} title={item.title} size="sm" className="hrail-cov" sizes="112px" />
+              <Cover
+                src={item.artwork}
+                title={item.title}
+                size="sm"
+                className="hrail-cov"
+                sizes="112px"
+                priority={priority && index < 2}
+              />
               {item.progress != null ? (
                 <span className="hrail-badge" aria-hidden="true">
                   {item.progress}%
