@@ -298,9 +298,9 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   useEffect(() => lockScroll(), [])
 
   // Full-screen page: iOS edge-swipe goes back. Suppressed while the screenshot
-  // lightbox is up (it has its own close) or while Settings is open over the
-  // page (Settings has its own bespoke edge-back). The rank sheet registers
-  // itself in the edge-back stack, so it owns the gesture while open.
+  // lightbox is up (it has its own direct-manipulation gestures) or while
+  // Settings is open over the page. Settings and the rank sheet both register
+  // later in the shared edge-back stack, so the topmost destination owns it.
   const [settingsUp, setSettingsUp] = useState(false)
   useEffect(() => {
     const onSettingsClosed = () => setSettingsUp(false)
@@ -392,7 +392,7 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   // row with a circular back button, the centered game title, and the settings
   // gear. Back returns to whatever opened the page, via requestClose.
   return createPortal(
-    <div className={`modal-backdrop${closing ? ' closing' : ''}`} onClick={handleOverlayClick}>
+    <div className={`modal-backdrop game-page-backdrop${closing ? ' closing' : ''}`} onClick={handleOverlayClick}>
       <div
         ref={dialogRef}
         className={`modal-sheet game-sheet game-page${closing ? ' closing' : ''}`}
