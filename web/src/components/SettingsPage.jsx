@@ -18,7 +18,7 @@ import { useMountTransition } from '../lib/useMountTransition.js'
 import { lockScroll } from '../lib/scrollLock.js'
 import { MenuItem, ICONS, relTime } from './menuUI.jsx'
 import { useDialogA11y } from '../lib/useDialogA11y.js'
-import { useEdgeBack } from '../lib/useEdgeBack.js'
+import { NAV_TRANSITION_MS, useEdgeBack } from '../lib/useEdgeBack.js'
 
 const REPO = 'ddibara5/GameDeck'
 const SOURCE_URL = 'https://github.com/ddibara5/GameDeck'
@@ -63,7 +63,7 @@ const TRANSPARENCY_OPTIONS = [
 ]
 
 export default function SettingsPage({ open, onClose, onOpenBar, initialPage = null }) {
-  const { mounted, closing } = useMountTransition(open)
+  const { mounted, closing } = useMountTransition(open, NAV_TRANSITION_MS)
   const [fallbackSync, setFallbackSync] = useState(null)
   const [sourceSync, setSourceSync] = useState({})
   const [version, setVersion] = useState(null)
@@ -127,7 +127,7 @@ export default function SettingsPage({ open, onClose, onOpenBar, initialPage = n
       if (stack.length) pop()
       else onClose()
     },
-    { register: mounted, disabled: !mounted || closing },
+    { register: mounted, disabled: !mounted || closing, interactiveRef: dialogRef },
   )
 
   // Load freshness data + version once when the page opens.
@@ -428,8 +428,13 @@ export default function SettingsPage({ open, onClose, onOpenBar, initialPage = n
    fixed, so nesting costs nothing in layout and buys the shared state. */
 
 function SubPage({ open, depth = 0, title, onBack, children }) {
-  const { mounted, closing } = useMountTransition(open)
+  const { mounted, closing } = useMountTransition(open, NAV_TRANSITION_MS)
   const dialogRef = useDialogA11y({ active: mounted, onClose: onBack })
+  useEdgeBack(onBack, {
+    register: mounted,
+    disabled: !mounted || closing,
+    interactiveRef: dialogRef,
+  })
   if (!mounted) return null
   // z-index by position in the stack rather than a class per level, so a fourth
   // level is a number and not another CSS rule. Clamped at 0 so a page that is
