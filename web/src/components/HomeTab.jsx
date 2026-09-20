@@ -1,21 +1,23 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import HomeRail from './HomeRail.jsx'
 import GameSheet, { preloadGameSheet } from './LazyGameSheet.jsx'
-import NewsSheet from './NewsSheet.jsx'
 import { HomeCustomizeBar, HomeCustomizeSheet } from './HomeCustomizer.jsx'
 import { TAB_ICONS } from './TabBar.jsx'
 import { preloadLibrary, useLibraryGames } from '../lib/useLibraryGames.js'
 import { useStatusMap } from '../lib/userStatus.js'
-import { supabase } from '../lib/supabase.js'
 import { gameArtworkUrl } from '../lib/homeInsights.js'
-import { fetchReleaseCandidates, releaseWatch } from '../lib/homeReleaseWatch.js'
-import { loadNews, markRead, resolveGame, buildLibraryIndex } from '../lib/news.js'
-import { fetchGameById } from '../lib/discover.js'
+import { releaseWatch } from '../lib/homeReleaseWatch.js'
+import { getNewsCache, loadNews, markRead, resolveGame, buildLibraryIndex } from '../lib/news.js'
 import { loadHomeLayout, saveHomeLayout } from '../lib/homeLayout.js'
+import { useWishlist } from '../lib/wishlist.js'
 import { gameProgress, libraryTitleKey, sortRecentGames, wishlistProgress } from '../lib/homeRails.js'
 import { libraryCover, releaseCardLabel } from '../lib/format.js'
 import './homeCards.css'
 import './homeRails.css'
+
+const loadNewsSheet = () => import('./NewsSheet.jsx')
+const NewsSheet = lazy(loadNewsSheet)
+const loadDiscover = () => import('../lib/discover.js')
 
 // Home: the approved compact layout. Five sections in the user's saved order
 // (gamedeck_home_layout_v2), each hideable and reorderable through the
@@ -106,7 +108,14 @@ function TopStory({ item, unread, onOpenNews, onOpenStory }) {
           </button>
         }
       />
-      <button type="button" className="hm-news-card" onClick={() => onOpenStory(item)} aria-label={`Top story: ${item.title}. Open article.`}>
+      <button
+        type="button"
+        className="hm-news-card"
+        onPointerDown={loadNewsSheet}
+        onFocus={loadNewsSheet}
+        onClick={() => onOpenStory(item)}
+        aria-label={`Top story: ${item.title}. Open article.`}
+      >
         <span className="hm-news-copy">
           <span className="hm-news-label">{item.gameName || 'FROM YOUR FEED'}</span>
           <span className="hm-news-title">{item.title}</span>
@@ -124,13 +133,14 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
   const { games, loading: libraryLoading, error: libraryError } = useLibraryGames()
   const statusMap = useStatusMap()
 
-  // Release candidates, plain (a refresh failure is soft - the line under the
-  // card says so; the card keeps whatever it has).
-  const [releaseItems, setReleaseItems] = useState(null)
-  const [releaseFailed, setReleaseFailed] = useState(false)
+  // Wishlist is already a local-first SWR source. Reusing it here removes a
+  // second uncached Supabase round trip from Home and keeps the preview/counts
+  // in sync with the expanded Release watch page.
+  const { items: wishlistItems, loading: wishlistLoading } = useWishlist()
 
-  // News: the featured top story.
-  const [newsItems, setNewsItems] = useState(null)
+  // Seed from the session copy when News has already been visited. Cold starts
+  // still fall through to IndexedDB via loadNews().
+  const [newsItems, setNewsItems] = useState(() => getNewsCache())
 
   // Home section layout: order + visibility, persisted for Dave.
   const [homeLayout, setHomeLayout] = useState(() => loadHomeLayout())
@@ -152,46 +162,18 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
 
   const runRef = useRef(0)
 
-  const loadRelease = () => {
-    const runId = runRef.current
-    setReleaseFailed(false)
-    return fetchReleaseCandidates(supabase).then(
-      (rows) => {
-        if (runRef.current === runId) {
-          setReleaseItems(rows)
-          setReleaseFailed(false)
-        }
-      },
-      () => {
-        if (runRef.current === runId) setReleaseFailed(true)
-      },
-    )
-  }
-
-  const loadTopStory = () => {
-    const runId = runRef.current
-    // loadNews never rejects: a failed refresh resolves to the cached digest
-    // or [], so the section hides itself when there is nothing to feature.
-    return loadNews().then((rows) => {
-      if (runRef.current === runId) setNewsItems(rows || [])
-    })
-  }
-
   useEffect(() => {
     const runId = ++runRef.current
 
-    setReleaseFailed(false)
+    // News is local-first too. Do not hold the Home shell behind it; publish the
+    // cached value as soon as loadNews resolves and refresh quietly afterward.
+    loadNews().then((rows) => {
+      if (runRef.current === runId) setNewsItems(rows || [])
+    })
 
-    const releaseTask = loadRelease()
-    const newsTask = loadTopStory()
-
-    // Parallel: each section publishes its own snapshot, so nothing waits on
-    // the slowest request. The allSettled keeps the promise chain observed.
-    Promise.allSettled([releaseTask, newsTask])
     return () => {
       runRef.current += 1
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const libraryByIgdb = useMemo(
@@ -202,24 +184,21 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
     () => new Map(games.map((game) => [libraryTitleKey(game.title), game])),
     [games],
   )
-  const releases = useMemo(() => releaseWatch(releaseItems || []), [releaseItems])
+  const releases = useMemo(() => releaseWatch(wishlistItems), [wishlistItems])
 
   // Recently played library games, most recent first. Feeds the Recent play
   // rail and its full list view.
   const recentGames = useMemo(() => sortRecentGames(games || []), [games])
   const topStory = newsItems && newsItems.length ? newsItems[0] : null
 
-  // Relevance for the featured story's sheet: library index only (no wishlist
-  // or Game Pass sets on Home), so the sheet can show "Because you're playing
-  // X" and prefer library art when it applies.
-  const newsSets = useMemo(() => ({ libIndex: buildLibraryIndex(games) }), [games])
-
+  // Build the heavier news/library relevance index only when the user opens the
+  // story, not on every Home/library refresh.
   const openStoryFor = useCallback(
     (item) => {
       markRead(item.primaryUrl)
-      setOpenStory({ item, rel: resolveGame(item, newsSets) })
+      setOpenStory({ item, rel: resolveGame(item, { libIndex: buildLibraryIndex(games) }) })
     },
-    [newsSets],
+    [games],
   )
 
   // A library game opens the owned sheet; anything else opens the discover
@@ -230,6 +209,7 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
       return
     }
     if (!item.gameIgdbId) return
+    const { fetchGameById } = await loadDiscover()
     const g = await fetchGameById(item.gameIgdbId)
     if (g) setSelectedGame({ game: g, variant: 'discover' })
   }, [])
@@ -269,6 +249,7 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
         <HomeRail
           title="Recent play"
           compact
+          priority
           items={recentGames.map((game) => ({
             key: String(game.master_id ?? game.igdb_id ?? game.title),
             title: game.title,
@@ -294,36 +275,29 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
     }
 
     if (section === 'upcoming') {
-      if (!releases.comingUp.length && !releaseFailed) return null
+      if (wishlistLoading && !wishlistItems.length) return <LoadingCard />
+      if (!releases.comingUp.length) return null
       return (
-        <div className="hm-rw-wrap">
-          {releases.comingUp.length ? (
-            <HomeRail
-              title="Upcoming"
-              compact
-              items={releases.comingUp.map(toWishlistRailItem)}
-              onOpenAll={() => onOpenList('releases')}
-              onOpen={(item) => setSelectedGame({ game: item, variant: 'wishlist' })}
-            />
-          ) : null}
-          {releaseFailed ? (
-            <button type="button" className="hm-rw-retry" onClick={loadRelease} aria-label="Retry Release Watch refresh">
-              <span>
-                Couldn’t refresh releases. Showing the last loaded games. <b>Try again</b>
-              </span>
-            </button>
-          ) : null}
-        </div>
+        <HomeRail
+          title="Upcoming"
+          compact
+          items={releases.comingUp.map(toWishlistRailItem)}
+          totalCount={releases.comingUpCount}
+          onOpenAll={() => onOpenList('releases')}
+          onOpen={(item) => setSelectedGame({ game: item, variant: 'wishlist' })}
+        />
       )
     }
 
     if (section === 'new-releases') {
+      if (wishlistLoading && !wishlistItems.length) return <LoadingCard />
       if (!releases.outNow.length) return null
       return (
         <HomeRail
           title="New releases"
           compact
           items={releases.outNow.map(toWishlistRailItem)}
+          totalCount={releases.outNowCount}
           onOpenAll={() => onOpenList('released')}
           onOpen={(item) => setSelectedGame({ game: item, variant: 'wishlist' })}
         />
@@ -333,39 +307,14 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
     return null
   }
 
-  const wishlistUnavailable =
-    releaseItems === null ? (
-      releaseFailed ? (
-        <ErrorCard
-          title="Release watch unavailable."
-          detail="Your wishlist could not be loaded."
-          onRetry={loadRelease}
-        />
-      ) : (
-        <LoadingCard />
-      )
-    ) : null
-
-  const showSpinner = !libraryReady && releaseItems === null && newsItems === null
-
   return (
     <div className="hm-page">
-      {showSpinner ? (
-        <div className="hm-spinner" role="status" aria-label="Loading">
-          <div className="hm-spinner-dot" />
-          <div className="hm-muted">Loading your games…</div>
-        </div>
-      ) : (
-        <>
-          {homeLayout.order
-            .filter((section) => !homeLayout.hidden.includes(section))
-            .map((section) => {
-              const content = renderSection(section)
-              return content ? <Fragment key={section}>{content}</Fragment> : null
-            })}
-          {wishlistUnavailable}
-        </>
-      )}
+      {homeLayout.order
+        .filter((section) => !homeLayout.hidden.includes(section))
+        .map((section) => {
+          const content = renderSection(section)
+          return content ? <Fragment key={section}>{content}</Fragment> : null
+        })}
 
       <div className="hm-custbar-wrap">
         <HomeCustomizeBar onPress={() => setCustomizeOpen(true)} />
@@ -386,12 +335,14 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
       ) : null}
 
       {openStory ? (
-        <NewsSheet
-          item={openStory.item}
-          rel={openStory.rel}
-          onClose={() => setOpenStory(null)}
-          onOpenGame={openGameFor}
-        />
+        <Suspense fallback={null}>
+          <NewsSheet
+            item={openStory.item}
+            rel={openStory.rel}
+            onClose={() => setOpenStory(null)}
+            onOpenGame={openGameFor}
+          />
+        </Suspense>
       ) : null}
     </div>
   )
