@@ -173,12 +173,13 @@ test('the drawer is fully gone from the app shell', async () => {
 })
 
 test('every destination is reachable in the finished build', async () => {
-  const [app, home, library, activity, tabbar] = await Promise.all([
+  const [app, home, library, activity, tabbar, browse] = await Promise.all([
     readFile(new URL('../src/App.jsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/components/HomeTab.jsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/components/LibraryTab.jsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/components/ActivityTab.jsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/components/TabBar.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/DiscoverBrowse.jsx', import.meta.url), 'utf8'),
   ])
   // Bottom bar: Home, Discover, Library, Activity.
   assert.match(app, /visibleTabs/)
@@ -193,9 +194,11 @@ test('every destination is reachable in the finished build', async () => {
   assert.match(home, /key: 'rankings'/)
   // News: featured top story + More news.
   assert.match(home, /onOpenTab\('news'\)/)
-  // Rankings / Wishlist: Library entry points.
-  assert.match(library, /onOpenRankings/)
-  assert.match(library, /onOpenWishlist/)
+  // Library is one collection; Rankings remains on Home and Wishlist in Browse.
+  assert.doesNotMatch(library, /onOpenRankings|onOpenWishlist|gd-entries/)
+  assert.match(app, /<LibraryTab \/>/)
+  assert.match(browse, /row.kind === 'wishlist'/)
+  assert.match(browse, /onClick=\{\(\) => setOpenRail\(row\)\}/)
   // Insights: Activity entry point.
   assert.match(activity, /onOpenInsights/)
 })

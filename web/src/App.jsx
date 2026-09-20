@@ -525,15 +525,7 @@ function GameDeckApp() {
             />
           )}
           {activeTab === 'library' && (
-            <LibraryTab
-              onOpenRankings={() => {
-                // Same fresh-start rule as every other Rankings entry: a tune
-                // launch fires exactly once.
-                setTuneLaunch(null)
-                navigateTab('rankings')
-              }}
-              onOpenWishlist={() => openView('wishlist')}
-            />
+            <LibraryTab />
           )}
           {activeTab === 'activity' && <ActivityTab onOpenInsights={() => navigateTab('insights')} />}
           {activeTab === 'insights' && <InsightsTab />}

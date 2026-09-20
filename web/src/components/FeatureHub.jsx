@@ -5,9 +5,6 @@ import { useState } from 'react'
 import SegmentedControl from './SegmentedControl.jsx'
 import ForYouTab from './ForYouTab.jsx'
 import DiscoverBrowse from './DiscoverBrowse.jsx'
-import LibraryTab from './LibraryTab.jsx'
-import WishlistTab from './WishlistTab.jsx'
-import RankingsTab from './RankingsTab.jsx'
 import ActivityTab from './ActivityTab.jsx'
 import InsightsTab from './InsightsTab.jsx'
 import './featureHub.css'
@@ -26,11 +23,6 @@ const SECTIONS = {
     { value: 'for-you', label: 'For You', Screen: ForYouTab },
     { value: 'browse', label: 'Browse', Screen: DiscoverBrowse },
   ],
-  library: [
-    { value: 'games', label: 'Games', Screen: LibraryTab },
-    { value: 'wishlist', label: 'Wishlist', Screen: WishlistTab },
-    { value: 'rankings', label: 'Rankings', Screen: RankingsTab },
-  ],
   activity: [
     { value: 'history', label: 'History', Screen: ActivityTab },
     { value: 'insights', label: 'Insights', Screen: InsightsTab },
@@ -43,7 +35,6 @@ export default function FeatureHub({
   onAsk,
   onBrowse,
   onCustomize,
-  onWishlistClose,
   onOpenTaste,
   onTuneTaste,
   onOpenRankings,
@@ -67,10 +58,6 @@ export default function FeatureHub({
   } else if (Screen === DiscoverBrowse) {
     if (onCustomize) screenProps.onCustomize = onCustomize
     if (onAsk) screenProps.onAsk = onAsk
-  } else if (Screen === WishlistTab) {
-    // WishlistTab is a "view" that renders a back button calling onClose;
-    // inside a hub there is nowhere to go back to, so default to a no-op.
-    screenProps.onClose = onWishlistClose || (() => {})
   }
 
   return (
@@ -92,10 +79,6 @@ export default function FeatureHub({
 
 export function DiscoverHub(props) {
   return <FeatureHub kind="discover" {...props} />
-}
-
-export function LibraryHub(props) {
-  return <FeatureHub kind="library" {...props} />
 }
 
 export function ActivityHub(props) {

@@ -1,19 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import GameCard from './GameCard.jsx'
+import { createPortal } from 'react-dom'
+import LibraryGameCard from './LibraryGameCard.jsx'
 import GameDetail from './GameDetail.jsx'
 import Skeleton from './Skeleton.jsx'
-import Cover from './Cover.jsx'
-import CompletionBar from './CompletionBar.jsx'
 import { MessageState } from './AsyncState.jsx'
-import { useStatusMap, effectiveStatus, STATUS_LABELS } from '../lib/userStatus.js'
-import { platformMeta, libraryCover } from '../lib/format.js'
+import { useStatusMap, effectiveStatus } from '../lib/userStatus.js'
 import { useLibraryGames, useVibeKeywords } from '../lib/useLibraryGames.js'
 import { hasVibe, availableVibes } from '../lib/vibes.js'
 import { topGenres } from '../lib/gameGenres.js'
 import { useDialogA11y } from '../lib/useDialogA11y.js'
-import { preloadGameSheet } from './LazyGameSheet.jsx'
-import { TAB_ICONS } from './TabBar.jsx'
-import { DEST_ICONS } from './destIcons.jsx'
+import { lockScroll } from '../lib/scrollLock.js'
+import { libraryProgress as storyProgress } from '../lib/libraryPresentation.js'
+import './library.css'
 
 // Matches the Expo pilot's status model: backlog / playing / finished are computed
 // from your activity (see userStatus.derivedStatus, the pilot's derivedGameStatus),
@@ -27,8 +25,6 @@ const STATUS_FILTERS = [
   { key: 'finished', label: 'Finished' },
   { key: 'abandoned', label: 'Abandoned' },
 ]
-
-const STATUS_LABEL = { ...STATUS_LABELS, abandoned: 'Abandoned' }
 
 // Same four buckets as the pilot (its text match on the platforms array), plus
 // the local environment key as a belt-and-suspenders match: the PWA rows always
@@ -72,130 +68,13 @@ const SORT_OPTIONS = [
   { key: 'achievements', label: 'Achievements' },
 ]
 
-function storyProgress(game) {
-  const len = Number(game.length_minutes) || 0
-  if (len > 0) return Math.min(100, Math.max(0, ((game.playtime_minutes || 0) / len) * 100))
-  return Math.min(100, Math.max(0, Number(game.percent) || 0))
-}
+const VIEW_OPTIONS = [
+  { key: 'grid', label: 'Large' },
+  { key: 'compact', label: 'Small' },
+  { key: 'list', label: 'List' },
+]
 
-// The library query used to live here as a second, private column list. It had
-// already drifted from the shared one, missing `keywords` and `igdb_rating`, which
-// would have made every vibe chip below return nothing while looking perfectly
-// healthy. Same shape of bug as the missing `igdb_id` that silently killed the
-// shuffler's Game Pass weighting. One list, one fetch, in useLibraryGames.
-
-// Subtitle under the large title. Deliberately two facts rather than a stat
-// block: how big the library is, and how big the pile you have not started is.
-// An empty or still-loading library gets no line at all rather than "0 games",
-// which reads like the fetch failed. When a search or filter narrows the list it
-// switches to "N of M games" so a narrow list reads as filtered, not missing.
-function librarySummary(games) {
-  if (!games || !games.length) return ''
-  const unplayed = games.filter((g) => !g.playtime_minutes).length
-  const total = `${games.length.toLocaleString()} games`
-  return unplayed ? `${total} · ${unplayed} unplayed` : total
-}
-
-// Grid tile for the grid view: cover, title, platform + status line, story
-// progress. Tapping opens the same GameDetail sheet the compact rows open.
-function GridGameCard({ game, onSelect, statusMap }) {
-  const { label } = platformMeta(game.environment)
-  const status = effectiveStatus(game, statusMap)
-  const len = Number(game.length_minutes) || 0
-  const statusLabel = STATUS_LABEL[status] || status
-  return (
-    <button
-      type="button"
-      className="gd-grid-card"
-      onPointerDown={preloadGameSheet}
-      onFocus={preloadGameSheet}
-      onClick={() => onSelect(game)}
-      aria-label={`${game.title}, ${label}, ${statusLabel}`}
-    >
-      <Cover src={libraryCover(game)} title={game.title} size="sm" />
-      <span className="gd-grid-title">{game.title}</span>
-      <span className="gd-grid-meta">
-        {label} · {statusLabel}
-      </span>
-      {len > 0 ? (
-        <CompletionBar percent={Math.round(storyProgress(game))} />
-      ) : (
-        <span className="gd-grid-meta">
-          {game.earned_awards ?? 0}/{game.total_awards ?? 0} achievements
-        </span>
-      )}
-    </button>
-  )
-}
-
-// Styles that exist only for this tab's pilot-parity additions (search row, view
-// toggle, status chips, grid). Everything else reuses the app's shared classes.
-// Kept here instead of index.css because the rebuild contract covers only this
-// file; the class names are gd- prefixed so they cannot collide.
-const LIBRARY_STYLES = `
-.gd-lib { max-width: 430px; margin: 0 auto; width: 100%; padding-bottom: var(--safe-bottom); }
-/* Entry points that moved here with the drawer: Rankings and Wishlist. Two
-   compact tiles above the toolbar, same visual language as Home's jump tiles. */
-.gd-entries { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-.gd-entry {
-  display: flex; align-items: center; gap: 10px;
-  min-height: 64px; padding: 10px 12px;
-  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
-  font: inherit; color: inherit; text-align: left; cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.gd-entry:active { opacity: 0.7; }
-.gd-entry-icon { width: 22px; height: 22px; flex: none; color: var(--accent); }
-.gd-entry-icon svg { width: 100%; height: 100%; }
-.gd-entry-text { min-width: 0; }
-.gd-entry-text b { display: block; font-size: var(--t-foot); font-weight: 700; color: var(--text); }
-.gd-entry-text small { display: block; font-size: 11px; line-height: 1.35; color: var(--muted); margin-top: 2px; }
-.gd-search-row { display: flex; gap: 8px; margin-top: 10px; }
-.gd-search-wrap { position: relative; flex: 1; min-width: 0; }
-.gd-search-wrap .search-input { padding-right: 44px; }
-.gd-clear {
-  position: absolute; right: 2px; top: 2px;
-  width: 40px; height: calc(100% - 4px);
-  display: flex; align-items: center; justify-content: center;
-  background: none; border: 0; border-radius: var(--r-sm);
-  color: var(--muted); font-size: 20px; line-height: 1; cursor: pointer;
-}
-.gd-clear:active { color: var(--text); }
-.gd-view-toggle {
-  display: flex; flex: 0 0 auto;
-  border: 1px solid var(--line); border-radius: var(--r-sm);
-  background: var(--surface); overflow: hidden;
-}
-.gd-view-toggle button {
-  min-height: 44px; min-width: 44px; padding: 0 12px;
-  background: none; border: 0; color: var(--muted);
-  font-size: var(--t-foot); font-weight: var(--w-semi); cursor: pointer;
-  white-space: nowrap;
-}
-.gd-view-toggle button + button { border-left: 1px solid var(--line); }
-.gd-view-toggle button.active { background: var(--accent); color: var(--bg); }
-.gd-chip-row .chip { min-height: 44px; }
-.gd-chip-count { margin-left: 6px; opacity: 0.75; font-variant-numeric: tabular-nums; }
-.gd-grid {
-  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px 12px; margin: 0 var(--screen-gutter) var(--space-5);
-}
-.gd-grid-card {
-  display: flex; flex-direction: column; align-items: stretch; gap: 6px;
-  background: none; border: 0; padding: 0; margin: 0;
-  min-height: 44px; text-align: left; cursor: pointer; min-width: 0;
-}
-.gd-grid-card:active { opacity: 0.72; }
-.gd-grid-card .cover.cover-sm { width: 100%; height: auto; aspect-ratio: 3 / 4; font-size: 44px; }
-.gd-grid-title {
-  font-size: var(--t-sub); font-weight: var(--w-semi); color: var(--text);
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.gd-grid-meta { font-size: var(--t-cap); color: var(--muted); }
-`
-
-export default function LibraryTab({ onOpenRankings, onOpenWishlist }) {
+export default function LibraryTab() {
   const { games, loading, error } = useLibraryGames()
   const [query, setQuery] = useState('')
   const [platformFilter, setPlatformFilter] = useState('all')
@@ -204,8 +83,15 @@ export default function LibraryTab({ onOpenRankings, onOpenWishlist }) {
   const [view, setView] = useState('compact')
   const [vibe, setVibe] = useState('any')
   const [genre, setGenre] = useState('any')
+  const [showSearch, setShowSearch] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
-  const filterDialogRef = useDialogA11y({ active: showFilters, onClose: () => setShowFilters(false) })
+  const [showView, setShowView] = useState(false)
+  const closeControls = () => { setShowFilters(false); setShowView(false) }
+  const controlsOpen = showFilters || showView
+  const filterDialogRef = useDialogA11y({ active: controlsOpen, onClose: closeControls })
+  useEffect(() => {
+    if (controlsOpen) return lockScroll()
+  }, [controlsOpen])
   const [selectedGame, setSelectedGame] = useState(null)
   const [visibleCount, setVisibleCount] = useState(12)
   const statusMap = useStatusMap()
@@ -323,87 +209,36 @@ export default function LibraryTab({ onOpenRankings, onOpenWishlist }) {
     if (activeCount > 0) {
       return `${visibleGames.length.toLocaleString()} of ${games.length.toLocaleString()} games`
     }
-    return librarySummary(games)
+    return `${games.length.toLocaleString()} games`
   }, [games, visibleGames.length, activeCount])
 
   return (
     <div className="gd-lib">
-      <style>{LIBRARY_STYLES}</style>
-      {/* Rankings and Wishlist live here now: the drawer that used to list
-          them is gone, and Library is their home surface. */}
-      <div className="gd-entries">
-        <button type="button" className="gd-entry" onClick={onOpenRankings}>
-          <span className="gd-entry-icon" aria-hidden="true">{TAB_ICONS.rankings}</span>
-          <span className="gd-entry-text">
-            <b>Rankings</b>
-            <small>Your explicit game order</small>
-          </span>
-        </button>
-        <button type="button" className="gd-entry" onClick={onOpenWishlist}>
-          <span className="gd-entry-icon" aria-hidden="true">{DEST_ICONS.wishlist}</span>
-          <span className="gd-entry-text">
-            <b>Wishlist</b>
-            <small>Games you want next</small>
-          </span>
-        </button>
-      </div>
       <div className="library-sticky">
-        <div className="library-toolbar">
-          <span className="library-toolbar-note">{summary}</span>
-          <button
-            type="button"
-            className={`filter-btn${activeCount ? ' active' : ''}`}
-            onClick={() => setShowFilters(true)}
-            aria-label={activeCount ? `Filters, ${activeCount} active` : 'Filters'}
-          >
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <path d="M4 6h16M7 12h10M10 18h4" />
-            </svg>
-            <span>Filters</span>
-            {activeCount ? <span className="filter-count">{activeCount}</span> : null}
-          </button>
-        </div>
-
-        <div className="gd-search-row">
-          <div className="gd-search-wrap">
-            <input
-              type="search"
-              className="search-input"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search your library"
-              aria-label="Search your library"
-              autoComplete="off"
-              enterKeyHint="search"
-            />
-            {query ? (
-              <button type="button" className="gd-clear" onClick={() => setQuery('')} aria-label="Clear search">
-                &times;
-              </button>
-            ) : null}
-          </div>
-          <div className="gd-view-toggle" role="group" aria-label="Library view">
-            <button
-              type="button"
-              className={view === 'compact' ? 'active' : ''}
-              aria-pressed={view === 'compact'}
-              onClick={() => setView('compact')}
-            >
-              Compact
+        <div className="gd-library-toolbar">
+          <h2 className="gd-library-count" aria-live="polite">{summary || (loading ? 'Loading games…' : '0 games')}</h2>
+          <div className="gd-library-tools">
+            <button type="button" className="gd-icon-button" aria-label="Search library" aria-expanded={showSearch} aria-controls="library-search" onClick={() => setShowSearch(!showSearch)}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="7.5" /><path d="m16 16 5 5" /></svg>
             </button>
-            <button
-              type="button"
-              className={view === 'grid' ? 'active' : ''}
-              aria-pressed={view === 'grid'}
-              onClick={() => setView('grid')}
-            >
-              Grid
+            <button type="button" className="gd-icon-button" aria-label="Library view and sort" aria-haspopup="dialog" onClick={() => setShowView(true)}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="7" rx="1" /><rect x="3" y="14" width="18" height="7" rx="1" /></svg>
+            </button>
+            <button type="button" className={`gd-icon-button${activeCount ? ' active' : ''}`} aria-label={activeCount ? `Filters, ${activeCount} active` : 'Filters'} aria-haspopup="dialog" onClick={() => setShowFilters(true)}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M6 12h12M9 18h6" /></svg>
+              {activeCount ? <span className="gd-filter-count">{activeCount}</span> : null}
             </button>
           </div>
         </div>
+        {showSearch && (
+          <div id="library-search" className="gd-search-wrap">
+            <input type="search" name="library-search" className="search-input" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search your library" aria-label="Search your library" autoComplete="off" enterKeyHint="search" autoFocus={showSearch} />
+            {query ? <button type="button" className="gd-clear" onClick={() => setQuery('')} aria-label="Clear search">&times;</button> : null}
+          </div>
+        )}
 
         <div className="chip-row gd-chip-row" role="group" aria-label="Status filters">
-          {STATUS_FILTERS.map((o) => (
+          {STATUS_FILTERS.filter((o) => o.key !== 'abandoned' || statusCounts.abandoned > 0 || statusFilter === 'abandoned').map((o) => (
             <button
               key={o.key}
               type="button"
@@ -424,39 +259,16 @@ export default function LibraryTab({ onOpenRankings, onOpenWishlist }) {
         <MessageState title="Couldn't load your library" error>{error}</MessageState>
       ) : visibleGames.length === 0 ? (
         <MessageState title="No games found">Try a different search or filter.</MessageState>
-      ) : view === 'grid' ? (
-        <>
-          <div className="gd-grid">
-            {visibleGames.slice(0, visibleCount).map((game) => (
-              <GridGameCard key={game.master_id} game={game} onSelect={setSelectedGame} statusMap={statusMap} />
-            ))}
-          </div>
-          {visibleGames.length > visibleCount ? (
-            <div className="show-more-row">
-              <button
-                type="button"
-                className="show-more-btn"
-                onClick={() => setVisibleCount((c) => c + 20)}
-              >
-                Show more ({visibleGames.length - visibleCount} left)
-              </button>
-            </div>
-          ) : null}
-        </>
       ) : (
         <>
-          <div className="game-list">
+          <div className={view === 'grid' ? 'gd-library-grid' : 'gd-library-list'}>
             {visibleGames.slice(0, visibleCount).map((game, index) => (
-              <GameCard key={game.master_id} game={game} onSelect={setSelectedGame} statusMap={statusMap} priority={index === 0} />
+              <LibraryGameCard key={game.master_id} game={game} onSelect={setSelectedGame} statusMap={statusMap} view={view} priority={index === 0} />
             ))}
           </div>
           {visibleGames.length > visibleCount ? (
             <div className="show-more-row">
-              <button
-                type="button"
-                className="show-more-btn"
-                onClick={() => setVisibleCount((c) => c + 20)}
-              >
+              <button type="button" className="show-more-btn" onClick={() => setVisibleCount((c) => c + 20)}>
                 Show more ({visibleGames.length - visibleCount} left)
               </button>
             </div>
@@ -464,9 +276,36 @@ export default function LibraryTab({ onOpenRankings, onOpenWishlist }) {
         </>
       )}
 
-      {showFilters ? (
+      {showView ? createPortal(
+        <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && closeControls()}>
+          <div ref={filterDialogRef} className="modal-sheet filter-sheet gd-library-sheet" role="dialog" aria-modal="true" aria-label="Library view and sort">
+            <div className="modal-handle" />
+            <button type="button" className="modal-close" aria-label="Close view and sort" onClick={closeControls}>&times;</button>
+            <div className="detail-title">View and sort</div>
+            <div className="filter-group">
+              <span className="filter-label">Artwork</span>
+              <div className="filter-options">
+                {VIEW_OPTIONS.map((o) => (
+                  <button key={o.key} type="button" className={`filter-opt${view === o.key ? ' active' : ''}`} aria-pressed={view === o.key} onClick={() => setView(o.key)}>{o.label}</button>
+                ))}
+              </div>
+            </div>
+            <div className="filter-group">
+              <span className="filter-label">Sort by</span>
+              <div className="filter-options">
+                {SORT_OPTIONS.map((o) => (
+                  <button key={o.key} type="button" className={`filter-opt${sortKey === o.key ? ' active' : ''}`} aria-pressed={sortKey === o.key} onClick={() => setSortKey(o.key)}>{o.label}</button>
+                ))}
+              </div>
+            </div>
+            <button type="button" className="discover-action primary" onClick={closeControls}>Done</button>
+          </div>
+        </div>, document.body,
+      ) : null}
+
+      {showFilters ? createPortal(
         <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && setShowFilters(false)}>
-          <div ref={filterDialogRef} className="modal-sheet filter-sheet" role="dialog" aria-modal="true" aria-label="Filters">
+          <div ref={filterDialogRef} className="modal-sheet filter-sheet gd-library-sheet" role="dialog" aria-modal="true" aria-label="Filters">
             <div className="modal-handle" />
             <button type="button" className="modal-close" aria-label="Close filters" onClick={() => setShowFilters(false)}>&times;</button>
             <div className="detail-title">Filters</div>
@@ -479,6 +318,7 @@ export default function LibraryTab({ onOpenRankings, onOpenWishlist }) {
                     key={o.key}
                     type="button"
                     className={`filter-opt${statusFilter === o.key ? ' active' : ''}`}
+                    aria-pressed={statusFilter === o.key}
                     onClick={() => setStatusFilter(o.key)}
                   >
                     {o.label}
@@ -495,6 +335,7 @@ export default function LibraryTab({ onOpenRankings, onOpenWishlist }) {
                     key={o.key}
                     type="button"
                     className={`filter-opt${platformFilter === o.key ? ' active' : ''}`}
+                    aria-pressed={platformFilter === o.key}
                     onClick={() => setPlatformFilter(o.key)}
                   >
                     {o.label}
@@ -510,6 +351,7 @@ export default function LibraryTab({ onOpenRankings, onOpenWishlist }) {
                   <button
                     type="button"
                     className={`filter-opt${genre === 'any' ? ' active' : ''}`}
+                    aria-pressed={genre === 'any'}
                     onClick={() => setGenre('any')}
                   >
                     All genres
@@ -519,6 +361,7 @@ export default function LibraryTab({ onOpenRankings, onOpenWishlist }) {
                       key={g}
                       type="button"
                       className={`filter-opt${genre === g ? ' active' : ''}`}
+                      aria-pressed={genre === g}
                       onClick={() => setGenre(genre === g ? 'any' : g)}
                     >
                       {g.replace(' (RPG)', '')}
@@ -537,6 +380,7 @@ export default function LibraryTab({ onOpenRankings, onOpenWishlist }) {
                   <button
                     type="button"
                     className={`filter-opt${vibe === 'any' ? ' active' : ''}`}
+                    aria-pressed={vibe === 'any'}
                     onClick={() => setVibe('any')}
                   >
                     Any
@@ -546,6 +390,7 @@ export default function LibraryTab({ onOpenRankings, onOpenWishlist }) {
                       key={v.key}
                       type="button"
                       className={`filter-opt${vibe === v.key ? ' active' : ''}`}
+                      aria-pressed={vibe === v.key}
                       onClick={() => setVibe(vibe === v.key ? 'any' : v.key)}
                     >
                       {v.label}
@@ -554,22 +399,6 @@ export default function LibraryTab({ onOpenRankings, onOpenWishlist }) {
                 </div>
               </div>
             ) : null}
-
-            <div className="filter-group">
-              <span className="filter-label">Sort by</span>
-              <div className="filter-options">
-                {SORT_OPTIONS.map((o) => (
-                  <button
-                    key={o.key}
-                    type="button"
-                    className={`filter-opt${sortKey === o.key ? ' active' : ''}`}
-                    onClick={() => setSortKey(o.key)}
-                  >
-                    {o.label}
-                  </button>
-                ))}
-              </div>
-            </div>
 
             <div className="filter-sheet-actions">
               <button type="button" className="discover-action" onClick={resetFilters}>
@@ -580,7 +409,7 @@ export default function LibraryTab({ onOpenRankings, onOpenWishlist }) {
               </button>
             </div>
           </div>
-        </div>
+        </div>, document.body,
       ) : null}
 
       {selectedGame ? (
