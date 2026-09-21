@@ -1,0 +1,846 @@
+{
+  "id": "ld4OAeOQZ0JDh305",
+  "name": "GameDeck | Xbox - Library and Playtime Sync",
+  "nodes": [
+    {
+      "id": "c3000000-0000-4000-8000-000000000001",
+      "name": "Every 6h Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -460,
+        -120
+      ],
+      "disabled": false,
+      "notes": "Live since 2026-08-13. Also runs inside the Refresh Trigger chain after PSN.",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "c3000000-0000-4000-8000-000000000002",
+      "name": "Called by Refresh",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -460,
+        120
+      ],
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "c3000000-0000-4000-8000-000000000003",
+      "name": "Get Stored Token",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -240,
+        0
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "parameters": {
+        "method": "GET",
+        "url": "https://eiskobjlvxzwvucgpenk.supabase.co/rest/v1/sync_tokens?key=eq.xbox&select=refresh_token",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {}
+      }
+    },
+    {
+      "id": "c3000000-0000-4000-8000-000000000004",
+      "name": "Load Stored Token",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -20,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json).filter(r => r && r.refresh_token);\nif (rows.length === 0) throw new Error('sync_tokens has no xbox refresh_token. Run GameDeck Xbox Auth Bootstrap. Continuing would send a blank token and look like an auth failure.');\nreturn [{ json: { refresh_token: rows[0].refresh_token } }];"
+      }
+    },
+    {
+      "id": "c3000000-0000-4000-8000-000000000005",
+      "name": "Refresh Access Token",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        200,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "notes": "Public client. client_id only, no client_secret. MSA reads the form body only on this endpoint.",
+      "parameters": {
+        "method": "POST",
+        "url": "https://login.live.com/oauth20_token.srf",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "client_id",
+              "value": "b284bce5-42ae-4017-aa53-fb2ffdb664fa"
+            },
+            {
+              "name": "grant_type",
+              "value": "refresh_token"
+            },
+            {
+              "name": "refresh_token",
+              "value": "={{ $json.refresh_token }}"
+            },
+            {
+              "name": "redirect_uri",
+              "value": "http://localhost/auth/callback"
+            },
+            {
+              "name": "scope",
+              "value": "Xboxlive.signin Xboxlive.offline_access"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "c3000000-0000-4000-8000-000000000006",
+      "name": "Store Rotated Token",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        420,
+        0
+      ],
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "notes": "Must stay ahead of every data fetch. A failure after refreshing but before storing burns the rotation chain and the sync dies silently weeks later.",
+      "parameters": {
+        "method": "POST",
+        "url": "https://eiskobjlvxzwvucgpenk.supabase.co/rest/v1/sync_tokens?on_conflict=key",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { key: 'xbox', refresh_token: $json.refresh_token, refresh_expires_at: $now.plus({ days: 90 }).toISO(), updated_at: $now.toISO() } }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "c3000000-0000-4000-8000-000000000007",
+      "name": "XBL Authenticate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        640,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "parameters": {
+        "method": "POST",
+        "url": "https://user.auth.xboxlive.com/user/authenticate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-xbl-contract-version",
+              "value": "1"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { RelyingParty: 'http://auth.xboxlive.com', TokenType: 'JWT', Properties: { AuthMethod: 'RPS', SiteName: 'user.auth.xboxlive.com', RpsTicket: 'd=' + $('Refresh Access Token').first().json.access_token } } }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "c3000000-0000-4000-8000-000000000008",
+      "name": "XSTS Authorize",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        860,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "parameters": {
+        "method": "POST",
+        "url": "https://xsts.auth.xboxlive.com/xsts/authorize",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-xbl-contract-version",
+              "value": "1"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { RelyingParty: 'http://xboxlive.com', TokenType: 'JWT', Properties: { UserTokens: [ $json.Token ], SandboxId: 'RETAIL' } } }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "c3000000-0000-4000-8000-000000000009",
+      "name": "Fetch Title History",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1080,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "parameters": {
+        "method": "GET",
+        "url": "=https://titlehub.xboxlive.com/users/xuid({{ $json.DisplayClaims.xui[0].xid }})/titles/titlehistory/decoration/achievement,scid,detail?maxItems=1000",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'XBL3.0 x=' + $json.DisplayClaims.xui[0].uhs + ';' + $json.Token }}"
+            },
+            {
+              "name": "x-xbl-contract-version",
+              "value": "2"
+            },
+            {
+              "name": "x-xbl-client-name",
+              "value": "XboxApp"
+            },
+            {
+              "name": "x-xbl-client-type",
+              "value": "UWA"
+            },
+            {
+              "name": "x-xbl-client-version",
+              "value": "39.39.22001.0"
+            },
+            {
+              "name": "Accept-Language",
+              "value": "en-US"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "c3000000-0000-4000-8000-00000000000a",
+      "name": "Get Existing Xbox Rows",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1300,
+        0
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "notes": "This select and the field list in Resolve and Merge are coupled. A field that Xbox may skip MUST be selected here, or the carry-forward silently writes null. This is the OWNED_BY_ENV trap from the Exophase workflow.",
+      "parameters": {
+        "method": "GET",
+        "url": "https://eiskobjlvxzwvucgpenk.supabase.co/rest/v1/games?environment=eq.xbox&select=master_id,title,playtime_minutes,playtime_label,last_played,earned_awards,total_awards,earned_points,percent,xbox_title_id,igdb_id&limit=2000",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {}
+      }
+    },
+    {
+      "id": "c3000000-0000-4000-8000-00000000000b",
+      "name": "Build Stat Batches",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1520,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const th = $('Fetch Title History').first().json;\nconst titles = Array.isArray(th.titles) ? th.titles : [];\nif (titles.length === 0) throw new Error('Title history returned no titles. Aborting rather than proceeding with an empty read. Keys seen: ' + Object.keys(th || {}).join(','));\n\nconst xuid = String($('XSTS Authorize').first().json.DisplayClaims.xui[0].xid);\nconst CHUNK = 100;\nconst out = [];\nfor (let i = 0; i < titles.length; i += CHUNK) {\n  const slice = titles.slice(i, i + CHUNK);\n  out.push({ json: { chunk_index: out.length, body: {\n    arrangebyfield: 'xuid',\n    xuids: [xuid],\n    stats: slice.map(t => ({ name: 'MinutesPlayed', titleid: String(t.titleId) }))\n  } } });\n}\nreturn out;"
+      }
+    },
+    {
+      "id": "c3000000-0000-4000-8000-00000000000c",
+      "name": "Fetch MinutesPlayed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1740,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "notes": "Body key is titleid, all lowercase. The upstream models serialise through a LowerCaseModel; titleId with a capital I returns nothing and looks like zero coverage.",
+      "parameters": {
+        "method": "POST",
+        "url": "https://userstats.xboxlive.com/batch",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'XBL3.0 x=' + $('XSTS Authorize').first().json.DisplayClaims.xui[0].uhs + ';' + $('XSTS Authorize').first().json.Token }}"
+            },
+            {
+              "name": "x-xbl-contract-version",
+              "value": "2"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept-Language",
+              "value": "en-US"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.body }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          },
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 400
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "c3000000-0000-4000-8000-00000000000d",
+      "name": "Resolve and Merge",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1960,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// ============================================================\n// Xbox resolve and merge.\n// Rules enforced here, each from a bug that already happened:\n//  1. Never null a column this source does not own. Every field\n//     carries the existing value forward when Xbox has nothing.\n//  2. Uniform key set across upsert rows, or PostgREST silently\n//     drops columns. Asserted below.\n//  3. Strip trademark symbols BEFORE NFKD, which turns TM into 'TM'.\n//  4. Never create a row off a failed lookup.\n//  5. A corrected total is NOT a play session. Events are gated on\n//     the title actually having been played in the window and are\n//     dated by lastTimePlayed, never by today.\n// ============================================================\n\n// 7, matching PSN's Gate Play Events and Exophase's Compute Deltas. This sync was\n// the one that implemented hard rule 10 correctly first and was left at 2, so it\n// was conservative rather than wrong - but a platform stat that lands days after\n// the session (a MinutesPlayed figure that only settles once the console next\n// syncs) was being filed as reconciliation and dropped. One window, three syncs.\nconst EVENT_WINDOW_DAYS = 7;\n\nconst titles = Array.isArray($('Fetch Title History').first().json.titles) ? $('Fetch Title History').first().json.titles : [];\nconst rows = $('Get Existing Xbox Rows').all().map(i => i.json).filter(r => r && r.master_id);\n\nif (!titles.length) throw new Error('Xbox returned no titles. Refusing to run: every row would look unmatched.');\nif (!rows.length) throw new Error('Supabase returned no xbox rows. Refusing to run: every title would look new.');\n\n// ---- MinutesPlayed ----\nconst stat = new Map();\nconst statErrors = [];\nfor (const it of $input.all()) {\n  const res = it.json;\n  const body = res && res.body ? res.body : res;\n  if (res && res.statusCode && res.statusCode >= 400) { statErrors.push(res.statusCode + ' ' + JSON.stringify(body).slice(0, 200)); continue; }\n  for (const coll of (body.statlistscollection || [])) {\n    for (const s of (coll.stats || [])) {\n      if (String(s.name).toLowerCase() !== 'minutesplayed') continue;\n      const v = Number(s.value);\n      if (!Number.isFinite(v)) continue;\n      const tid = String(s.titleid || s.titleId || '');\n      if (tid) stat.set(tid, Math.floor(v));\n    }\n  }\n}\nif (statErrors.length) throw new Error('userstats batch returned errors. Refusing to write from a partial read: ' + statErrors.slice(0, 3).join(' | '));\n\n// ---- normalisation ----\nconst norm = (t) => String(t || '')\n  .replace(/[™®©℠]/g, '')\n  .normalize('NFKD')\n  .toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]/g, '');\n\nconst EDITION = /\\b(game preview|anniversary edition|complete edition|definitive edition|deluxe edition|ultimate edition|standard edition|game of the year|remastered|remaster|xbox series x\\|s|xbox one|for windows|windows)\\b/gi;\nconst stripEd = (t) => norm(String(t || '').replace(/\\([^)]*\\)/g, ' ').replace(EDITION, ' '));\nconst NON_GAME = /(launcher|^netflix|^youtube|^spotify|^disney\\+|^hulu|^plex|blu-ray)/i;\n\n// playtime_label must be written in the same run as playtime_minutes.\n// Exophase hands the stored label straight back for xbox rows, so if this\n// sync updated the minutes and left the label alone, nothing would ever\n// repair it and the two would disagree forever.\n// Format copied from the existing data: <60 -> '43m', whole hours -> '10h',\n// otherwise '1h 43m'.\nconst fmtLabel = (m) => {\n  if (m === null || m === undefined) return null;\n  const n = Math.max(0, Math.floor(m));\n  if (n < 60) return n + 'm';\n  const h = Math.floor(n / 60), r = n % 60;\n  return r === 0 ? h + 'h' : h + 'h ' + r + 'm';\n};\n\n// ---- index existing rows ----\nconst byId = new Map(), byNorm = new Map(), byStrip = new Map();\nfor (const r of rows) {\n  if (r.xbox_title_id) byId.set(String(r.xbox_title_id), r);\n  const n = norm(r.title); if (n && !byNorm.has(n)) byNorm.set(n, r);\n  const s = stripEd(r.title); if (s && !byStrip.has(s)) byStrip.set(s, r);\n}\n\nconst unmatched = [], excluded = [];\nconst groups = new Map(); // master_id -> candidate titles\n\n// ---- pass 1: resolve every title to a row ----\nfor (const t of titles) {\n  const tid = String(t.titleId);\n  const name = String(t.name || '');\n  if (NON_GAME.test(name)) { excluded.push({ title: name, title_id: tid, reason: 'non-game name pattern' }); continue; }\n\n  const hist = t.titleHistory || {};\n  const mp = stat.has(tid) ? stat.get(tid) : null;\n\n  let row = null, signal = null;\n  if (byId.has(tid)) { row = byId.get(tid); signal = 'xbox_title_id'; }\n  else if (byNorm.has(norm(name))) { row = byNorm.get(norm(name)); signal = 'title_exact'; }\n  else if (byStrip.has(stripEd(name))) { row = byStrip.get(stripEd(name)); signal = 'title_edition_stripped'; }\n\n  if (!row) {\n    const key = stripEd(name);\n    const near = rows.filter(r => {\n      const rk = stripEd(r.title);\n      if (!rk || !key) return false;\n      return rk.startsWith(key.slice(0, 10)) || key.startsWith(rk.slice(0, 10));\n    }).slice(0, 3);\n    unmatched.push({\n      title: name, title_id: tid, minutes_played: mp, last_played: hist.lastTimePlayed || null,\n      considered: [\n        'xbox_title_id: no existing row carries ' + tid,\n        'title_exact: no row normalises to \"' + norm(name) + '\"',\n        'title_edition_stripped: no row strips to \"' + key + '\"'\n      ],\n      near_misses: near.map(r => ({ master_id: r.master_id, title: r.title, strips_to: stripEd(r.title) }))\n    });\n    continue;\n  }\n\n  if (!groups.has(row.master_id)) groups.set(row.master_id, { row, cands: [] });\n  groups.get(row.master_id).cands.push({ t, tid, name, signal, mp, lastPlayed: hist.lastTimePlayed || null });\n}\n\n// ---- pass 2: pick a winner per row. Prefer the edition that actually\n//      publishes MinutesPlayed, then the most recently played. ----\nconst games = [], events = [], matched = [], superseded = [], regressions = [], backfills = [];\nconst nowIso = $now.toISO();\n\nfor (const [masterId, g] of groups) {\n  const ranked = g.cands.slice().sort((a, b) => {\n    if ((a.mp !== null) !== (b.mp !== null)) return a.mp !== null ? -1 : 1;\n    return new Date(b.lastPlayed || 0) - new Date(a.lastPlayed || 0);\n  });\n  const win = ranked[0];\n  const row = g.row;\n\n  for (const lose of ranked.slice(1)) {\n    superseded.push({ title: lose.name, title_id: lose.tid, master_id: masterId,\n      lost_to: win.name + ' (' + win.tid + ')',\n      reason: (win.mp !== null && lose.mp === null) ? 'winner publishes MinutesPlayed, this one does not' : 'winner played more recently',\n      minutes_played: lose.mp, note: 'reported only, never written and never deleted' });\n  }\n\n  const a = win.t.achievement || {};\n  const leftAlone = [];\n  const keep = (xv, existing, label) => {\n    if (xv === null || xv === undefined || xv === 0) {\n      if (existing !== null && existing !== undefined) leftAlone.push(label);\n      return existing === undefined ? null : existing;\n    }\n    return xv;\n  };\n\n  let playtime = row.playtime_minutes === undefined ? null : row.playtime_minutes;\n  if (win.mp !== null) {\n    if (row.playtime_minutes != null && win.mp < row.playtime_minutes - 5) {\n      regressions.push({ title: win.name, master_id: masterId, existing: row.playtime_minutes, xbox: win.mp, action: 'blocked, kept existing' });\n    } else {\n      playtime = win.mp;\n    }\n  } else if (row.playtime_minutes != null) {\n    leftAlone.push('playtime_minutes (Xbox publishes no MinutesPlayed for this title)');\n  }\n\n  const earned  = keep(a.currentAchievements, row.earned_awards, 'earned_awards');\n  const total   = keep(a.totalAchievements, row.total_awards, 'total_awards');\n  const points  = keep(a.currentGamerscore, row.earned_points, 'earned_points');\n  const percent = keep(a.progressPercentage, row.percent, 'percent');\n\n  games.push({\n    // environment and title are NOT NULL. PostgREST forms the INSERT tuple\n    // before resolving the conflict, so they must be present even on a pure\n    // update. title is the EXISTING title on purpose: Xbox names carry\n    // trademark symbols and edition suffixes the library already cleaned off.\n    master_id: masterId,\n    environment: 'xbox',\n    title: row.title,\n    xbox_title_id: Number(win.tid),\n    playtime_minutes: playtime,\n    playtime_label: playtime === null || playtime === undefined ? (row.playtime_label === undefined ? null : row.playtime_label) : fmtLabel(playtime),\n    last_played: win.lastPlayed || row.last_played || null,\n    earned_awards: earned,\n    total_awards: total,\n    earned_points: points,\n    percent: percent,\n    direct_synced_at: nowIso,\n    updated_at: nowIso\n  });\n\n  const dMin = (win.mp !== null && row.playtime_minutes != null && win.mp > row.playtime_minutes) ? win.mp - row.playtime_minutes : 0;\n  const dAch = (earned != null && row.earned_awards != null && earned > row.earned_awards) ? earned - row.earned_awards : 0;\n\n  // A corrected total is not a session. Only log activity if this title\n  // was actually played inside the window, and date it by when it was played.\n  const lp = win.lastPlayed ? DateTime.fromISO(win.lastPlayed) : null;\n  const daysSince = lp ? $now.diff(lp, 'days').days : null;\n  const inWindow = daysSince !== null && daysSince <= EVENT_WINDOW_DAYS;\n\n  if (dMin > 0 || dAch > 0) {\n    if (inWindow) {\n      events.push({\n        master_id: masterId, title: row.title, environment: 'xbox', event_date: lp.toISODate(),\n        minutes_delta: dMin, achievements_delta: dAch, percent_after: percent,\n        playtime_minutes_after: playtime, earned_awards_after: earned,\n        last_played: win.lastPlayed, is_new: false\n      });\n    } else {\n      backfills.push({ title: win.name, master_id: masterId, minutes_delta: dMin, ach_delta: dAch,\n        days_since_played: daysSince === null ? null : Math.round(daysSince),\n        note: 'total corrected on the row, no activity event: this is reconciliation, not a session' });\n    }\n  }\n\n  matched.push({ title: win.name, master_id: masterId, our_title: row.title, signal: win.signal, title_id: win.tid,\n    playtime_change: (row.playtime_minutes === null ? 'null' : row.playtime_minutes) + ' -> ' + playtime,\n    minutes_delta: dMin, ach_delta: dAch, logged_event: (dMin > 0 || dAch > 0) && inWindow, fields_left_alone: leftAlone });\n}\n\nconst keySets = new Set(games.map(g => Object.keys(g).sort().join(',')));\nif (keySets.size > 1) throw new Error('Upsert payload has ' + keySets.size + ' different key sets. PostgREST would silently drop columns. Sets: ' + [...keySets].join(' || '));\n\nreturn [{ json: {\n  _mode: 'LIVE - Upsert Games and Insert Play Events are enabled.',\n  summary: {\n    xbox_titles: titles.length,\n    our_xbox_rows: rows.length,\n    matched: matched.length,\n    unmatched_reported_not_created: unmatched.length,\n    superseded: superseded.length,\n    excluded_non_game: excluded.length,\n    rows_to_upsert: games.length,\n    events_to_insert: events.length,\n    backfills_no_event: backfills.length,\n    matched_by_signal: matched.reduce((m, x) => { m[x.signal] = (m[x.signal] || 0) + 1; return m; }, {}),\n    playtime_regressions_blocked: regressions.length,\n    upsert_key_set: [...keySets][0] || null\n  },\n  regressions,\n  events,\n  backfills_biggest: backfills.slice().sort((a, b) => b.minutes_delta - a.minutes_delta).slice(0, 15),\n  fields_left_alone_sample: matched.filter(m => m.fields_left_alone.length).slice(0, 15),\n  unmatched,\n  superseded,\n  excluded,\n  games\n} }];"
+      }
+    },
+    {
+      "id": "c3000000-0000-4000-8000-00000000000e",
+      "name": "Upsert Games",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2180,
+        0
+      ],
+      "disabled": false,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "notes": "Disabled until the dry run is reviewed. Enable only after checking regressions, superseded and fields_left_alone.",
+      "parameters": {
+        "method": "POST",
+        "url": "https://eiskobjlvxzwvucgpenk.supabase.co/rest/v1/games?on_conflict=master_id",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.games }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "c3000000-0000-4000-8000-00000000000f",
+      "name": "Insert Play Events",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2400,
+        0
+      ],
+      "disabled": false,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "notes": "Must run in the same execution as Upsert Games. Splitting them is what cost four days of Steam sessions.",
+      "parameters": {
+        "method": "POST",
+        "url": "https://eiskobjlvxzwvucgpenk.supabase.co/rest/v1/play_events?on_conflict=master_id,event_date",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('Date Play Events').first().json.events }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "c3000000-0000-4000-8000-000000000010",
+      "name": "Run Manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        -358
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "e3b8043c-4b8c-45e1-ba8e-01396b9cf145",
+      "name": "Date Play Events",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2400,
+        180
+      ],
+      "parameters": {
+        "jsCode": "// Which day does a play session belong to?\n//\n// Resolve and Merge dates each event with DateTime.toISODate(), which resolves in\n// whatever zone the runtime is configured for. This instance runs on UTC, so a\n// session at 10:18pm Eastern on the 12th was filed as the 13th. The app renders\n// event_date as a plain calendar day in the reader's zone, so those sessions showed\n// up under the wrong heading. Setting the workflow timezone did not demonstrably\n// change the runtime, and an unverified setting is not a fix.\n//\n// So the zone is pinned here, in code, where it is visible and testable. The day a\n// session belongs to is a product decision about the reader, not an infrastructure\n// detail that should drift when someone changes an instance default.\nconst ACTIVITY_ZONE = 'America/New_York';\n\nconst src = $('Resolve and Merge').first().json;\nconst events = Array.isArray(src.events) ? src.events : [];\n\nconst dated = [];\nconst unchanged = [];\nfor (const e of events) {\n  const lp = e.last_played ? DateTime.fromISO(e.last_played).setZone(ACTIVITY_ZONE) : null;\n  if (!lp || !lp.isValid) {\n    // No usable timestamp: leave whatever Resolve and Merge decided rather than\n    // inventing a day. It already refuses to emit an event without one.\n    unchanged.push({ title: e.title, event_date: e.event_date, reason: 'no usable last_played' });\n    dated.push(e);\n    continue;\n  }\n  const day = lp.toISODate();\n  if (day !== e.event_date) {\n    unchanged.push({ title: e.title, from: e.event_date, to: day, last_played: e.last_played, moved: true });\n  }\n  dated.push({ ...e, event_date: day });\n}\n\nreturn [{ json: {\n  activity_zone: ACTIVITY_ZONE,\n  events: dated,\n  count: dated.length,\n  redated: unchanged.filter(u => u.moved).length,\n  notes: unchanged\n} }];"
+      },
+      "notes": "Which calendar day a session belongs to is a product decision (the reader's day), not an infrastructure setting. Pinned here so it cannot drift with the instance timezone."
+    },
+    {
+      "id": "602ec272-ba1e-4b93-b8b4-e238fe93c3c8",
+      "name": "Build Unmatched Discovery Queries",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2180,
+        -360
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const src = $('Resolve and Merge').first().json || {};\nconst unmatched = Array.isArray(src.unmatched) ? src.unmatched : [];\nconst WINDOW_DAYS = 7;\nconst APP = /(launcher|^netflix\\b|^youtube\\b|^spotify\\b|^disney\\+\\b|^hulu\\b|^plex\\b|blu-ray|media player|xbox accessories|microsoft edge)/i;\nconst TEST_BUILD = /\\b(?:demo|trial|playtest|open beta|closed beta|beta test|public test branch|test branch|test server|technical test|network test)\\b/i;\nconst out = [];\nfor (const u of unmatched) {\n  const title = String(u.title || '').trim();\n  const tid = String(u.title_id || '').trim();\n  const mp = Number(u.minutes_played);\n  const lp = u.last_played ? DateTime.fromISO(u.last_played) : null;\n  const days = lp && lp.isValid ? $now.diff(lp, 'days').days : null;\n  if (!title || !tid) continue;\n  if (APP.test(title) || TEST_BUILD.test(title)) continue;\n  if (!Number.isFinite(mp) || mp <= 0) continue;\n  if (days === null || days < -1 || days > WINDOW_DAYS) continue;\n  out.push({ json: {\n    title,\n    title_id: tid,\n    minutes_played: Math.floor(mp),\n    last_played: u.last_played || null,\n  } });\n}\nreturn out;"
+      },
+      "notes": "Only recent unmatched titles with positive Xbox playtime enter discovery. Apps, demos, betas and test branches are never auto-created; old unmatched titles remain reported but are not backfilled into fake activity."
+    },
+    {
+      "id": "f934fa60-3245-4944-991b-a2ab09fc9812",
+      "name": "Match Unmatched to IGDB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2400,
+        -360
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://gamedeck-kappa.vercel.app/api/discover",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "limit",
+              "value": "5"
+            }
+          ]
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 3,
+              "batchInterval": 1000
+            }
+          },
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "notes": "Reuses the same private GameDeck /api/discover service credential as the live Game Pass matcher. No new secret or credential is introduced.",
+      "retryOnFail": true,
+      "maxTries": 3
+    },
+    {
+      "id": "665224e1-4048-4dd0-b9fb-09556be0c6da",
+      "name": "Resolve Unmatched Discovery",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2620,
+        -360
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const WINDOW_DAYS = 7;\nconst ACTIVITY_ZONE = 'America/New_York';\nconst XBOX_BAND = 3000000000000;\nconst BAD_GAME_TYPES = new Set([1, 3, 5, 6, 7, 13, 14]);\nconst APP = /(launcher|^netflix\\b|^youtube\\b|^spotify\\b|^disney\\+\\b|^hulu\\b|^plex\\b|blu-ray|media player|xbox accessories|microsoft edge)/i;\nconst TEST_BUILD = /\\b(?:demo|trial|playtest|open beta|closed beta|beta test|public test branch|test branch|test server|technical test|network test)\\b/i;\nconst EDITION = /\\b(?:the complete edition|complete edition|anniversary edition|definitive edition|deluxe edition|ultimate edition|standard edition|game of the year|goty|remastered|remaster|xbox series x\\|s|xbox one|for windows|windows|game preview)\\b/gi;\n\nconst norm = (t) => String(t || '')\n  .replace(/[™®©℠]/g, '')\n  .normalize('NFKD')\n  .toLowerCase()\n  .replace(/&/g, 'and')\n  .replace(/[^a-z0-9]/g, '');\nconst stripEd = (t) => norm(String(t || '').replace(/\\([^)]*\\)/g, ' ').replace(EDITION, ' '));\nconst cleanTitle = (t) => String(t || '').replace(/[™®©℠]/g, '').replace(/\\s+/g, ' ').trim();\nconst fmtLabel = (m) => {\n  const n = Math.max(0, Math.floor(Number(m) || 0));\n  if (n < 60) return n + 'm';\n  const h = Math.floor(n / 60), r = n % 60;\n  return r === 0 ? h + 'h' : h + 'h ' + r + 'm';\n};\nconst xboxPlatform = (g) => Array.isArray(g && g.platforms) && g.platforms.some((p) => /xbox|x360|xone|xsx|series x|series s/i.test(String(p || '')));\nconst positiveOrStored = (value, stored, fallback = 0) => {\n  const n = Number(value);\n  if (Number.isFinite(n) && n > 0) return n;\n  return stored !== null && stored !== undefined ? stored : fallback;\n};\n\nconst queries = $('Build Unmatched Discovery Queries').all().map((i) => i.json);\nconst responses = $input.all();\nif (responses.length !== queries.length) {\n  throw new Error('IGDB discovery responses (' + responses.length + ') do not align with queries (' + queries.length + '). Refusing to write.');\n}\n\nconst source = $('Resolve and Merge').first().json || {};\nconst allUnmatched = Array.isArray(source.unmatched) ? source.unmatched : [];\nconst existing = $('Get Existing Xbox Rows').all().map((i) => i.json).filter((r) => r && r.master_id != null);\nconst xboxTitles = Array.isArray($('Fetch Title History').first().json.titles) ? $('Fetch Title History').first().json.titles : [];\nconst rawById = new Map(xboxTitles.map((t) => [String(t.titleId), t]));\n\nconst byIgdb = new Map();\nfor (const r of existing) {\n  const id = Number(r.igdb_id);\n  if (!Number.isFinite(id) || id <= 0) continue;\n  if (!byIgdb.has(id)) byIgdb.set(id, []);\n  byIgdb.get(id).push(r);\n}\n\nconst games = [];\nconst events = [];\nconst resolved = [];\nconst unresolved = [];\nconst regressions = [];\nconst handledIds = new Set();\nconst nowIso = $now.toISO();\n\nfor (let i = 0; i < queries.length; i++) {\n  const q = queries[i] || {};\n  const tid = String(q.title_id || '');\n  const title = String(q.title || '');\n  const body = responses[i] && responses[i].json ? responses[i].json : {};\n  const candidates = Array.isArray(body.games) ? body.games : [];\n  const scored = [];\n\n  for (const g of candidates) {\n    if (!g || !g.id || !g.name || !g.cover) continue;\n    if (g.gameType != null && BAD_GAME_TYPES.has(Number(g.gameType))) continue;\n    if (!xboxPlatform(g)) continue;\n    const exact = norm(g.name) === norm(title);\n    const stripped = stripEd(g.name) && stripEd(g.name) === stripEd(title);\n    const score = exact ? 100 : stripped ? 90 : 0;\n    if (score > 0) scored.push({ g, score });\n  }\n\n  scored.sort((a, b) => b.score - a.score || Number(b.g.ratingCount || 0) - Number(a.g.ratingCount || 0));\n  const best = scored[0] || null;\n  if (!best) {\n    unresolved.push({ title, title_id: tid, reason: 'no high-confidence Xbox IGDB match', candidates: candidates.slice(0, 5).map((g) => ({ id: g.id, name: g.name, platforms: g.platforms, gameType: g.gameType, versionParent: g.versionParent })) });\n    continue;\n  }\n\n  const canonicalIgdbId = Number(best.g.versionParent || best.g.id);\n  const tiedCanonical = [...new Set(scored.filter((x) => x.score === best.score).map((x) => Number(x.g.versionParent || x.g.id)))];\n  if (tiedCanonical.length > 1) {\n    unresolved.push({ title, title_id: tid, reason: 'ambiguous IGDB match', candidates: scored.filter((x) => x.score === best.score).map((x) => ({ id: x.g.id, name: x.g.name, canonical_igdb_id: Number(x.g.versionParent || x.g.id) })) });\n    continue;\n  }\n\n  const existingHits = [];\n  for (const id of [...new Set([canonicalIgdbId, Number(best.g.id)])]) {\n    for (const r of (byIgdb.get(id) || [])) {\n      if (!existingHits.some((x) => Number(x.master_id) === Number(r.master_id))) existingHits.push(r);\n    }\n  }\n  if (existingHits.length > 1) {\n    unresolved.push({ title, title_id: tid, reason: 'multiple existing Xbox rows share the resolved IGDB identity', master_ids: existingHits.map((r) => r.master_id) });\n    continue;\n  }\n\n  const row = existingHits[0] || null;\n  if (row && row.xbox_title_id != null && String(row.xbox_title_id) !== tid) {\n    unresolved.push({ title, title_id: tid, reason: 'resolved row already belongs to a different xbox_title_id', master_id: row.master_id, existing_xbox_title_id: row.xbox_title_id });\n    continue;\n  }\n\n  const raw = rawById.get(tid) || {};\n  const ach = raw.achievement || {};\n  const before = row && row.playtime_minutes != null ? Number(row.playtime_minutes) : null;\n  const mp = Number(q.minutes_played);\n  let playtime = Number.isFinite(mp) ? Math.max(0, Math.floor(mp)) : (before ?? 0);\n  let regressed = false;\n  if (before != null && Number.isFinite(mp) && mp < before - 5) {\n    playtime = before;\n    regressed = true;\n    regressions.push({ title, title_id: tid, master_id: row.master_id, existing: before, xbox: mp, action: 'blocked, kept existing' });\n  }\n\n  const earned = positiveOrStored(ach.currentAchievements, row && row.earned_awards, 0);\n  const total = positiveOrStored(ach.totalAchievements, row && row.total_awards, 0);\n  const points = positiveOrStored(ach.currentGamerscore, row && row.earned_points, 0);\n  const percent = positiveOrStored(ach.progressPercentage, row && row.percent, 0);\n  const lastPlayed = q.last_played || (row && row.last_played) || null;\n  const isNew = !row;\n  const masterId = row ? Number(row.master_id) : XBOX_BAND + Number(tid);\n  const gameTitle = row ? row.title : cleanTitle(best.g.name || title);\n  const igdbId = row && row.igdb_id != null ? Number(row.igdb_id) : canonicalIgdbId;\n\n  games.push({\n    master_id: masterId,\n    environment: 'xbox',\n    title: gameTitle,\n    xbox_title_id: Number(tid),\n    igdb_id: igdbId,\n    playtime_minutes: playtime,\n    playtime_label: fmtLabel(playtime),\n    last_played: lastPlayed,\n    earned_awards: earned,\n    total_awards: total,\n    earned_points: points,\n    percent,\n    direct_synced_at: nowIso,\n    updated_at: nowIso,\n  });\n\n  const lp = lastPlayed ? DateTime.fromISO(lastPlayed).setZone(ACTIVITY_ZONE) : null;\n  const days = lp && lp.isValid ? $now.diff(lp, 'days').days : null;\n  const recent = days !== null && days >= -1 && days <= WINDOW_DAYS;\n  let dMin = 0;\n  let dAch = 0;\n  if (isNew) {\n    if (recent && playtime > 0) {\n      dMin = playtime;\n      dAch = Number(earned) || 0;\n    }\n  } else if (!regressed) {\n    if (before != null && playtime > before) dMin = playtime - before;\n    const prevEarned = Number(row.earned_awards) || 0;\n    if (Number(earned) > prevEarned) dAch = Number(earned) - prevEarned;\n  }\n\n  if ((dMin > 0 || dAch > 0) && recent) {\n    events.push({\n      master_id: masterId,\n      title: gameTitle,\n      environment: 'xbox',\n      event_date: lp.toISODate(),\n      minutes_delta: dMin,\n      achievements_delta: dAch,\n      percent_after: percent,\n      playtime_minutes_after: playtime,\n      earned_awards_after: earned,\n      last_played: lastPlayed,\n      is_new: isNew,\n    });\n  }\n\n  handledIds.add(tid);\n  resolved.push({\n    title,\n    title_id: tid,\n    master_id: masterId,\n    canonical_title: gameTitle,\n    igdb_id: igdbId,\n    igdb_match: best.g.name,\n    matched_existing: Boolean(row),\n    minutes_before: before,\n    minutes_after: playtime,\n    event_date: ((dMin > 0 || dAch > 0) && recent) ? lp.toISODate() : null,\n    minutes_delta: dMin,\n    achievements_delta: dAch,\n  });\n}\n\nlet excludedCount = 0;\nlet deferredCount = 0;\nfor (const u of allUnmatched) {\n  const tid = String(u.title_id || '');\n  if (handledIds.has(tid) || unresolved.some((x) => String(x.title_id) === tid)) continue;\n  const title = String(u.title || '');\n  const mp = Number(u.minutes_played);\n  const lp = u.last_played ? DateTime.fromISO(u.last_played) : null;\n  const days = lp && lp.isValid ? $now.diff(lp, 'days').days : null;\n  let reason = 'outside current activity resolution window';\n  if (APP.test(title)) { reason = 'non-game/app name pattern'; excludedCount++; }\n  else if (TEST_BUILD.test(title)) { reason = 'demo/beta/test build'; excludedCount++; }\n  else if (!Number.isFinite(mp) || mp <= 0) { reason = 'no positive Xbox playtime to baseline'; deferredCount++; }\n  else if (days === null || days < -1 || days > WINDOW_DAYS) { reason = 'last_played outside ' + WINDOW_DAYS + '-day activity window'; deferredCount++; }\n  else { reason = 'not selected for discovery'; deferredCount++; }\n  unresolved.push({ title, title_id: tid, minutes_played: u.minutes_played, last_played: u.last_played, reason });\n}\n\nconst gameKeySets = new Set(games.map((g) => Object.keys(g).sort().join(',')));\nconst eventKeySets = new Set(events.map((e) => Object.keys(e).sort().join(',')));\nif (gameKeySets.size > 1) throw new Error('Resolved Xbox game upsert payload has inconsistent key sets.');\nif (eventKeySets.size > 1) throw new Error('Resolved Xbox event payload has inconsistent key sets.');\n\nreturn [{ json: {\n  summary: {\n    unmatched_input: allUnmatched.length,\n    candidates_queried: queries.length,\n    resolved: resolved.length,\n    new_rows: resolved.filter((r) => !r.matched_existing).length,\n    matched_existing_rows: resolved.filter((r) => r.matched_existing).length,\n    events_to_insert: events.length,\n    remaining_unresolved_after_run: Math.max(0, allUnmatched.length - resolved.length),\n    excluded_non_game_or_test: excludedCount,\n    deferred_outside_activity_window_or_no_playtime: deferredCount,\n    regressions_blocked: regressions.length,\n    activity_zone: ACTIVITY_ZONE,\n    window_days: WINDOW_DAYS,\n  },\n  resolved,\n  unresolved,\n  regressions,\n  games,\n  events,\n} }];"
+      },
+      "notes": "Requires a high-confidence title match on an Xbox-platform IGDB result, rejects add-ons and ambiguity, reuses existing Xbox rows by IGDB identity when unique, otherwise mints 3e12 + Xbox title id. First recent play uses the lifetime total as the session baseline, exactly like Steam/PSN/Exophase."
+    },
+    {
+      "id": "38b29c37-9479-41d1-bd8a-4ea31aebf441",
+      "name": "Upsert Resolved Xbox Games",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2840,
+        -360
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://eiskobjlvxzwvucgpenk.supabase.co/rest/v1/games?on_conflict=master_id",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('Resolve Unmatched Discovery').first().json.games }}",
+        "options": {}
+      },
+      "notes": "Separate from the established Xbox bulk upsert so existing uniform-payload behavior is untouched. This branch adds igdb_id only for newly resolved titles or carries the existing id.",
+      "retryOnFail": true,
+      "maxTries": 3
+    },
+    {
+      "id": "17d34d8c-a5c1-4687-aa5a-cdb099ef79b2",
+      "name": "Insert Resolved Xbox Play Events",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3060,
+        -360
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://eiskobjlvxzwvucgpenk.supabase.co/rest/v1/play_events?on_conflict=master_id,event_date",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('Resolve Unmatched Discovery').first().json.events }}",
+        "options": {}
+      },
+      "notes": "Uses the existing (master_id,event_date) conflict key and database same-day merge trigger. Events are already dated in America/New_York by last_played.",
+      "retryOnFail": true,
+      "maxTries": 3
+    }
+  ],
+  "connections": {
+    "Every 6h Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Stored Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Called by Refresh": {
+      "main": [
+        [
+          {
+            "node": "Get Stored Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Stored Token": {
+      "main": [
+        [
+          {
+            "node": "Load Stored Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Stored Token": {
+      "main": [
+        [
+          {
+            "node": "Refresh Access Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Refresh Access Token": {
+      "main": [
+        [
+          {
+            "node": "Store Rotated Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Rotated Token": {
+      "main": [
+        [
+          {
+            "node": "XBL Authenticate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "XBL Authenticate": {
+      "main": [
+        [
+          {
+            "node": "XSTS Authorize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "XSTS Authorize": {
+      "main": [
+        [
+          {
+            "node": "Fetch Title History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Title History": {
+      "main": [
+        [
+          {
+            "node": "Get Existing Xbox Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Existing Xbox Rows": {
+      "main": [
+        [
+          {
+            "node": "Build Stat Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Stat Batches": {
+      "main": [
+        [
+          {
+            "node": "Fetch MinutesPlayed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch MinutesPlayed": {
+      "main": [
+        [
+          {
+            "node": "Resolve and Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve and Merge": {
+      "main": [
+        [
+          {
+            "node": "Upsert Games",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Build Unmatched Discovery Queries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Manually": {
+      "main": [
+        [
+          {
+            "node": "Get Stored Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Games": {
+      "main": [
+        [
+          {
+            "node": "Date Play Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Date Play Events": {
+      "main": [
+        [
+          {
+            "node": "Insert Play Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Unmatched Discovery Queries": {
+      "main": [
+        [
+          {
+            "node": "Match Unmatched to IGDB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Match Unmatched to IGDB": {
+      "main": [
+        [
+          {
+            "node": "Resolve Unmatched Discovery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve Unmatched Discovery": {
+      "main": [
+        [
+          {
+            "node": "Upsert Resolved Xbox Games",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Resolved Xbox Games": {
+      "main": [
+        [
+          {
+            "node": "Insert Resolved Xbox Play Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "errorWorkflow": "W11JuhRH6NWJry1e",
+    "availableInMCP": true,
+    "timezone": "America/New_York"
+  },
+  "meta": {
+    "templateId": "gamedeck-xbox-library-playtime-sync",
+    "credentialBindingsOmitted": true,
+    "credentialNote": "Credential bindings are intentionally omitted from source control. Rebind the existing n8n credentials after import."
+  },
+  "tags": []
+}
