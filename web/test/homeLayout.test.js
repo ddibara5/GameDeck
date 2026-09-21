@@ -23,9 +23,10 @@ function makeStorage() {
 
 const SECTION_IDS = homeSectionOptions.map((option) => option.id)
 
-test('the section catalog holds the five redesigned sections', () => {
+test('the section catalog holds the six Home sections', () => {
   assert.deepEqual(SECTION_IDS, [
     'jump-back-in',
+    'for-you',
     'new-releases',
     'top-story',
     'upcoming',
@@ -76,7 +77,7 @@ test('load drops unknown ids and dedupes the order', () => {
     assert.deepEqual(loadHomeLayout(), {
       // User order survives; unknown ids are gone; sections missing from the
       // stored order are appended in catalog order.
-      order: ['upcoming', 'jump-back-in', 'new-releases', 'top-story', 'continue-playing'],
+      order: ['upcoming', 'jump-back-in', 'for-you', 'new-releases', 'top-story', 'continue-playing'],
       hidden: ['top-story'],
     })
   } finally {
@@ -92,6 +93,7 @@ test('load appends defaults to a partial stored order', () => {
     assert.deepEqual(loadHomeLayout().order, [
       'top-story',
       'jump-back-in',
+      'for-you',
       'new-releases',
       'upcoming',
       'continue-playing',
@@ -110,7 +112,7 @@ test('save normalizes before writing to storage', () => {
       hidden: ['top-story', 'bogus'],
     })
     assert.deepEqual(JSON.parse(storage.getItem(HOME_LAYOUT_KEY)), {
-      order: ['upcoming', 'jump-back-in', 'new-releases', 'top-story', 'continue-playing'],
+      order: ['upcoming', 'jump-back-in', 'for-you', 'new-releases', 'top-story', 'continue-playing'],
       hidden: ['top-story'],
     })
   } finally {
@@ -122,7 +124,7 @@ test('a round trip preserves a valid layout exactly', () => {
   const storage = makeStorage()
   globalThis.localStorage = storage
   const layout = {
-    order: ['upcoming', 'continue-playing', 'jump-back-in', 'top-story', 'new-releases'],
+    order: ['upcoming', 'continue-playing', 'jump-back-in', 'for-you', 'top-story', 'new-releases'],
     hidden: ['top-story'],
   }
   try {
@@ -130,6 +132,31 @@ test('a round trip preserves a valid layout exactly', () => {
     assert.deepEqual(loadHomeLayout(), layout)
     resetHomeLayout()
     assert.deepEqual(loadHomeLayout(), defaultHomeLayout)
+  } finally {
+    delete globalThis.localStorage
+  }
+})
+
+
+test('old v2 layouts insert For You directly after Jump back in', () => {
+  const storage = makeStorage()
+  storage.setItem(
+    HOME_LAYOUT_KEY,
+    JSON.stringify({
+      order: ['jump-back-in', 'new-releases', 'top-story', 'upcoming', 'continue-playing'],
+      hidden: [],
+    }),
+  )
+  globalThis.localStorage = storage
+  try {
+    assert.deepEqual(loadHomeLayout().order, [
+      'jump-back-in',
+      'for-you',
+      'new-releases',
+      'top-story',
+      'upcoming',
+      'continue-playing',
+    ])
   } finally {
     delete globalThis.localStorage
   }
