@@ -25,7 +25,7 @@ const loadDiscover = () => import('../lib/discover.js')
 //
 //   continue-playing  a "Recent play" rail of recently played games with their
 //                     story progress; hidden when there is none
-//   jump-back-in      three entry tiles: For You, Rankings, Insights
+//   jump-back-in      a For You game rail plus entry tiles for Rankings and Insights
 //   top-story         featured news card, plus More news
 //   upcoming          wishlist Release watch, coming up
 //   new-releases      wishlist Release watch, out now
@@ -62,10 +62,26 @@ function SectionHead({ title, action }) {
 }
 
 const JUMP_TILES = [
-  { key: 'foryou', title: 'For You', sub: 'Fresh picks from your taste', icon: 'foryou' },
   { key: 'rankings', title: 'Rankings', sub: 'Choose between two games', icon: 'rankings' },
   { key: 'insights', title: 'Insights', sub: 'Playtime and taste trends', icon: 'insights' },
 ]
+
+function LoadingRail({ title }) {
+  return (
+    <section className="hrail" aria-label={`Loading ${title}`}>
+      <div className="hrail-head" aria-hidden="true">
+        <span className="hrail-title">{title}</span>
+      </div>
+      <div className="hrail-strip" aria-hidden="true">
+        {[0, 1, 2, 3].map((index) => (
+          <span className="hrail-card" key={index}>
+            <span className="hrail-poster skeleton hm-skel" />
+          </span>
+        ))}
+      </div>
+    </section>
+  )
+}
 
 function JumpBackIn({ onOpenTab }) {
   return (
@@ -185,6 +201,46 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
   }, [])
 
   const [selectedGame, setSelectedGame] = useState(null)
+  const [forYouPreview, setForYouPreview] = useState(null)
+  const [forYouLoading, setForYouLoading] = useState(false)
+
+  // Keep the For You engine out of Home's initial JS chunk. The preview warms
+  // after first paint, reuses the engine's IndexedDB candidate cache, and then
+  // makes the full For You page faster when the header is tapped.
+  const forYouVisible = !homeLayout.hidden.includes('jump-back-in')
+  useEffect(() => {
+    if (!forYouVisible) return undefined
+
+    let cancelled = false
+    let idleId = null
+    let timerId = null
+
+    const loadPreview = async () => {
+      setForYouLoading(true)
+      try {
+        const { loadForYouFilters, loadForYouSnapshot } = await import('../lib/forYou.js')
+        const snapshot = await loadForYouSnapshot(loadForYouFilters())
+        if (!cancelled) setForYouPreview(snapshot)
+      } catch {
+        // Keep Home usable if recommendations are temporarily unavailable.
+        // The full For You page still owns its richer retry/error state.
+      } finally {
+        if (!cancelled) setForYouLoading(false)
+      }
+    }
+
+    if ('requestIdleCallback' in window) {
+      idleId = window.requestIdleCallback(() => void loadPreview(), { timeout: 500 })
+    } else {
+      timerId = window.setTimeout(() => void loadPreview(), 0)
+    }
+
+    return () => {
+      cancelled = true
+      if (idleId != null && 'cancelIdleCallback' in window) window.cancelIdleCallback(idleId)
+      if (timerId != null) window.clearTimeout(timerId)
+    }
+  }, [forYouVisible])
 
   // The featured top story's article sheet. { item, rel }, same shape as
   // NewsTab's openStory, so the card opens the article itself.
@@ -288,7 +344,38 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
     }
 
     if (section === 'jump-back-in') {
-      return <JumpBackIn onOpenTab={onOpenTab} />
+      const picks = forYouPreview?.deck || []
+      return (
+        <>
+          {forYouLoading && !picks.length ? <LoadingRail title="For You" /> : null}
+          {picks.length ? (
+            <HomeRail
+              title="For You"
+              compact
+              priority
+              items={picks.slice(0, 6).map((pick) => {
+                const game = pick.game || {}
+                return {
+                  key: `foryou:${game.id ?? game.igdb_id ?? game.title ?? game.name}`,
+                  title: game.title || game.name || 'Game',
+                  artwork: game.artwork || game.cover || null,
+                  source: pick,
+                }
+              })}
+              totalCount={picks.length}
+              onOpenAll={() => onOpenTab('foryou')}
+              onOpen={(pick) =>
+                setSelectedGame({
+                  game: pick.game,
+                  variant: 'discover',
+                  recommendation: pick,
+                })
+              }
+            />
+          ) : null}
+          <JumpBackIn onOpenTab={onOpenTab} />
+        </>
+      )
     }
 
     if (section === 'top-story') {
@@ -354,6 +441,7 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
         <GameSheet
           variant={selectedGame.variant}
           game={selectedGame.game}
+          recommendation={selectedGame.recommendation || null}
           onClose={() => setSelectedGame(null)}
         />
       ) : null}
