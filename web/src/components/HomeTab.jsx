@@ -19,13 +19,14 @@ const loadNewsSheet = () => import('./NewsSheet.jsx')
 const NewsSheet = lazy(loadNewsSheet)
 const loadDiscover = () => import('../lib/discover.js')
 
-// Home: the approved compact layout. Five sections in the user's saved order
+// Home: the approved compact layout. Six sections in the user's saved order
 // (gamedeck_home_layout_v2), each hideable and reorderable through the
 // Customize bar/sheet:
 //
 //   continue-playing  a "Recent play" rail of recently played games with their
 //                     story progress; hidden when there is none
-//   jump-back-in      a For You game rail plus entry tiles for Rankings and Insights
+//   jump-back-in      entry tiles for Rankings and Insights
+//   for-you           a preview rail from the daily For You recommendation deck
 //   top-story         featured news card, plus More news
 //   upcoming          wishlist Release watch, coming up
 //   new-releases      wishlist Release watch, out now
@@ -207,7 +208,7 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
   // Keep the For You engine out of Home's initial JS chunk. The preview warms
   // after first paint, reuses the engine's IndexedDB candidate cache, and then
   // makes the full For You page faster when the header is tapped.
-  const forYouVisible = !homeLayout.hidden.includes('jump-back-in')
+  const forYouVisible = !homeLayout.hidden.includes('for-you')
   useEffect(() => {
     if (!forYouVisible) return undefined
 
@@ -344,37 +345,37 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
     }
 
     if (section === 'jump-back-in') {
+      return <JumpBackIn onOpenTab={onOpenTab} />
+    }
+
+    if (section === 'for-you') {
       const picks = forYouPreview?.deck || []
+      if (forYouLoading && !picks.length) return <LoadingRail title="For You" />
+      if (!picks.length) return null
       return (
-        <>
-          {forYouLoading && !picks.length ? <LoadingRail title="For You" /> : null}
-          {picks.length ? (
-            <HomeRail
-              title="For You"
-              compact
-              priority
-              items={picks.slice(0, 6).map((pick) => {
-                const game = pick.game || {}
-                return {
-                  key: `foryou:${game.id ?? game.igdb_id ?? game.title ?? game.name}`,
-                  title: game.title || game.name || 'Game',
-                  artwork: game.artwork || game.cover || null,
-                  source: pick,
-                }
-              })}
-              totalCount={picks.length}
-              onOpenAll={() => onOpenTab('foryou')}
-              onOpen={(pick) =>
-                setSelectedGame({
-                  game: pick.game,
-                  variant: 'discover',
-                  recommendation: pick,
-                })
-              }
-            />
-          ) : null}
-          <JumpBackIn onOpenTab={onOpenTab} />
-        </>
+        <HomeRail
+          title="For You"
+          compact
+          priority
+          items={picks.slice(0, 6).map((pick) => {
+            const game = pick.game || {}
+            return {
+              key: `foryou:${game.id ?? game.igdb_id ?? game.title ?? game.name}`,
+              title: game.title || game.name || 'Game',
+              artwork: game.artwork || game.cover || null,
+              source: pick,
+            }
+          })}
+          totalCount={picks.length}
+          onOpenAll={() => onOpenTab('foryou')}
+          onOpen={(pick) =>
+            setSelectedGame({
+              game: pick.game,
+              variant: 'discover',
+              recommendation: pick,
+            })
+          }
+        />
       )
     }
 
