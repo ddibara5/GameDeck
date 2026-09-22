@@ -95,21 +95,7 @@ function SummaryCard({ title, sub, meta, icon, onPress, children, columns = 4 })
   )
 }
 
-function deltaLabel(current, previous, formatter = (value) => String(value)) {
-  const delta = Number(current || 0) - Number(previous || 0)
-  if (delta === 0) return { text: '— no change', tone: 'flat' }
-  return {
-    text: `${delta > 0 ? '↑' : '↓'} ${formatter(Math.abs(delta))}`,
-    tone: delta > 0 ? 'up' : 'down',
-  }
-}
-
-function InsightsSummaryCard({ insight, previous, loading, onOpen }) {
-  const playDelta = deltaLabel(insight?.minutes, previous?.minutes, minutesToHhm)
-  const gamesDelta = deltaLabel(insight?.games, previous?.games)
-  const achievementDelta = deltaLabel(insight?.achievements, previous?.achievements)
-  const daysDelta = deltaLabel(insight?.activeDays, previous?.activeDays)
-
+function InsightsSummaryCard({ insight, loading, onOpen }) {
   return (
     <SummaryCard
       title="Your Gaming Insights"
@@ -118,10 +104,10 @@ function InsightsSummaryCard({ insight, previous, loading, onOpen }) {
       icon="insights"
       onPress={onOpen}
     >
-      <SummaryMetric value={loading ? '—' : minutesToHhm(insight?.minutes || 0)} label="Playtime" detail={loading ? null : playDelta.text} tone={playDelta.tone} />
-      <SummaryMetric value={loading ? '—' : insight?.games || 0} label="Games" detail={loading ? null : gamesDelta.text} tone={gamesDelta.tone} />
-      <SummaryMetric value={loading ? '—' : insight?.achievements || 0} label="Achievements" detail={loading ? null : achievementDelta.text} tone={achievementDelta.tone} />
-      <SummaryMetric value={loading ? '—' : insight?.activeDays || 0} label="Active days" detail={loading ? null : daysDelta.text} tone={daysDelta.tone} />
+      <SummaryMetric value={loading ? '—' : minutesToHhm(insight?.minutes || 0)} label="Playtime" />
+      <SummaryMetric value={loading ? '—' : insight?.games || 0} label="Games" />
+      <SummaryMetric value={loading ? '—' : insight?.achievements || 0} label="Achievements" />
+      <SummaryMetric value={loading ? '—' : insight?.activeDays || 0} label="Active days" />
     </SummaryCard>
   )
 }
@@ -386,14 +372,6 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
     () => periodInsights(insightEvents, new Date(), INSIGHT_WEEK_DAYS),
     [insightEvents],
   )
-  const previousInsightSummary = useMemo(
-    () => periodInsights(
-      insightEvents,
-      new Date(Date.now() - INSIGHT_WEEK_DAYS * 86400000),
-      INSIGHT_WEEK_DAYS,
-    ),
-    [insightEvents],
-  )
 
   // Home is a compact preview of News → For you, not a separate "newest" feed.
   // Using the shared selector keeps the ordering identical: actively played,
@@ -483,7 +461,6 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
       return (
         <InsightsSummaryCard
           insight={insightSummary}
-          previous={previousInsightSummary}
           loading={insightsLoading}
           onOpen={() => onOpenTab('insights')}
         />
