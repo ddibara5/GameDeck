@@ -632,8 +632,8 @@ button.hm-np:not(:disabled) {
   --hm-summary-cols: 4;
   display: grid;
   grid-template-columns: repeat(var(--hm-summary-cols), minmax(0, 1fr));
-  margin-top: 8px;
-  padding-top: 8px;
+  margin-top: 7px;
+  padding-top: 7px;
   border-top: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
 }
 
@@ -662,9 +662,9 @@ button.hm-np:not(:disabled) {
 }
 
 .hm-summary-metric b,
-.hm-summary-metric > span,
-.hm-summary-metric small {
-  display: block;
+.hm-summary-metric-line,
+.hm-summary-metric-line > span,
+.hm-summary-metric-line small {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -672,6 +672,7 @@ button.hm-np:not(:disabled) {
 }
 
 .hm-summary-metric b {
+  display: block;
   color: var(--text);
   font-size: var(--t-foot);
   font-weight: var(--w-semi);
@@ -680,17 +681,25 @@ button.hm-np:not(:disabled) {
   letter-spacing: -0.01em;
 }
 
-.hm-summary-metric > span {
+.hm-summary-metric-line {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
   margin-top: 3px;
   color: var(--muted);
-  font-size: 10px;
   line-height: 1.08;
+}
+
+.hm-summary-metric-line > span {
+  flex: 0 1 auto;
+  font-size: 9px;
   font-weight: var(--w-med);
   letter-spacing: -0.008em;
 }
 
-.hm-summary-metric small {
-  margin-top: 4px;
+.hm-summary-metric-line small {
+  flex: 0 0 auto;
+  margin: 0;
   color: var(--muted);
   font-size: 9px;
   line-height: 1.05;
@@ -711,61 +720,60 @@ button.hm-np:not(:disabled) {
   letter-spacing: -0.01em;
 }
 
-/* Rankings is intentionally a thinner launch bar than Insights. It keeps the
-   useful state, but collapses it into one compact line with no subtitle or
-   dashboard grid. */
+/* Rankings is a single-line launch bar: icon, title, live summary, caret. */
 .hm-ranking-bar {
-  padding: 9px 11px 8px;
+  padding: 8px 10px;
 }
 
-.hm-ranking-bar-head {
+.hm-ranking-inline {
   display: grid;
-  grid-template-columns: 27px minmax(0, 1fr) 8px;
+  grid-template-columns: 27px auto minmax(0, 1fr) 8px;
   align-items: center;
   column-gap: 8px;
+  min-width: 0;
 }
 
-.hm-ranking-bar-head > b {
+.hm-ranking-title {
   color: var(--text);
   font-size: var(--t-foot);
   font-weight: var(--w-semi);
   line-height: 1.1;
   letter-spacing: -0.01em;
+  white-space: nowrap;
 }
 
-.hm-ranking-bar-head .hm-chev {
+.hm-ranking-inline .hm-chev {
   width: 7px;
   height: 12px;
   color: color-mix(in srgb, var(--muted) 74%, transparent);
 }
 
-.hm-ranking-bar-stats {
+.hm-ranking-inline-stats {
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  gap: 5px;
   min-width: 0;
-  margin: 6px 0 0 35px;
+  overflow: hidden;
   color: var(--muted);
   font-size: 10px;
   font-weight: var(--w-med);
-  line-height: 1.15;
+  line-height: 1.1;
   white-space: nowrap;
-  overflow: hidden;
 }
 
-.hm-ranking-bar-stats > span {
+.hm-ranking-inline-stats > span {
   flex: none;
   min-width: 0;
 }
 
-.hm-ranking-bar-stats b {
+.hm-ranking-inline-stats b {
   color: var(--text);
   font-size: 11px;
   font-weight: var(--w-semi);
   font-variant-numeric: tabular-nums;
 }
 
-.hm-ranking-bar-stats i {
+.hm-ranking-inline-stats i {
   color: color-mix(in srgb, var(--muted) 58%, transparent);
   font-style: normal;
 }
@@ -812,21 +820,22 @@ button.hm-np:not(:disabled) {
     padding-inline: 3px;
   }
 
-  .hm-ranking-bar-stats {
+  .hm-ranking-inline {
+    grid-template-columns: 26px auto minmax(0, 1fr) 7px;
+    column-gap: 6px;
+  }
+
+  .hm-ranking-inline-stats {
     gap: 4px;
-    margin-left: 34px;
     font-size: 9px;
   }
 
-  .hm-ranking-bar-stats b {
+  .hm-ranking-inline-stats b {
     font-size: 10px;
   }
 
-  .hm-summary-metric > span {
-    font-size: 9px;
-  }
-
-  .hm-summary-metric small {
+  .hm-summary-metric-line > span,
+  .hm-summary-metric-line small {
     font-size: 8px;
   }
 }
