@@ -9,8 +9,6 @@ import {
   saveHomeLayout,
 } from '../src/lib/homeLayout.js'
 
-// In-memory localStorage shim: the module reads storage at call time, so a
-// test-scoped shim is enough.
 function makeStorage() {
   const store = new Map()
   return {
@@ -23,9 +21,10 @@ function makeStorage() {
 
 const SECTION_IDS = homeSectionOptions.map((option) => option.id)
 
-test('the section catalog holds the six Home sections', () => {
+test('the section catalog holds the seven Home sections', () => {
   assert.deepEqual(SECTION_IDS, [
-    'jump-back-in',
+    'insights-summary',
+    'rankings-summary',
     'for-you',
     'new-releases',
     'top-story',
@@ -34,7 +33,7 @@ test('the section catalog holds the six Home sections', () => {
   ])
 })
 
-test('the layout uses a v2 storage key', () => {
+test('the layout keeps the v2 storage key for in-place migration', () => {
   assert.equal(HOME_LAYOUT_KEY, 'gamedeck_home_layout_v2')
 })
 
@@ -68,16 +67,22 @@ test('load drops unknown ids and dedupes the order', () => {
   storage.setItem(
     HOME_LAYOUT_KEY,
     JSON.stringify({
-      order: ['upcoming', 'bogus', 'jump-back-in', 'upcoming', 'gone'],
+      order: ['upcoming', 'bogus', 'insights-summary', 'upcoming', 'gone'],
       hidden: ['top-story', 'bogus', 'top-story'],
     }),
   )
   globalThis.localStorage = storage
   try {
     assert.deepEqual(loadHomeLayout(), {
-      // User order survives; unknown ids are gone; sections missing from the
-      // stored order are appended in catalog order.
-      order: ['upcoming', 'jump-back-in', 'for-you', 'new-releases', 'top-story', 'continue-playing'],
+      order: [
+        'upcoming',
+        'insights-summary',
+        'for-you',
+        'rankings-summary',
+        'new-releases',
+        'top-story',
+        'continue-playing',
+      ],
       hidden: ['top-story'],
     })
   } finally {
@@ -92,7 +97,8 @@ test('load appends defaults to a partial stored order', () => {
   try {
     assert.deepEqual(loadHomeLayout().order, [
       'top-story',
-      'jump-back-in',
+      'insights-summary',
+      'rankings-summary',
       'for-you',
       'new-releases',
       'upcoming',
@@ -108,11 +114,19 @@ test('save normalizes before writing to storage', () => {
   globalThis.localStorage = storage
   try {
     saveHomeLayout({
-      order: ['upcoming', 'bogus', 'jump-back-in', 'upcoming'],
+      order: ['upcoming', 'bogus', 'rankings-summary', 'upcoming'],
       hidden: ['top-story', 'bogus'],
     })
     assert.deepEqual(JSON.parse(storage.getItem(HOME_LAYOUT_KEY)), {
-      order: ['upcoming', 'jump-back-in', 'for-you', 'new-releases', 'top-story', 'continue-playing'],
+      order: [
+        'upcoming',
+        'rankings-summary',
+        'for-you',
+        'insights-summary',
+        'new-releases',
+        'top-story',
+        'continue-playing',
+      ],
       hidden: ['top-story'],
     })
   } finally {
@@ -124,7 +138,15 @@ test('a round trip preserves a valid layout exactly', () => {
   const storage = makeStorage()
   globalThis.localStorage = storage
   const layout = {
-    order: ['upcoming', 'continue-playing', 'jump-back-in', 'for-you', 'top-story', 'new-releases'],
+    order: [
+      'upcoming',
+      'continue-playing',
+      'insights-summary',
+      'rankings-summary',
+      'for-you',
+      'top-story',
+      'new-releases',
+    ],
     hidden: ['top-story'],
   }
   try {
@@ -137,8 +159,7 @@ test('a round trip preserves a valid layout exactly', () => {
   }
 })
 
-
-test('old v2 layouts insert For You directly after Jump back in', () => {
+test('legacy Jump back in expands to Insights then Rankings in place', () => {
   const storage = makeStorage()
   storage.setItem(
     HOME_LAYOUT_KEY,
@@ -150,13 +171,31 @@ test('old v2 layouts insert For You directly after Jump back in', () => {
   globalThis.localStorage = storage
   try {
     assert.deepEqual(loadHomeLayout().order, [
-      'jump-back-in',
+      'insights-summary',
+      'rankings-summary',
       'for-you',
       'new-releases',
       'top-story',
       'upcoming',
       'continue-playing',
     ])
+  } finally {
+    delete globalThis.localStorage
+  }
+})
+
+test('a hidden legacy Jump back in hides both replacement cards', () => {
+  const storage = makeStorage()
+  storage.setItem(
+    HOME_LAYOUT_KEY,
+    JSON.stringify({
+      order: ['jump-back-in', 'new-releases'],
+      hidden: ['jump-back-in'],
+    }),
+  )
+  globalThis.localStorage = storage
+  try {
+    assert.deepEqual(loadHomeLayout().hidden, ['insights-summary', 'rankings-summary'])
   } finally {
     delete globalThis.localStorage
   }
