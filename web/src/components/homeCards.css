@@ -540,50 +540,52 @@ button.hm-np:not(:disabled) {
 
 /* ---- Home summary entry cards ---- */
 
-/* These cards are intentionally quieter than the destination pages. They use
-   the same small Home typography as the rails below so Insights/Rankings feel
-   like compact entry points rather than dashboard panels dropped onto Home. */
+/* Final compact pass: these should read as quiet launch cards, not mini
+   dashboards. The values remain scannable, but the typography and dividers are
+   intentionally subordinate to the rest of Home. */
 .hm-summary-card {
   display: block;
   width: 100%;
-  padding: 11px 12px 10px;
+  padding: 10px 11px 9px;
   text-align: left;
-  background: var(--surface);
-  border: 1px solid color-mix(in srgb, var(--line) 88%, transparent);
-  border-radius: 17px;
+  background: color-mix(in srgb, var(--surface) 96%, var(--surface-2));
+  border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  border-radius: 15px;
   color: inherit;
   font: inherit;
   cursor: pointer;
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--text) 3%, transparent);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--text) 2%, transparent),
+    0 5px 14px color-mix(in srgb, var(--text) 2%, transparent);
   -webkit-tap-highlight-color: transparent;
 }
 
 .hm-summary-card:active {
-  opacity: 0.76;
-  transform: scale(0.995);
+  opacity: 0.78;
+  transform: scale(0.996);
 }
 
 .hm-summary-head {
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) auto 10px;
+  grid-template-columns: 27px minmax(0, 1fr) auto 8px;
   align-items: center;
-  column-gap: 9px;
+  column-gap: 8px;
 }
 
 .hm-summary-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 27px;
+  height: 27px;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
   color: var(--accent);
 }
 
 .hm-summary-icon svg {
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
 }
 
 .hm-summary-copy {
@@ -595,21 +597,21 @@ button.hm-np:not(:disabled) {
   color: var(--text);
   font-size: var(--t-foot);
   font-weight: var(--w-semi);
-  line-height: 1.18;
-  letter-spacing: -0.008em;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
 }
 
 .hm-summary-copy small,
 .hm-summary-meta {
   color: var(--muted);
-  font-size: var(--t-cap2);
-  line-height: 1.25;
+  font-size: 10px;
+  line-height: 1.2;
   font-weight: var(--w-med);
 }
 
 .hm-summary-copy small {
   display: block;
-  margin-top: 2px;
+  margin-top: 1px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -617,46 +619,46 @@ button.hm-np:not(:disabled) {
 
 .hm-summary-meta {
   white-space: nowrap;
-  padding-left: 6px;
+  padding-left: 4px;
 }
 
 .hm-summary-head .hm-chev {
-  width: 8px;
-  height: 14px;
-  color: color-mix(in srgb, var(--muted) 82%, transparent);
+  width: 7px;
+  height: 12px;
+  color: color-mix(in srgb, var(--muted) 74%, transparent);
 }
 
 .hm-summary-grid {
   --hm-summary-cols: 4;
   display: grid;
   grid-template-columns: repeat(var(--hm-summary-cols), minmax(0, 1fr));
-  margin-top: 9px;
-  padding-top: 9px;
-  border-top: 1px solid color-mix(in srgb, var(--line) 86%, transparent);
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
 }
 
 .hm-summary-metric {
   position: relative;
   min-width: 0;
-  padding: 0 9px;
+  padding: 0 7px;
 }
 
 .hm-summary-metric + .hm-summary-metric::before {
   content: '';
   position: absolute;
   left: 0;
-  top: 2px;
-  bottom: 2px;
+  top: 3px;
+  bottom: 3px;
   width: 1px;
-  background: color-mix(in srgb, var(--line) 86%, transparent);
+  background: color-mix(in srgb, var(--line) 70%, transparent);
 }
 
 .hm-summary-metric:first-child {
-  padding-left: 2px;
+  padding-left: 1px;
 }
 
 .hm-summary-metric:last-child {
-  padding-right: 2px;
+  padding-right: 1px;
 }
 
 .hm-summary-metric b,
@@ -664,73 +666,88 @@ button.hm-np:not(:disabled) {
 .hm-summary-metric small {
   display: block;
   min-width: 0;
-}
-
-.hm-summary-metric b {
-  color: var(--text);
-  font-size: var(--t-sub);
-  font-weight: var(--w-semi);
-  font-variant-numeric: tabular-nums;
-  line-height: 1.12;
-  letter-spacing: -0.012em;
-  white-space: nowrap;
-}
-
-.hm-summary-metric > span {
-  margin-top: 3px;
-  color: var(--muted);
-  font-size: var(--t-cap2);
-  line-height: 1.15;
-  font-weight: var(--w-med);
-  white-space: nowrap;
-  letter-spacing: -0.012em;
-}
-
-.hm-summary-metric small {
-  margin-top: 5px;
-  color: var(--muted);
-  font-size: 10px;
-  line-height: 1.1;
-  font-weight: var(--w-med);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.hm-summary-metric small.up {
-  color: var(--accent);
+.hm-summary-metric b {
+  color: var(--text);
+  font-size: var(--t-foot);
+  font-weight: var(--w-semi);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.08;
+  letter-spacing: -0.01em;
 }
 
-.hm-summary-metric small.down {
+.hm-summary-metric > span {
+  margin-top: 3px;
   color: var(--muted);
+  font-size: 10px;
+  line-height: 1.08;
+  font-weight: var(--w-med);
+  letter-spacing: -0.008em;
 }
 
+.hm-summary-metric small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.05;
+  font-weight: var(--w-med);
+}
+
+.hm-summary-metric small.up {
+  color: color-mix(in srgb, var(--accent) 88%, var(--text));
+}
+
+.hm-summary-metric small.down,
 .hm-summary-metric small.flat {
   color: var(--muted);
 }
 
 .hm-summary-metric small.game {
-  text-transform: capitalize;
+  color: color-mix(in srgb, var(--muted) 92%, var(--text));
   letter-spacing: -0.01em;
 }
 
-/* The four-column Insights card is the tightest case. Reduce side padding at
-   ordinary iPhone widths so "Achievements" stays whole instead of ellipsizing. */
+/* Give the three-column Rankings card a touch more breathing room while
+   keeping its height identical to the Insights card. */
+.hm-summary-grid[style*="--hm-summary-cols: 3"] .hm-summary-metric {
+  padding-inline: 10px;
+}
+
+.hm-summary-grid[style*="--hm-summary-cols: 3"] .hm-summary-metric:first-child {
+  padding-left: 1px;
+}
+
+.hm-summary-grid[style*="--hm-summary-cols: 3"] .hm-summary-metric:last-child {
+  padding-right: 1px;
+}
+
 @media (max-width: 430px) {
   .hm-summary-metric {
-    padding-inline: 6px;
+    padding-inline: 5px;
   }
 
   .hm-summary-metric:first-child {
-    padding-left: 2px;
+    padding-left: 1px;
   }
 
   .hm-summary-metric:last-child {
-    padding-right: 2px;
+    padding-right: 1px;
   }
 
-  .hm-summary-metric > span {
-    font-size: 10px;
+  .hm-summary-grid[style*="--hm-summary-cols: 3"] .hm-summary-metric {
+    padding-inline: 8px;
+  }
+
+  .hm-summary-grid[style*="--hm-summary-cols: 3"] .hm-summary-metric:first-child {
+    padding-left: 1px;
+  }
+
+  .hm-summary-grid[style*="--hm-summary-cols: 3"] .hm-summary-metric:last-child {
+    padding-right: 1px;
   }
 }
 
@@ -740,25 +757,25 @@ button.hm-np:not(:disabled) {
   }
 
   .hm-summary-head {
-    grid-template-columns: 28px minmax(0, 1fr) 8px;
+    grid-template-columns: 26px minmax(0, 1fr) 7px;
   }
 
   .hm-summary-icon {
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
   }
 
-  .hm-summary-metric {
-    padding-inline: 4px;
+  .hm-summary-metric,
+  .hm-summary-grid[style*="--hm-summary-cols: 3"] .hm-summary-metric {
+    padding-inline: 3px;
   }
 
-  .hm-summary-metric b {
-    font-size: var(--t-foot);
-  }
-
-  .hm-summary-metric > span,
-  .hm-summary-metric small {
+  .hm-summary-metric > span {
     font-size: 9px;
+  }
+
+  .hm-summary-metric small {
+    font-size: 8px;
   }
 }
 
