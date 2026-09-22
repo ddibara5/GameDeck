@@ -104,22 +104,9 @@ export default function LibraryTab() {
   const statusMap = useStatusMap()
 
   // The effective status: explicit game_status override first, activity-derived
-  // second. This is the pilot's statusFor, and the chips below read it.
+  // second. This is the pilot's statusFor and backs the addable Status filter.
   const statusFor = useCallback((game) => effectiveStatus(game, statusMap), [statusMap])
 
-  // Status chips show counts like the pilot's, so "Abandoned 3" tells you the
-  // filter is worth tapping before you tap it.
-  const statusCounts = useMemo(() => {
-    const counts = { all: games.length, playing: 0, backlog: 0, finished: 0, abandoned: 0 }
-    for (const game of games) {
-      const s = statusFor(game)
-      if (counts[s] != null) counts[s] += 1
-    }
-    return counts
-  }, [games, statusFor])
-
-  // Only offer chips that can return something, so tapping one never lands on an
-  // empty library. Recomputed from the loaded set rather than hardcoded.
   // keywords arrive separately from the library rows; see useVibeKeywords. They
   // are only fetched once the filter sheet has been opened, because that is the
   // only place in this tab that reads them, and the Library is the landing tab.
@@ -244,21 +231,6 @@ export default function LibraryTab() {
             {query ? <button type="button" className="gd-clear" onClick={() => setQuery('')} aria-label="Clear search">&times;</button> : null}
           </div>
         )}
-
-        <div className="chip-row gd-chip-row" role="group" aria-label="Status filters">
-          {STATUS_FILTERS.filter((o) => o.key !== 'abandoned' || statusCounts.abandoned > 0 || statusFilter === 'abandoned').map((o) => (
-            <button
-              key={o.key}
-              type="button"
-              className={`chip${statusFilter === o.key ? ' active' : ''}`}
-              aria-pressed={statusFilter === o.key}
-              onClick={() => setStatusFilter(o.key)}
-            >
-              {o.label}
-              <span className="gd-chip-count">{(statusCounts[o.key] || 0).toLocaleString()}</span>
-            </button>
-          ))}
-        </div>
       </div>
 
       {loading ? (
