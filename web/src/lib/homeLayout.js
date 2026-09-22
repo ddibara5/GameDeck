@@ -1,18 +1,17 @@
-// Home section layout preferences: the standing order and visibility of the
-// Home sections (Jump back in, For You, New releases, Top story, Upcoming,
-// Recent play).
+// Home section layout preferences: the standing order and visibility of Home.
+// Insights and Rankings are independent summary cards so each can be shown,
+// hidden, and reordered from the Home customizer.
 //
-// The key moved to _v2 with the Home redesign (2026-09-19): the redesign
-// replaced the old four sections (Statistics, Recent play, New releases,
-// Upcoming) with the redesigned sections, so a stored v1 order no longer describes the
-// page. v2 starts every profile on the approved mockup order; the customize
-// sheet (show/hide, reorder, local persistence) works exactly as before from
-// there.
+// Keep the v2 key so existing preferences migrate in place. Older v2 layouts
+// used one "jump-back-in" section; normalize expands that legacy id into the
+// two new summary cards at the same position.
 
 const KEY = 'gamedeck_home_layout_v2'
+const LEGACY_JUMP_ID = 'jump-back-in'
 
 export const homeSectionOptions = [
-  { id: 'jump-back-in', label: 'Jump back in' },
+  { id: 'insights-summary', label: 'Insights' },
+  { id: 'rankings-summary', label: 'Rankings' },
   { id: 'for-you', label: 'For You' },
   { id: 'new-releases', label: 'New releases' },
   { id: 'top-story', label: 'Top story' },
@@ -31,30 +30,43 @@ function isHomeSection(value) {
   return SECTION_IDS.includes(value)
 }
 
+function expandLegacyIds(values) {
+  const expanded = []
+  for (const id of Array.isArray(values) ? values : []) {
+    if (id === LEGACY_JUMP_ID) {
+      expanded.push('insights-summary', 'rankings-summary')
+    } else {
+      expanded.push(id)
+    }
+  }
+  return expanded
+}
+
 // Validate and normalize a stored layout: unknown ids are dropped, the order
-// is deduped with the defaults appended (so a layout saved before a new
-// section exists still renders it), and hidden ids must also be known.
+// is deduped with the defaults appended, and legacy Jump back in preferences
+// are translated to the two new cards.
 function normalize(value) {
   if (!value || typeof value !== 'object') {
     return { order: [...SECTION_IDS], hidden: [] }
   }
-  const storedOrder = (Array.isArray(value.order) ? value.order : []).filter(
+
+  const storedOrder = expandLegacyIds(value.order).filter(
     (id, index, all) => isHomeSection(id) && all.indexOf(id) === index,
   )
 
-  // "For You" became its own Home section after the v2 layout shipped. Keep
-  // existing customized layouts intact, but migrate old v2 orders by placing
-  // the new section directly after Jump back in. Once the user moves it, that
-  // explicit position is preserved on later loads.
+  // For You was added after the first v2 layouts shipped. Preserve that older
+  // migration too, placing it directly after the two entry summary cards.
   if (!storedOrder.includes('for-you')) {
-    const jumpIndex = storedOrder.indexOf('jump-back-in')
-    if (jumpIndex >= 0) storedOrder.splice(jumpIndex + 1, 0, 'for-you')
+    const rankingsIndex = storedOrder.indexOf('rankings-summary')
+    const insightsIndex = storedOrder.indexOf('insights-summary')
+    const insertAfter = rankingsIndex >= 0 ? rankingsIndex : insightsIndex
+    if (insertAfter >= 0) storedOrder.splice(insertAfter + 1, 0, 'for-you')
   }
 
   const order = [...storedOrder, ...SECTION_IDS].filter(
     (id, index, all) => isHomeSection(id) && all.indexOf(id) === index,
   )
-  const hidden = (Array.isArray(value.hidden) ? value.hidden : []).filter(
+  const hidden = expandLegacyIds(value.hidden).filter(
     (id, index, all) => isHomeSection(id) && all.indexOf(id) === index,
   )
   return { order, hidden }
