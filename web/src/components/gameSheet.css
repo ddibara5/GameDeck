@@ -258,7 +258,7 @@
   border-radius: 0;
   border-top: 0;
   box-shadow: none;
-  padding: 0 18px calc(116px + env(safe-area-inset-bottom, 0px));
+  padding: 0 18px env(safe-area-inset-bottom, 0px);
   animation: settings-in var(--nav-in) var(--enter-ease);
   overscroll-behavior-y: contain;
 }
