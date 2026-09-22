@@ -124,6 +124,15 @@ function InsightsSummaryCard({ insight, previous, loading, onOpen }) {
   )
 }
 
+function displayGameTitle(title) {
+  const value = String(title || '').trim()
+  if (!value) return ''
+  if (value !== value.toUpperCase()) return value
+  return value
+    .toLowerCase()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
 function RankingsSummaryCard({ state, gamesById, loading, onOpen }) {
   const ranks = state?.ranks || []
   const top = ranks[0] || null
@@ -139,7 +148,7 @@ function RankingsSummaryCard({ state, gamesById, loading, onOpen }) {
     >
       <SummaryMetric value={loading ? '—' : ranks.length} label="Ranked" />
       <SummaryMetric value={loading ? '—' : state?.comparisons?.length || 0} label="Comparisons" />
-      <SummaryMetric value={loading ? '—' : top ? '#1' : '—'} label="Top game" detail={topGame?.title || (top ? 'Ranked game' : 'None yet')} tone="game" />
+      <SummaryMetric value={loading ? '—' : top ? '#1' : '—'} label="Top game" detail={displayGameTitle(topGame?.title || (top ? 'Ranked game' : 'None yet'))} tone="game" />
     </SummaryCard>
   )
 }
