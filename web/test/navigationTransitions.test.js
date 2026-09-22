@@ -30,7 +30,7 @@ test('navigation pages use the shared interactive edge-back stack', () => {
   assert.match(app, /interactiveRefs: subPageInteractiveRefs\.current/)
   assert.match(app, /deferBack: true/)
   assert.match(edgeBack, /shouldCompleteEdgeBack/)
-  assert.match(edgeBack, /data\.edgeBackDragging/)
+  assert.match(edgeBack, /dataset\.edgeBackDragging/)
 })
 
 test('game detail push navigation reveals the source page and exits by class', () => {
