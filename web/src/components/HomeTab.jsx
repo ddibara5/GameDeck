@@ -137,19 +137,29 @@ function RankingsSummaryCard({ state, gamesById, loading, onOpen }) {
   const ranks = state?.ranks || []
   const top = ranks[0] || null
   const topGame = top ? gamesById.get(String(top.master_id)) : null
+  const comparisons = state?.comparisons?.length || 0
+  const topTitle = displayGameTitle(topGame?.title || (top ? 'Ranked game' : 'None yet'))
 
   return (
-    <SummaryCard
-      title="Rankings"
-      sub="Your taste profile"
-      icon="rankings"
-      onPress={onOpen}
-      columns={3}
+    <button
+      type="button"
+      className="hm-summary-card hm-ranking-bar"
+      onClick={onOpen}
+      aria-label={loading ? 'Rankings' : `Rankings: ${ranks.length} ranked, ${comparisons} comparisons, number one ${topTitle}`}
     >
-      <SummaryMetric value={loading ? '—' : ranks.length} label="Ranked" />
-      <SummaryMetric value={loading ? '—' : state?.comparisons?.length || 0} label="Comparisons" />
-      <SummaryMetric value={loading ? '—' : top ? '#1' : '—'} label="Top game" detail={displayGameTitle(topGame?.title || (top ? 'Ranked game' : 'None yet'))} tone="game" />
-    </SummaryCard>
+      <span className="hm-ranking-bar-head">
+        <span className="hm-summary-icon" aria-hidden="true">{TAB_ICONS.rankings}</span>
+        <b>Rankings</b>
+        <NowPlayingChevron />
+      </span>
+      <span className="hm-ranking-bar-stats">
+        <span><b>{loading ? '—' : ranks.length}</b> ranked</span>
+        <i aria-hidden="true">·</i>
+        <span><b>{loading ? '—' : comparisons}</b> comps</span>
+        <i aria-hidden="true">·</i>
+        <span className="hm-ranking-top"><b>{loading ? '—' : top ? '#1' : '—'}</b> {loading ? 'Loading' : topTitle}</span>
+      </span>
+    </button>
   )
 }
 
