@@ -2,12 +2,16 @@ import Cover from './Cover.jsx'
 import { effectiveStatus, STATUS_LABELS } from '../lib/userStatus.js'
 import { libraryCover, platformMeta } from '../lib/format.js'
 import { libraryMetadata, libraryProgress } from '../lib/libraryPresentation.js'
+import { versionPlatformLabel } from '../lib/gameGroups.js'
 import { preloadGameSheet } from './LazyGameSheet.jsx'
 
 export default function LibraryGameCard({ game, statusMap, onSelect, view, priority }) {
   const status = effectiveStatus(game, statusMap)
   const statusLabel = STATUS_LABELS[status] || (status === 'abandoned' ? 'Abandoned' : status)
-  const platform = game.platforms?.[0] || platformMeta(game.environment).label
+  // Grouped games span several consoles, e.g. "Xbox 360 · Xbox One".
+  const platform = game.versions
+    ? versionPlatformLabel(game) || platformMeta(game.environment).label
+    : game.platforms?.[0] || platformMeta(game.environment).label
   const metadata = libraryMetadata(game)
   const progress = Math.round(libraryProgress(game))
 

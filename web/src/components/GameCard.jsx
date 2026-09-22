@@ -1,11 +1,14 @@
 import Cover from './Cover.jsx'
 import CompletionBar from './CompletionBar.jsx'
 import { platformMeta, libraryCover } from '../lib/format.js'
+import { versionPlatformLabel } from '../lib/gameGroups.js'
 import { effectiveStatus, STATUS_LABELS } from '../lib/userStatus.js'
 import { preloadGameSheet } from './LazyGameSheet.jsx'
 
 export default function GameCard({ game, onSelect, statusMap, priority = false }) {
   const { label, color } = platformMeta(game.environment)
+  // Grouped games span several consoles, e.g. "Xbox 360 · Xbox One".
+  const platformLabel = game.versions ? versionPlatformLabel(game) || label : label
   const status = effectiveStatus(game, statusMap)
   const showBadge = status === 'finished'
   // Completion = story progress (your playtime vs the game's length). Falls back to
@@ -32,7 +35,7 @@ export default function GameCard({ game, onSelect, statusMap, priority = false }
         <div className="game-title">{game.title}</div>
         <div className="platform-row">
           <span className="platform-dot" style={{ background: color }} />
-          <span>{label}</span>
+          <span>{platformLabel}</span>
           {showBadge ? <span className={`status-badge status-${status}`}>{STATUS_LABELS[status]}</span> : null}
         </div>
         {storyPct != null ? <CompletionBar percent={storyPct} /> : null}

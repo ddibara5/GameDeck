@@ -7,6 +7,7 @@ import { NAV_TRANSITION_MS, useEdgeBack } from '../lib/useEdgeBack.js'
 import { lockScroll } from '../lib/scrollLock.js'
 import { useAchievementsUrl, useLibraryGames } from '../lib/useLibraryGames.js'
 import { igdbCover, platformMeta, minutesToHhm, formatDate, releaseLabel } from '../lib/format.js'
+import { versionPlatformLabel } from '../lib/gameGroups.js'
 import {
   STATUSES,
   STATUS_LABELS,
@@ -389,7 +390,7 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
   const releaseText = releaseLabel((media && media.release) || game.release, year)
   const genreText = game.genre || genres[0] || null
   const platformText = owned
-    ? platformMeta(game.environment).label
+    ? versionPlatformLabel(game) || platformMeta(game.environment).label
     : platforms.slice(0, 3).join(', ')
   const rating = owned
     ? Number(game.igdb_rating) >= 0
@@ -619,6 +620,53 @@ export default function GameSheet({ variant, game, onClose, inLibrary = false, o
                   ) : null}
                 </div>
               </div>
+
+              {/* Your versions: every console / ecosystem you own this game
+                  on, with per-version playtime. Display only; the rows behind
+                  it are untouched. */}
+              {game.versions && game.versions.length > 1 ? (
+                <div style={{ ...cardStyle, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <span style={sectionTitleStyle}>Your versions</span>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    {game.versions.map((version, index) => {
+                      const versionLabel =
+                        (version.platforms || []).filter(Boolean).join(' · ') ||
+                        platformMeta(version.environment).label
+                      const versionPlaytime =
+                        version.playtime_label || minutesToHhm(version.playtime_minutes)
+                      return (
+                        <div
+                          key={version.master_id}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'baseline',
+                            gap: 12,
+                            padding: '10px 0',
+                            borderTop: index === 0 ? 'none' : '1px solid var(--line-soft)',
+                          }}
+                        >
+                          <span style={{ color: 'var(--text)', fontSize: 15, fontWeight: 600 }}>
+                            {versionLabel}
+                          </span>
+                          <span
+                            style={{
+                              color: 'var(--muted)',
+                              fontSize: 13,
+                              lineHeight: '18px',
+                              textAlign: 'right',
+                            }}
+                          >
+                            {versionPlaytime || 'Not recorded'}
+                            {' · '}
+                            {formatDate(version.last_played, 'Never played')}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : null}
 
               {/* At a glance, pilot card + metrics grid. */}
               <div style={{ ...cardStyle, display: 'flex', flexDirection: 'column', gap: 8 }}>

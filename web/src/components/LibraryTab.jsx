@@ -12,6 +12,7 @@ import { topGenres } from '../lib/gameGenres.js'
 import { useDialogA11y } from '../lib/useDialogA11y.js'
 import { lockScroll } from '../lib/scrollLock.js'
 import { libraryProgress as storyProgress } from '../lib/libraryPresentation.js'
+import { groupLibraryGames } from '../lib/gameGroups.js'
 import './library.css'
 
 // Matches the Expo pilot's status model: backlog / playing / finished are computed
@@ -76,7 +77,11 @@ const VIEW_OPTIONS = [
 ]
 
 export default function LibraryTab() {
-  const { games, loading, error } = useLibraryGames()
+  const { games: libraryGames, loading, error } = useLibraryGames()
+  // One tile per game: rows that are the same title on several consoles or
+  // ecosystems collapse into one tile; the versions stay listed in the detail
+  // sheet. Display-layer grouping only, no data is merged or deleted.
+  const games = useMemo(() => groupLibraryGames(libraryGames), [libraryGames])
   const [query, setQuery] = useState('')
   const [platformFilter, setPlatformFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')

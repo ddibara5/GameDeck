@@ -4,6 +4,7 @@ import GameDetail from './GameDetail.jsx'
 import Skeleton from './Skeleton.jsx'
 import { MessageState } from './AsyncState.jsx'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
+import { groupLibraryGames } from '../lib/gameGroups.js'
 import { useStatusMap, effectiveStatus, includeInLists } from '../lib/userStatus.js'
 import { hasRecentPlay, sortRecentGames } from '../lib/homeRails.js'
 import './wishlist.css'
@@ -40,7 +41,9 @@ export const LIST_DEFS = {
 
 export default function ListView({ viewKey, onClose }) {
   const def = LIST_DEFS[viewKey]
-  const { games, loading, error } = useLibraryGames()
+  const { games: libraryGames, loading, error } = useLibraryGames()
+  // Same one-tile-per-game grouping as the Library tab.
+  const games = useMemo(() => groupLibraryGames(libraryGames), [libraryGames])
   const statusMap = useStatusMap()
   const [selectedGame, setSelectedGame] = useState(null)
 
