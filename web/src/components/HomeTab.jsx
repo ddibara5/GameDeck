@@ -63,8 +63,10 @@ function SummaryMetric({ value, label, detail, tone = '' }) {
   return (
     <span className="hm-summary-metric">
       <b>{value}</b>
-      <span>{label}</span>
-      {detail ? <small className={tone}>{detail}</small> : null}
+      <span className="hm-summary-metric-line">
+        <span>{label}</span>
+        {detail ? <small className={tone}>{detail}</small> : null}
+      </span>
     </span>
   )
 }
@@ -147,17 +149,17 @@ function RankingsSummaryCard({ state, gamesById, loading, onOpen }) {
       onClick={onOpen}
       aria-label={loading ? 'Rankings' : `Rankings: ${ranks.length} ranked, ${comparisons} comparisons, number one ${topTitle}`}
     >
-      <span className="hm-ranking-bar-head">
+      <span className="hm-ranking-inline">
         <span className="hm-summary-icon" aria-hidden="true">{TAB_ICONS.rankings}</span>
-        <b>Rankings</b>
+        <b className="hm-ranking-title">Rankings</b>
+        <span className="hm-ranking-inline-stats">
+          <span><b>{loading ? '—' : ranks.length}</b> ranked</span>
+          <i aria-hidden="true">·</i>
+          <span><b>{loading ? '—' : comparisons}</b> comps</span>
+          <i aria-hidden="true">·</i>
+          <span className="hm-ranking-top"><b>{loading ? '—' : top ? '#1' : '—'}</b> {loading ? 'Loading' : topTitle}</span>
+        </span>
         <NowPlayingChevron />
-      </span>
-      <span className="hm-ranking-bar-stats">
-        <span><b>{loading ? '—' : ranks.length}</b> ranked</span>
-        <i aria-hidden="true">·</i>
-        <span><b>{loading ? '—' : comparisons}</b> comps</span>
-        <i aria-hidden="true">·</i>
-        <span className="hm-ranking-top"><b>{loading ? '—' : top ? '#1' : '—'}</b> {loading ? 'Loading' : topTitle}</span>
       </span>
     </button>
   )
