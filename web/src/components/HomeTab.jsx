@@ -12,6 +12,8 @@ import { loadHomeLayout, saveHomeLayout } from '../lib/homeLayout.js'
 import { useWishlist } from '../lib/wishlist.js'
 import { gameProgress, sortRecentGames } from '../lib/homeRails.js'
 import { libraryCover, releaseCardLabel, remoteImg } from '../lib/format.js'
+import { getHomePreview, homePreviewKey, rememberHomePreview } from '../lib/homePreviewCache.js'
+import { warmOnIdle } from '../lib/warmChunks.js'
 import './homeCards.css'
 import './homeRails.css'
 
@@ -202,7 +204,7 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
   }, [])
 
   const [selectedGame, setSelectedGame] = useState(null)
-  const [forYouPreview, setForYouPreview] = useState(null)
+  const [forYouPreview, setForYouPreview] = useState(getHomePreview)
   const [forYouLoading, setForYouLoading] = useState(false)
 
   // Keep the For You engine out of Home's initial JS chunk. The preview warms
@@ -220,7 +222,9 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
       setForYouLoading(true)
       try {
         const { loadForYouFilters, loadForYouSnapshot } = await import('../lib/forYou.js')
+        const previewKey = homePreviewKey()
         const snapshot = await loadForYouSnapshot(loadForYouFilters())
+        rememberHomePreview(snapshot, previewKey)
         if (!cancelled) setForYouPreview(snapshot)
       } catch {
         // Keep Home usable if recommendations are temporarily unavailable.
@@ -298,6 +302,16 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
 
   const libraryReady = !libraryLoading || games.length > 0
   const libraryBroken = Boolean(libraryError) && games.length === 0
+  const rankingsVisible = !homeLayout.hidden.includes('jump-back-in')
+  useEffect(() => {
+    if (!libraryReady || !rankingsVisible) return undefined
+    let cancelled = false
+    const stop = warmOnIdle([async () => {
+      const { warmRankingArtwork } = await import('../lib/rankingArtwork.js')
+      if (!cancelled) await warmRankingArtwork(() => cancelled)
+    }])
+    return () => { cancelled = true; stop() }
+  }, [libraryReady, rankingsVisible])
 
   const toWishlistRailItem = (item) => ({
     key: String(item.igdb_id ?? item.title),
@@ -407,6 +421,7 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
       return (
         <HomeRail
           title="New releases"
+          priority
           compact
           items={releases.outNow.map(toWishlistRailItem)}
           totalCount={releases.outNowCount}

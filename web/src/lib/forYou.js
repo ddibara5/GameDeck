@@ -9,6 +9,7 @@
 // and same-day slate reconciliation. loadForYouDeck() below is the original
 // lane-fill algorithm, kept as the legacy path.
 
+import { FOR_YOU_FILTERS_KEY } from './homePreviewCache.js'
 import { supabase } from './supabase.js'
 import { authFetch } from './appAuth.js'
 import { buildQuery, loadLibraryTitles, normTitle } from './discover.js'
@@ -40,7 +41,7 @@ export const defaultForYouFilters = {
   availability: 'all',
 }
 
-const FILTERS_KEY = 'gamedeck-for-you-filters-v1'
+const FILTERS_KEY = FOR_YOU_FILTERS_KEY
 const DISMISSED_KEY = 'gamedeck-for-you-dismissed-v1'
 const DISMISSED_CAP = 250
 const COMPARISON_LIMIT = 500

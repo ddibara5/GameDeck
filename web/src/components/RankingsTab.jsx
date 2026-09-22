@@ -49,7 +49,7 @@ function RankedRow({ game, rank, position, total, onEdit, onOpen }) {
           aria-label={'Open ' + game.title + ', ranked ' + position}
         >
           <span className="rank-place" aria-hidden="true">{position}</span>
-          <Cover src={libraryCover(game)} title={game.title} />
+          <Cover src={libraryCover(game)} title={game.title} sizes="64px" priority={position <= 8} />
           <span className="rank-row-copy">
             <strong>{game.title}</strong>
             <span className="rank-row-meta">
@@ -83,7 +83,7 @@ function CompareCard({ game, score, onPick, disabled }) {
       disabled={disabled}
       aria-label={'Rank ' + game.title + ' higher'}
     >
-      <Cover src={libraryCover(game)} title={game.title} size="lg" />
+      <Cover src={libraryCover(game)} title={game.title} size="lg" priority />
       <strong>{game.title}</strong>
       <span className="rank-duel-score">{formatScore(score)} score</span>
       <span className="rank-duel-pick" aria-hidden="true">Rank higher</span>
@@ -328,7 +328,7 @@ export default function RankingsTab({ launch = null, onReturnToForYou = null }) 
                         setSearchOpen(false)
                       }}
                     >
-                      <Cover src={libraryCover(game)} title={game.title} />
+                      <Cover src={libraryCover(game)} title={game.title} sizes="64px" priority />
                       <span><strong>{game.title}</strong><small>{isRanked ? 'Already ranked' : canRank ? 'Ready to rank' : 'Not eligible yet'}</small></span>
                     </button>
                   )
