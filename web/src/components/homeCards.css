@@ -538,63 +538,155 @@ button.hm-np:not(:disabled) {
   opacity: 0.7;
 }
 
-/* ---- Jump back in: three entry tiles (compressed) ---- */
+/* ---- Home summary entry cards ---- */
 
-.hm-jump-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.hm-jump {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 56px;
-  padding: 9px 10px;
+.hm-summary-card {
+  display: block;
+  width: 100%;
+  padding: 12px;
   text-align: left;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 12px;
-  font: inherit;
+  border-radius: 16px;
   color: inherit;
+  font: inherit;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 
-.hm-jump:active {
-  opacity: 0.7;
+.hm-summary-card:active {
+  opacity: 0.74;
 }
 
-.hm-jump-icon {
-  width: 18px;
-  height: 18px;
-  flex: none;
+.hm-summary-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 9px;
+}
+
+.hm-summary-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
   color: var(--accent);
 }
 
-.hm-jump-icon svg {
-  width: 100%;
-  height: 100%;
+.hm-summary-icon svg {
+  width: 18px;
+  height: 18px;
 }
 
-.hm-jump-text {
+.hm-summary-copy {
   min-width: 0;
 }
 
-.hm-jump-text b {
+.hm-summary-copy b {
   display: block;
   color: var(--text);
-  font-size: 12px;
+  font-size: var(--t-sub);
   font-weight: 700;
+  line-height: 1.2;
 }
 
-.hm-jump-text small {
+.hm-summary-copy small,
+.hm-summary-meta {
+  color: var(--muted);
+  font-size: var(--t-foot);
+  line-height: 1.3;
+}
+
+.hm-summary-copy small {
   display: block;
+  margin-top: 2px;
+}
+
+.hm-summary-meta {
+  white-space: nowrap;
+}
+
+.hm-summary-grid {
+  --hm-summary-cols: 4;
+  display: grid;
+  grid-template-columns: repeat(var(--hm-summary-cols), minmax(0, 1fr));
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.hm-summary-metric {
+  min-width: 0;
+  padding: 0 8px;
+  border-right: 1px solid var(--line);
+}
+
+.hm-summary-metric:first-child {
+  padding-left: 2px;
+}
+
+.hm-summary-metric:last-child {
+  padding-right: 2px;
+  border-right: 0;
+}
+
+.hm-summary-metric b,
+.hm-summary-metric > span,
+.hm-summary-metric small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hm-summary-metric b {
+  color: var(--text);
+  font-size: var(--t-sub);
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.hm-summary-metric > span {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: var(--t-foot);
+}
+
+.hm-summary-metric small {
+  margin-top: 4px;
   color: var(--muted);
   font-size: 10px;
-  line-height: 1.35;
-  margin-top: 1px;
+  line-height: 1.2;
+}
+
+.hm-summary-metric small.up {
+  color: var(--success, var(--accent));
+}
+
+.hm-summary-metric small.down {
+  color: var(--danger, var(--accent));
+}
+
+.hm-summary-metric small.flat {
+  color: var(--muted);
+}
+
+@media (max-width: 360px) {
+  .hm-summary-meta {
+    display: none;
+  }
+
+  .hm-summary-metric {
+    padding: 0 5px;
+  }
+
+  .hm-summary-metric b {
+    font-size: var(--t-foot);
+  }
 }
 
 /* ---- Latest news: uniform full-bleed article cards ---- */
