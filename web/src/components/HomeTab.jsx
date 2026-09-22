@@ -139,7 +139,7 @@ function RankingsSummaryCard({ state, gamesById, loading, onOpen }) {
     >
       <SummaryMetric value={loading ? '—' : ranks.length} label="Ranked" />
       <SummaryMetric value={loading ? '—' : state?.comparisons?.length || 0} label="Comparisons" />
-      <SummaryMetric value={loading ? '—' : top ? '#1' : '—'} label="Top game" detail={topGame?.title || (top ? 'Ranked game' : 'None yet')} />
+      <SummaryMetric value={loading ? '—' : top ? '#1' : '—'} label="Top game" detail={topGame?.title || (top ? 'Ranked game' : 'None yet')} tone="game" />
     </SummaryCard>
   )
 }
