@@ -139,6 +139,7 @@ function RankingsSummaryCard({ state, gamesById, loading, onOpen }) {
         <span className="hm-summary-icon" aria-hidden="true">{TAB_ICONS.rankings}</span>
         <b className="hm-ranking-title">Rankings</b>
         <span className="hm-ranking-inline-stats">
+          <i aria-hidden="true">·</i>
           <span><b>{loading ? '—' : ranks.length}</b> ranked</span>
           <i aria-hidden="true">·</i>
           <span><b>{loading ? '—' : comparisons}</b> comps</span>
