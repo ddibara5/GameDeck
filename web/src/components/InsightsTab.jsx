@@ -3,7 +3,6 @@ import Skeleton from './Skeleton.jsx'
 import Cover from './Cover.jsx'
 import Hhm from './Hhm.jsx'
 import GameDetail from './GameDetail.jsx'
-import CustomizeCards from './CustomizeCards.jsx'
 import { libraryCover, minutesToHhm } from '../lib/format.js'
 import {
   getActivityStartCache,
@@ -20,12 +19,12 @@ import {
   INSIGHT_WEEK_DAYS,
   periodInsights,
 } from '../lib/playInsights.js'
-import { useCardsConfig } from '../lib/insightsCards.js'
 import { useLibraryGames } from '../lib/useLibraryGames.js'
 import './insights.css'
 
 const WEEK_TRACK = 46
 const MONTH_TRACK = 58
+const FIXED_CARD_ORDER = ['week_chart', 'week_games', 'momentum', 'genres']
 
 function PeriodToggle({ span, onChange }) {
   return (
@@ -222,9 +221,7 @@ export default function InsightsTab() {
   const [activityStart, setActivityStart] = useState(() => getActivityStartCache())
   const [selected, setSelected] = useState(null)
   const [span, setSpan] = useState(INSIGHT_WEEK_DAYS)
-  const [customizeOpen, setCustomizeOpen] = useState(false)
   const [loading, setLoading] = useState(() => !cachedEvents)
-  const cards = useCardsConfig()
 
   useEffect(() => {
     let cancelled = false
@@ -261,17 +258,12 @@ export default function InsightsTab() {
     momentum: () => <Momentum insight={month} firstRecorded={activityStart} key="momentum" />,
     genres: () => <GenresLately genres={genres} span={span} key="genres" />,
   }
-  const rendered = cards.order.filter((key) => cards.enabled[key] && renderers[key]).map((key) => renderers[key]())
+  const rendered = FIXED_CARD_ORDER.map((key) => renderers[key]())
 
   return (
     <div>
       <PeriodToggle span={span} onChange={setSpan} />
-      {rendered.length ? rendered : <div className="chart-card"><div className="chart-empty">Every card is switched off. Open Customize cards to bring some back.</div></div>}
-      <button type="button" className="customize-btn" onClick={() => setCustomizeOpen(true)}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /><circle cx="9" cy="6" r="2" fill="currentColor" stroke="none" /><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none" /><circle cx="7" cy="18" r="2" fill="currentColor" stroke="none" /></svg>
-        Customize cards
-      </button>
-      <CustomizeCards open={customizeOpen} onClose={() => setCustomizeOpen(false)} />
+      {rendered}
       {selected ? <GameDetail game={selected} onClose={() => setSelected(null)} /> : null}
     </div>
   )
