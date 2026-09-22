@@ -487,7 +487,46 @@
    Shared theme/control tokens own states; ranking-specific CSS owns only hierarchy. */
 .rank-page { max-width: 640px; padding: 8px var(--screen-gutter) calc(var(--space-5) + env(safe-area-inset-bottom)); }
 .rank-head { margin: 0; }
-.rank-tabs { margin: 0 0 10px; }
+
+/* Match Insights' 7/30-day segmented control exactly: same pill radius,
+   surface, selected state, height, type and spacing. */
+.rank-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  margin: 0 0 var(--space-3);
+  padding: 3px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  box-shadow: none;
+  overflow: visible;
+}
+
+.rank-tabs .seg-btn {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--t-foot);
+  font-weight: var(--w-semi);
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.rank-tabs .seg-btn.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--e1);
+}
+
+.rank-tabs .seg-btn:active {
+  opacity: 0.7;
+}
+
 .rank-count, .rank-notice, .rank-compare-meta, .rank-skip-note { margin: 0; color: var(--muted); font-family: var(--font-supporting); font-size: var(--collection-meta); line-height: 1.3; }
 .rank-count { margin-bottom: 4px; }
 .rank-notice { margin: 0 0 8px; }
