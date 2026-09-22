@@ -6,12 +6,15 @@ import { HomeCustomizeBar, HomeCustomizeSheet } from './HomeCustomizer.jsx'
 import { TAB_ICONS } from './TabBar.jsx'
 import { preloadLibrary, useLibraryGames } from '../lib/useLibraryGames.js'
 import { gameArtworkUrl } from '../lib/homeInsights.js'
+import { getRecentActivityCache, loadRecentActivity } from '../lib/recentActivity.js'
+import { INSIGHT_QUERY_DAYS, INSIGHT_WEEK_DAYS, periodInsights } from '../lib/playInsights.js'
+import { getRankingStateCache, loadRankingState } from '../lib/ranking.js'
 import { releaseWatch } from '../lib/homeReleaseWatch.js'
 import { cardArtChain, getNewsCache, homeNewsPreview, loadNews, markRead, relTime, buildLibraryIndex } from '../lib/news.js'
 import { loadHomeLayout, saveHomeLayout } from '../lib/homeLayout.js'
 import { useWishlist } from '../lib/wishlist.js'
 import { gameProgress, sortRecentGames } from '../lib/homeRails.js'
-import { libraryCover, releaseCardLabel, remoteImg } from '../lib/format.js'
+import { libraryCover, minutesToHhm, releaseCardLabel, remoteImg } from '../lib/format.js'
 import { getHomePreview, homePreviewKey, rememberHomePreview } from '../lib/homePreviewCache.js'
 import { warmOnIdle } from '../lib/warmChunks.js'
 import './homeCards.css'
@@ -21,20 +24,11 @@ const loadNewsSheet = () => import('./NewsSheet.jsx')
 const NewsSheet = lazy(loadNewsSheet)
 const loadDiscover = () => import('../lib/discover.js')
 
-// Home: the approved compact layout. Six sections in the user's saved order
-// (gamedeck_home_layout_v2), each hideable and reorderable through the
-// Customize bar/sheet:
-//
-//   continue-playing  a "Recent play" rail of recently played games with their
-//                     story progress; hidden when there is none
-//   jump-back-in      entry tiles for Rankings and Insights
-//   for-you           a preview rail from the daily For You recommendation deck
-//   top-story         featured news card, plus More news
-//   upcoming          wishlist Release watch, coming up
-//   new-releases      wishlist Release watch, out now
-//
-// For You, News, Rankings and Insights are reachable only from here and their
-// own entry points; none of them sits on the bottom bar (see navConfig).
+// Home: compact, configurable sections in the user's saved order
+// (gamedeck_home_layout_v2). Insights and Rankings each have their own summary
+// card so they can be independently shown, hidden, and reordered. For You,
+// News, Rankings and Insights are reachable from Home and their own entry
+// points; none of them sits on the bottom bar (see navConfig).
 
 // Most recently played game that is still in progress: has playtime and is not
 // finished or abandoned. Null when there is nothing to continue.
@@ -64,10 +58,91 @@ function SectionHead({ title, action }) {
   )
 }
 
-const JUMP_TILES = [
-  { key: 'rankings', title: 'Rankings', sub: 'Choose between two games', icon: 'rankings' },
-  { key: 'insights', title: 'Insights', sub: 'Playtime and taste trends', icon: 'insights' },
-]
+
+function SummaryMetric({ value, label, detail, tone = '' }) {
+  return (
+    <span className="hm-summary-metric">
+      <b>{value}</b>
+      <span>{label}</span>
+      {detail ? <small className={tone}>{detail}</small> : null}
+    </span>
+  )
+}
+
+function SummaryCard({ title, sub, meta, icon, onPress, children, columns = 4 }) {
+  return (
+    <button
+      type="button"
+      className="hm-summary-card"
+      onClick={onPress}
+      aria-label={`${title}: ${sub}`}
+    >
+      <span className="hm-summary-head">
+        <span className="hm-summary-icon" aria-hidden="true">{TAB_ICONS[icon]}</span>
+        <span className="hm-summary-copy">
+          <b>{title}</b>
+          <small>{sub}</small>
+        </span>
+        {meta ? <span className="hm-summary-meta">{meta}</span> : null}
+        <NowPlayingChevron />
+      </span>
+      <span className="hm-summary-grid" style={{ '--hm-summary-cols': columns }}>
+        {children}
+      </span>
+    </button>
+  )
+}
+
+function deltaLabel(current, previous, formatter = (value) => String(value)) {
+  const delta = Number(current || 0) - Number(previous || 0)
+  if (delta === 0) return { text: '— no change', tone: 'flat' }
+  return {
+    text: `${delta > 0 ? '↑' : '↓'} ${formatter(Math.abs(delta))}`,
+    tone: delta > 0 ? 'up' : 'down',
+  }
+}
+
+function InsightsSummaryCard({ insight, previous, loading, onOpen }) {
+  const playDelta = deltaLabel(insight?.minutes, previous?.minutes, minutesToHhm)
+  const gamesDelta = deltaLabel(insight?.games, previous?.games)
+  const achievementDelta = deltaLabel(insight?.achievements, previous?.achievements)
+  const daysDelta = deltaLabel(insight?.activeDays, previous?.activeDays)
+
+  return (
+    <SummaryCard
+      title="Your Gaming Insights"
+      sub="Playtime, trends, and more"
+      meta="Last 7 days"
+      icon="insights"
+      onPress={onOpen}
+    >
+      <SummaryMetric value={loading ? '—' : minutesToHhm(insight?.minutes || 0)} label="Playtime" detail={loading ? null : playDelta.text} tone={playDelta.tone} />
+      <SummaryMetric value={loading ? '—' : insight?.games || 0} label="Games" detail={loading ? null : gamesDelta.text} tone={gamesDelta.tone} />
+      <SummaryMetric value={loading ? '—' : insight?.achievements || 0} label="Achievements" detail={loading ? null : achievementDelta.text} tone={achievementDelta.tone} />
+      <SummaryMetric value={loading ? '—' : insight?.activeDays || 0} label="Active days" detail={loading ? null : daysDelta.text} tone={daysDelta.tone} />
+    </SummaryCard>
+  )
+}
+
+function RankingsSummaryCard({ state, gamesById, loading, onOpen }) {
+  const ranks = state?.ranks || []
+  const top = ranks[0] || null
+  const topGame = top ? gamesById.get(String(top.master_id)) : null
+
+  return (
+    <SummaryCard
+      title="Rankings"
+      sub="Your taste profile"
+      icon="rankings"
+      onPress={onOpen}
+      columns={3}
+    >
+      <SummaryMetric value={loading ? '—' : ranks.length} label="Ranked" />
+      <SummaryMetric value={loading ? '—' : state?.comparisons?.length || 0} label="Comparisons" />
+      <SummaryMetric value={loading ? '—' : top ? '#1' : '—'} label="Top game" detail={topGame?.title || (top ? 'Ranked game' : 'None yet')} />
+    </SummaryCard>
+  )
+}
 
 function LoadingRail({ title }) {
   return (
@@ -80,33 +155,6 @@ function LoadingRail({ title }) {
           <span className="hrail-card" key={index}>
             <span className="hrail-poster skeleton hm-skel" />
           </span>
-        ))}
-      </div>
-    </section>
-  )
-}
-
-function JumpBackIn({ onOpenTab }) {
-  return (
-    <section aria-label="Jump back in">
-      <SectionHead title="Jump back in" />
-      <div className="hm-jump-grid">
-        {JUMP_TILES.map((tile) => (
-          <button
-            key={tile.key}
-            type="button"
-            className="hm-jump"
-            onClick={() => onOpenTab(tile.key)}
-            aria-label={`${tile.title}: ${tile.sub}`}
-          >
-            <span className="hm-jump-icon" aria-hidden="true">
-              {TAB_ICONS[tile.icon]}
-            </span>
-            <span className="hm-jump-text">
-              <b>{tile.title}</b>
-              <small>{tile.sub}</small>
-            </span>
-          </button>
         ))}
       </div>
     </section>
@@ -191,6 +239,13 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
   // still fall through to IndexedDB via loadNews().
   const [newsItems, setNewsItems] = useState(() => getNewsCache())
 
+  const cachedInsightEvents = getRecentActivityCache({ days: INSIGHT_QUERY_DAYS })
+  const [insightEvents, setInsightEvents] = useState(() => cachedInsightEvents || [])
+  const [insightsLoading, setInsightsLoading] = useState(() => !cachedInsightEvents)
+  const cachedRankingState = getRankingStateCache()
+  const [rankingState, setRankingState] = useState(() => cachedRankingState)
+  const [rankingLoading, setRankingLoading] = useState(() => !cachedRankingState)
+
   // Home section layout: order + visibility, persisted for Dave.
   const [homeLayout, setHomeLayout] = useState(() => loadHomeLayout())
   const [customizeOpen, setCustomizeOpen] = useState(false)
@@ -206,6 +261,39 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
   const [selectedGame, setSelectedGame] = useState(null)
   const [forYouPreview, setForYouPreview] = useState(getHomePreview)
   const [forYouLoading, setForYouLoading] = useState(false)
+
+  const insightsVisible = !homeLayout.hidden.includes('insights-summary')
+  const rankingsVisible = !homeLayout.hidden.includes('rankings-summary')
+
+  useEffect(() => {
+    if (!insightsVisible) return undefined
+    let cancelled = false
+    loadRecentActivity({ days: INSIGHT_QUERY_DAYS }, (fresh) => {
+      if (!cancelled) setInsightEvents(fresh || [])
+    }).then((rows) => {
+      if (!cancelled) {
+        setInsightEvents(rows || [])
+        setInsightsLoading(false)
+      }
+    })
+    return () => { cancelled = true }
+  }, [insightsVisible])
+
+  useEffect(() => {
+    if (!rankingsVisible) return undefined
+    let cancelled = false
+    loadRankingState(false, (fresh) => {
+      if (!cancelled) setRankingState(fresh)
+    }).then((state) => {
+      if (!cancelled) {
+        setRankingState(state)
+        setRankingLoading(false)
+      }
+    }).catch(() => {
+      if (!cancelled) setRankingLoading(false)
+    })
+    return () => { cancelled = true }
+  }, [rankingsVisible])
 
   // Keep the For You engine out of Home's initial JS chunk. The preview warms
   // after first paint, reuses the engine's IndexedDB candidate cache, and then
@@ -272,6 +360,19 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
   // Recently played library games, most recent first. Feeds the Recent play
   // rail and its full list view.
   const recentGames = useMemo(() => sortRecentGames(games || []), [games])
+  const gamesById = useMemo(() => new Map((games || []).map((game) => [String(game.master_id), game])), [games])
+  const insightSummary = useMemo(
+    () => periodInsights(insightEvents, new Date(), INSIGHT_WEEK_DAYS),
+    [insightEvents],
+  )
+  const previousInsightSummary = useMemo(
+    () => periodInsights(
+      insightEvents,
+      new Date(Date.now() - INSIGHT_WEEK_DAYS * 86400000),
+      INSIGHT_WEEK_DAYS,
+    ),
+    [insightEvents],
+  )
 
   // Home is a compact preview of News → For you, not a separate "newest" feed.
   // Using the shared selector keeps the ordering identical: actively played,
@@ -302,7 +403,6 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
 
   const libraryReady = !libraryLoading || games.length > 0
   const libraryBroken = Boolean(libraryError) && games.length === 0
-  const rankingsVisible = !homeLayout.hidden.includes('jump-back-in')
   useEffect(() => {
     if (!libraryReady || !rankingsVisible) return undefined
     let cancelled = false
@@ -358,8 +458,26 @@ export default function HomeTab({ onOpenTab, onOpenList, newsUnread }) {
       )
     }
 
-    if (section === 'jump-back-in') {
-      return <JumpBackIn onOpenTab={onOpenTab} />
+    if (section === 'insights-summary') {
+      return (
+        <InsightsSummaryCard
+          insight={insightSummary}
+          previous={previousInsightSummary}
+          loading={insightsLoading}
+          onOpen={() => onOpenTab('insights')}
+        />
+      )
+    }
+
+    if (section === 'rankings-summary') {
+      return (
+        <RankingsSummaryCard
+          state={rankingState}
+          gamesById={gamesById}
+          loading={rankingLoading}
+          onOpen={() => onOpenTab('rankings')}
+        />
+      )
     }
 
     if (section === 'for-you') {
